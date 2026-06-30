@@ -47,6 +47,7 @@ from doxabase.mcp_tools import (
     list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
+    list_graph_versions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
     plan_staged_revision_recovery_tool,
@@ -537,6 +538,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             staged_validation_status=staged_validation_status,
             stale_resolution_state=stale_resolution_state,
             current_staged_work_only=current_staged_work_only,
+            limit=limit,
+            offset=offset,
+        )
+
+    @server.tool(name="doxabase.list_graph_versions")
+    def list_graph_versions(
+        graph_role: str,
+        graph: str | None = "history",
+        exact_only: bool = False,
+        include_current: bool = True,
+        record_kind: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List stored graph-version snapshots for one graph role."""
+
+        return list_graph_versions_tool(
+            db,
+            graph_role=graph_role,
+            graph=graph,
+            exact_only=exact_only,
+            include_current=include_current,
+            record_kind=record_kind,
             limit=limit,
             offset=offset,
         )

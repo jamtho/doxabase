@@ -335,6 +335,20 @@ arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.
 
+`doxabase.list_graph_versions`
+
+Lists stored graph-version snapshots for one graph role, newest first. Use this
+when a workflow needs the timeline of `map`, `ontology`, `patterns`, or another
+graph role without scripting over revision rows. Rows include `revision_iri`,
+`record_kind`, `snapshot_semantics`, `triple_count`, `content_digest`,
+`count_basis`, `exact_snapshot_available`, `snapshot_evidence_status`, lineage
+links, and suggested calls to `describe_revision_graph_snapshot`.
+`snapshot_semantics` distinguishes `staged_before_graph`,
+`applied_after_graph`, and `recorded_graph_snapshot`. Set `exact_only=True` to
+hide RDF-only count/digest snapshots, and `include_current=False` when a caller
+only wants historical snapshot rows. This is stored-snapshot timeline browsing,
+not temporal checkout or replay.
+
 `doxabase.describe_revision_lineage`
 
 Describes one graph revision's staged/applied lineage by revision IRI. Use it

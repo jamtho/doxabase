@@ -3802,6 +3802,64 @@ status such as `ready`, `conflict`, `noop`, `validation_failed`,
 events, expect
 `record_kind == "applied_event"` and `application_status == "applied_event"`.
 
+`db.list_graph_versions(graph_role, ...)` returns `GraphVersionList`:
+
+```python
+versions.graph_role
+versions.graph
+versions.exact_only
+versions.include_current
+versions.record_kind
+versions.limit
+versions.offset
+versions.count
+versions.total_count
+versions.returned_count
+versions.current_graph
+versions.snapshot_evidence_status_counts
+versions.exact_snapshot_available_count
+versions.versions
+versions.note
+```
+
+Each item in `versions.versions` has:
+
+```python
+item.revision_iri
+item.graph_role
+item.record_kind
+item.snapshot_semantics
+item.summary
+item.revision_type
+item.revision_type_label
+item.created_at
+item.changed_graphs
+item.included_graphs
+item.applies_staged_revision
+item.applied_by
+item.restaged_from
+item.restaged_by
+item.current_restaged_by
+item.triple_count
+item.content_digest
+item.count_basis
+item.stored_at
+item.exact_snapshot_available
+item.snapshot_evidence_status
+item.snapshot_evidence
+item.suggested_next_actions
+item.suggested_next_calls
+```
+
+Use `list_graph_versions("map")` when the question is "what stored versions of
+this graph role can I inspect?" rather than "which revision row should I route
+next?" `snapshot_semantics` labels staged-source rows as
+`staged_before_graph`, applied-event rows as `applied_after_graph`, and ordinary
+history rows as `recorded_graph_snapshot`. The current live graph summary is in
+`current_graph` unless `include_current=False`. This helper lists stored
+snapshots and their count/digest evidence; it does not checkout historical graph
+state or replay revisions.
+
 First-read triage fields:
 
 ```python

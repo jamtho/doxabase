@@ -264,9 +264,9 @@ Expected state at the time of writing:
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
 - Staged revisions can be applied with conservative graph-state conflict checks
   and stale proposals can be planned, restaged, grouped, exported, and routed
-  through lineage and snapshot-evidence helpers. Rich semantic merge/rebase and
-  durable graph version browsing beyond staged/applied snapshots are not
-  implemented yet.
+  through lineage, snapshot-evidence helpers, and a read-only graph-version
+  timeline over stored snapshots. Rich semantic merge/rebase and historical
+  graph checkout/replay are not implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.

@@ -11649,6 +11649,99 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert first_page.next_action_queue != full_page.next_action_queue
 
 
+def test_list_graph_versions_lists_stored_graph_timeline(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    applied = db.apply_staged_revision(
+        staged.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    versions = db.list_graph_versions("map")
+
+    assert versions.graph_role == "map"
+    assert versions.graph == "history"
+    assert versions.exact_only is False
+    assert versions.include_current is True
+    assert versions.count == 2
+    assert versions.total_count == 2
+    assert versions.returned_count == 2
+    assert versions.current_graph is not None
+    assert versions.current_graph.graph_role == "map"
+    assert versions.current_graph.triple_count == db.triple_count("map")
+    assert versions.current_graph.content_digest == db._graph_content_digest("map")
+    assert versions.snapshot_evidence_status_counts == {
+        "history_plus_snapshot_rows": 2
+    }
+    assert versions.exact_snapshot_available_count == 2
+    assert "not a temporal checkout engine" in versions.note
+
+    rows_by_iri = {item.revision_iri: item for item in versions.versions}
+    staged_row = rows_by_iri[staged.revision_iri]
+    applied_row = rows_by_iri[applied.applied_revision_iri]
+
+    assert staged_row.record_kind == "staged_patch"
+    assert staged_row.snapshot_semantics == "staged_before_graph"
+    assert staged_row.summary == "Stage messages table"
+    assert staged_row.created_at == "2026-06-01T10:00:00+00:00"
+    assert staged_row.changed_graphs == ["map"]
+    assert staged_row.included_graphs == ["map"]
+    assert staged_row.triple_count == 0
+    assert staged_row.count_basis == "stored_snapshot_rows"
+    assert staged_row.exact_snapshot_available is True
+    assert staged_row.snapshot_evidence_status == "history_plus_snapshot_rows"
+    assert staged_row.suggested_next_actions[0].tool_name == (
+        "describe_revision_graph_snapshot"
+    )
+
+    assert applied_row.record_kind == "applied_event"
+    assert applied_row.snapshot_semantics == "applied_after_graph"
+    assert applied_row.created_at == "2026-06-01T10:01:00+00:00"
+    assert applied_row.applies_staged_revision == staged.revision_iri
+    assert applied_row.triple_count == db.triple_count("map")
+    assert applied_row.exact_snapshot_available is True
+
+    exact_staged = db.list_graph_versions(
+        "map",
+        exact_only=True,
+        include_current=False,
+        record_kind="staged_patch",
+    )
+    assert exact_staged.exact_only is True
+    assert exact_staged.include_current is False
+    assert exact_staged.record_kind == "staged_patch"
+    assert exact_staged.current_graph is None
+    assert [item.revision_iri for item in exact_staged.versions] == [
+        staged.revision_iri
+    ]
+
+    first_page = db.list_graph_versions("map", limit=1, offset=0)
+    second_page = db.list_graph_versions("map", limit=1, offset=1)
+    assert first_page.count == 2
+    assert first_page.returned_count == 1
+    assert first_page.versions[0].revision_iri == applied.applied_revision_iri
+    assert second_page.count == 2
+    assert second_page.returned_count == 1
+    assert second_page.versions[0].revision_iri == staged.revision_iri
+
+
 def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     tmp_path: Path,
 ) -> None:

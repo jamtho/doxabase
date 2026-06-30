@@ -1281,4 +1281,5 @@ DoxaBase can apply one staged revision with conservative graph-state conflict
 checks and can restage a stale proposal when the target graph has drifted. New
 staged revisions store snapshot rows for exact count/digest drift reporting. It
 does not yet support rich semantic merge diagnostics, rebasing, approval state
-machines, or durable graph version browsing beyond those staged snapshots.
+machines, or historical graph checkout/replay. Use `list_graph_versions` for a
+read-only timeline of stored graph snapshots.

@@ -74,6 +74,13 @@ metadata there.
 Use `list_graph_revisions()` when you need to discover staged, applied, or
 historical revision records. Use `describe_graph_revision()` when you want a
 compact review of one revision record instead of generic outgoing triples.
+Use `list_graph_versions(graph_role="map")` when the task is graph-timeline
+browsing rather than revision-record routing. It lists stored snapshots for one
+graph role with `snapshot_semantics` values such as `staged_before_graph`,
+`applied_after_graph`, and `recorded_graph_snapshot`, plus the role-local
+count/digest and snapshot-evidence status. It is not checkout/replay; call
+`describe_revision_graph_snapshot(..., include_triples=True)` for exact stored
+triples on a specific version when that is necessary and safe to inspect.
 Use `describe_revision_lineage(revision_iri)` when you already have any staged
 source, restaged successor, or applied event IRI and need the graph-level
 restage/apply chain, current/latest pointers, alternatives, and next route
@@ -696,12 +703,13 @@ The response carries `snapshot_evidence` for the applied event and
 `history_only_count_digest`, import the companion revision snapshot JSON before
 assuming the graph-diff note is the full recovery context.
 
-This is still provenance browsing, not durable graph-version browsing. The
-applied event gives counts and content digests; `applied_source` gives compact
-intent context; the staged source gives the full intended patch. The diff helper
-compares the staged source's before snapshots with the applied event's after
-snapshots for changed graphs. It does not browse arbitrary historical graph
-versions.
+For a graph-role timeline over stored snapshots, use
+`list_graph_versions(graph_role="map")`. The applied event gives counts and
+content digests; `applied_source` gives compact intent context; the staged
+source gives the full intended patch. The diff helper compares the staged
+source's before snapshots with the applied event's after snapshots for changed
+graphs. It does not browse arbitrary historical graph versions, and
+`list_graph_versions` still does not provide checkout/replay.
 
 ## Limits
 

@@ -1584,6 +1584,15 @@ snapshot. It is the route for full before/after snapshot contents once another
 helper has identified the staged source IRI or applied event IRI. When exact
 stored rows are missing, it falls back to RDF count/digest metadata and leaves
 triple arrays empty.
+`list_graph_versions(graph_role, graph="history", exact_only=False,
+include_current=True, record_kind=None, limit=50, offset=0)` lists stored
+snapshot versions for one graph role, newest first. Each row carries the source
+revision IRI, `record_kind`, lineage links, role-local count/digest,
+`snapshot_evidence`, and `snapshot_semantics` values such as
+`staged_before_graph`, `applied_after_graph`, or `recorded_graph_snapshot`.
+Set `exact_only=True` to keep only rows with exact stored snapshot quads. This
+is a read-only timeline browser over stored revision snapshots, not a graph
+checkout or replay API.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
 or missing project/history RDF. Those actions mark placeholder paths with
@@ -1707,8 +1716,9 @@ graph-state conflict checks and preview validation. It rejects already-applied
 staged revisions, rejects target graph count or digest drift from the patch
 `beforeTripleCount` values and graph snapshots, and records an
 `rc:AppliedStagedRevision` history event linked to the staged revision. This is
-a conservative first apply path, not a full conflict/rebase or
-graph-version workflow. The return payload includes
+a conservative first apply path, not a full conflict/rebase or graph checkout
+workflow. Use `list_graph_versions` for the stored graph-version timeline. The
+return payload includes
 `post_apply_recheck_revision_iris`, a list of other current staged revisions
 sharing changed graphs or validation dependencies that should be rechecked
 before any further apply, and `post_apply_recheck_revisions`, compact rows with

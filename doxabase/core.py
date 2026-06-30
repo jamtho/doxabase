@@ -1953,6 +1953,53 @@ class GraphRevisionList:
 
 
 @dataclass(frozen=True)
+class GraphVersionListItem:
+    revision_iri: str
+    graph_role: str
+    record_kind: str
+    snapshot_semantics: str
+    summary: str | None
+    revision_type: str | None
+    revision_type_label: str | None
+    created_at: str | None
+    changed_graphs: list[str]
+    included_graphs: list[str]
+    applies_staged_revision: str | None
+    applied_by: str | None
+    restaged_from: str | None
+    restaged_by: str | None
+    current_restaged_by: str | None
+    triple_count: int | None
+    content_digest: str | None
+    count_basis: str
+    stored_at: str | None
+    exact_snapshot_available: bool
+    snapshot_evidence_status: str
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class GraphVersionList:
+    graph_role: str
+    graph: str | None
+    exact_only: bool
+    include_current: bool
+    record_kind: str | None
+    limit: int
+    offset: int
+    count: int
+    total_count: int
+    returned_count: int
+    current_graph: GraphSnapshotDescription | None
+    snapshot_evidence_status_counts: dict[str, int]
+    exact_snapshot_available_count: int
+    versions: list[GraphVersionListItem]
+    note: str
+
+
+@dataclass(frozen=True)
 class RevisionLineageDescription:
     selected_revision: GraphRevisionListItem
     selected_revision_iri: str
@@ -7719,6 +7766,191 @@ class DoxaBase:
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
+
+    def list_graph_versions(
+        self,
+        graph_role: str,
+        *,
+        graph: str | None = "history",
+        exact_only: bool = False,
+        include_current: bool = True,
+        record_kind: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> GraphVersionList:
+        if graph_role not in self._known_graph_names():
+            raise DoxaBaseError(f"Unknown graph role: {graph_role}")
+        self._ensure_non_negative("limit", limit)
+        self._ensure_non_negative("offset", offset)
+
+        revisions = self.list_graph_revisions(
+            graph=graph,
+            record_kind=record_kind,
+            include_apply_checks=False,
+            limit=1_000_000,
+        ).revisions
+        versions: list[GraphVersionListItem] = []
+        for revision in revisions:
+            snapshot = self._graph_version_snapshot_for_revision(
+                revision,
+                graph_role,
+                graph=graph,
+            )
+            if snapshot is None:
+                continue
+            if exact_only and not snapshot.exact_snapshot_available:
+                continue
+            versions.append(snapshot)
+
+        versions.sort(
+            key=lambda item: (
+                item.created_at or "",
+                item.stored_at or "",
+                item.summary or "",
+                item.revision_iri,
+            ),
+            reverse=True,
+        )
+        sliced_versions = versions[offset : offset + limit]
+        current_graph = (
+            GraphSnapshotDescription(
+                graph_role=graph_role,
+                triple_count=self.triple_count(graph_role),
+                content_digest=self._graph_content_digest(graph_role),
+            )
+            if include_current
+            else None
+        )
+        return GraphVersionList(
+            graph_role=graph_role,
+            graph=graph,
+            exact_only=exact_only,
+            include_current=include_current,
+            record_kind=record_kind,
+            limit=limit,
+            offset=offset,
+            count=len(versions),
+            total_count=len(versions),
+            returned_count=len(sliced_versions),
+            current_graph=current_graph,
+            snapshot_evidence_status_counts=self._graph_version_status_counts(
+                versions,
+            ),
+            exact_snapshot_available_count=sum(
+                1 for version in versions if version.exact_snapshot_available
+            ),
+            versions=sliced_versions,
+            note=(
+                "Graph versions are stored revision snapshots, not a temporal "
+                "checkout engine. Staged revision snapshots are before-states; "
+                "applied revision snapshots are after-states."
+            ),
+        )
+
+    def _graph_version_snapshot_for_revision(
+        self,
+        revision: GraphRevisionListItem,
+        graph_role: str,
+        *,
+        graph: str | None,
+    ) -> GraphVersionListItem | None:
+        snapshot = self.describe_revision_graph_snapshot(
+            revision.iri,
+            graph_role,
+            graph=graph,
+            include_triples=False,
+        )
+        if snapshot.triple_count is None:
+            return None
+        suggested_next_actions = [
+            SuggestedNextAction(
+                action_label="Inspect graph version snapshot",
+                tool_name="describe_revision_graph_snapshot",
+                mcp_tool_name="doxabase.describe_revision_graph_snapshot",
+                arguments={
+                    "iri": revision.iri,
+                    "graph_role": graph_role,
+                },
+                reason=(
+                    "Inspect this stored graph snapshot; pass "
+                    "include_triples=True only when exact historical triples "
+                    "are needed and safe to review."
+                ),
+                call=self._suggested_call_string(
+                    "describe_revision_graph_snapshot",
+                    {
+                        "iri": revision.iri,
+                        "graph_role": graph_role,
+                    },
+                ),
+            )
+        ]
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            suggested_next_actions,
+            snapshot.snapshot_evidence,
+        )
+        return GraphVersionListItem(
+            revision_iri=revision.iri,
+            graph_role=graph_role,
+            record_kind=revision.record_kind,
+            snapshot_semantics=self._graph_version_snapshot_semantics(revision),
+            summary=revision.summary,
+            revision_type=revision.revision_type,
+            revision_type_label=revision.revision_type_label,
+            created_at=revision.created_at,
+            changed_graphs=revision.changed_graphs,
+            included_graphs=self._graph_version_included_graphs(revision),
+            applies_staged_revision=revision.applies_staged_revision,
+            applied_by=revision.applied_by,
+            restaged_from=revision.restaged_from,
+            restaged_by=revision.restaged_by,
+            current_restaged_by=revision.current_restaged_by,
+            triple_count=snapshot.triple_count,
+            content_digest=snapshot.content_digest,
+            count_basis=snapshot.count_basis,
+            stored_at=snapshot.stored_at,
+            exact_snapshot_available=snapshot.exact_snapshot_available,
+            snapshot_evidence_status=snapshot.snapshot_evidence.status,
+            snapshot_evidence=snapshot.snapshot_evidence,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    @staticmethod
+    def _graph_version_snapshot_semantics(
+        revision: GraphRevisionListItem,
+    ) -> str:
+        if revision.record_kind == "staged_patch":
+            return "staged_before_graph"
+        if revision.record_kind == "applied_event":
+            return "applied_after_graph"
+        return "recorded_graph_snapshot"
+
+    @staticmethod
+    def _graph_version_included_graphs(
+        revision: GraphRevisionListItem,
+    ) -> list[str]:
+        return list(
+            dict.fromkeys(
+                [
+                    *revision.changed_graphs,
+                    *revision.snapshot_evidence.rdf_snapshot_graph_roles,
+                    *revision.snapshot_evidence.stored_snapshot_graph_roles,
+                ]
+            )
+        )
+
+    @staticmethod
+    def _graph_version_status_counts(
+        versions: Iterable[GraphVersionListItem],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for version in versions:
+            status = version.snapshot_evidence_status
+            counts[status] = counts.get(status, 0) + 1
+        return counts
 
     @staticmethod
     def _graph_revision_list_counts(

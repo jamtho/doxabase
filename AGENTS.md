@@ -132,8 +132,9 @@ be treated as a full executable catalog.
 Revision metadata and staged graph patch proposals exist. The current runtime
 can apply one staged revision with conservative graph-state conflict checks, and
 new staged revisions store snapshot rows for exact count/digest drift reporting.
-Rich conflict handling, rebasing, and durable graph version browsing beyond
-those staged snapshots are not implemented yet. For the longer plan, see
+Rich conflict handling, rebasing, and historical graph checkout/replay are not
+implemented yet; use `list_graph_versions` for a read-only timeline over stored
+graph snapshots. For the longer plan, see
 `doxabase_design_docs/03-doxabase-v1-storage-schema.md` and the revision model
 in `doxabase_design_docs/01-doxabase-v1-design-brief.md`.
 

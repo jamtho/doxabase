@@ -235,6 +235,29 @@ def list_graph_revisions_tool(
     )
 
 
+def list_graph_versions_tool(
+    db: DoxaBase,
+    graph_role: str,
+    graph: str | None = "history",
+    exact_only: bool = False,
+    include_current: bool = True,
+    record_kind: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    return to_dict(
+        db.list_graph_versions(
+            graph_role=graph_role,
+            graph=graph,
+            exact_only=exact_only,
+            include_current=include_current,
+            record_kind=record_kind,
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
 def describe_revision_lineage_tool(
     db: DoxaBase,
     iri: str,

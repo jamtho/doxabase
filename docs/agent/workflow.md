@@ -116,5 +116,5 @@ In the current V1 slice, the MCP interface exposes route-explained context
 slices and reviewable staged revisions. It can apply one staged revision with
 conservative graph-state conflict checks, and new staged revisions store
 snapshot rows for exact count/digest drift reporting. It does not yet provide
-rich conflict handling, rebasing, or durable graph version browsing beyond those
-staged snapshots.
+rich conflict handling, rebasing, or historical graph checkout/replay beyond
+stored graph-version snapshot browsing.
