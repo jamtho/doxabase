@@ -2859,6 +2859,16 @@ class AggregatedColumnDescription:
 
 
 @dataclass(frozen=True)
+class RelationshipEndpointDescription:
+    iri: str
+    dataset: ResourceSummary | None
+    direction: str | None
+    direction_label: str | None
+    role: str | None
+    order: int | None
+
+
+@dataclass(frozen=True)
 class RelationshipDescription:
     iri: str
     label: str | None
@@ -2871,6 +2881,9 @@ class RelationshipDescription:
     target_dataset: ResourceSummary | None
     source_datasets: list[ResourceSummary]
     target_datasets: list[ResourceSummary]
+    endpoints: list[RelationshipEndpointDescription]
+    source_endpoints: list[RelationshipEndpointDescription]
+    target_endpoints: list[RelationshipEndpointDescription]
     foreign_key_from: ResourceSummary | None
     foreign_key_to: ResourceSummary | None
     referential_integrity: ResourceSummary | None
@@ -31172,6 +31185,8 @@ class DoxaBase:
         target_dataset: str | None = None,
         source_datasets: Iterable[str] | str | None = None,
         target_datasets: Iterable[str] | str | None = None,
+        source_endpoints: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        target_endpoints: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         from_column: str | None = None,
         to_column: str | None = None,
         identifying_columns: Iterable[str] | str | None = None,
@@ -31206,6 +31221,34 @@ class DoxaBase:
             "target_datasets",
             target_dataset,
             target_datasets,
+        )
+        source_endpoint_specs = self._normalise_relationship_endpoint_specs(
+            "source_endpoints",
+            source_endpoints,
+            relationship_iri=relationship_iri,
+            direction="source",
+        )
+        target_endpoint_specs = self._normalise_relationship_endpoint_specs(
+            "target_endpoints",
+            target_endpoints,
+            relationship_iri=relationship_iri,
+            direction="target",
+        )
+        source_dataset_values = list(
+            dict.fromkeys(
+                [
+                    *source_dataset_values,
+                    *(spec["dataset"] for spec in source_endpoint_specs),
+                ]
+            )
+        )
+        target_dataset_values = list(
+            dict.fromkeys(
+                [
+                    *target_dataset_values,
+                    *(spec["dataset"] for spec in target_endpoint_specs),
+                ]
+            )
         )
         aggregated_column_values = self._normalise_aggregated_column_specs(
             aggregated_columns,
@@ -31286,6 +31329,57 @@ class DoxaBase:
                     self._resource_ref("target_datasets", target_dataset_value),
                 )
             )
+        for endpoint_spec in [*source_endpoint_specs, *target_endpoint_specs]:
+            endpoint = URIRef(endpoint_spec["iri"])
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasRelationshipEndpoint")),
+                    endpoint,
+                )
+            )
+            graph.add(
+                (
+                    endpoint,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:RelationshipEndpoint")),
+                )
+            )
+            graph.add(
+                (
+                    endpoint,
+                    URIRef(self.expand_iri("rc:endpointDataset")),
+                    self._resource_ref(endpoint_spec["field"], endpoint_spec["dataset"]),
+                )
+            )
+            graph.add(
+                (
+                    endpoint,
+                    URIRef(self.expand_iri("rc:endpointDirection")),
+                    URIRef(
+                        self.expand_iri(
+                            "rc:SourceEndpoint"
+                            if endpoint_spec["direction"] == "source"
+                            else "rc:TargetEndpoint"
+                        )
+                    ),
+                )
+            )
+            graph.add(
+                (
+                    endpoint,
+                    URIRef(self.expand_iri("rc:endpointOrder")),
+                    Literal(endpoint_spec["order"], datatype=XSD.integer),
+                )
+            )
+            if endpoint_spec["role"] is not None:
+                graph.add(
+                    (
+                        endpoint,
+                        URIRef(self.expand_iri("rc:endpointRole")),
+                        Literal(endpoint_spec["role"]),
+                    )
+                )
         if relationship_type == "foreign_key":
             assert from_column is not None
             assert to_column is not None
@@ -31453,6 +31547,7 @@ class DoxaBase:
             str(RDFS.comment),
             self.expand_iri("rc:sourceDataset"),
             self.expand_iri("rc:targetDataset"),
+            self.expand_iri("rc:hasRelationshipEndpoint"),
             self.expand_iri("rc:foreignKeyFrom"),
             self.expand_iri("rc:foreignKeyTo"),
             self.expand_iri("rc:declared"),
@@ -31465,6 +31560,7 @@ class DoxaBase:
             self.expand_iri("rc:groupByColumn"),
             self.expand_iri("rc:hasAggregatedColumn"),
         ]
+        self._delete_existing_relationship_endpoint_triples(relationship_iri)
         self._delete_existing_aggregated_column_triples(relationship_iri)
         triples = self._replace_subject_triples(
             "map",
@@ -31490,6 +31586,56 @@ class DoxaBase:
             values.extend(self._string_values(plural_name, singular_value))
         values.extend(self._string_values(plural_name, plural_values))
         return list(dict.fromkeys(values))
+
+    def _normalise_relationship_endpoint_specs(
+        self,
+        name: str,
+        values: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        *,
+        relationship_iri: str,
+        direction: TypingLiteral["source", "target"],
+    ) -> list[dict[str, Any]]:
+        if values is None:
+            return []
+        if isinstance(values, MappingABC):
+            raw_values = [values]
+        else:
+            raw_values = list(values)
+        specs: list[dict[str, Any]] = []
+        for index, value in enumerate(raw_values, start=1):
+            if not isinstance(value, MappingABC):
+                raise DoxaBaseError(f"{name}[{index}] must be a mapping")
+            dataset = value.get("dataset", value.get("dataset_iri"))
+            if not isinstance(dataset, str) or not dataset:
+                raise DoxaBaseError(
+                    f"{name}[{index}] requires a non-empty dataset or dataset_iri"
+                )
+            role = value.get("role")
+            if role is not None and not isinstance(role, str):
+                raise DoxaBaseError(f"{name}[{index}].role must be a string")
+            order_value = value.get("order", value.get("sequence_index", index))
+            if not isinstance(order_value, int) or order_value < 1:
+                raise DoxaBaseError(
+                    f"{name}[{index}].order must be a positive integer"
+                )
+            endpoint_iri = value.get("iri")
+            if endpoint_iri is not None and not isinstance(endpoint_iri, str):
+                raise DoxaBaseError(f"{name}[{index}].iri must be a string")
+            specs.append(
+                {
+                    "iri": (
+                        self._required_iri(f"{name}[{index}].iri", endpoint_iri)
+                        if endpoint_iri is not None
+                        else f"{relationship_iri}/{direction}-endpoint/{index}"
+                    ),
+                    "field": f"{name}[{index}].dataset",
+                    "dataset": dataset,
+                    "direction": direction,
+                    "role": role,
+                    "order": order_value,
+                }
+            )
+        return specs
 
     def _validate_relationship_column_resources(
         self,
@@ -31627,6 +31773,37 @@ class DoxaBase:
                 }
             )
         return normalised
+
+    def _delete_existing_relationship_endpoint_triples(
+        self,
+        relationship_iri: str,
+    ) -> None:
+        endpoint_iris = self._objects(
+            ["map"],
+            relationship_iri,
+            "rc:hasRelationshipEndpoint",
+        )
+        if not endpoint_iris:
+            return
+        predicates = [
+            str(RDF.type),
+            self.expand_iri("rc:endpointDataset"),
+            self.expand_iri("rc:endpointDirection"),
+            self.expand_iri("rc:endpointRole"),
+            self.expand_iri("rc:endpointOrder"),
+        ]
+        placeholders = ",".join("?" for _ in predicates)
+        for endpoint_iri in endpoint_iris:
+            self._conn.execute(
+                f"""
+                DELETE FROM quads
+                WHERE graph = 'map'
+                  AND subject = ?
+                  AND predicate IN ({placeholders})
+                """,
+                [endpoint_iri, *predicates],
+            )
+        self._conn.commit()
 
     def _delete_existing_aggregated_column_triples(self, relationship_iri: str) -> None:
         mapping_iris = self._objects(["map"], relationship_iri, "rc:hasAggregatedColumn")
@@ -53398,6 +53575,76 @@ class DoxaBase:
             for relationship_iri in sorted(relationship_iris)
         ]
 
+    def _relationship_endpoint_descriptions(
+        self,
+        relationship_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[RelationshipEndpointDescription]:
+        endpoints = [
+            self._describe_relationship_endpoint(
+                endpoint_iri,
+                data_graphs,
+                lookup_graphs,
+            )
+            for endpoint_iri in self._objects(
+                data_graphs,
+                relationship_iri,
+                "rc:hasRelationshipEndpoint",
+            )
+        ]
+        direction_rank = {"source": 0, "target": 1}
+        return sorted(
+            endpoints,
+            key=lambda endpoint: (
+                direction_rank.get(endpoint.direction or "", 2),
+                endpoint.order or 999999,
+                endpoint.iri,
+            ),
+        )
+
+    def _describe_relationship_endpoint(
+        self,
+        endpoint_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> RelationshipEndpointDescription:
+        dataset_iri = self._first_object(
+            data_graphs,
+            endpoint_iri,
+            "rc:endpointDataset",
+        )
+        direction_iri = self._first_object(
+            data_graphs,
+            endpoint_iri,
+            "rc:endpointDirection",
+        )
+        direction = None
+        if direction_iri == self.expand_iri("rc:SourceEndpoint"):
+            direction = "source"
+        elif direction_iri == self.expand_iri("rc:TargetEndpoint"):
+            direction = "target"
+        return RelationshipEndpointDescription(
+            iri=endpoint_iri,
+            dataset=self._optional_resource_summary(lookup_graphs, dataset_iri),
+            direction=direction,
+            direction_label=self._label_for_resource(direction_iri),
+            role=self._first_object(data_graphs, endpoint_iri, "rc:endpointRole"),
+            order=self._int_object(data_graphs, endpoint_iri, "rc:endpointOrder"),
+        )
+
+    @staticmethod
+    def _relationship_dataset_iris_with_endpoint_order(
+        dataset_iris: list[str],
+        endpoints: list[RelationshipEndpointDescription],
+    ) -> list[str]:
+        ordered_endpoint_iris = [
+            endpoint.dataset.iri
+            for endpoint in endpoints
+            if endpoint.dataset is not None
+        ]
+        return list(dict.fromkeys([*ordered_endpoint_iris, *dataset_iris]))
+
     def _describe_relationship(
         self,
         relationship_iri: str,
@@ -53424,6 +53671,25 @@ class DoxaBase:
             data_graphs,
             relationship_iri,
             "rc:targetDataset",
+        )
+        endpoints = self._relationship_endpoint_descriptions(
+            relationship_iri,
+            data_graphs,
+            lookup_graphs,
+        )
+        source_endpoints = [
+            endpoint for endpoint in endpoints if endpoint.direction == "source"
+        ]
+        target_endpoints = [
+            endpoint for endpoint in endpoints if endpoint.direction == "target"
+        ]
+        source_dataset_iris = self._relationship_dataset_iris_with_endpoint_order(
+            source_dataset_iris,
+            source_endpoints,
+        )
+        target_dataset_iris = self._relationship_dataset_iris_with_endpoint_order(
+            target_dataset_iris,
+            target_endpoints,
         )
         source_dataset = source_dataset_iris[0] if source_dataset_iris else None
         target_dataset = target_dataset_iris[0] if target_dataset_iris else None
@@ -53511,6 +53777,9 @@ class DoxaBase:
             target_dataset=target_dataset_summary,
             source_datasets=source_dataset_summaries,
             target_datasets=target_dataset_summaries,
+            endpoints=endpoints,
+            source_endpoints=source_endpoints,
+            target_endpoints=target_endpoints,
             foreign_key_from=foreign_key_from_summary,
             foreign_key_to=foreign_key_to_summary,
             referential_integrity=self._optional_resource_summary(

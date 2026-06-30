@@ -295,9 +295,30 @@ and aggregate mapping column fields.
 For no-column asset-level derivation or aggregation, use `source_datasets` and
 `target_datasets` without column fields. The singular `source_dataset` and
 `target_dataset` arguments are still accepted as compatibility shortcuts for
-one endpoint each. Use observations, patterns, or staged systematisation when
-the relationship needs richer asset roles, transform details, or competing RDF
-framings beyond endpoint routing.
+one endpoint each. Use `source_endpoints` and `target_endpoints` when endpoint
+role or precedence matters:
+
+```python
+record_map_relationship_tool(
+    db,
+    iri="ex:masks_from_images_labels_and_sidecars",
+    relationship_type="derivation",
+    source_endpoints=[
+        {"dataset": "ex:RawImages", "role": "primary image input", "order": 1},
+        {"dataset": "ex:LabelSchema", "role": "class-id lookup", "order": 2},
+        {"dataset": "ex:Sidecars", "role": "geometry sidecar input", "order": 3},
+    ],
+    target_endpoints=[
+        {"dataset": "ex:SegmentationMasks", "role": "indexed mask output"},
+    ],
+)
+```
+
+Endpoint specs still write ordinary `sourceDataset` / `targetDataset` edges for
+compatibility, while `describe_dataset` exposes the ordered `source_endpoints`
+and `target_endpoints` lists. Use observations, patterns, or staged
+systematisation when the relationship needs richer transform details or
+competing RDF framings beyond endpoint role/order.
 
 Column-shaped aggregation relationships can carry `source_dataset`,
 `target_dataset`, `group_by_columns`, and `aggregated_columns`. Each

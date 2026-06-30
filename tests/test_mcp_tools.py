@@ -10726,17 +10726,35 @@ def test_record_map_relationship_tool_accepts_asset_level_endpoints(
         iri=f"{base}mosaic_derivation",
         relationship_type="derivation",
         label="mosaic derivation",
-        source_datasets=[raw, correction],
+        source_endpoints=[
+            {
+                "dataset": raw,
+                "role": "primary packet input",
+                "order": 1,
+            },
+            {
+                "dataset": correction,
+                "role": "navigation correction input",
+                "order": 2,
+            },
+        ],
         target_datasets=[mosaic],
     )
 
     assert result["resource_type"] == RC + "Derivation"
     description = describe_dataset_tool(db, iri=mosaic)
     relationship = description["relationships"][0]
-    assert {dataset["iri"] for dataset in relationship["source_datasets"]} == {
+    assert [dataset["iri"] for dataset in relationship["source_datasets"]] == [
         raw,
         correction,
-    }
+    ]
+    assert [
+        (endpoint["dataset"]["iri"], endpoint["role"], endpoint["order"])
+        for endpoint in relationship["source_endpoints"]
+    ] == [
+        (raw, "primary packet input", 1),
+        (correction, "navigation correction input", 2),
+    ]
     assert [dataset["iri"] for dataset in relationship["target_datasets"]] == [
         mosaic
     ]

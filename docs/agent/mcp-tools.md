@@ -1544,13 +1544,16 @@ mapping should include `target_column`, `source_columns`, optional
 `aggregation_function`, and optional `within_group_ordering`. Asset-level
 derivations or aggregations can use `source_datasets` and `target_datasets`
 without column mappings; singular `source_dataset` and `target_dataset` remain
-compatibility shortcuts for one endpoint each. Relationship
-endpoints, columns, functions, and properties are resource-valued fields, so use
-IRIs or CURIEs rather than prose. Dataset relationship descriptions expose
-`relationship_kind` as the RDF class IRI and `relationship_type` as the helper
-token such as `foreign_key` or `aggregation`. Column fields must point to
-column resources; known data assets, datasets, and tables are rejected in those
-slots.
+compatibility shortcuts for one endpoint each. Use `source_endpoints` or
+`target_endpoints` when endpoint role or order matters; each entry accepts
+`dataset`, optional reviewed string `role`, optional one-based `order`, and
+optional endpoint `iri`, while still writing compatibility source/target
+dataset edges. Endpoint datasets, columns, functions, and properties are
+resource-valued fields, so use IRIs or CURIEs rather than prose. Dataset
+relationship descriptions expose `relationship_kind` as the RDF class IRI and
+`relationship_type` as the helper token such as `foreign_key` or `aggregation`.
+Column fields must point to column resources; known data assets, datasets, and
+tables are rejected in those slots.
 
 `doxabase.record_graph_revision`
 

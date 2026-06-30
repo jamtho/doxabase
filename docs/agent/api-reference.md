@@ -1087,8 +1087,12 @@ identifiers, derivations, and aggregations; for aggregations, pass
 `source_columns`, optional `aggregation_function`, and optional
 `within_group_ordering`. For no-column asset-level derivations or aggregations,
 pass `source_datasets` and `target_datasets`; the singular `source_dataset` and
-`target_dataset` arguments remain compatibility shortcuts. Relationship column
-fields must point to column
+`target_dataset` arguments remain compatibility shortcuts. When role or
+precedence matters for asset endpoints, pass `source_endpoints` or
+`target_endpoints` entries such as
+`{"dataset": "ex:RawImages", "role": "primary image input", "order": 1}`.
+Endpoint specs also write the compatibility `sourceDataset` / `targetDataset`
+edges. Relationship column fields must point to column
 resources; known data assets, datasets, and tables are rejected in those slots.
 Dataset descriptions expose all partition columns as
 `partition_columns`; the older singular `partition_column` field remains as a

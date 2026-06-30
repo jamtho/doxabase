@@ -313,6 +313,36 @@ rc:AggregationShape a sh:NodeShape ;
         sh:message "hasAggregatedColumn values should match rc:AggregatedColumnShape." ;
     ] .
 
+rc:RelationshipEndpointShape a sh:NodeShape ;
+    sh:targetClass rc:RelationshipEndpoint ;
+    sh:property [
+        sh:path rc:endpointDataset ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "RelationshipEndpoint must name exactly one endpointDataset IRI." ;
+    ] ;
+    sh:property [
+        sh:path rc:endpointDirection ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( rc:SourceEndpoint rc:TargetEndpoint ) ;
+        sh:message "endpointDirection must be SourceEndpoint or TargetEndpoint." ;
+    ] ;
+    sh:property [
+        sh:path rc:endpointRole ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "endpointRole must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:endpointOrder ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "endpointOrder must be a positive integer if declared." ;
+    ] .
+
 rc:AggregatedColumnShape a sh:NodeShape ;
     sh:targetClass rc:AggregatedColumn ;
     sh:property [

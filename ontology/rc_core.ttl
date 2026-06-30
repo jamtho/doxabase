@@ -313,6 +313,12 @@ rc:Aggregation a rdfs:Class ;
     rdfs:subClassOf rc:Relationship ;
     rdfs:comment "A declaration that a target asset or column is derived by grouping and aggregating a source." .
 
+rc:RelationshipEndpoint a rdfs:Class ;
+    rdfs:comment "A role/order annotation for one dataset endpoint in a relationship." .
+
+rc:RelationshipEndpointDirection a rdfs:Class ;
+    rdfs:comment "Whether a relationship endpoint is on the source or target side." .
+
 rc:AggregatedColumn a rdfs:Class ;
     rdfs:comment "A per-column mapping inside an aggregation relationship." .
 
@@ -369,6 +375,31 @@ rc:sourceDataset a rdf:Property ;
 rc:targetDataset a rdf:Property ;
     rdfs:range rc:DataAsset ;
     rdfs:comment "The target dataset or data asset in a relationship." .
+
+rc:hasRelationshipEndpoint a rdf:Property ;
+    rdfs:domain rc:Relationship ;
+    rdfs:range rc:RelationshipEndpoint ;
+    rdfs:comment "Links a relationship to a structured dataset endpoint carrying optional role or order metadata." .
+
+rc:endpointDataset a rdf:Property ;
+    rdfs:domain rc:RelationshipEndpoint ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The dataset or data asset named by a structured relationship endpoint." .
+
+rc:endpointDirection a rdf:Property ;
+    rdfs:domain rc:RelationshipEndpoint ;
+    rdfs:range rc:RelationshipEndpointDirection ;
+    rdfs:comment "Whether this structured relationship endpoint is a source or target endpoint." .
+
+rc:endpointRole a rdf:Property ;
+    rdfs:domain rc:RelationshipEndpoint ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Short reviewed role text for the endpoint, such as primary image input or label lookup." .
+
+rc:endpointOrder a rdf:Property ;
+    rdfs:domain rc:RelationshipEndpoint ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "One-based endpoint order when source or target precedence matters." .
 
 rc:sourceColumn a rdf:Property ;
     rdfs:range rc:Column ;
@@ -448,6 +479,12 @@ rc:Invertible a rc:DerivationProperty ;
 
 rc:Lossy a rc:DerivationProperty ;
     rdfs:comment "The derivation loses information." .
+
+rc:SourceEndpoint a rc:RelationshipEndpointDirection ;
+    rdfs:label "source endpoint" .
+
+rc:TargetEndpoint a rc:RelationshipEndpointDirection ;
+    rdfs:label "target endpoint" .
 
 rc:Min a rdfs:Resource ; rdfs:label "MIN" .
 rc:Max a rdfs:Resource ; rdfs:label "MAX" .

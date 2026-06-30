@@ -2486,6 +2486,9 @@ relationship.source_dataset
 relationship.target_dataset
 relationship.source_datasets
 relationship.target_datasets
+relationship.endpoints
+relationship.source_endpoints
+relationship.target_endpoints
 relationship.foreign_key_from
 relationship.foreign_key_to
 relationship.referential_integrity
@@ -2508,6 +2511,10 @@ aggregations, use `group_by_columns` and `aggregated_columns` when columns are
 involved, and `source_datasets` / `target_datasets` for no-column asset-level
 rollups. The singular `source_dataset` and `target_dataset` fields are
 compatibility shortcuts to the first endpoint when present.
+`source_datasets` and `target_datasets` are simple endpoint sets. When source or
+target role/order matters, use `source_endpoints` and `target_endpoints`; each
+endpoint carries `dataset`, `direction`, `direction_label`, `role`, and
+one-based `order`.
 
 `dataset.profile_observations` contains recent dataset-scoped
 `ProfileObservationSummary` items for observations whose `observed_asset` is the

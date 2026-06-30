@@ -3369,9 +3369,10 @@ few useful gaps:
   patterns, and context slices. Base vocabulary now includes common
   image/document `rc:FileFormat` terms (`rc:JPEG`, `rc:PNG`, `rc:TIFF`,
   `rc:GeoTIFF`, and `rc:PDF`), so agents do not need project-local terms for
-  those formats. Optional relationship endpoint role/order support remains the
-  next genuine non-tabular modeling gap; using `derivation_properties` for
-  endpoint roles is shape-invalid and should be avoided.
+  those formats. `record_map_relationship()` now accepts `source_endpoints` and
+  `target_endpoints` for optional endpoint role/order metadata while preserving
+  compatibility `sourceDataset` / `targetDataset` edges; use that route instead
+  of `derivation_properties` for endpoint roles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

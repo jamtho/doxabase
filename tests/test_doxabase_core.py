@@ -123,9 +123,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1256
+    assert graphs["base_ontology"].triple_count == 1284
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1230
+    assert graphs["base_shapes"].triple_count == 1259
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -22613,7 +22613,18 @@ def test_record_map_relationship_supports_asset_level_endpoints(
         f"{base}mosaic_from_bags_and_navigation",
         relationship_type="derivation",
         label="mosaic from bags and navigation corrections",
-        source_datasets=[raw_bags, navigation],
+        source_endpoints=[
+            {
+                "dataset": raw_bags,
+                "role": "primary sonar input",
+                "order": 1,
+            },
+            {
+                "dataset": navigation,
+                "role": "navigation correction input",
+                "order": 2,
+            },
+        ],
         target_datasets=[mosaic],
         derivation_properties=["rc:Deterministic", "rc:Lossy"],
     )
@@ -22636,6 +22647,21 @@ def test_record_map_relationship_supports_asset_level_endpoints(
     assert {dataset.iri for dataset in derivation.source_datasets} == {
         raw_bags,
         navigation,
+    }
+    assert [dataset.iri for dataset in derivation.source_datasets] == [
+        raw_bags,
+        navigation,
+    ]
+    assert [
+        (endpoint.dataset.iri if endpoint.dataset else None, endpoint.role)
+        for endpoint in derivation.source_endpoints
+    ] == [
+        (raw_bags, "primary sonar input"),
+        (navigation, "navigation correction input"),
+    ]
+    assert [endpoint.order for endpoint in derivation.source_endpoints] == [1, 2]
+    assert {endpoint.direction for endpoint in derivation.source_endpoints} == {
+        "source"
     }
     assert [dataset.iri for dataset in derivation.target_datasets] == [mosaic]
     assert derivation.source_columns == []
