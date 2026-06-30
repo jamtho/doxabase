@@ -2312,13 +2312,17 @@ when a receiver has the manifest as well as the paired project/history TriG and
 revision snapshot JSON artifacts. The helper resolves relative artifact paths
 from the manifest directory, reports pre-import snapshot evidence, imports the
 TriG first and snapshot JSON second, then returns post-import snapshot evidence
-plus `plan_staged_revision_recovery` for the manifest revisions. A stale-seed
-recovery handoff can legitimately have no revision rows; in that case the real
-import returns an empty recovery plan with `mutation_allowed_after` set to
-`no_mutation_frontier`, and the next step is to rerun `project_brief` in the
-fresh capsule. Pass `dry_run=true` to inspect the manifest paths and expected
-receiver action without mutating the capsule. Pass `replace=true` only when
-overwriting existing graph roles and stored snapshot pairs is intentional.
+plus `plan_staged_revision_recovery` for the manifest revisions. Manifest
+revision lists may include ordinary non-staged `rc:GraphRevision` history or
+snapshot context alongside staged patch rows; those import as informational
+recovery lanes and should be inspected with `describe_graph_revision`, not
+applied or restaged. A stale-seed recovery handoff can legitimately have no
+revision rows; in that case the real import returns an empty recovery plan with
+`mutation_allowed_after` set to `no_mutation_frontier`, and the next step is to
+rerun `project_brief` in the fresh capsule. Pass `dry_run=true` to inspect the
+manifest paths and expected receiver action without mutating the capsule. Pass
+`replace=true` only when overwriting existing graph roles and stored snapshot
+pairs is intentional.
 If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is

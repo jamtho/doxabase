@@ -34158,6 +34158,7 @@ class DoxaBase:
         (
             restage_revision_iris,
             patchless_staged_history_iris,
+            non_staged_history_iris,
             snapshot_only_revision_iris,
             applied_event_iris,
         ) = self._staged_recovery_split_non_patch_inputs(
@@ -34218,6 +34219,13 @@ class DoxaBase:
             )
             for revision_iri in patchless_staged_history_iris
         ]
+        non_staged_history_items = [
+            self._non_staged_history_recovery_item(
+                revision_iri,
+                history_graphs=history_graphs,
+            )
+            for revision_iri in non_staged_history_iris
+        ]
         snapshot_only_batch_items = [
             self._snapshot_only_recovery_item(
                 revision_iri,
@@ -34249,6 +34257,23 @@ class DoxaBase:
                 "It cannot be applied or restaged until a project/history RDF "
                 "bundle with patch entries is imported; valid staged patch rows "
                 "in the same request were still planned."
+            )
+        for item in non_staged_history_items:
+            lane, warning, _, _ = self._staged_recovery_lane_from_batch_item(
+                item,
+                summary_by_iri=summary_by_iri,
+                include_drafts=False,
+                repair_drafts_remaining=0,
+                validation_scope=validation_scope,
+            )
+            lanes.append(lane)
+            if warning is not None:
+                warnings.append(warning)
+            warnings.append(
+                "Recovery selection includes non-staged graph-revision history "
+                f"context: {item.source_revision_iri}. It is available for "
+                "inspection and snapshot evidence, but is not an apply/restage "
+                "target."
             )
         for item in snapshot_only_batch_items:
             lane, warning, _, _ = self._staged_recovery_lane_from_batch_item(
@@ -34399,6 +34424,7 @@ class DoxaBase:
                 revision_iri: revision_iri
                 for revision_iri in [
                     *patchless_staged_history_iris,
+                    *non_staged_history_iris,
                     *snapshot_only_revision_iris,
                     *applied_event_iris,
                 ]
@@ -34409,6 +34435,7 @@ class DoxaBase:
                 [
                     *batch.review_revision_iris,
                     *patchless_staged_history_iris,
+                    *non_staged_history_iris,
                     *snapshot_only_revision_iris,
                     *applied_event_iris,
                 ]
@@ -34423,6 +34450,11 @@ class DoxaBase:
                 "missing_patch_payload",
                 [],
             ).extend(patchless_staged_history_iris)
+        if non_staged_history_iris:
+            not_restageable_revision_iris_by_reason.setdefault(
+                "non_staged_history_record",
+                [],
+            ).extend(non_staged_history_iris)
         if snapshot_only_revision_iris:
             not_restageable_revision_iris_by_reason.setdefault(
                 "missing_history_graph",
@@ -34502,6 +34534,7 @@ class DoxaBase:
                     [
                         *batch.bundle_summary.recommended_review_iris,
                         *patchless_staged_history_iris,
+                        *non_staged_history_iris,
                         *snapshot_only_revision_iris,
                         *applied_event_iris,
                     ]
@@ -35122,9 +35155,10 @@ class DoxaBase:
         revision_iris: Iterable[str],
         *,
         history_graphs: list[str],
-    ) -> tuple[list[str], list[str], list[str], list[str]]:
+    ) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
         restage_revision_iris: list[str] = []
         patchless_staged_history_iris: list[str] = []
+        non_staged_history_iris: list[str] = []
         snapshot_only_revision_iris: list[str] = []
         applied_event_iris: list[str] = []
         staged_revision_type = self.expand_iri("rc:StagedRevision")
@@ -35159,6 +35193,12 @@ class DoxaBase:
             ):
                 patchless_staged_history_iris.append(revision_value)
             elif (
+                is_graph_revision
+                and not has_patch_payload
+                and applies_staged_revision is None
+            ):
+                non_staged_history_iris.append(revision_value)
+            elif (
                 self._revision_snapshot_evidence_status(
                     revision_value,
                     history_graphs,
@@ -35171,6 +35211,7 @@ class DoxaBase:
         return (
             restage_revision_iris,
             patchless_staged_history_iris,
+            non_staged_history_iris,
             snapshot_only_revision_iris,
             applied_event_iris,
         )
@@ -35393,6 +35434,99 @@ class DoxaBase:
                 "rc:StagedRevision history record without staged patch entries. "
                 "It is useful as metadata, but cannot be applied or mechanically "
                 "restaged until patch payloads are imported."
+            ),
+        )
+
+    def _non_staged_history_recovery_item(
+        self,
+        revision_iri: str,
+        *,
+        history_graphs: list[str],
+    ) -> StagedGraphRevisionBatchRestageItem:
+        revision = self.describe_graph_revision(revision_iri)
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            revision.iri,
+            history_graphs,
+        )
+        snapshot_completeness = self._snapshot_evidence_completeness_label(
+            snapshot_evidence
+        )
+        staged_validation_status = self._staged_validation_status(
+            conforms=revision.validation_conforms,
+            result_count=revision.validation_result_count,
+        )
+        arguments = {"iri": revision.iri, "graph": "history"}
+        next_action = RevisionNextAction(
+            action_type="inspect_non_staged_history_record",
+            queue="informational",
+            action_label="Inspect non-staged history record",
+            tool_name="describe_graph_revision",
+            mcp_tool_name="doxabase.describe_graph_revision",
+            arguments=arguments,
+            reason=(
+                "This explicit recovery input is ordinary graph-revision "
+                "history or snapshot context, not a staged patch. Inspect it as "
+                "history instead of applying or restaging it."
+            ),
+            call=self._suggested_call_string("describe_graph_revision", arguments),
+            source="plan_staged_revision_recovery",
+        )
+        suggested_action = SuggestedNextAction(
+            action_label=next_action.action_label,
+            tool_name=next_action.tool_name or "describe_graph_revision",
+            mcp_tool_name=next_action.mcp_tool_name
+            or "doxabase.describe_graph_revision",
+            arguments=arguments,
+            reason=next_action.reason,
+            call=next_action.call or "",
+        )
+        queue_item = self._revision_next_action_queue_item(
+            row_iri=revision.iri,
+            next_action=next_action,
+            record_kind=revision.record_kind,
+            application_status="not_available",
+            application_decision="non_staged_history_record",
+            staged_validation_status=staged_validation_status,
+        )
+        return StagedGraphRevisionBatchRestageItem(
+            source_revision_iri=revision.iri,
+            summary=revision.summary,
+            status_before="not_available",
+            decision_before="non_staged_history_record",
+            routing_decision_before="inspect_non_staged_history_record",
+            stale_resolution_state_before=None,
+            blocking_reasons_before=["non_staged_history_record"],
+            exact_drift_summary_before=[],
+            source_staged_validation_status=staged_validation_status,
+            source_validation_result_count=revision.validation_result_count,
+            source_snapshot_evidence=snapshot_evidence,
+            source_snapshot_evidence_completeness=snapshot_completeness,
+            status_after="not_available",
+            decision_after="non_staged_history_record",
+            routing_decision_after="inspect_non_staged_history_record",
+            stale_resolution_state_after=None,
+            blocking_reasons_after=["non_staged_history_record"],
+            exact_drift_summary_after=[],
+            current_staged_validation_status=staged_validation_status,
+            current_validation_result_count=revision.validation_result_count,
+            current_snapshot_evidence=snapshot_evidence,
+            current_snapshot_evidence_completeness=snapshot_completeness,
+            triples_to_add_after=0,
+            triples_to_remove_after=0,
+            action="skipped_non_staged_history_record",
+            not_restageable_reason="non_staged_history_record",
+            restaged_from=None,
+            restaged_revision_iri=None,
+            current_restaged_by=None,
+            current_revision_iri=revision.iri,
+            next_action_after=next_action,
+            next_action_queue_item_after=queue_item,
+            suggested_next_actions_after=[suggested_action],
+            repair_first_warning=None,
+            note=(
+                "Skipped because this explicit recovery input is not a staged "
+                "patch revision. It remains available as history/snapshot "
+                "context but is not an apply or mechanical-restage target."
             ),
         )
 

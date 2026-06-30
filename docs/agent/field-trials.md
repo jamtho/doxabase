@@ -3549,6 +3549,15 @@ few useful gaps:
   receiver validation and scans that closure, while still warning that SQLite
   revision snapshot rows are absent and `export_handoff_bundle` is required for
   exact recovery.
+- A follow-up profile/query/staged/privacy wave found profile-frontier and
+  staged rebase/version flows handled broad workflows without repo changes. The
+  query-frontier run confirmed fixture staleness is visible but still advisory
+  when full frontier expansion is pending, so agents must read
+  `health_tasks[]` before staging repeated fixture storage repairs. The privacy
+  handoff run exposed one real defect: recovery-complete handoff manifests can
+  include ordinary non-staged `rc:GraphRevision` snapshot rows. Import now keeps
+  those rows as informational recovery lanes instead of sending them through
+  staged-patch restage/apply planning.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

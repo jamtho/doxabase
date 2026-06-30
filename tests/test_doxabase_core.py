@@ -2286,6 +2286,75 @@ def test_export_handoff_bundle_blocks_sensitive_literals_before_writing(
     assert existing_manifest_path.read_text(encoding="utf-8") == "keep me\n"
 
 
+def test_import_handoff_bundle_routes_non_staged_revision_context(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    source.record_map_dataset(
+        "https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+    )
+    manual = source.record_graph_revision(
+        summary="Manual map review",
+        rationale="Record non-staged review history with exact map snapshots.",
+        changed_graphs=["map"],
+        included_graphs=["map"],
+    )
+    staged = source.stage_graph_revision(
+        summary="Stage shipment table",
+        rationale="Create a staged patch alongside ordinary history context.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Shipments a rc:Dataset, rc:Table .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    manifest_path = tmp_path / "handoff-manifest.json"
+    source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[manual.revision_iri, staged.revision_iri],
+        fail_on_sensitive=True,
+    )
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(manifest_path)
+
+    assert imported.revision_iris == [manual.revision_iri, staged.revision_iri]
+    assert imported.recovery_plan is not None
+    plan = imported.recovery_plan
+    assert plan.processed_revision_iris == [manual.revision_iri, staged.revision_iri]
+    assert plan.next_action_queue_item_counts == {
+        "apply_after_review": 1,
+        "informational": 1,
+    }
+    lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
+    manual_lane = lanes_by_source[manual.revision_iri]
+    assert manual_lane.batch_action == "skipped_non_staged_history_record"
+    assert manual_lane.next_action is not None
+    assert manual_lane.next_action.tool_name == "describe_graph_revision"
+    assert plan.not_restageable_revision_iris_by_reason[
+        "non_staged_history_record"
+    ] == [manual.revision_iri]
+    evidence_by_iri = {
+        row.revision_iri: row for row in imported.post_import_snapshot_evidence
+    }
+    assert evidence_by_iri[manual.revision_iri].status == "history_plus_snapshot_rows"
+    assert evidence_by_iri[staged.revision_iri].status == "history_plus_snapshot_rows"
+    validation = receiver.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_export_preflight_blocks_sensitive_handoff_scope(
     tmp_path: Path,
 ) -> None:
@@ -8939,6 +9008,65 @@ def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
         "inspect_already_applied",
         "apply_after_review",
     ]
+
+
+def test_plan_staged_revision_recovery_routes_non_staged_history_records(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.record_map_dataset(
+        "https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+    )
+    manual = db.record_graph_revision(
+        summary="Manual map review",
+        rationale="Record durable map review history with snapshots.",
+        changed_graphs=["map"],
+        included_graphs=["map"],
+    )
+    ready = db.stage_graph_revision(
+        summary="Stage ready table",
+        rationale="This staged source has a complete patch payload.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:ReadyNonStagedHandoff a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    plan = db.plan_staged_revision_recovery(
+        [manual.revision_iri, ready.revision_iri],
+        current_staged_work_only=False,
+    )
+
+    assert plan.processed_revision_iris == [manual.revision_iri, ready.revision_iri]
+    assert plan.next_action_queue_item_counts == {
+        "apply_after_review": 1,
+        "informational": 1,
+    }
+    lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
+    manual_lane = lanes_by_source[manual.revision_iri]
+    assert manual_lane.lane == "informational"
+    assert manual_lane.batch_action == "skipped_non_staged_history_record"
+    assert manual_lane.not_restageable_reason == "non_staged_history_record"
+    assert manual_lane.next_action is not None
+    assert manual_lane.next_action.tool_name == "describe_graph_revision"
+    assert manual_lane.next_action_queue_item is not None
+    assert manual_lane.next_action_queue_item.record_kind == "history_record"
+    assert plan.not_restageable_revision_iris_by_reason[
+        "non_staged_history_record"
+    ] == [manual.revision_iri]
+    assert manual.revision_iri in plan.review_revision_iris
+    assert any(
+        "non-staged graph-revision history" in warning for warning in plan.warnings
+    )
 
 
 def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
