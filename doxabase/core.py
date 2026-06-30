@@ -823,6 +823,25 @@ class StagedGraphSnapshotDrift:
 
 
 @dataclass(frozen=True)
+class StagedRevisionExactDriftSummary:
+    graph_role: str
+    blocking_reasons: list[str]
+    has_count_drift: bool
+    has_snapshot_digest_drift: bool
+    count_drift_count: int
+    count_drift_deltas: list[int]
+    patch_triple_status_counts: dict[str, int]
+    snapshot_triple_count: int | None
+    current_triple_count: int | None
+    triples_added_since_snapshot_count: int | None
+    triples_removed_since_snapshot_count: int | None
+    exact_changed_triples_available: bool
+    exact_changed_triples_included: bool
+    drift_relevance: str | None
+    note: str
+
+
+@dataclass(frozen=True)
 class AppliedRevisionGraphSnapshotDiff:
     graph_role: str
     count_basis: str
@@ -1324,6 +1343,7 @@ class StagedGraphRevisionBatchRestageItem:
     routing_decision_before: str
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
+    exact_drift_summary_before: list[StagedRevisionExactDriftSummary]
     source_staged_validation_status: str
     source_validation_result_count: int | None
     source_snapshot_evidence: RevisionSnapshotEvidenceStatus
@@ -1333,6 +1353,7 @@ class StagedGraphRevisionBatchRestageItem:
     routing_decision_after: str
     stale_resolution_state_after: str | None
     blocking_reasons_after: list[str]
+    exact_drift_summary_after: list[StagedRevisionExactDriftSummary]
     current_staged_validation_status: str
     current_validation_result_count: int | None
     current_snapshot_evidence: RevisionSnapshotEvidenceStatus
@@ -1393,6 +1414,7 @@ class StagedRevisionRecoveryLane:
     routing_decision_before: str
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
+    exact_drift_summary: list[StagedRevisionExactDriftSummary]
     status_after: str
     decision_after: str
     routing_decision_after: str
@@ -30474,6 +30496,9 @@ class DoxaBase:
                     routing_decision_before=check.routing_decision,
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
+                    exact_drift_summary_before=(
+                        self._staged_revision_exact_drift_summary(check)
+                    ),
                     source_staged_validation_status=(
                         source_staged_validation_status
                     ),
@@ -30489,6 +30514,9 @@ class DoxaBase:
                     routing_decision_after=routing_decision_after,
                     stale_resolution_state_after=stale_resolution_state_after,
                     blocking_reasons_after=current_check.blocking_reasons,
+                    exact_drift_summary_after=(
+                        self._staged_revision_exact_drift_summary(current_check)
+                    ),
                     current_staged_validation_status=(
                         current_staged_validation_status
                     ),
@@ -31074,6 +31102,7 @@ class DoxaBase:
             routing_decision_before="inspect_missing_patch_payload",
             stale_resolution_state_before=None,
             blocking_reasons_before=["missing_patch_payload"],
+            exact_drift_summary_before=[],
             source_staged_validation_status=staged_validation_status,
             source_validation_result_count=revision.validation_result_count,
             source_snapshot_evidence=snapshot_evidence,
@@ -31083,6 +31112,7 @@ class DoxaBase:
             routing_decision_after="inspect_missing_patch_payload",
             stale_resolution_state_after=None,
             blocking_reasons_after=["missing_patch_payload"],
+            exact_drift_summary_after=[],
             current_staged_validation_status=staged_validation_status,
             current_validation_result_count=revision.validation_result_count,
             current_snapshot_evidence=snapshot_evidence,
@@ -31173,6 +31203,7 @@ class DoxaBase:
             routing_decision_before="inspect_applied_event",
             stale_resolution_state_before=None,
             blocking_reasons_before=["applied_event_record"],
+            exact_drift_summary_before=[],
             source_staged_validation_status=staged_validation_status,
             source_validation_result_count=revision.validation_result_count,
             source_snapshot_evidence=snapshot_evidence,
@@ -31182,6 +31213,7 @@ class DoxaBase:
             routing_decision_after="inspect_applied_event",
             stale_resolution_state_after=None,
             blocking_reasons_after=["applied_event_record"],
+            exact_drift_summary_after=[],
             current_staged_validation_status=staged_validation_status,
             current_validation_result_count=revision.validation_result_count,
             current_snapshot_evidence=snapshot_evidence,
@@ -31663,6 +31695,10 @@ class DoxaBase:
                 routing_decision_before=item.routing_decision_before,
                 stale_resolution_state_before=item.stale_resolution_state_before,
                 blocking_reasons_before=item.blocking_reasons_before,
+                exact_drift_summary=(
+                    item.exact_drift_summary_before
+                    or item.exact_drift_summary_after
+                ),
                 status_after=item.status_after,
                 decision_after=item.decision_after,
                 routing_decision_after=item.routing_decision_after,
@@ -31709,6 +31745,102 @@ class DoxaBase:
             ),
             warning,
         )
+
+    @staticmethod
+    def _staged_revision_exact_drift_summary(
+        check: StagedRevisionApplyCheck,
+    ) -> list[StagedRevisionExactDriftSummary]:
+        count_drifts_by_graph: dict[str, list[StagedGraphCountDrift]] = {}
+        for drift in check.count_drifts:
+            count_drifts_by_graph.setdefault(drift.target_graph, []).append(drift)
+        snapshot_drift_by_graph = {
+            drift.graph_role: drift for drift in check.snapshot_drifts
+        }
+        graph_roles = list(
+            dict.fromkeys(
+                [
+                    *count_drifts_by_graph.keys(),
+                    *snapshot_drift_by_graph.keys(),
+                ]
+            )
+        )
+        summaries: list[StagedRevisionExactDriftSummary] = []
+        for graph_role in graph_roles:
+            count_drifts = count_drifts_by_graph.get(graph_role, [])
+            snapshot_drift = snapshot_drift_by_graph.get(graph_role)
+            patch_triple_status_counts: dict[str, int] = {}
+            for drift in count_drifts:
+                if drift.patch_triple_status is None:
+                    continue
+                patch_triple_status_counts[drift.patch_triple_status] = (
+                    patch_triple_status_counts.get(drift.patch_triple_status, 0)
+                    + 1
+                )
+            has_snapshot_digest_drift = (
+                snapshot_drift is not None
+                and snapshot_drift.snapshot_content_digest
+                != snapshot_drift.current_content_digest
+            )
+            note_parts: list[str] = []
+            if count_drifts:
+                note_parts.append(
+                    "Count drift summarizes patch-level count checks for this graph."
+                )
+            if snapshot_drift is not None:
+                note_parts.append(
+                    "Snapshot drift summarizes graph-level count/digest drift; "
+                    "raw changed triples are intentionally omitted from this "
+                    "compact recovery-lane field."
+                )
+            summaries.append(
+                StagedRevisionExactDriftSummary(
+                    graph_role=graph_role,
+                    blocking_reasons=check.blocking_reasons,
+                    has_count_drift=bool(count_drifts),
+                    has_snapshot_digest_drift=has_snapshot_digest_drift,
+                    count_drift_count=len(count_drifts),
+                    count_drift_deltas=[
+                        drift.delta for drift in count_drifts
+                    ],
+                    patch_triple_status_counts=patch_triple_status_counts,
+                    snapshot_triple_count=(
+                        snapshot_drift.snapshot_triple_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    current_triple_count=(
+                        snapshot_drift.current_triple_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    triples_added_since_snapshot_count=(
+                        snapshot_drift.triples_added_since_snapshot_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    triples_removed_since_snapshot_count=(
+                        snapshot_drift.triples_removed_since_snapshot_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    exact_changed_triples_available=(
+                        snapshot_drift.exact_changed_triples_available
+                        if snapshot_drift is not None
+                        else any(
+                            drift.exact_changed_triples_available
+                            for drift in count_drifts
+                        )
+                    ),
+                    exact_changed_triples_included=False,
+                    drift_relevance=(
+                        snapshot_drift.drift_relevance
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    note=" ".join(note_parts),
+                )
+            )
+        return summaries
 
     @staticmethod
     def _staged_recovery_should_use_embedded_draft_route(

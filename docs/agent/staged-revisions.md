@@ -305,6 +305,11 @@ Compact cookbook for a mixed stale queue:
    mechanical restage worklist; do not feed `repair_or_replace`,
    `skipped_not_restageable`, informational, or already-applied rows into a bulk
    restage.
+   For stale rows, read `lane.exact_drift_summary[]` before drilling into full
+   apply-check payloads. It names the graph, whether the blocker is count drift
+   and/or snapshot digest drift, count deltas, patch-triple status counts, exact
+   drift availability, added/removed-since-snapshot counts, and relevance
+   without embedding raw triples.
 4. Run `restage_staged_revisions(revision_iris=plan.would_restage_revision_iris,
    dry_run=True)` and compare its classifications with the plan.
 5. If the dry run still matches your review, run the real batch over the same
@@ -320,6 +325,14 @@ Compact cookbook for a mixed stale queue:
    `helper_mutation_frontier_actions` or the lane repair draft, usually a
    reviewed `stage_map_assertion_change(..., restages_revision=...)`, then
    check the new successor before applying.
+
+Digest-only stale recovery follows the same route. If a count-neutral graph
+change produces `target_digest_drift`, `lane.exact_drift_summary[]` should show
+`has_count_drift=false`, `has_snapshot_digest_drift=true`, matching
+snapshot/current counts, and non-zero added/removed-since-snapshot counts. That
+is still a real stale proposal: review/export it, restage against current graph
+state if the intent remains valid, inspect the successor, apply at most one
+ready row, then replan current staged work.
 
 Version browsing cookbook:
 

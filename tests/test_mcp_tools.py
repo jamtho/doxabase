@@ -2135,6 +2135,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["source_revision_iri"] == staged["revision_iri"]
     assert lane["row_iri"] == staged["revision_iri"]
     assert lane["lane"] == "apply_after_review"
+    assert lane["exact_drift_summary"] == []
     assert lane["next_action"]["tool_name"] == "apply_staged_revision"
     assert lane["next_action_queue_item"]["resolved_target_iri"] == (
         staged["revision_iri"]
@@ -2241,6 +2242,37 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     )
 
     assert result["would_restage_revision_iris"] == [staged["revision_iri"]]
+    lane = result["lanes"][0]
+    assert lane["exact_drift_summary"] == [
+        {
+            "graph_role": "map",
+            "blocking_reasons": ["target_count_drift"],
+            "has_count_drift": True,
+            "has_snapshot_digest_drift": True,
+            "count_drift_count": 1,
+            "count_drift_deltas": [2],
+            "patch_triple_status_counts": {"all_patch_triples_absent": 1},
+            "snapshot_triple_count": 0,
+            "current_triple_count": 2,
+            "triples_added_since_snapshot_count": 2,
+            "triples_removed_since_snapshot_count": 0,
+            "exact_changed_triples_available": True,
+            "exact_changed_triples_included": False,
+            "drift_relevance": "broad_patch_object_overlap",
+            "note": (
+                "Count drift summarizes patch-level count checks for this graph. "
+                "Snapshot drift summarizes graph-level count/digest drift; raw "
+                "changed triples are intentionally omitted from this compact "
+                "recovery-lane field."
+            ),
+        }
+    ]
+    assert lane["batch_item"]["exact_drift_summary_before"] == (
+        lane["exact_drift_summary"]
+    )
+    assert lane["batch_item"]["exact_drift_summary_after"] == (
+        lane["exact_drift_summary"]
+    )
     batch_action = result["suggested_next_actions"][0]
     assert batch_action["tool_name"] == "restage_staged_revisions"
     assert batch_action["mcp_tool_name"] == "doxabase.restage_staged_revisions"

@@ -2954,6 +2954,15 @@ few useful gaps:
   storage when the same template already forms a clean non-database candidate;
   if a database relation mismatch remains, treat it as a true database-route
   review signal rather than object-route noise.
+- A four-frontier retest confirmed the updated autonomous goal is reaching
+  broad project surfaces rather than only local helper polish: project brief
+  expansion exposed staged, query, profile, and ready-handoff queues together;
+  staged recovery handled both count drift and same-count digest drift; privacy
+  export gates blocked planted scanner hits while raw context slices remained a
+  report-leak risk if pasted; review bundles preserved awkward alternatives but
+  could use stronger modelling-choice summaries. Recovery lanes now carry
+  `exact_drift_summary` so cold agents can report count/digest drift evidence
+  before drilling into full apply-check payloads.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

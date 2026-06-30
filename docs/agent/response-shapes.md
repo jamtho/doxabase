@@ -5162,6 +5162,7 @@ lane.decision_before
 lane.routing_decision_before
 lane.stale_resolution_state_before
 lane.blocking_reasons_before
+lane.exact_drift_summary
 lane.status_after
 lane.decision_after
 lane.routing_decision_after
@@ -5202,6 +5203,13 @@ already-applied source can have `resolved_target_iri` set to the applied event
 and `row_is_target=False`. An applied-event input is already the resolved row:
 `batch_action` is `skipped_applied_event`, `not_restageable_reason` is
 `applied_event_record`, and `row_is_target=True`.
+When count or digest drift routes a lane, read
+`lane.exact_drift_summary[]` first. It is a compact per-graph summary with
+`has_count_drift`, `has_snapshot_digest_drift`, `count_drift_deltas`,
+`patch_triple_status_counts`, snapshot/current graph counts, exact-triple
+availability, added/removed-since-snapshot counts, and drift relevance. It does
+not include raw triples; inspect `batch_item` or the staged revision's current
+apply check when exact changed triples are needed for review.
 
 `plan.resolved_target_groups[]` is the target-family view over those source
 lanes. It collapses rows that point at the same queue and resolved target while

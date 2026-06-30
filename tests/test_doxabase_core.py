@@ -6357,6 +6357,28 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
         "Seed dataset renamed"
     ]
 
+    recovery = db.plan_staged_revision_recovery([staged.revision_iri])
+    assert len(recovery.lanes) == 1
+    lane_drift_summary = recovery.lanes[0].exact_drift_summary
+    assert len(lane_drift_summary) == 1
+    assert lane_drift_summary[0].graph_role == "map"
+    assert lane_drift_summary[0].blocking_reasons == ["target_digest_drift"]
+    assert lane_drift_summary[0].has_count_drift is False
+    assert lane_drift_summary[0].has_snapshot_digest_drift is True
+    assert lane_drift_summary[0].count_drift_count == 0
+    assert lane_drift_summary[0].count_drift_deltas == []
+    assert lane_drift_summary[0].patch_triple_status_counts == {}
+    assert lane_drift_summary[0].snapshot_triple_count == 2
+    assert lane_drift_summary[0].current_triple_count == 2
+    assert lane_drift_summary[0].triples_added_since_snapshot_count == 1
+    assert lane_drift_summary[0].triples_removed_since_snapshot_count == 1
+    assert lane_drift_summary[0].exact_changed_triples_available is True
+    assert lane_drift_summary[0].exact_changed_triples_included is False
+    assert lane_drift_summary[0].drift_relevance == "no_patch_subject_overlap"
+    assert "raw changed triples are intentionally omitted" in (
+        lane_drift_summary[0].note
+    )
+
 
 def test_apply_check_reports_object_and_anchor_snapshot_drift_overlap(
     tmp_path: Path,
