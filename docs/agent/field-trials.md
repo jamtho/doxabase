@@ -3515,6 +3515,31 @@ few useful gaps:
   a fresh receiver imports the manifest plus snapshot rows, and receiver-local
   `project_brief` / `plan_staged_revision_recovery(current_staged_work_only=True)`
   expose the staged frontier without source-local state.
+- A recovery-session handoff trial confirmed the receiver can continue from a
+  persisted `start_staged_revision_recovery_session` after import and after one
+  mutation. `describe_staged_revision_recovery_session` recomputed
+  completed/active source lists, `mutation_frontier_items`, and recheck
+  warnings after the apply. Continue to prefer `mutation_frontier_items` over
+  `mutation_frontier_iris` alone, because repair/helper lanes may not have a
+  concrete staged target IRI yet.
+- A recovered-frontier trial on the active capsule confirmed stale-seed recovery
+  drops the seed safety gate in the fresh receiver. The receiver brief moved to
+  query/profile frontier work, retained `query_fixture_staleness_review` for the
+  reduced AIS/Polymarket storage state, and explicit `revision_iris=[]` recovery
+  planning returned a harmless empty no-frontier plan.
+- A Polymarket query-handoff trial showed `pm:Trades` can reach a credible
+  non-executed DuckDB `read_parquet` handoff from fixture metadata, but an honest
+  manifest-derived overlay should remain review-blocked by
+  `layout_needs_verification` and required `{date,hour}` bindings. Do not mark
+  fixture paths `VerifiedByListingLayout` or `VerifiedByQueryLayout` without real
+  listing/query evidence; record blocked handoff evidence instead.
+- A positive profile apply/rerun trial confirmed the safe ordinary path:
+  one full-scan profile map update produced one
+  `safe_single_apply_candidate_revision_iris`, the ready apply check allowed one
+  reviewed mutation, rerunning the draft closed the current profile-review lane,
+  and applied-source exports/context slices still recovered the review trail.
+  Unattended scripts should require safe-list cardinality plus a ready apply
+  check before applying even when the decision label says bulk apply.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

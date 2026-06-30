@@ -39,6 +39,17 @@ conclusions about query-target behavior. `describe_query_context` now carries
 the same warning in `missing_storage_access.details.fixture_staleness_hint` when
 known fixture tables are present with no storage access resources.
 
+The reduced Polymarket fixture can already contain enough storage, layout, and
+partition metadata to produce a non-executed file handoff. For example,
+`pm:Trades` can draft a DuckDB `read_parquet` handoff with required `{date,hour}`
+bindings. Do not turn manifest-derived review notes into verified execution
+readiness: `rc:GeneratedFromManifestLayout` is honest review context and may
+route the plan to `metadata_review_required` / `layout_needs_verification`.
+Only use `rc:VerifiedByListingLayout` or `rc:VerifiedByQueryLayout` after a
+real listing, schema check, or query result is in scope. Recording a blocked
+`record_query_result` for the handoff is preferable to pretending DoxaBase
+executed or verified a local data lake mount.
+
 ## AIS DailyIndex Question-To-Handoff Gap
 
 The bundled AIS fixture is a representative reduced pressure test, not a full

@@ -241,6 +241,15 @@ Use `executor_decision_summary` as the compact unattended routing object: it
 names the decision, mutation policy, safe-single candidates, blocked candidates,
 open lanes, and whether a rerun is required after mutation. Then inspect the
 detailed candidate/lane rows before applying anything.
+For the narrow positive case with one ordinary profile map-update candidate,
+`bulk_apply_allowed=true` and `decision="bulk_apply_after_review"` can be safe,
+but scripts should still count, not parse the word "bulk": require exactly one
+IRI in `safe_single_apply_candidate_revision_iris`, confirm
+`check_staged_revision_apply(...).status == "ready"`, apply that one reviewed
+row, and rerun `draft_profile_map_updates` / the profile insight export before
+any further mutation. If a handoff needs post-apply review context, keep
+`include_applied_staged_sources=true`; current-only exports should drop the
+applied map-update candidate once the live draft is closed.
 Scalar-conflict review is semantic context too. After one same-evidence scalar
 choice is applied, a sibling row-count or nullable observation should stay out
 of default `profile_map_updates`; the draft routes it through
