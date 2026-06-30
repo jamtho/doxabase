@@ -3567,6 +3567,15 @@ few useful gaps:
   cleanly, preserving reviewed source handles, profile evidence links,
   semantic alternatives, and apply-one-then-recheck gates without inventing
   secrets or collapsing ambiguous lore into one template.
+- A subsequent broad wave confirmed the stale-seed recovery path works end to
+  end but exposed one automation gap: empty-revision
+  `import_handoff_bundle()` imports succeeded with no staged recovery lanes and
+  no structured next call. Empty handoff imports now return `project_brief()` as
+  the post-import follow-up so a receiver can resume safety/frontier routing
+  without relying on prose memory. The same wave found storage/query,
+  profile/systematisation, and staged handoff/privacy flows broadly passing;
+  remaining profile apply-gate and mixed-plan display frictions are semantic
+  workflow candidates for later trials rather than this narrow import fix.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

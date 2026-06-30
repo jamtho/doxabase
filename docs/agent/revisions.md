@@ -631,7 +631,9 @@ For a stale-restage-apply handoff between capsules:
 6. Without a manifest, run `import_revision_snapshots(snapshot_path)` and verify
    `post_import_snapshot_evidence` or `describe_revision_snapshot_evidence()`
    reaches `history_plus_snapshot_rows`. Manifest import returns that evidence
-   plus a staged recovery plan directly.
+   plus a staged recovery plan directly. If the manifest has no revision rows,
+   the empty recovery plan is complete and the import's structured
+   `suggested_next_actions` points back to receiver `project_brief()`.
 7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
    triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
    for full before/after snapshot contents. Suggested import paths are

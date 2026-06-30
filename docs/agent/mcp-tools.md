@@ -2396,8 +2396,9 @@ on the `seed_recovery_review` health task and points first to
 TriG plus companion revision snapshot JSON, create a fresh seeded capsule, and
 import the manifest there with `import_handoff_bundle`. When the stale capsule
 has no stored revision snapshots, the snapshot JSON is empty and the import
-returns an empty recovery plan; rerun `project_brief` in the fresh capsule. When
-staged rows exist, follow the staged recovery plan returned by the import.
+returns an empty recovery plan plus a structured `project_brief()` follow-up for
+the fresh capsule. When staged rows exist, follow the staged recovery plan
+returned by the import.
 
 `doxabase.export_handoff_bundle`
 

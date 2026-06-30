@@ -2226,7 +2226,9 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
     assert imported["recovery_plan"]["mutation_allowed_after"] == (
         "no_mutation_frontier"
     )
-    assert imported["suggested_next_actions"] == []
+    assert imported["suggested_next_actions"][0]["tool_name"] == "project_brief"
+    assert imported["suggested_next_actions"][0]["arguments"] == {}
+    assert imported["suggested_next_calls"] == ["project_brief()"]
     assert receiver.describe_dataset(
         "https://example.test/project#Customers",
     ).label == "Customers"

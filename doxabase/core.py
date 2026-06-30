@@ -50589,6 +50589,10 @@ class DoxaBase:
                     *recovery_plan.suggested_next_actions,
                 ]
             )
+            if not suggested_next_actions and not recovery_plan.processed_revision_iris:
+                suggested_next_actions = [
+                    self._post_handoff_import_project_brief_action()
+                ]
 
         return HandoffBundleImportRecord(
             path=source_label,
@@ -50748,6 +50752,22 @@ class DoxaBase:
                 "start_staged_revision_recovery_session",
                 arguments,
             ),
+        )
+
+    def _post_handoff_import_project_brief_action(self) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {}
+        return SuggestedNextAction(
+            action_label="Resume project frontier",
+            tool_name="project_brief",
+            mcp_tool_name="doxabase.project_brief",
+            arguments=arguments,
+            reason=(
+                "The handoff import had no revision rows to recover. Rerun the "
+                "receiving capsule's project brief so the next agent resumes "
+                "from its current safety gates, frontier expansion, or project "
+                "work queue."
+            ),
+            call=self._suggested_call_string("project_brief", arguments),
         )
 
     def _handoff_manifest_artifact_path(

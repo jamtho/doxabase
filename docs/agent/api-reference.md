@@ -28,8 +28,9 @@ that immutable `base_ontology` is missing current staging vocabulary, follow
 `project_brief`'s stale-seed health action and preflight a handoff export before
 creating a fresh `DoxaBase.create(...)` capsule. `export_handoff_bundle(...)`
 is valid even when there are no staged revision rows; the snapshot JSON will be
-empty and `import_handoff_bundle(...)` will return an empty recovery plan. Do
-not use a normal `all_with_seeds` import for this recovery path because
+empty and `import_handoff_bundle(...)` will return an empty recovery plan plus a
+`project_brief()` follow-up action for the receiving capsule. Do not use a
+normal `all_with_seeds` import for this recovery path because
 immutable seed graphs are protected. When the stale capsule has staged revision
 rows or exact revision recovery matters, preserve the project/history TriG plus
 companion revision snapshot JSON, import both artifacts into the fresh capsule,
