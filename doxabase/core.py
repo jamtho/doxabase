@@ -34854,6 +34854,7 @@ class DoxaBase:
         framing_records: list[SystematisationFramingRecord] = []
         first_revision_iri: str | None = None
         first_anchor_default_linked_revision_iris: list[str] = []
+        recorded_profile_route_sources: list[dict[str, Any]] = []
         for index, framing in enumerate(framing_values, start=1):
             if not isinstance(framing, Mapping):
                 raise DoxaBaseError("framings entries must be objects")
@@ -34884,6 +34885,36 @@ class DoxaBase:
             stance = str(framing.get("stance") or default_stance).strip()
             if not stance:
                 raise DoxaBaseError("framing stance must not be empty")
+            framing_route_sources_provided = any(
+                key in framing
+                for key in ("profile_route_sources", "profileRouteSources")
+            )
+            framing_profile_route_source_values = (
+                self._explicit_profile_route_sources(
+                    framing.get("profile_route_sources")
+                    if "profile_route_sources" in framing
+                    else framing.get("profileRouteSources")
+                )
+                if framing_route_sources_provided
+                else []
+            )
+            if (
+                framing_route_sources_provided
+                and not framing_profile_route_source_values
+            ):
+                warnings.append(
+                    "profile_route_sources was provided for framing "
+                    f"{label!r}, but no usable profile route source objects were "
+                    "found. Pass the action source block, for example "
+                    "query_action.source_query_context, rather than the whole "
+                    "suggested action object."
+                )
+            framing_effective_profile_route_sources = (
+                self._merge_profile_route_sources(
+                    profile_route_source_values,
+                    framing_profile_route_source_values,
+                )
+            )
             additions, removals = self._systematisation_patch_specs(framing)
             addition_specs = self._patch_specs_with_role(
                 additions or [],
@@ -34946,7 +34977,11 @@ class DoxaBase:
             )
             self._record_profile_insight_route_sources(
                 staged.revision_iri,
-                profile_route_source_values,
+                framing_effective_profile_route_sources,
+            )
+            recorded_profile_route_sources = self._merge_profile_route_sources(
+                recorded_profile_route_sources,
+                framing_effective_profile_route_sources,
             )
             if first_revision_iri is None:
                 first_revision_iri = staged.revision_iri
@@ -35133,7 +35168,7 @@ class DoxaBase:
             summary=summary_value,
             intent=intent_value,
             anchors=anchor_values,
-            profile_route_source_count=len(profile_route_source_values),
+            profile_route_source_count=len(recorded_profile_route_sources),
             warnings=warnings,
             structured_warnings=structured_warnings,
             framings=framing_records,

@@ -26,6 +26,10 @@ profile route on the staged revision so
 instead of only related support. Check the returned
 `profile_route_source_count`; when it is `0` after you supplied sources, use the
 draft warning to correct the source shape before relying on the review bundle.
+Top-level `profile_route_sources` apply to every framing. When alternatives
+close different semantic moves, put `profile_route_sources` or
+`profileRouteSources` on the individual framing objects instead; those
+framing-level sources are recorded only on that staged revision.
 Generated metric/type advisory actions already include `profile_route_sources`
 when their primary call stages a map assertion, pattern promotion, or
 systematisation. Preserve that argument when following the generated call. For

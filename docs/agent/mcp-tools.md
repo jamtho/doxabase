@@ -1635,8 +1635,11 @@ to move.
 When a caller-authored framing directly resolves a profile draft route, such as
 a `query_context_review` lane from `draft_profile_map_updates`, pass the
 action's source block in `profile_route_sources`:
-`profile_route_sources=[query_action.source_query_context]`. The stored staged
-revision then closes that route as a direct action in
+`profile_route_sources=[query_action.source_query_context]`. Top-level sources
+are recorded on every framing. If different alternatives close different
+semantic moves, put `profile_route_sources` or `profileRouteSources` on each
+framing object so only that staged revision carries that direct route. The
+stored staged revision then closes that route as a direct action in
 `export_profile_insight_review_bundle`, rather than appearing only as related
 support through shared anchors. The returned `profile_route_source_count` should
 be greater than `0`; if it is `0`, the draft warning usually means the caller

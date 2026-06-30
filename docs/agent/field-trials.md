@@ -3209,6 +3209,14 @@ few useful gaps:
   `project_brief`, and `export_profile_insight_review_bundle` return payloads.
   This is response hygiene only; RDF and Markdown artifacts remain faithful and
   should still use `fail_on_sensitive=True` when they need to block.
+- A profile-to-map/systematisation trial showed that multi-framing
+  `stage_systematisation()` calls could overstate direct profile route closure:
+  top-level `profile_route_sources` were recorded on every framing, so a
+  pattern-only fallback could look like it directly closed the same semantic
+  moves as an ontology+map framing. Framing objects now accept
+  `profile_route_sources` / `profileRouteSources` so alternatives can carry
+  route sources only for the semantic move they actually close. Keep top-level
+  sources for common routes that genuinely apply to every framing.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1193,13 +1193,15 @@ copying from `describe_staged_revision`.
 Pass `profile_route_sources` when a caller-authored framing is meant to resolve
 a route from `draft_profile_map_updates`, for example
 `profile_route_sources=[query_action.source_query_context]` for a
-`query_context_review` repair. Explicit route sources are persisted on each
-staged framing as direct profile review routes, so
+`query_context_review` repair. Top-level explicit route sources are persisted on
+each staged framing as direct profile review routes, so
 `export_profile_insight_review_bundle()` can close that lane instead of treating
-the revision as support-only context. The returned
-`profile_route_source_count` echoes how many usable sources were persisted; a
-provided input with count `0` emits a warning and usually means the source block
-was shaped incorrectly.
+the revision as support-only context. When multiple framings close different
+semantic moves, put `profile_route_sources` or `profileRouteSources` on each
+framing object; framing-level sources are recorded only on that staged
+revision. The returned `profile_route_source_count` echoes how many usable
+unique sources were persisted; a provided input with count `0` emits a warning
+and usually means the source block was shaped incorrectly.
 
 `stage_map_assertion_change()` also accepts `profile_route_sources`. Preserve the
 generated action's `arguments.profile_route_sources` when a profile type-review

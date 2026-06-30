@@ -14787,6 +14787,153 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     assert "Temporal scopes must name the timezone evidence column." in exported
 
 
+def test_stage_systematisation_routes_profile_sources_per_framing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#OperationalStatusCode"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+    profile = db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled for status semantics.",
+        evidence_summary="Synthetic profile run for status value-type review.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All Orders rows.",
+        sample_method="Synthetic full-table profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+    profile_iri = profile.observation.observation_iri
+    route_group_key = "profile-route-group:orders-status-value-type"
+
+    def route_source(step: str, semantic_move: str) -> dict[str, object]:
+        return {
+            "review_lane": "profile_type_review",
+            "route_group_key": route_group_key,
+            "route_step_key": f"profile-route-step:{step}",
+            "semantic_move": semantic_move,
+            "route_anchor_iris": [status_column, status_value_type],
+            "duplicate_profile_observation_iris": [profile_iri],
+            "type_advisory_indexes": [0],
+        }
+
+    define_source = route_source("define-value-type", "define_value_type")
+    assert_source = route_source("assert-map-type", "assert_map_type")
+    fallback_source = route_source("caveat-fallback", "caveat_fallback")
+
+    draft = db.stage_systematisation(
+        summary="Review status value-type alternatives",
+        intent=(
+            "Compare the direct ontology+map type framing with a pattern-only "
+            "fallback for the same profile type finding."
+        ),
+        anchors=[dataset, status_column, status_value_type],
+        supporting_observations=[profile_iri],
+        evidence=[evidence],
+        framings=[
+            {
+                "label": "Define and assert value type",
+                "additions": [
+                    {
+                        "graph": "ontology",
+                        "content": f"""
+                            @prefix rc: <https://richcanopy.org/ns/rc#> .
+                            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                            <{status_value_type}> a rc:ValueType ;
+                                rdfs:label "Operational status code" .
+                        """,
+                    },
+                    {
+                        "graph": "map",
+                        "content": f"""
+                            @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                            <{status_column}> rc:valueType <{status_value_type}> .
+                        """,
+                    },
+                ],
+                "profile_route_sources": [define_source, assert_source],
+            },
+            {
+                "label": "Pattern-only fallback",
+                "graph": "patterns",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <https://example.test/project#StatusTypeFallbackPattern>
+                        a rc:Pattern ;
+                        rc:summary "Status values need semantic review." ;
+                        rc:patternText "Status codes look domain-specific, but the project value type is not durable yet." ;
+                        rc:rationale "Keep the type finding tentative if ontology and map promotion are premature." ;
+                        rc:patternTarget <{status_column}> ;
+                        rc:supportingObservation <{profile_iri}> .
+                """,
+                "profileRouteSources": [fallback_source],
+            },
+        ],
+        validation_scope="all",
+    )
+
+    assert draft.profile_route_source_count == 3
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "status-type-review.md",
+    )
+    candidates = {
+        candidate.revision_iri: candidate for candidate in review.candidates
+    }
+    direct_candidate = candidates[draft.staged_revisions[0].revision_iri]
+    fallback_candidate = candidates[draft.staged_revisions[1].revision_iri]
+    direct_groups = {
+        group["review_lane"]: group for group in direct_candidate.profile_route_groups
+    }
+    fallback_groups = {
+        group["review_lane"]: group
+        for group in fallback_candidate.profile_route_groups
+    }
+
+    assert direct_groups["profile_type_review"]["match_strength"] == (
+        "direct_action"
+    )
+    assert set(direct_groups["profile_type_review"]["direct_semantic_moves"]) == {
+        "define_value_type",
+        "assert_map_type",
+    }
+    assert "caveat_fallback" not in direct_groups["profile_type_review"][
+        "direct_semantic_moves"
+    ]
+    assert fallback_groups["profile_type_review"]["match_strength"] == (
+        "direct_action"
+    )
+    assert fallback_groups["profile_type_review"]["direct_semantic_moves"] == [
+        "caveat_fallback"
+    ]
+    assert "define_value_type" not in fallback_groups["profile_type_review"][
+        "direct_semantic_moves"
+    ]
+    assert "assert_map_type" not in fallback_groups["profile_type_review"][
+        "direct_semantic_moves"
+    ]
+    assert set(review.closed_semantic_moves) == {
+        "define_value_type",
+        "assert_map_type",
+        "caveat_fallback",
+    }
+
+
 def test_stage_systematisation_warns_on_unusable_profile_route_sources(
     tmp_path: Path,
 ) -> None:

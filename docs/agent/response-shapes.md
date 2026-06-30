@@ -3617,10 +3617,14 @@ own run-specific path.
 review routes onto caller-authored framings, for example by passing
 `query_action.source_query_context` from `draft_profile_map_updates`. Explicit
 sources default to direct for their `review_lane`, allowing profile insight
-review bundles to close that lane. The returned
-`profile_route_source_count` reports how many usable route sources were stored;
-if you provided route sources and the count is `0`, inspect `warnings` and check
-that you passed the action source block rather than the whole suggested action.
+review bundles to close that lane. Top-level sources are recorded on every
+framing. Framing objects can also carry `profile_route_sources` or
+`profileRouteSources`; use framing-level sources when alternatives close
+different semantic moves and should not all inherit the same direct route. The
+returned `profile_route_source_count` reports how many usable unique route
+sources were stored; if you provided route sources and the count is `0`, inspect
+`warnings` and check that you passed the action source block rather than the
+whole suggested action.
 
 `draft.structured_warnings` is a machine-readable companion to selected prose
 warnings. For example, when the first framing is not routed to
