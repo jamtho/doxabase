@@ -8674,6 +8674,33 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     )
 
 
+def test_plan_staged_revision_recovery_accepts_empty_explicit_revision_list(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    plan = db.plan_staged_revision_recovery(
+        revision_iris=[],
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+
+    assert plan.selection_mode == "explicit_revision_iris"
+    assert plan.requested_revision_iris == []
+    assert plan.processed_revision_iris == []
+    assert plan.current_staged_work_only is False
+    assert plan.drift_detail == "exact"
+    assert plan.count == 0
+    assert plan.returned_count == 0
+    assert plan.total_count == 0
+    assert plan.lane_counts == {}
+    assert plan.next_action_queue == {}
+    assert plan.next_action_queue_items == []
+    assert plan.mutation_frontier_iris == []
+    assert plan.mutation_allowed_after == "no_mutation_frontier"
+    assert plan.suggested_next_actions == []
+
+
 def test_plan_staged_revision_recovery_reuses_apply_checks_for_current_work(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

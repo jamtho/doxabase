@@ -2232,6 +2232,34 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
     ).label == "Customers"
 
 
+def test_plan_staged_revision_recovery_tool_accepts_empty_revision_list(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    result = plan_staged_revision_recovery_tool(
+        db,
+        revision_iris=[],
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+
+    assert result["selection_mode"] == "explicit_revision_iris"
+    assert result["requested_revision_iris"] == []
+    assert result["processed_revision_iris"] == []
+    assert result["current_staged_work_only"] is False
+    assert result["drift_detail"] == "exact"
+    assert result["count"] == 0
+    assert result["returned_count"] == 0
+    assert result["total_count"] == 0
+    assert result["lane_counts"] == {}
+    assert result["next_action_queue"] == {}
+    assert result["next_action_queue_items"] == []
+    assert result["mutation_frontier_iris"] == []
+    assert result["mutation_allowed_after"] == "no_mutation_frontier"
+    assert result["suggested_next_actions"] == []
+
+
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_turtle(

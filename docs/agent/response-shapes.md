@@ -5581,7 +5581,11 @@ plan.note
 or write files. With no explicit `revision_iris`, `selection_mode` is
 `current_staged_work` by default and the helper plans over the bounded current
 staged queue. With explicit `revision_iris`, it preserves first-seen order after
-`limit` and `offset`. Patchless staged-history rows are returned as
+`limit` and `offset`. Passing `revision_iris=[]` is an explicit empty selection
+and returns the same no-frontier plan shape used by empty handoff-bundle
+imports: empty lane/queue/frontier fields and
+`mutation_allowed_after="no_mutation_frontier"`. Patchless staged-history rows
+are returned as
 `informational` / `missing_patch_payload` lanes instead of aborting the rest of
 the plan, including when `current_staged_work_only=False` scans all staged
 revision history. Explicit applied revision events are returned as

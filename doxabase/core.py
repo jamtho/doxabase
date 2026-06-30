@@ -34134,7 +34134,6 @@ class DoxaBase:
                     self._string_values(
                         "revision_iris",
                         revision_iris,
-                        required=True,
                     )
                 )
             )
