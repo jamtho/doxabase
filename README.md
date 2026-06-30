@@ -167,6 +167,8 @@ Not implemented yet:
 - `examples/ais-query-overlay-smoke.py` - scratch AIS DailyIndex overlay and
   stale-link repair workflow for the documented query-planning pressure test.
 - `examples/profile-frontier-workflow.py` - scratch workflow for profile-derived map updates and staged-frontier review.
+- `examples/staged-semantic-repair-smoke.py` - scratch semantic same-slot
+  staged-revision repair workflow after applying one competing alternative.
 - `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.
 - `tests/` - parser, validation, capsule, and MCP helper tests.
 - `tools/validate_rdf.py` - parser, term-definition, and SHACL validation checks.
@@ -207,8 +209,9 @@ query-planning and result-capture smoke test. Use
 `examples/ais-query-overlay-smoke.py` when you want to exercise the reduced AIS
 fixture's path from reviewed metadata overlay through stale partition-link
 repair to a non-executed DuckDB handoff. Use
-`examples/adversarial-field-trial.py` when you want a more demanding
-staged-revision and systematisation exercise.
+`examples/staged-semantic-repair-smoke.py` when you want a compact semantic
+same-slot rebase loop. Use `examples/adversarial-field-trial.py` when you want
+a more demanding staged-revision and systematisation exercise.
 
 ## Python Capsule Example
 

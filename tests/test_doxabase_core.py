@@ -8304,6 +8304,224 @@ def test_same_slot_replacement_preserves_applied_alternative_gate(
     )
 
 
+def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/semantic-rebase#"
+    orders = f"{base}Orders"
+    fulfillment_events = f"{base}FulfillmentEvents"
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        row_semantics="rc:SnapshotRow",
+    )
+    independent = db.stage_graph_revision(
+        summary="Add Fulfillment Events table",
+        rationale="Independent table proposal staged before row-grain review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <{RC}> .
+
+                    <{fulfillment_events}> a rc:Dataset, rc:Table .
+                """,
+            }
+        ],
+        revision_anchors=[fulfillment_events],
+    )
+    alternatives = db.stage_systematisation(
+        summary="Explore Orders row-grain alternatives",
+        intent=(
+            "Keep competing row-semantics framings reviewable while recovery "
+            "distinguishes mechanical drift from semantic same-slot repair."
+        ),
+        anchors=[orders],
+        framings=[
+            {
+                "label": "Event rows",
+                "additions": [
+                    {
+                        "graph": "map",
+                        "content": f"""
+                            @prefix rc: <{RC}> .
+
+                            <{orders}> rc:rowSemantics rc:EventRow .
+                        """,
+                    }
+                ],
+                "removals": [
+                    {
+                        "graph": "map",
+                        "content": f"""
+                            @prefix rc: <{RC}> .
+
+                            <{orders}> rc:rowSemantics rc:SnapshotRow .
+                        """,
+                    }
+                ],
+                "review_recommendation": "Preferred for this trial.",
+            },
+            {
+                "label": "Aggregate rows",
+                "additions": [
+                    {
+                        "graph": "map",
+                        "content": f"""
+                            @prefix rc: <{RC}> .
+
+                            <{orders}> rc:rowSemantics rc:AggregateRow .
+                        """,
+                    }
+                ],
+                "removals": [
+                    {
+                        "graph": "map",
+                        "content": f"""
+                            @prefix rc: <{RC}> .
+
+                            <{orders}> rc:rowSemantics rc:SnapshotRow .
+                        """,
+                    }
+                ],
+                "review_recommendation": "Competing alternative.",
+            },
+        ],
+        validation_scope="all",
+    )
+    event_rows = alternatives.staged_revisions[0]
+    aggregate_rows = alternatives.staged_revisions[1]
+    assert aggregate_rows.alternative_to == event_rows.revision_iri
+
+    initial_plan = db.plan_staged_revision_recovery(
+        current_staged_work_only=True,
+    )
+    assert set(initial_plan.mutation_frontier_iris) == {
+        independent.revision_iri,
+        event_rows.revision_iri,
+        aggregate_rows.revision_iri,
+    }
+    assert initial_plan.requires_recheck_after_each_apply is True
+
+    applied_event = db.apply_staged_revision(event_rows.revision_iri)
+    assert set(applied_event.post_apply_recheck_revision_iris) == {
+        independent.revision_iri,
+        aggregate_rows.revision_iri,
+    }
+
+    stale_plan = db.plan_staged_revision_recovery(
+        current_staged_work_only=True,
+        drift_detail="exact",
+    )
+    assert stale_plan.next_action_queue == {
+        "repair_or_replace": [aggregate_rows.revision_iri],
+        "restage_after_review": [independent.revision_iri],
+    }
+    assert stale_plan.mutation_frontier_iris == [independent.revision_iri]
+    assert stale_plan.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [aggregate_rows.revision_iri],
+    }
+    assert stale_plan.semantic_review_required_queue_counts == {
+        "repair_or_replace": 1,
+    }
+    assert [
+        action.tool_name
+        for action in stale_plan.helper_mutation_frontier_actions
+    ] == ["stage_map_assertion_change"]
+    helper_action = stale_plan.helper_mutation_frontier_actions[0]
+    assert helper_action.arguments["restages_revision"] == (
+        aggregate_rows.revision_iri
+    )
+    assert helper_action.arguments["alternative_to"] == event_rows.revision_iri
+    lanes_by_source = {
+        lane.source_revision_iri: lane for lane in stale_plan.lanes
+    }
+    assert lanes_by_source[independent.revision_iri].lane == "restage_after_review"
+    repair_lane = lanes_by_source[aggregate_rows.revision_iri]
+    assert repair_lane.lane == "repair_or_replace"
+    assert repair_lane.not_restageable_reason == "same_slot_replacement"
+    assert repair_lane.repair_draft is not None
+    assert repair_lane.repair_draft.draft_kind == "same_slot_replacement"
+    assert repair_lane.next_action is not None
+    assert repair_lane.next_action.tool_name == "stage_map_assertion_change"
+
+    dry_run = db.restage_staged_revisions(
+        [independent.revision_iri, aggregate_rows.revision_iri],
+        dry_run=True,
+    )
+    assert dry_run.would_restage_revision_iris == [independent.revision_iri]
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [aggregate_rows.revision_iri],
+    }
+    assert [
+        (item.source_revision_iri, item.action, item.not_restageable_reason)
+        for item in dry_run.items
+    ] == [
+        (independent.revision_iri, "would_restage", None),
+        (
+            aggregate_rows.revision_iri,
+            "skipped_not_restageable",
+            "same_slot_replacement",
+        ),
+    ]
+
+    restaged_independent = db.restage_staged_revision(independent.revision_iri)
+    restaged_independent_check = db.check_staged_revision_apply(
+        restaged_independent.revision_iri,
+    )
+    assert restaged_independent_check.status == "ready"
+    applied_independent = db.apply_staged_revision(
+        restaged_independent.revision_iri,
+    )
+    assert applied_independent.patches_applied == 1
+
+    repair_draft = db.draft_staged_revision_rebase(aggregate_rows.revision_iri)
+    assert repair_draft.draft_status == "drafted"
+    assert repair_draft.draft_kind == "same_slot_replacement"
+    assert repair_draft.preferred_action is not None
+    assert repair_draft.preferred_action.tool_name == "stage_map_assertion_change"
+    assert repair_draft.preferred_action.arguments["restages_revision"] == (
+        aggregate_rows.revision_iri
+    )
+    assert repair_draft.preferred_action.arguments["alternative_to"] == (
+        event_rows.revision_iri
+    )
+
+    repair = db.stage_map_assertion_change(
+        **repair_draft.preferred_action.arguments,
+    )
+    assert repair.staged_revision.restaged_from == aggregate_rows.revision_iri
+    assert repair.staged_revision.alternative_to == event_rows.revision_iri
+    repair_check = db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri,
+    )
+    assert repair_check.status == "ready"
+    assert repair_check.alternative_gate.status == "alternative_to_applied_source"
+    assert repair_check.alternative_gate.semantic_review_required is True
+    assert repair_check.alternative_gate.applied_source_iri == event_rows.revision_iri
+    assert repair_check.alternative_gate.applied_revision_iri == (
+        applied_event.applied_revision_iri
+    )
+    assert repair_check.next_action is not None
+    assert repair_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+
+    final_plan = db.plan_staged_revision_recovery(current_staged_work_only=True)
+    assert final_plan.mutation_frontier_iris == [
+        repair.staged_revision.revision_iri
+    ]
+    assert final_plan.semantic_review_required_queue_counts == {
+        "apply_after_review": 1,
+    }
+    semantic_item = final_plan.next_action_queue_items[0]
+    assert semantic_item.row_iri == repair.staged_revision.revision_iri
+    assert semantic_item.alternative_gate_status == "alternative_to_applied_source"
+    assert semantic_item.alternative_semantic_review_required is True
+
+
 def test_stale_column_same_slot_drift_keeps_restage_route(
     tmp_path: Path,
 ) -> None:

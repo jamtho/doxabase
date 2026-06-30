@@ -78,6 +78,38 @@ def test_profile_frontier_workflow_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
+def test_staged_semantic_repair_smoke_example_runs() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "examples" / "staged-semantic-repair-smoke.py"),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout
+
+    assert "# DoxaBase Staged Semantic Repair Smoke" in output
+    assert "Initial mutation frontier count: 3" in output
+    assert "Initial requires recheck after each apply: True" in output
+    assert "Post-apply recheck subset count: 2" in output
+    assert "Recovery queues: {'repair_or_replace': 1, 'restage_after_review': 1}" in (
+        output
+    )
+    assert "Helper mutation actions: ['stage_map_assertion_change']" in output
+    assert "same_slot_replacement" in output
+    assert "Independent successor status: ready" in output
+    assert "Repair draft: drafted / same_slot_replacement" in output
+    assert "Repair successor status: ready / Apply only after semantic review" in output
+    assert "Alternative gate: alternative_to_applied_source" in output
+    assert "Alternative semantic review required: True" in output
+    assert "Final semantic review counts: {'apply_after_review': 1}" in output
+    assert "Validation conforms: True" in output
+
+
 def test_local_csv_query_smoke_example_runs() -> None:
     result = subprocess.run(
         [sys.executable, str(ROOT / "examples" / "local-csv-query-smoke.py")],

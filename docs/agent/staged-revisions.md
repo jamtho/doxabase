@@ -406,6 +406,36 @@ Guarded same-slot conflicts that already suggest a
 `not_restageable_reason="same_slot_replacement"` and rejected by direct
 `restage_staged_revision()`; follow the item repair action and pass
 `restages_revision` so the replacement supersedes the stale source.
+Semantic same-slot repair smoke route:
+
+1. Stage competing alternatives with `stage_systematisation`, for example
+   replacing one `rc:rowSemantics` value with `rc:EventRow` versus
+   `rc:AggregateRow`.
+2. Apply at most one ready alternative, then rerun
+   `plan_staged_revision_recovery(current_staged_work_only=True,
+   drift_detail="exact")`; do not treat
+   `apply_staged_revision().post_apply_recheck_revision_iris` as the full
+   remaining queue.
+3. Treat `would_restage_revision_iris` as the only mechanical restage worklist.
+   Same-slot semantic conflicts route through `repair_or_replace`,
+   `not_restageable_reason="same_slot_replacement"`, and a helper action such
+   as `stage_map_assertion_change(..., restages_revision=...)`.
+4. Stage the helper repair or the lane's
+   `repair_draft.preferred_action`, then check the successor. A successor that
+   is mechanically `ready` can still have
+   `alternative_gate.status="alternative_to_applied_source"` and an apply label
+   of `Apply only after semantic review`.
+5. Replan after each apply. `mutation_frontier_iris` can contain a mechanically
+   ready semantic alternative after its successor exists; read
+   `semantic_review_required_queue_counts`, `mutation_frontier_items`, and
+   `alternative_semantic_review_required` before applying unattended.
+
+For a scratch executable version, run:
+
+```bash
+./.venv/bin/python examples/staged-semantic-repair-smoke.py
+```
+
 Scripts should drive follow-up calls from `next_action_after.arguments["iri"]`
 when present, or `current_revision_iri` otherwise. `restaged_revision_iri` is
 only populated for a batch item that created a successor in that batch. For a

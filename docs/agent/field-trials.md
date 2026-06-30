@@ -3097,6 +3097,14 @@ few useful gaps:
   vocabulary promotion has concrete staged skeletons, while caveat or
   systematisation fallbacks for awkward metric/value advisories still require
   more caller-authored RDF.
+- A semantic same-slot rebase trial confirmed the recovery workflow can
+  distinguish ordinary stale drift from a competing same-slot replacement after
+  one alternative has been applied. Use `would_restage_revision_iris` only for
+  mechanical restage work, route `same_slot_replacement` rows through the
+  helper `stage_map_assertion_change(..., restages_revision=...)`, and stop at
+  `alternative_to_applied_source` even when the repaired successor is
+  mechanically ready. `examples/staged-semantic-repair-smoke.py` now exercises
+  this repair-first loop in a scratch capsule.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
