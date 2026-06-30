@@ -924,16 +924,17 @@ the reviewed `file_format`; database relation handoffs should use table-layout
 formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
 those match the engine.
 When `missing_storage_access` appears, use the lifted repair group for reviewed
-repair templates: record a non-secret storage access and link it to the dataset,
-or stage a reviewed `rc:hasStorageAccess` assertion to an existing storage
-access. Candidate ranking uses exact path-template matches, dataset-token
-overlap, weak generic-token overlap, and a linked-dataset caution for accesses
-already attached elsewhere; read `dataset_token_matches`,
+repair templates: stage a new non-secret storage access and dataset link, record
+one directly only when direct map mutation is intentional, or stage a reviewed
+`rc:hasStorageAccess` assertion to an existing storage access. Candidate ranking
+uses exact path-template matches, dataset-token overlap, weak generic-token
+overlap, and a linked-dataset caution for accesses already attached elsewhere;
+read `dataset_token_matches`,
 `generic_dataset_token_matches`, `dataset_partial_token_matches`,
 `generic_dataset_partial_token_matches`, `linked_dataset_iris`, and
 `match_reasons` before choosing a reviewed target. Missing-storage repair actions
-have stable `action_type` values
-(`record_reviewed_storage_access` and `stage_existing_storage_access_link`), and
+have stable `action_type` values (`stage_reviewed_storage_access`,
+`record_reviewed_storage_access`, and `stage_existing_storage_access_link`), and
 the repair hint carries `choice_mode="choose_one"` plus
 `candidate_existing_storage_accesses` when current map storage accesses are
 available for review. A candidate can carry
@@ -950,11 +951,12 @@ query-planning metadata on the dataset or linked query resources such as storage
 accesses, physical layouts, partition schemes, or columns, not arbitrary staged
 caveats or profile work. `describe_query_context` also marks exact matching
 repair actions as `already_pending` so compact `pending_action_options` can skip
-duplicate storage/path/protocol/layout mutations. For the record-new-storage action,
-include the optional `path_templates` field only when the storage access itself
-owns the path or database relation template. Omit it when a dataset or partition
-already carries the reviewed file/object path template, or you can create
-duplicate equivalent query target candidates. Database relation identifiers are
+duplicate storage/path/protocol/layout mutations. For staged or direct
+new-storage actions, include the optional `path_templates` field only when the
+storage access itself owns the path or database relation template. Omit it when
+a dataset or partition already carries the reviewed file/object path template,
+or you can create duplicate equivalent query target candidates. Database
+relation identifiers are
 the important storage-owned exception: for
 `storage_protocol="rc:DatabaseStorage"`, `path_templates` are reviewed database
 relation identifiers such as `schema.table`, and `storage_root` is the
@@ -1113,6 +1115,19 @@ patches for those old dataset-level values alongside the reviewed overlay;
 those removals are part of making the staged preview validation-clean.
 This route preserves graph-revision rationale and keeps the draft step
 side-effect free.
+
+### doxabase.stage_query_storage_access_repair
+
+Stages a reviewed storage access resource and `rc:hasStorageAccess` dataset
+link for a `missing_storage_access` query repair. Pass `dataset_iri`,
+`storage_access_iri`, `storage_protocol`, `storage_root`, and a reviewed
+`rationale`; optional location kind, access mode, path/relation templates,
+endpoint fields, and verification note are written to the staged
+`rc:StorageAccess`. Use storage-access-owned `path_templates` for database
+relation identifiers, but omit them when the dataset or partition already owns
+the file/object template. The helper returns a normal staged-revision record, so
+run `check_staged_revision_apply`, apply the ready row, then rerun
+`describe_query_context` before drafting a query plan.
 
 ### doxabase.stage_query_physical_layout_repair
 

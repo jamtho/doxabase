@@ -2775,8 +2775,9 @@ action's `arguments` or fill its `arguments_template`, add every
 calling the named tool.
 `choice_mode` is usually `review_all_applicable`; `choose_one` means the pending
 actions are alternatives. For example, `missing_storage_access` lets the agent
-either record a reviewed new storage access or stage a link to an existing
-reviewed storage access. In choose-one groups, do not treat
+stage a reviewed new storage access, record one directly, or stage a link to an
+existing reviewed storage access. Prefer the staged new-storage route when
+review history should be preserved. In choose-one groups, do not treat
 `pending_required_extra_arguments` as one call's required fields; use
 `pending_action_options[]` or the selected action's own
 `required_extra_arguments`.
@@ -3012,14 +3013,17 @@ excluded blocker counts, codes, and resource IRIs. `missing_storage_access`
 includes `dataset_iri`,
 `global_storage_access_count`, a `repair_hint`, and sometimes
 `fixture_staleness_hint`. The repair hint offers reviewed action templates for
-`record_map_storage_access(..., datasets=[...])` or a staged
+`stage_query_storage_access_repair(...)`, a direct
+`record_map_storage_access(..., datasets=[...])`, or a staged
 `rc:hasStorageAccess` assertion to an existing access resource.
 Missing-storage repair actions have stable `action_type` values:
-`record_reviewed_storage_access` and `stage_existing_storage_access_link`.
+`stage_reviewed_storage_access`, `record_reviewed_storage_access`, and
+`stage_existing_storage_access_link`.
 When existing map storage accesses are present, the repair hint also carries
 bounded `candidate_existing_storage_accesses` so agents can review likely link
 targets before filling the staged assertion's `object`. In the
-record-new-storage template, omit optional storage-owned `path_templates` when
+staged or direct new-storage template, omit optional storage-owned
+`path_templates` when
 the dataset or partition already carries the reviewed file/object path template;
 duplicating it can create equivalent ready query candidates. Database relation
 identifiers are the storage-owned exception. A fixture staleness hint means

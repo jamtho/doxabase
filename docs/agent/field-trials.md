@@ -2334,6 +2334,13 @@ few useful gaps:
   groups, so query repair groups now expose `choice_mode` and
   `pending_action_options` for per-action routing while preserving the legacy
   union field.
+- A later Polymarket query-repair trial found missing-storage repairs still
+  required direct map writes when no existing storage candidate could be linked.
+  `missing_storage_access` now exposes a staged
+  `stage_query_storage_access_repair` option for reviewed new storage access
+  metadata, while keeping `record_map_storage_access` as an intentional direct
+  write fallback and `stage_existing_storage_access_link` for existing access
+  resources.
 - A staged storage-link trial showed `project_brief` correctly routes pending
   query repairs behind staged frontier review, but raw `describe_query_context`
   could still hand out a duplicate staged-link template for the same

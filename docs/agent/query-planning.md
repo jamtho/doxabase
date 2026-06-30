@@ -209,9 +209,11 @@ Start with `describe_query_context(dataset_iri)`:
    `details.caveat_severity_iri`; pause or narrow scope on severe caveats even
    when physical query planning is ready.
    When `missing_storage_access` appears, read its `details.repair_hint` before
-   guessing at a path: either record reviewed non-secret storage access metadata
-   and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
-   an existing access resource. The repair hint includes
+   guessing at a path: prefer `stage_query_storage_access_repair` for a reviewed
+   new non-secret storage access and dataset link, use
+   `record_map_storage_access` only when a direct current-best map write is
+   intentional, or stage a reviewed `rc:hasStorageAccess` link to an existing
+   access resource. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
    use those ranked candidates for review only. A candidate can carry
    `pending_staged_repair_iris` and `candidate_status="already_pending"` when

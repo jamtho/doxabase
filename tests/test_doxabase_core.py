@@ -16377,45 +16377,70 @@ def test_describe_query_context_reports_missing_planning_metadata(
     ] is False
     repair_actions = missing_storage.details["repair_hint"]["actions"]
     assert [action["action_type"] for action in repair_actions] == [
+        "stage_reviewed_storage_access",
         "record_reviewed_storage_access",
         "stage_existing_storage_access_link",
     ]
     assert [action["tool_name"] for action in repair_actions] == [
+        "stage_query_storage_access_repair",
         "record_map_storage_access",
         "stage_map_assertion_change",
     ]
     assert repair_actions[0]["required_extra_arguments"] == [
+        "storage_access_iri",
+        "storage_protocol",
+        "storage_root",
+        "rationale",
+    ]
+    assert repair_actions[0]["arguments_template"]["dataset_iri"] == dataset
+    assert repair_actions[0]["arguments_template"]["storage_access_iri"] == (
+        "<reviewed storage access IRI>"
+    )
+    assert repair_actions[0]["placeholder_fields"] == [
+        "storage_access_iri",
+        "storage_protocol",
+        "storage_root",
+        "rationale",
+        "location_kind",
+        "path_templates",
+        "layout_verification_status",
+        "layout_verification_note",
+    ]
+    assert "stage_query_storage_access_repair records a reviewable" in (
+        repair_actions[0]["review_rationale_guidance"]
+    )
+    assert repair_actions[1]["required_extra_arguments"] == [
         "iri",
         "storage_protocol",
         "storage_root",
     ]
-    assert repair_actions[0]["arguments_template"]["datasets"] == [dataset]
-    assert repair_actions[0]["placeholder_fields"] == ["path_templates"]
-    assert repair_actions[0]["reviewed_value_fields"] == ["path_templates"]
-    assert "Omit this optional field" in repair_actions[0]["condition"]
+    assert repair_actions[1]["arguments_template"]["datasets"] == [dataset]
+    assert repair_actions[1]["placeholder_fields"] == ["path_templates"]
+    assert repair_actions[1]["reviewed_value_fields"] == ["path_templates"]
+    assert "Omit this optional field" in repair_actions[1]["condition"]
     assert "duplicating it can create equivalent query target candidates" in (
-        repair_actions[0]["condition"]
+        repair_actions[1]["condition"]
     )
-    assert "Database relation identifiers" in repair_actions[0]["condition"]
+    assert "Database relation identifiers" in repair_actions[1]["condition"]
     assert "database_relation_template_source_mismatch" in (
-        repair_actions[0]["condition"]
+        repair_actions[1]["condition"]
     )
-    assert repair_actions[0]["protocol_guidance"][
+    assert repair_actions[1]["protocol_guidance"][
         "file_or_object_storage"
     ].startswith("Omit storage-owned path_templates")
-    assert "database relation identifiers" in repair_actions[0][
+    assert "database relation identifiers" in repair_actions[1][
         "protocol_guidance"
     ]["rc:DatabaseStorage"]
     assert "record_map_storage_access writes current-best map facts directly" in (
-        repair_actions[0]["review_rationale_guidance"]
+        repair_actions[1]["review_rationale_guidance"]
     )
-    assert repair_actions[1]["arguments_template"]["subject"] == dataset
-    assert repair_actions[1]["arguments_template"]["predicate"] == (
+    assert repair_actions[2]["arguments_template"]["subject"] == dataset
+    assert repair_actions[2]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
-    assert repair_actions[1]["placeholder_fields"] == ["object"]
-    assert repair_actions[1]["reviewed_value_fields"] == ["object"]
-    assert "revision_anchors" not in repair_actions[1]["arguments_template"]
+    assert repair_actions[2]["placeholder_fields"] == ["object"]
+    assert repair_actions[2]["reviewed_value_fields"] == ["object"]
+    assert "revision_anchors" not in repair_actions[2]["arguments_template"]
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.group_name == "query_repair_review"
@@ -16431,23 +16456,60 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_group.repair_context[
         "candidate_existing_storage_accesses"
     ] == []
-    assert repair_group.action_count == 2
-    assert repair_group.action_status_counts == {"pending_review": 2}
-    assert repair_group.pending_action_count == 2
+    assert repair_group.action_count == 3
+    assert repair_group.action_status_counts == {"pending_review": 3}
+    assert repair_group.pending_action_count == 3
     assert repair_group.skippable_action_count == 0
     assert repair_group.already_satisfied_action_count == 0
     assert repair_group.pending_required_extra_arguments == [
-        "iri",
+        "storage_access_iri",
         "storage_protocol",
         "storage_root",
-        "object",
         "rationale",
+        "iri",
+        "object",
     ]
-    assert len(repair_group.pending_action_options) == 2
-    storage_option = repair_group.pending_action_options[0]
+    assert len(repair_group.pending_action_options) == 3
+    staged_storage_option = repair_group.pending_action_options[0]
+    _assert_repair_action_option(
+        staged_storage_option,
+        action_index=0,
+        action_type="stage_reviewed_storage_access",
+        tool_name="stage_query_storage_access_repair",
+        mcp_tool_name="doxabase.stage_query_storage_access_repair",
+        action_label="Stage storage access repair",
+        required_extra_arguments=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+        ],
+        placeholder_fields=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+            "location_kind",
+            "path_templates",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+        reviewed_value_fields=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+            "location_kind",
+            "path_templates",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+    )
+    assert "staged-revision rationale" in staged_storage_option["reason"]
+    storage_option = repair_group.pending_action_options[1]
     _assert_repair_action_option(
         storage_option,
-        action_index=0,
+        action_index=1,
         action_type="record_reviewed_storage_access",
         tool_name="record_map_storage_access",
         mcp_tool_name="doxabase.record_map_storage_access",
@@ -16465,10 +16527,10 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert "record_map_storage_access writes current-best map facts directly" in (
         storage_option["review_rationale_guidance"]
     )
-    link_option = repair_group.pending_action_options[1]
+    link_option = repair_group.pending_action_options[2]
     _assert_repair_action_option(
         link_option,
-        action_index=1,
+        action_index=2,
         action_type="stage_existing_storage_access_link",
         tool_name="stage_map_assertion_change",
         mcp_tool_name="doxabase.stage_map_assertion_change",
@@ -16479,20 +16541,23 @@ def test_describe_query_context_reports_missing_planning_metadata(
     )
     assert "suitable storage access resource already exists" in link_option["reason"]
     assert [action["action_type"] for action in repair_group.actions] == [
+        "stage_reviewed_storage_access",
         "record_reviewed_storage_access",
         "stage_existing_storage_access_link",
     ]
     assert [action["tool_name"] for action in repair_group.actions] == [
+        "stage_query_storage_access_repair",
         "record_map_storage_access",
         "stage_map_assertion_change",
     ]
-    assert repair_group.actions[0]["arguments_template"]["datasets"] == [dataset]
-    assert repair_group.actions[1]["arguments_template"]["predicate"] == (
+    assert repair_group.actions[0]["arguments_template"]["dataset_iri"] == dataset
+    assert repair_group.actions[1]["arguments_template"]["datasets"] == [dataset]
+    assert repair_group.actions[2]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
-    assert repair_group.actions[1]["placeholder_fields"] == ["object"]
-    assert repair_group.actions[1]["reviewed_value_fields"] == ["object"]
-    assert "revision_anchors" not in repair_group.actions[1]["arguments_template"]
+    assert repair_group.actions[2]["placeholder_fields"] == ["object"]
+    assert repair_group.actions[2]["reviewed_value_fields"] == ["object"]
+    assert "revision_anchors" not in repair_group.actions[2]["arguments_template"]
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
     assert {issue.domain for issue in context.issues} == {"query_planning"}
     assert context.query_target_decision.status == "no_candidate"
@@ -16760,7 +16825,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert repair_group.repair_context[
         "candidate_existing_storage_accesses"
     ][0]["storage_access_iri"] == storage.iri
-    link_action = repair_hint["actions"][1]
+    link_action = repair_hint["actions"][2]
 
     assert link_action["action_type"] == "stage_existing_storage_access_link"
     assert link_action["required_extra_arguments"] == ["object", "rationale"]
@@ -16812,15 +16877,17 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         staged.revision_iri
     ]
     assert pending_repair_group.action_status_counts == {
-        "pending_review": 1,
+        "pending_review": 2,
         "already_pending": 1,
     }
-    assert pending_repair_group.pending_action_count == 1
+    assert pending_repair_group.pending_action_count == 2
     assert pending_repair_group.skippable_action_count == 1
     assert pending_repair_group.pending_required_extra_arguments == [
-        "iri",
+        "storage_access_iri",
         "storage_protocol",
         "storage_root",
+        "rationale",
+        "iri",
     ]
     pending_action_by_type = {
         action["action_type"]: action for action in pending_repair_group.actions
@@ -16835,11 +16902,46 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert pending_link_action["pending_staged_repair_iris"] == [
         staged.revision_iri
     ]
-    assert len(pending_repair_group.pending_action_options) == 1
-    pending_storage_option = pending_repair_group.pending_action_options[0]
+    assert len(pending_repair_group.pending_action_options) == 2
+    pending_staged_storage_option = pending_repair_group.pending_action_options[0]
+    _assert_repair_action_option(
+        pending_staged_storage_option,
+        action_index=0,
+        action_type="stage_reviewed_storage_access",
+        tool_name="stage_query_storage_access_repair",
+        mcp_tool_name="doxabase.stage_query_storage_access_repair",
+        action_label="Stage storage access repair",
+        required_extra_arguments=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+        ],
+        placeholder_fields=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+            "location_kind",
+            "path_templates",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+        reviewed_value_fields=[
+            "storage_access_iri",
+            "storage_protocol",
+            "storage_root",
+            "rationale",
+            "location_kind",
+            "path_templates",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+    )
+    pending_storage_option = pending_repair_group.pending_action_options[1]
     _assert_repair_action_option(
         pending_storage_option,
-        action_index=0,
+        action_index=1,
         action_type="record_reviewed_storage_access",
         tool_name="record_map_storage_access",
         mcp_tool_name="doxabase.record_map_storage_access",
@@ -16857,6 +16959,44 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert "record_map_storage_access writes current-best map facts directly" in (
         pending_storage_option["review_rationale_guidance"]
     )
+
+
+def test_stage_query_storage_access_repair_unblocks_missing_storage(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    storage_access = "https://example.test/project#messages_storage"
+    db.record_map_dataset(
+        dataset,
+        label="Messages",
+        is_table=True,
+        path_templates=["messages/current/*.jsonl"],
+    )
+
+    before = db.describe_query_context(dataset)
+    assert "missing_storage_access" in {issue.code for issue in before.issues}
+
+    staged = db.stage_query_storage_access_repair(
+        dataset_iri=dataset,
+        storage_access_iri=storage_access,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        rationale="Reviewed the local warehouse route for Messages.",
+        location_kind="directory",
+        path_templates=["messages/current/*.jsonl"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Reviewed from local warehouse listing.",
+    )
+
+    assert staged.validation_conforms is True
+    assert db.check_staged_revision_apply(staged.revision_iri).status == "ready"
+    db.apply_staged_revision(staged.revision_iri)
+
+    repaired = db.describe_query_context(dataset)
+    assert "missing_storage_access" not in {issue.code for issue in repaired.issues}
+    assert repaired.storage_accesses[0].iri == storage_access
+    assert repaired.storage_accesses[0].storage_root == str(tmp_path / "warehouse")
 
 
 def test_missing_storage_access_ranks_dataset_specific_candidates_first(
@@ -17030,8 +17170,8 @@ def test_missing_storage_access_downweights_generic_token_candidates(
         staged.revision_iri
     ]
     pending_repair_group = pending_context.suggested_repair_action_groups[0]
-    assert pending_repair_group.action_status_counts == {"pending_review": 2}
-    assert pending_repair_group.pending_action_count == 2
+    assert pending_repair_group.action_status_counts == {"pending_review": 3}
+    assert pending_repair_group.pending_action_count == 3
     assert pending_repair_group.skippable_action_count == 0
     assert pending_repair_group.repair_context[
         "already_pending_candidate_count"
@@ -17083,8 +17223,16 @@ def test_missing_storage_access_repair_omits_duplicate_path_template(
         issue for issue in before.issues if issue.code == "missing_storage_access"
     )
     assert missing_storage.details is not None
-    repair_action = missing_storage.details["repair_hint"]["actions"][0]
-    assert "Omit this optional field" in repair_action["condition"]
+    repair_actions = {
+        action["action_type"]: action
+        for action in missing_storage.details["repair_hint"]["actions"]
+    }
+    staged_action = repair_actions["stage_reviewed_storage_access"]
+    direct_action = repair_actions["record_reviewed_storage_access"]
+    assert "Omit them when the dataset or partition already carries" in (
+        staged_action["condition"]
+    )
+    assert "Omit this optional field" in direct_action["condition"]
 
     db.record_map_storage_access(
         "https://example.test/project#events_local_storage",

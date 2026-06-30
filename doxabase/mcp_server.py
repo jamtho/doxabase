@@ -79,6 +79,7 @@ from doxabase.mcp_tools import (
     search_tool,
     stage_graph_revision_tool,
     stage_query_physical_layout_repair_tool,
+    stage_query_storage_access_repair_tool,
     stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
     stage_profile_map_updates_tool,
@@ -90,7 +91,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
 class _LazyDoxaBase:
@@ -386,6 +387,59 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             label=label,
             description=description,
             compression_codec=compression_codec,
+            layout_verification_status=layout_verification_status,
+            layout_verification_note=layout_verification_note,
+            summary=summary,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.stage_query_storage_access_repair")
+    def stage_query_storage_access_repair(
+        dataset_iri: str,
+        storage_access_iri: str,
+        storage_protocol: str,
+        storage_root: str,
+        rationale: str,
+        label: str | None = None,
+        description: str | None = None,
+        access_mode: str | None = None,
+        location_kind: str | None = None,
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        path_templates: list[str] | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        summary: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: str = "all",
+    ) -> dict[str, Any]:
+        """Stage reviewed storage access metadata for a query repair."""
+
+        return stage_query_storage_access_repair_tool(
+            db,
+            dataset_iri=dataset_iri,
+            storage_access_iri=storage_access_iri,
+            storage_protocol=storage_protocol,
+            storage_root=storage_root,
+            rationale=rationale,
+            label=label,
+            description=description,
+            access_mode=access_mode,
+            location_kind=location_kind,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            path_templates=path_templates,
             layout_verification_status=layout_verification_status,
             layout_verification_note=layout_verification_note,
             summary=summary,

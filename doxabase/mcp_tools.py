@@ -715,6 +715,58 @@ def stage_query_physical_layout_repair_tool(
     return to_dict(result)
 
 
+def stage_query_storage_access_repair_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    storage_access_iri: str,
+    storage_protocol: str,
+    storage_root: str,
+    rationale: str,
+    label: str | None = None,
+    description: str | None = None,
+    access_mode: str | None = None,
+    location_kind: str | None = None,
+    endpoint_profile: str | None = None,
+    bucket_name: str | None = None,
+    key_prefix: str | None = None,
+    region: str | None = None,
+    path_style_access: bool | None = None,
+    credential_reference: str | None = None,
+    path_templates: list[str] | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
+    summary: str | None = None,
+    review_note: str | None = None,
+    review_recommendation: str | None = None,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.stage_query_storage_access_repair(
+        dataset_iri=dataset_iri,
+        storage_access_iri=storage_access_iri,
+        storage_protocol=storage_protocol,
+        storage_root=storage_root,
+        rationale=rationale,
+        label=label,
+        description=description,
+        access_mode=access_mode,
+        location_kind=location_kind,
+        endpoint_profile=endpoint_profile,
+        bucket_name=bucket_name,
+        key_prefix=key_prefix,
+        region=region,
+        path_style_access=path_style_access,
+        credential_reference=credential_reference,
+        path_templates=path_templates,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
+        summary=summary,
+        review_note=review_note,
+        review_recommendation=review_recommendation,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def describe_context_slice_tool(
     db: DoxaBase,
     seed_iris: list[str],

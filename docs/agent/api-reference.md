@@ -429,11 +429,14 @@ and exact path-template add/remove repairs when a template caused the mismatch.
 Their templated actions name `placeholder_fields` and `reviewed_value_fields`
 for the reviewed value to fill in; database relation add-template actions mark
 `object` as the reviewed placeholder and require both `object` and `rationale`.
-For `missing_storage_access`, the record-new-storage template's optional
-`path_templates` field should be omitted when the dataset or partition already
-owns the reviewed file/object path template; duplicating it can produce
-equivalent ready query candidates. Use storage-access-owned templates for
-database relation identifiers. Existing storage candidates can carry
+For `missing_storage_access`, prefer `stage_query_storage_access_repair()` when
+a reviewed new storage access should carry graph-revision rationale before map
+mutation. The direct record-new-storage template remains available for
+intentional current-best writes. In both routes, optional `path_templates` should
+be omitted when the dataset or partition already owns the reviewed file/object
+path template; duplicating it can produce equivalent ready query candidates. Use
+storage-access-owned templates for database relation identifiers. Existing
+storage candidates can carry
 `pending_staged_repair_iris` and `candidate_status="already_pending"` when that
 exact dataset/storage link is already staged.
 Follow each repair action's `required_extra_arguments`, `placeholder_fields`,
