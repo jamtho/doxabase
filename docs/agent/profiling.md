@@ -197,6 +197,10 @@ kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key
 for scripts. `profile_route_groups` rows are dict-shaped; scripts should index
 fields such as `group["review_lane"]` rather than using attribute access.
+Use `group["direct_semantic_moves"]` and `group["direct_route_step_keys"]` when
+deciding what a staged row closed. A single `profile_type_review` route group can
+contain both `define_value_type` and `assert_map_type`; staging the value-type
+vocabulary skeleton closes the definition move, not the later map assertion.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

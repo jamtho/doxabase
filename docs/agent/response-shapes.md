@@ -2272,7 +2272,8 @@ scan, `candidate.explicit` is still false; inspect the nested
 `next_action` to follow the applied event.
 `profile_route_keys` names matched draft `route_group_key` values; each
 `profile_route_groups[]` row has `route_group_key`, `review_lane`,
-`route_step_keys`, `matched_by`, and `match_strength`. Strength values are
+`route_step_keys`, `direct_route_step_keys`, `semantic_moves`,
+`direct_semantic_moves`, `matched_by`, and `match_strength`. Strength values are
 `direct_action`, `strong_support`, or `related_support`: direct means the staged
 row appears to implement that draft lane, while strong/related support means it
 shares profile observations, support patterns, or anchors with the lane. The
@@ -2284,8 +2285,12 @@ query-planning repair review notes for already-applied query repairs whose live
 blocker is gone. For already-applied profile-map sources,
 persisted/generated route sources can be direct; fresh live draft follow-up
 routes for the same lane are support until staged separately.
+When several semantic moves share one `route_group_key`, for example
+`define_value_type` and `assert_map_type` inside `profile_type_review`, a direct
+candidate only closes the moves named in `direct_semantic_moves`. Other live
+steps in the same route group stay in `open_profile_review_lanes`.
 `open_profile_review_lanes[]` groups live draft route groups that still do not
-have a `direct_action` candidate in the bundle:
+have a direct candidate for the same route semantic move or exact route step:
 
 ```python
 lane.review_lane

@@ -24351,6 +24351,9 @@ class DoxaBase:
             source.get("duplicate_group_keys") or source.get("route_anchor_iris"),
         )
         source["route_group_key"] = route_group_key
+        semantic_move = DoxaBase._profile_advisory_semantic_move(action, source)
+        if semantic_move is not None:
+            source["semantic_move"] = semantic_move
         return DoxaBase._with_profile_route_step_key(source, action)
 
     @staticmethod
@@ -36786,6 +36789,9 @@ class DoxaBase:
                     "route_group_key": route_group_key,
                     "review_lane": review_lane,
                     "route_step_keys": [],
+                    "direct_route_step_keys": [],
+                    "semantic_moves": [],
+                    "direct_semantic_moves": [],
                     "matched_by": [],
                     "match_strength": match_strength,
                 },
@@ -36802,6 +36808,22 @@ class DoxaBase:
                     route_group["route_step_keys"],
                     route_step_key,
                 )
+                if match_strength == "direct_action":
+                    DoxaBase._append_unique(
+                        route_group["direct_route_step_keys"],
+                        route_step_key,
+                    )
+            semantic_move = source.get("semantic_move")
+            if isinstance(semantic_move, str):
+                DoxaBase._append_unique(
+                    route_group["semantic_moves"],
+                    semantic_move,
+                )
+                if match_strength == "direct_action":
+                    DoxaBase._append_unique(
+                        route_group["direct_semantic_moves"],
+                        semantic_move,
+                    )
             for match in matched_by:
                 DoxaBase._append_unique(route_group["matched_by"], match)
 
@@ -36933,13 +36955,37 @@ class DoxaBase:
         profile_route_sources: Iterable[MappingABC[str, Any]],
         candidates: list[ProfileInsightReviewCandidate],
     ) -> list[ProfileInsightOpenReviewLane]:
-        direct_satisfied_route_keys = {
-            str(group["route_group_key"])
-            for candidate in candidates
-            for group in candidate.profile_route_groups
-            if isinstance(group.get("route_group_key"), str)
-            and group.get("match_strength") == "direct_action"
-        }
+        direct_satisfied_route_moves: set[tuple[str, str]] = set()
+        direct_satisfied_route_steps: set[str] = set()
+        legacy_direct_satisfied_route_keys: set[str] = set()
+        for candidate in candidates:
+            for group in candidate.profile_route_groups:
+                route_group_key = group.get("route_group_key")
+                if not isinstance(route_group_key, str):
+                    continue
+                if group.get("match_strength") != "direct_action":
+                    continue
+                direct_semantic_moves = [
+                    move
+                    for move in group.get("direct_semantic_moves") or []
+                    if isinstance(move, str)
+                ]
+                direct_route_step_keys = [
+                    step
+                    for step in group.get("direct_route_step_keys") or []
+                    if isinstance(step, str)
+                ]
+                for semantic_move in direct_semantic_moves:
+                    direct_satisfied_route_moves.add(
+                        (route_group_key, semantic_move)
+                    )
+                direct_satisfied_route_steps.update(direct_route_step_keys)
+                # A value-type vocabulary promotion is a prerequisite, not the
+                # final map assertion for the profile type lane.
+                if not direct_semantic_moves or set(direct_semantic_moves) - {
+                    "define_value_type",
+                }:
+                    legacy_direct_satisfied_route_keys.add(route_group_key)
         candidate_iris_by_route_key: dict[str, list[str]] = {}
         for candidate in candidates:
             for group in candidate.profile_route_groups:
@@ -36964,7 +37010,19 @@ class DoxaBase:
                 continue
             if not DoxaBase._profile_route_source_requires_open_lane(source):
                 continue
-            if route_group_key in direct_satisfied_route_keys:
+            semantic_move = source.get("semantic_move")
+            if (
+                isinstance(semantic_move, str)
+                and (route_group_key, semantic_move)
+                in direct_satisfied_route_moves
+            ):
+                continue
+            if (
+                isinstance(route_step_key, str)
+                and route_step_key in direct_satisfied_route_steps
+            ):
+                continue
+            if route_group_key in legacy_direct_satisfied_route_keys:
                 continue
             lane = by_lane.get(review_lane)
             if lane is None:

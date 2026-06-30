@@ -2971,12 +2971,13 @@ few useful gaps:
   faithful inspection content. Profile value-type trials found
   `export_profile_insight_review_bundle` can over-close a shared route group
   after staging only a value-type vocabulary promotion, leaving the map
-  `rc:valueType` assertion open in the live draft. Project-brief onboarding
-  trials showed low-limit briefs expand correctly but the lane recipes deserve a
-  compact `project_brief` doc or read-only profile review action. Grouped
-  review-bundle trials showed awkward modelling choices need stronger
-  top-level decision summaries, structured framing roles, and common support
-  rollups.
+  `rc:valueType` assertion open in the live draft; profile route groups now
+  track direct semantic moves so `define_value_type` does not close
+  `assert_map_type`. Project-brief onboarding trials showed low-limit briefs
+  expand correctly but the lane recipes deserve a compact `project_brief` doc
+  or read-only profile review action. Grouped review-bundle trials showed
+  awkward modelling choices need stronger top-level decision summaries,
+  structured framing roles, and common support rollups.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

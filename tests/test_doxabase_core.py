@@ -27563,6 +27563,7 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert value_type_route_source["route_group_key"] == (
         value_type_plan.route_group_key
     )
+    assert value_type_route_source["semantic_move"] == "define_value_type"
     assert value_type_route_source["route_step_key"] in (
         value_type_plan.route_step_keys
     )
@@ -27607,9 +27608,26 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert route_groups["profile_type_review"]["match_strength"] == (
         "direct_action"
     )
-    assert "profile_type_review" not in {
-        lane.review_lane for lane in review.open_profile_review_lanes
+    assert route_groups["profile_type_review"]["direct_semantic_moves"] == [
+        "define_value_type"
+    ]
+    assert "assert_map_type" in route_groups["profile_type_review"][
+        "semantic_moves"
+    ]
+    open_lanes = {
+        lane.review_lane: lane for lane in review.open_profile_review_lanes
     }
+    assert set(open_lanes) == {"profile_type_review"}
+    assert open_lanes["profile_type_review"].route_group_keys == [
+        value_type_plan.route_group_key
+    ]
+    assert open_lanes["profile_type_review"].matched_candidate_revision_iris == [
+        staged.iri
+    ]
+    assert not set(open_lanes["profile_type_review"].route_step_keys) & set(
+        value_type_plan.route_step_keys
+    )
+    assert open_lanes["profile_type_review"].action_count == 4
 
 
 def test_profile_type_assertion_route_source_closes_only_selected_advisory(
