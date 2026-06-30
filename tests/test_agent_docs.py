@@ -254,6 +254,7 @@ def test_profiling_doc_names_core_workflow_tools() -> None:
     assert "stage_profile_map_updates" in content
     assert "profile_type_review" in content
     assert "profile_scalar_conflict_review" in content
+    assert "do_not_bulk_apply" in content
 
 
 def test_systematisation_doc_names_core_workflow_tools() -> None:

@@ -132,6 +132,13 @@ inside a later profile insight review bundle.
 run that produced the blocker action; keep one of those fields with copied
 first-hop `describe_query_context` actions when several profile runs on the
 same dataset route to the same physical blocker.
+For mixed profile/query lanes, do not let a profile insight bundle's
+`do_not_bulk_apply` decision block reviewed query repair progress. The safe
+loop is lane-specific: stage profile-routed storage/layout repairs, export the
+profile insight or staged-revisions review, apply one repair only after
+`check_staged_revision_apply` is ready, rerun `plan_staged_revision_recovery`
+or `describe_query_context`, restage any stale sibling repair, recheck it, then
+apply the refreshed successor before drafting the query plan.
 
 ## Stage Accepted Facts
 

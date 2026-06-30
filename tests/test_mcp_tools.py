@@ -2063,6 +2063,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "history_missing": 1,
     }
     assert dry_run["recovery_summary"]["recovery_plan_available"] is False
+    assert dry_run["recovery_summary"]["first_mutation_action"] is None
     assert dry_run["recovery_summary"]["recommended_next_step"] == (
         "run_import_handoff_bundle"
     )
@@ -2126,6 +2127,15 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
+    assert manifest_import["recovery_summary"]["first_mutation_action"][
+        "tool_name"
+    ] == "apply_staged_revision"
+    assert manifest_import["recovery_summary"]["first_mutation_action"][
+        "arguments"
+    ] == {"iri": staged["revision_iri"]}
+    assert manifest_import["recovery_summary"]["first_mutation_frontier_item"][
+        "target_iri"
+    ] == staged["revision_iri"]
     assert manifest_import["recovery_summary"]["profile_route_revision_count"] == 1
     assert manifest_import["recovery_summary"]["profile_route_group_count"] == 1
     assert manifest_import["recovery_summary"]["profile_route_keys"] == [
@@ -2259,6 +2269,9 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     assert imported["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
+    assert imported["recovery_summary"]["first_mutation_action"]["tool_name"] == (
+        "apply_staged_revision"
+    )
     assert imported["recovery_summary"]["first_suggested_next_action"][
         "tool_name"
     ] == "start_staged_revision_recovery_session"
@@ -2311,6 +2324,7 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
     )
     assert imported["recovery_summary"]["revision_count"] == 0
     assert imported["recovery_summary"]["snapshot_evidence_complete"] is True
+    assert imported["recovery_summary"]["first_mutation_action"] is None
     assert imported["recovery_summary"]["recommended_next_step"] == (
         "resume_project_frontier"
     )

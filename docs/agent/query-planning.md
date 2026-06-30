@@ -316,6 +316,12 @@ Start with `describe_query_context(dataset_iri)`:
    prerequisites are satisfied, follow the
    `replace_dataset_layout_verification_status` repair group rather than
    hand-authoring a generic graph revision.
+   When the repair came from a profile draft's `query_context_review` lane,
+   keep the profile route source on each staged repair. If applying the first
+   storage/layout repair makes a pre-staged sibling stale, run
+   `plan_staged_revision_recovery`, dry-run or review the restage route, restage
+   the sibling, recheck the successor, then apply it before drafting the final
+   query plan.
    In multiple-candidate missing-storage groups, the group-level
    `stage_existing_storage_access_link` action may still be pending because a
    different non-pending candidate could be chosen after review; use the

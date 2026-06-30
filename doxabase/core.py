@@ -798,6 +798,8 @@ class HandoffBundleRecoverySummary:
     recovery_next_action_queue_item_counts: dict[str, int]
     mutation_frontier_iris: list[str]
     mutation_frontier_count: int
+    first_mutation_frontier_item: StagedRevisionMutationFrontierItem | None
+    first_mutation_action: SuggestedNextAction | RevisionNextAction | None
     profile_route_revision_count: int
     profile_route_group_count: int
     profile_route_keys: list[str]
@@ -51867,6 +51869,19 @@ class DoxaBase:
         profile_route_keys: list[str] = []
         profile_route_revision_count = 0
         profile_route_group_count = 0
+        mutation_frontier_items = (
+            list(recovery_plan.mutation_frontier_items)
+            if recovery_plan is not None
+            else []
+        )
+        first_mutation_frontier_item = (
+            mutation_frontier_items[0] if mutation_frontier_items else None
+        )
+        first_mutation_action = (
+            first_mutation_frontier_item.action
+            if first_mutation_frontier_item is not None
+            else None
+        )
         if recovery_plan is not None:
             for summary in recovery_plan.revision_summaries:
                 if summary.profile_route_groups:
@@ -51936,6 +51951,8 @@ class DoxaBase:
                 if recovery_plan is not None
                 else 0
             ),
+            first_mutation_frontier_item=first_mutation_frontier_item,
+            first_mutation_action=first_mutation_action,
             profile_route_revision_count=profile_route_revision_count,
             profile_route_group_count=profile_route_group_count,
             profile_route_keys=profile_route_keys,

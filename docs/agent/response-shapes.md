@@ -5059,6 +5059,8 @@ summary.matching_recovery_session_count
 summary.recovery_lane_counts
 summary.recovery_next_action_queue_item_counts
 summary.mutation_frontier_iris
+summary.first_mutation_frontier_item
+summary.first_mutation_action
 summary.profile_route_revision_count
 summary.profile_route_group_count
 summary.profile_route_keys
@@ -5069,7 +5071,10 @@ summary.recommended_next_step
 It is a compact report over the same imported manifest, snapshot evidence,
 matching recovery sessions, recovery plan, route-source bridge, and first
 structured follow-up action. Use it for PASS/FAIL continuity checks, then open
-the raw fields when a count is surprising or incomplete.
+the raw fields when a count is surprising or incomplete. When
+`first_mutation_action` is present, it is copied from the recovery plan's first
+mutation-frontier item so a receiver can see the next reviewed mutation without
+opening the nested plan first.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:
