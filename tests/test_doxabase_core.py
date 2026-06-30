@@ -2824,6 +2824,126 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert round_trip.search("Sensitive payroll", graph="map").matches == []
 
 
+def test_context_slice_export_preserves_relationship_endpoint_bodies(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/asset-context#"
+    raw_images = f"{base}RawImages"
+    ocr_documents = f"{base}OcrDocuments"
+    review_packet = f"{base}ReviewPacket"
+    relationship_iri = f"{base}ReviewPacketDerivation"
+
+    db.record_map_dataset(
+        raw_images,
+        label="Raw images",
+        is_table=False,
+        extra_types=["rc:ImageFile"],
+    )
+    db.record_map_dataset(
+        ocr_documents,
+        label="OCR documents",
+        is_table=False,
+        extra_types=["rc:PDFFile"],
+    )
+    db.record_map_dataset(
+        review_packet,
+        label="Review packet",
+        is_table=False,
+        extra_types=["rc:DocumentCollection"],
+    )
+    db.record_map_relationship(
+        relationship_iri,
+        label="Review packet derivation",
+        relationship_type="derivation",
+        source_endpoints=[
+            {
+                "iri": f"{base}ReviewPacketDerivationRawImagesEndpoint",
+                "dataset": raw_images,
+                "role": "primary image input",
+                "order": 10,
+            },
+            {
+                "iri": f"{base}ReviewPacketDerivationOcrEndpoint",
+                "dataset": ocr_documents,
+                "role": "report text input",
+                "order": 20,
+            },
+        ],
+        target_endpoints=[
+            {
+                "iri": f"{base}ReviewPacketDerivationTargetEndpoint",
+                "dataset": review_packet,
+                "role": "human review packet output",
+                "order": 1,
+            }
+        ],
+    )
+    assert db.validate_graph(scope="all").conforms
+
+    context_slice = db.describe_context_slice(
+        [review_packet],
+        profile="dataset_brief",
+        max_triples=300,
+    )
+    assert context_slice.route_counts["relationship_endpoint"] == 3
+    assert context_slice.route_counts["relationship_endpoint_dataset"] == 3
+
+    export_path = tmp_path / "review-packet-context.trig"
+    export = db.export_context_slice(
+        export_path,
+        [review_packet],
+        profile="dataset_brief",
+        max_triples=300,
+        fail_on_sensitive=True,
+    )
+    assert export.graph_counts == {"map": export.triples}
+    assert export.triples == export.candidate_triple_count
+
+    export_text = export_path.read_text(encoding="utf-8")
+    assert "hasRelationshipEndpoint" in export_text
+    assert "endpointDataset" in export_text
+    assert "endpointDirection" in export_text
+    assert "endpointRole" in export_text
+    assert "endpointOrder" in export_text
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip-context.sqlite")
+    imported = round_trip.import_trig(export_path)
+    assert imported == {"map": export.triples}
+    validation = round_trip.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+    described = round_trip.describe_dataset(review_packet)
+    derivation = next(
+        item
+        for item in described.relationships
+        if item.iri == relationship_iri
+    )
+    assert [
+        (
+            endpoint.dataset.iri if endpoint.dataset else None,
+            endpoint.role,
+            endpoint.order,
+            endpoint.direction,
+        )
+        for endpoint in derivation.source_endpoints
+    ] == [
+        (raw_images, "primary image input", 10, "source"),
+        (ocr_documents, "report text input", 20, "source"),
+    ]
+    assert [
+        (
+            endpoint.dataset.iri if endpoint.dataset else None,
+            endpoint.role,
+            endpoint.order,
+            endpoint.direction,
+        )
+        for endpoint in derivation.target_endpoints
+    ] == [
+        (review_packet, "human review packet output", 1, "target"),
+    ]
+
+
 def test_context_slice_export_redacts_sensitive_seed_descriptions(
     tmp_path: Path,
 ) -> None:

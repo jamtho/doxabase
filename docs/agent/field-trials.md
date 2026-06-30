@@ -3375,6 +3375,14 @@ few useful gaps:
   `target_endpoints` for optional endpoint role/order metadata while preserving
   compatibility `sourceDataset` / `targetDataset` edges; use that route instead
   of `derivation_properties` for endpoint roles.
+- A follow-up endpoint role/order trial found dataset-seeded
+  `dataset_brief` context slices preserved relationship links but omitted the
+  structured endpoint node bodies, so import lost endpoint role/order and failed
+  SHACL validation. Dataset relationship routes now include
+  `relationship_endpoint` and `relationship_endpoint_dataset` resources, so
+  `export_context_slice(profile="dataset_brief")` round-trips endpoint
+  `rdf:type`, `endpointDataset`, `endpointDirection`, `endpointRole`, and
+  `endpointOrder` triples.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

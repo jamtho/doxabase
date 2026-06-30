@@ -11436,6 +11436,21 @@ class DoxaBase:
                         source_iri=relationship.iri,
                         depth=depth + 1,
                     )
+            for endpoint in relationship.endpoints:
+                add_resource(
+                    endpoint.iri,
+                    "relationship_endpoint",
+                    "relationship endpoint",
+                    source_iri=relationship.iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    endpoint.dataset,
+                    "relationship_endpoint_dataset",
+                    "relationship endpoint dataset",
+                    source_iri=endpoint.iri,
+                    depth=depth + 2,
+                )
 
         def add_dataset(dataset_iri: str, source_iri: str | None, depth: int) -> None:
             add_resource(
@@ -13359,6 +13374,8 @@ class DoxaBase:
             "dataset_column": 5,
             "known_caveat": 6,
             "dataset_relationship": 7,
+            "relationship_endpoint": 8,
+            "relationship_endpoint_dataset": 9,
             "related_dataset_reason": 8,
             "related_dataset": 9,
             "related_column": 9,
@@ -13518,6 +13535,12 @@ class DoxaBase:
             "dataset_column": "A column belonging to a selected dataset.",
             "known_caveat": "A caveat attached to a selected dataset.",
             "dataset_relationship": "A relationship attached to a selected dataset.",
+            "relationship_endpoint": (
+                "A structured source or target endpoint attached to a selected dataset relationship."
+            ),
+            "relationship_endpoint_dataset": (
+                "A dataset named by a structured relationship endpoint."
+            ),
             "related_dataset_reason": (
                 "A relationship or shared identifier explaining a related dataset."
             ),
