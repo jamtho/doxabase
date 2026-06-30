@@ -3281,9 +3281,11 @@ few useful gaps:
   staged apply checks inside each profile draft while also building the staged
   review frontier. `project_brief` now reuses its staged review summary for
   profile pending detection, which cut the 16-row expanded frontier trial from
-  about 32 seconds to about 7 seconds. `plan_staged_revision_recovery()` remains
-  the next staged-frontier runtime target; the same trial still spent about 19
-  seconds planning 20 current staged rows.
+  about 32 seconds to about 7 seconds. A follow-up recovery-planner pass made
+  `plan_staged_revision_recovery()` select current staged rows without an
+  apply-check listing and reuse the checks already computed during dry-run
+  planning; the same 20-row recovery plan dropped from about 19 seconds to
+  about 10 seconds.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

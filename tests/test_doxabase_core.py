@@ -8199,6 +8199,55 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     )
 
 
+def test_plan_staged_revision_recovery_reuses_apply_checks_for_current_work(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/recovery-performance#"
+    revisions = [
+        db.stage_graph_revision(
+            summary=f"Stage ready table {index}",
+            rationale="Independent ready staged row for recovery planning.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                        @prefix rc: <{RC}> .
+
+                        <{base}Table{index}> a rc:Dataset, rc:Table .
+                    """,
+                }
+            ],
+            revision_anchors=[f"{base}Table{index}"],
+        )
+        for index in range(2)
+    ]
+
+    apply_check_count = 0
+    original_check = db.check_staged_revision_apply
+
+    def counted_check(*args, **kwargs):
+        nonlocal apply_check_count
+        apply_check_count += 1
+        return original_check(*args, **kwargs)
+
+    monkeypatch.setattr(db, "check_staged_revision_apply", counted_check)
+
+    plan = db.plan_staged_revision_recovery(
+        current_staged_work_only=True,
+        include_drafts=False,
+    )
+
+    assert apply_check_count == len(revisions)
+    assert plan.selection_mode == "current_staged_work"
+    assert plan.total_count == len(revisions)
+    assert plan.lane_counts == {"apply_after_review": len(revisions)}
+    assert set(plan.mutation_frontier_iris) == {
+        revision.revision_iri for revision in revisions
+    }
+
+
 def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
     tmp_path: Path,
 ) -> None:

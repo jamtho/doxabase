@@ -32778,10 +32778,25 @@ class DoxaBase:
         review_revision_iris: list[str] = []
         items: list[StagedGraphRevisionBatchRestageItem] = []
         history_graphs = self._expand_graphs(["history"])
+        apply_check_by_iri: dict[
+            str,
+            tuple[StagedRevisionApplyCheck | None, str | None],
+        ] = {}
 
         def add_review_revision(iri: str | None) -> None:
             if iri is not None and iri not in review_revision_iris:
                 review_revision_iris.append(iri)
+
+        def record_apply_check(check: StagedRevisionApplyCheck) -> None:
+            apply_check_by_iri[check.revision_iri] = (check, None)
+
+        def apply_check_for_review(
+            description: StagedGraphRevisionDescription,
+        ) -> tuple[StagedRevisionApplyCheck | None, str | None]:
+            cached = apply_check_by_iri.get(description.iri)
+            if cached is not None:
+                return cached
+            return self._staged_revision_apply_check_for_export(description)
 
         for source_iri in processed_revision_iris:
             source = self.describe_staged_revision(source_iri)
@@ -32797,6 +32812,7 @@ class DoxaBase:
                 source.iri,
                 validation_scope=validation_scope,
             )
+            record_apply_check(check)
             restaged_by = (
                 source.restaged_by.iri if source.restaged_by is not None else None
             )
@@ -32933,6 +32949,7 @@ class DoxaBase:
                     current_revision_iri,
                     validation_scope=validation_scope,
                 )
+                record_apply_check(current_check)
             else:
                 current_description = source
                 current_check = check
@@ -33118,7 +33135,7 @@ class DoxaBase:
                 self.describe_staged_revision(iri) for iri in review_revision_iris
             ]
             review_apply_checks = [
-                self._staged_revision_apply_check_for_export(description)
+                apply_check_for_review(description)
                 for description in review_descriptions
             ]
             revision_summaries = self._staged_revisions_export_summaries(
@@ -33183,6 +33200,8 @@ class DoxaBase:
     ) -> StagedRevisionRecoveryPlan:
         if drift_detail not in {"summary", "exact"}:
             raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
+        self._ensure_non_negative("limit", limit)
+        self._ensure_non_negative("offset", offset)
         selection_mode: str
         requested_revision_iris: list[str] | None
         total_count: int
@@ -33196,18 +33215,25 @@ class DoxaBase:
             requested_revision_iris = None
             listing = self.list_graph_revisions(
                 revision_type="rc:StagedRevision",
-                include_apply_checks=True,
+                include_apply_checks=False,
                 drift_detail=drift_detail,
-                current_staged_work_only=current_staged_work_only,
-                limit=limit,
-                offset=offset,
+                current_staged_work_only=False,
+                limit=1_000_000 if current_staged_work_only else limit,
+                offset=0 if current_staged_work_only else offset,
             )
-            selected_revision_iris = [item.iri for item in listing.revisions]
-            total_count = listing.total_count
+            if current_staged_work_only:
+                current_items = [
+                    item for item in listing.revisions if item.is_current_staged_work
+                ]
+                selected_revision_iris = [
+                    item.iri for item in current_items[offset : offset + limit]
+                ]
+                total_count = len(current_items)
+            else:
+                selected_revision_iris = [item.iri for item in listing.revisions]
+                total_count = listing.total_count
         else:
             selection_mode = "explicit_revision_iris"
-            self._ensure_non_negative("limit", limit)
-            self._ensure_non_negative("offset", offset)
             requested_revision_iris = list(
                 dict.fromkeys(
                     self._string_values(
