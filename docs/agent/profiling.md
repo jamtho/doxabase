@@ -83,6 +83,12 @@ advisories are present, it is advisory-only: do not call
 Use `advisory_followthrough_plan` for a compact next-step menu over metric/type
 lanes. It groups existing actions by `semantic_move`: `define_metric`,
 `define_value_type`, `assert_map_type`, or `caveat_fallback`.
+For type review, `caveat_fallback` is the pattern/systematisation alternative
+when the finding is not ready for a direct assertion. It is not an additional
+required move after the same route group has staged the reviewed
+`assert_map_type` path. In value-type workflows, a vocabulary promotion can
+close only `define_value_type`; stage the reviewed map assertion separately when
+the profile finding should become current map truth.
 Do not select rows by `semantic_move` alone when scripting. A draft can expose
 several `define_metric` rows, for example context inspection and a staging call.
 Use `primary_action_kind` to choose the route you intend:

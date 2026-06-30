@@ -3136,6 +3136,14 @@ few useful gaps:
   from a cold capsule: record result, follow `describe_query_context`, fill the
   reviewed overlay placeholders, stage/check/apply, rerun context, then draft a
   plan. The weak spot was discoverability, not code behavior.
+- A profile value-type support-trail trial confirmed targeted patterns can
+  support vocabulary promotion first and a map value-type assertion second.
+  `caveat_fallback` is an alternative route for unresolved type evidence, not a
+  mandatory extra lane once the direct `assert_map_type` route closes the group.
+- A non-tabular asset trial confirmed API, document, and object assets stay out
+  of query-repair queues while preserving storage, layout, caveat, observation,
+  evidence, and pattern context. Candidate-layout warnings on non-tabular assets
+  are context-review signals, not instructions to force a query-planning repair.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

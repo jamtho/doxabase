@@ -1553,6 +1553,7 @@ def test_context_slice_skips_query_context_action_for_non_tabular_seed(
 
     context = db.describe_query_context(api)
     slice_context = db.describe_context_slice([api], profile="deep_lore")
+    brief = db.project_brief(limit=5)
 
     assert context.readiness == "not_applicable_non_tabular_asset"
     assert {
@@ -1563,6 +1564,9 @@ def test_context_slice_skips_query_context_action_for_non_tabular_seed(
     assert [
         action.tool_name for action in slice_context.suggested_next_actions
     ] == []
+    assert brief.queue_counts == {"non_tabular_asset_review": 1}
+    assert "query_repair_review" not in brief.queue_counts
+    assert "query_context_review" not in brief.queue_counts
 
 
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
@@ -16099,6 +16103,7 @@ def test_describe_query_context_marks_non_tabular_asset_not_applicable(
     ]
     assert context.issues[0].severity == "info"
     assert context.storage_accesses[0].iri == storage.iri
+    assert context.suggested_repair_action_group_count == 0
     assert context.suggested_next_actions[0].tool_name == "describe_context_slice"
 
     plan = db.draft_query_plan(asset)
@@ -28512,6 +28517,47 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert "Closed semantic moves: define_value_type" in exported
     assert "Remaining semantic moves:" in exported
     assert "assert_map_type" in exported
+
+    value_type_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:valueType"
+    ][0]
+    value_type_args = dict(value_type_action.arguments)
+    value_type_args["supporting_patterns"] = [
+        target_pattern.pattern_iri,
+        implication_pattern.pattern_iri,
+    ]
+    staged_assertion = db.stage_map_assertion_change(**value_type_args)
+    final_review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-type-review-final.md",
+    )
+
+    assert final_review.open_profile_review_lanes == []
+    assert final_review.closed_semantic_moves == [
+        "assert_map_type",
+        "define_value_type",
+    ]
+    final_candidates = {
+        candidate.revision_iri: candidate for candidate in final_review.candidates
+    }
+    assert staged.iri in final_candidates
+    assert staged_assertion.revision_iri in final_candidates
+    final_assertion_candidate = final_candidates[staged_assertion.revision_iri]
+    final_route_groups = {
+        group["review_lane"]: group
+        for group in final_assertion_candidate.profile_route_groups
+    }
+    assert final_route_groups["profile_type_review"]["closed_semantic_moves"] == [
+        "assert_map_type"
+    ]
+    assert "caveat_fallback" in final_route_groups["profile_type_review"][
+        "semantic_moves"
+    ]
+    assert "caveat_fallback" not in final_review.remaining_semantic_moves
 
 
 def test_profile_type_assertion_route_source_closes_only_selected_advisory(

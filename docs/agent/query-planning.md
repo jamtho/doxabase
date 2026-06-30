@@ -9,8 +9,10 @@ Direct query helpers are table-oriented. For map datasets recorded with
 `readiness="not_applicable_non_tabular_asset"` with no query target candidates,
 and `draft_query_plan` returns
 `handoff_kind="not_applicable_non_tabular_asset"` rather than a file/database
-scan. Use `describe_context_slice` or `describe_resource` for those assets
-unless a separate queryable table route has been modeled.
+scan. Candidate layout or storage warnings on those assets are context for
+handoff review, not query-repair work. Use `describe_context_slice` or
+`describe_resource` for those assets unless a separate queryable table route has
+been modeled.
 
 When starting from a query metadata resource instead of a dataset, such as a
 storage access, physical layout, partition scheme, or mapped column, call
