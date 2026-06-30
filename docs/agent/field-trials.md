@@ -3277,6 +3277,13 @@ few useful gaps:
   Use this for receiver-side staged review handoffs when the full profile
   insight bundle is unavailable or when a generic staged bundle mixes profile
   and non-profile rows.
+- A project-brief performance trial found `project_brief()` was recomputing
+  staged apply checks inside each profile draft while also building the staged
+  review frontier. `project_brief` now reuses its staged review summary for
+  profile pending detection, which cut the 16-row expanded frontier trial from
+  about 32 seconds to about 7 seconds. `plan_staged_revision_recovery()` remains
+  the next staged-frontier runtime target; the same trial still spent about 19
+  seconds planning 20 current staged rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

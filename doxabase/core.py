@@ -4115,6 +4115,7 @@ class DoxaBase:
             profile_summary = self._project_brief_profile_summary(
                 description,
                 profile_candidate_limit=profile_candidate_limit,
+                staged_review=pending_detection_staged_review,
             )
             dataset_summary = ProjectBriefDatasetSummary(
                 dataset=self._privacy_redacted_resource_summary(
@@ -4350,6 +4351,7 @@ class DoxaBase:
         dataset: DatasetDescription,
         *,
         profile_candidate_limit: int,
+        staged_review: ProjectBriefStagedReviewSummary,
     ) -> ProjectBriefDatasetProfileSummary:
         profile_summary = dataset.profile_summary
         candidates = profile_summary.profile_run_candidates
@@ -4360,9 +4362,19 @@ class DoxaBase:
         omitted_draft_evidence_iris = draft_evidence_iris[profile_candidate_limit:]
         drafts: list[ProjectBriefProfileDraftSummary] = []
         for evidence_iri in selected_draft_evidence_iris:
+            pending_staged_profile_update_iris = (
+                self._project_brief_pending_staged_profile_update_iris(
+                    dataset.iri,
+                    evidence_iri,
+                    staged_review,
+                )
+            )
             draft = self.draft_profile_map_updates(
                 dataset.iri,
                 evidence_iri,
+                known_pending_staged_profile_update_iris=(
+                    pending_staged_profile_update_iris
+                ),
             )
             suggested_next_actions = [
                 self._privacy_redacted_suggested_next_action(action)
@@ -14358,6 +14370,7 @@ class DoxaBase:
         evidence_iri: str,
         *,
         graph: str | None = "map",
+        known_pending_staged_profile_update_iris: Iterable[str] | None = None,
     ) -> ProfileMapUpdateDraft:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
         evidence_value = self._required_iri("evidence_iri", evidence_iri)
@@ -14604,7 +14617,9 @@ class DoxaBase:
             else []
         )
         pending_staged_profile_update_iris = (
-            self._pending_staged_profile_update_iris(
+            list(known_pending_staged_profile_update_iris)
+            if known_pending_staged_profile_update_iris is not None
+            else self._pending_staged_profile_update_iris(
                 dataset_value,
                 evidence_value,
             )

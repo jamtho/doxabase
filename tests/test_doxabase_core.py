@@ -520,6 +520,71 @@ def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     assert query_tasks[0].profile_evidence_iri is None
 
 
+def test_project_brief_reuses_staged_review_for_profile_pending_detection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence_a = "https://example.test/project#OrdersProfileEvidenceA"
+    evidence_b = "https://example.test/project#OrdersProfileEvidenceB"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    for index, evidence_iri in enumerate([evidence_a, evidence_b], start=1):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Orders profile run {index}.",
+            evidence_summary=f"Synthetic profile run {index}.",
+            evidence_sources=[f"test://orders-profile/{index}"],
+            evidence_iri=evidence_iri,
+            sample_size=10 + index,
+            sample_scope="All rows in the local Orders table.",
+            sample_method="DuckDB full-table aggregate profile.",
+            row_count=10 + index,
+            update_map_snapshot=False,
+        )
+
+    draft = db.draft_profile_map_updates(dataset, evidence_a)
+    staged = db.stage_profile_map_updates(
+        **draft.suggested_next_actions[0].arguments
+    )
+    assert staged.staged_revision is not None
+
+    apply_check_count = 0
+    original_check = db.check_staged_revision_apply
+
+    def counted_check(revision_iri: str):
+        nonlocal apply_check_count
+        apply_check_count += 1
+        return original_check(revision_iri)
+
+    monkeypatch.setattr(db, "check_staged_revision_apply", counted_check)
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=2)
+
+    assert apply_check_count == 1
+    profile_tasks = [
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    ]
+    assert {task.profile_evidence_iri for task in profile_tasks} == {
+        evidence_a,
+        evidence_b,
+    }
+    pending_task = next(
+        task for task in profile_tasks if task.profile_evidence_iri == evidence_a
+    )
+    assert pending_task.pending_staged_profile_update_iris == [
+        staged.staged_revision.revision_iri
+    ]
+
+
 def test_project_brief_routes_blocked_context_tasks_to_context_review(
     tmp_path: Path,
 ) -> None:
