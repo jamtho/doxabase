@@ -55,6 +55,13 @@ Distinguish stale sessions from calls that never executed: `user cancelled MCP
 tool call` and sandbox setup failures such as a `bwrap` namespace error are
 execution-environment failures, not evidence that the DoxaBase MCP schema or
 docs registry is old.
+`codex mcp list` only proves the server is registered and enabled; it does not
+prove the stdio command can start, open the configured capsule, or complete a
+handshake. If doc calls return `Transport closed`, inspect the configured `cd`
+path, capsule filename, capsule permissions, and Python importability. The
+DoxaBase MCP server should register `doxabase.list_docs` and `doxabase.get_doc`
+without opening the capsule; graph tools still open the configured capsule on
+first use.
 
 When running a trial through Codex sub-agents, keep the harness explicit:
 
@@ -3105,6 +3112,12 @@ few useful gaps:
   `alternative_to_applied_source` even when the repaired successor is
   mechanically ready. `examples/staged-semantic-repair-smoke.py` now exercises
   this repair-first loop in a scratch capsule.
+- An MCP transport diagnostic showed that an enabled `codex mcp list` entry can
+  still produce `Transport closed` when the command path, capsule filename, or
+  capsule startup fails. `build_server()` now lazy-opens the capsule so
+  `doxabase.list_docs` and `doxabase.get_doc` remain available before SQLite
+  initialization; graph tools still surface capsule startup failures on first
+  actual graph use.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

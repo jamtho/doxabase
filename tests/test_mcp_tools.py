@@ -223,6 +223,37 @@ async def test_server_get_doc_serves_query_planning_doc(
 
 
 @pytest.mark.anyio
+async def test_server_doc_tools_do_not_open_capsule_at_startup(
+    tmp_path: Path,
+) -> None:
+    capsule_path = tmp_path / "missing" / "mcp.sqlite"
+    server = build_server(capsule_path)
+
+    assert not capsule_path.exists()
+
+    _, result = await server.call_tool(
+        "doxabase.get_doc",
+        {"doc_id": "start_here", "max_chars": 80},
+    )
+
+    assert result["id"] == "start_here"
+    assert result["content"].startswith("# Start Here")
+    assert not capsule_path.exists()
+
+    graph_capsule_path = tmp_path / "graph.sqlite"
+    graph_server = build_server(graph_capsule_path)
+    assert not graph_capsule_path.exists()
+
+    _, overview = await graph_server.call_tool(
+        "doxabase.graph_overview",
+        {"limit": 5},
+    )
+
+    assert graph_capsule_path.exists()
+    assert "named_graphs" in overview
+
+
+@pytest.mark.anyio
 async def test_profile_mcp_tools_expose_sampled_snapshot_gate(
     tmp_path: Path,
 ) -> None:

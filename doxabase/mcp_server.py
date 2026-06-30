@@ -90,8 +90,22 @@ Use project_brief, graph_overview, search, list_entities, describe_dataset, desc
 Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
+class _LazyDoxaBase:
+    def __init__(self, capsule_path: str | Path) -> None:
+        self._capsule_path = capsule_path
+        self._db: DoxaBase | None = None
+
+    def _open(self) -> DoxaBase:
+        if self._db is None:
+            self._db = DoxaBase.create(self._capsule_path, overwrite=False)
+        return self._db
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._open(), name)
+
+
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
-    db = DoxaBase.create(capsule_path, overwrite=False)
+    db = _LazyDoxaBase(capsule_path)
     server = FastMCP("doxabase", instructions=SERVER_INSTRUCTIONS)
 
     @server.tool(name="doxabase.list_docs")
