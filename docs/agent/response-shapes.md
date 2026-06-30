@@ -4728,8 +4728,17 @@ handoff.snapshot_graph_roles
 handoff.revision_iris
 handoff.manifest_path
 handoff.manifest_bytes_written
+handoff.decision
+handoff.scanner_clean
+handoff.shareability_review_required
+handoff.shareability_review_status
+handoff.would_block_sensitive_export
 handoff.sensitive_literal_count
+handoff.graph_sensitive_literal_count
+handoff.snapshot_sensitive_literal_count
 handoff.privacy_warnings
+handoff.warnings
+handoff.scanner_note
 handoff.artifact_kind
 handoff.importable
 handoff.recommended_import_tool
@@ -4745,7 +4754,13 @@ partial two-file handoff. The `manifest` field is always returned; when
 `manifest_path` is supplied, the same payload is written as
 `doxabase.handoff_bundle.v1` JSON. The manifest pairs artifact paths, records
 graph roles, revision IRIs, snapshot graph roles, redacted privacy warnings, and
-the receiver route. When `manifest_path` is supplied,
+the receiver route. It also preserves preflight-style export metadata:
+`decision`, `scanner_clean`, `shareability_review_required`,
+`shareability_review_status`, `would_block_sensitive_export`, graph/snapshot
+sensitive counts, warnings, and `scanner_note`. Treat
+`scanner_clean=true` as scanner-clean only; it is not shareability approval while
+`shareability_review_status="required_not_completed"`.
+When `manifest_path` is supplied,
 `recommended_import_tool` is `doxabase.import_handoff_bundle`; the manifest also
 keeps the lower-level `recommended_import_sequence`, where `import_trig` should
 yield `history_only_count_digest`, then `import_revision_snapshots` should yield

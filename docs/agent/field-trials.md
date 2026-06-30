@@ -3163,6 +3163,13 @@ few useful gaps:
   actions now carry route-scoped result-binding metadata: match
   `binding_key`, read the produced `pattern_iri`, and append it to
   `supporting_patterns` on the paired staged assertion action.
+- A privacy/handoff trial confirmed dirty handoff exports block before writing
+  artifacts and clean scanner output imports successfully, but the clean
+  manifest did not preserve that scanner-clean is not shareability approval.
+  `export_handoff_bundle` now writes preflight-style `decision`,
+  `scanner_clean`, sensitive-count, and `shareability_review_status` metadata
+  into both the result and manifest; `import_handoff_bundle` warns receivers
+  when shareability review remains incomplete.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

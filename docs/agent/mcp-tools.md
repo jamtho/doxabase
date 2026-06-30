@@ -2261,12 +2261,18 @@ paths, records redacted privacy warnings, sets top-level
 lower-level `import_trig` then `import_revision_snapshots` sequence with
 expected snapshot evidence statuses. The result contains nested `trig` and
 `revision_snapshots` export records, the manifest payload, optional manifest
-write metadata, plus combined `sensitive_literal_count` and `privacy_warnings`.
+write metadata, plus combined `sensitive_literal_count`, graph/snapshot
+sensitive counts, `decision`, `scanner_clean`,
+`shareability_review_status`, `privacy_warnings`, and `warnings`.
+`scanner_clean=true` still means scanner-clean only; receivers should treat
+`shareability_review_status="required_not_completed"` as a live sharing gate.
 Read `recovery_complete` at the paired handoff level for the bundle as a whole;
 the nested TriG and snapshot JSON records are components and are not
 recovery-complete by themselves.
 When receiving a manifest, prefer `doxabase.import_handoff_bundle` over manually
-translating component paths and calling lower-level import tools.
+translating component paths and calling lower-level import tools. The import
+helper surfaces a warning when a manifest says shareability review is still
+required.
 Use `doxabase.export_preflight(export_kind="handoff_bundle")` before choosing
 paths when you need to review both the RDF graph roles and stored snapshot rows
 without creating artifacts.

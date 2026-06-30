@@ -135,7 +135,10 @@ On the receiving capsule:
 
 1. If a manifest arrived, call `import_handoff_bundle(manifest_path,
    dry_run=True)` first to confirm the paired artifact paths, expected graph
-   roles, pre-import snapshot evidence, and proposed receiver action.
+   roles, pre-import snapshot evidence, shareability warnings, and proposed
+   receiver action. A manifest with `scanner_clean=true` and
+   `shareability_review_status="required_not_completed"` is scanner-clean only,
+   not approval to reshare the artifacts.
 2. Then call `import_handoff_bundle(manifest_path)`. The helper imports the
    project/history TriG first, imports the companion snapshot JSON second, and
    returns `post_trig_snapshot_evidence`, `post_import_snapshot_evidence`, and a

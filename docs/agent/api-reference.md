@@ -159,12 +159,14 @@ Use `export_handoff_bundle()` when a receiver needs both project/history RDF and
 exact revision snapshots. It writes the project TriG artifact and companion
 snapshot JSON together, preflighting both output paths and combined privacy
 warnings before creating either file. Pass `manifest_path` to persist a small
-JSON manifest with artifact paths, redacted privacy warnings, and the expected
-receiver import sequence. On the receiving capsule, prefer
+JSON manifest with artifact paths, redacted privacy warnings, preflight-style
+scanner/shareability metadata, and the expected receiver import sequence. On
+the receiving capsule, prefer
 `import_handoff_bundle(manifest_path, dry_run=True)` followed by
 `import_handoff_bundle(manifest_path)` when that manifest is available; the
 helper imports the paired TriG before snapshot JSON and returns snapshot
-evidence plus a staged recovery plan.
+evidence plus a staged recovery plan. Treat `scanner_clean=true` as scanner
+output only while `shareability_review_status="required_not_completed"`.
 
 `export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
 revision snapshot rows. Its result includes `sensitive_literal_count` and

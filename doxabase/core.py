@@ -654,8 +654,22 @@ class HandoffBundleExportRecord:
     revision_iris: list[str]
     manifest_path: str | None = None
     manifest_bytes_written: int | None = None
+    decision: str = "clean_by_scanner_only"
+    scanner_clean: bool = True
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
+    would_block_sensitive_export: bool = False
     sensitive_literal_count: int = 0
+    graph_sensitive_literal_count: int = 0
+    snapshot_sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    scanner_note: str = (
+        "Scanner-clean means no selected export content matched DoxaBase's "
+        "credential-like graph-term patterns; it is not proof that an artifact "
+        "is shareable or free of user-specific paths, endpoint details, or "
+        "confidential project facts."
+    )
     artifact_kind: str = "handoff_bundle"
     importable: bool = True
     recommended_import_tool: str | None = (
@@ -47117,6 +47131,22 @@ class DoxaBase:
             *trig_privacy_warnings,
             *snapshot_privacy_warnings,
         ]
+        decision = (
+            "block"
+            if sensitive_literal_count
+            else "clean_by_scanner_only"
+        )
+        scanner_clean = sensitive_literal_count == 0
+        shareability_review_required = True
+        shareability_review_status = "required_not_completed"
+        would_block_sensitive_export = sensitive_literal_count > 0
+        scanner_note = (
+            "Scanner-clean means no selected export content matched DoxaBase's "
+            "credential-like graph-term patterns; it is not proof that an artifact "
+            "is shareable or free of user-specific paths, endpoint details, or "
+            "confidential project facts."
+        )
+        warnings = [*privacy_warnings, scanner_note]
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -47173,8 +47203,17 @@ class DoxaBase:
         manifest = self._handoff_bundle_manifest(
             trig=trig_record,
             revision_snapshots=snapshot_record,
+            decision=decision,
+            scanner_clean=scanner_clean,
+            shareability_review_required=shareability_review_required,
+            shareability_review_status=shareability_review_status,
+            would_block_sensitive_export=would_block_sensitive_export,
             sensitive_literal_count=sensitive_literal_count,
+            graph_sensitive_literal_count=trig_sensitive_count,
+            snapshot_sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=privacy_warnings,
+            warnings=warnings,
+            scanner_note=scanner_note,
             recommended_import_tool=recommended_import_tool,
         )
         manifest_bytes_written = None
@@ -47203,8 +47242,17 @@ class DoxaBase:
             revision_iris=snapshot_revision_iris,
             manifest_path=str(manifest_path) if manifest_path is not None else None,
             manifest_bytes_written=manifest_bytes_written,
+            decision=decision,
+            scanner_clean=scanner_clean,
+            shareability_review_required=shareability_review_required,
+            shareability_review_status=shareability_review_status,
+            would_block_sensitive_export=would_block_sensitive_export,
             sensitive_literal_count=sensitive_literal_count,
+            graph_sensitive_literal_count=trig_sensitive_count,
+            snapshot_sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=privacy_warnings,
+            warnings=warnings,
+            scanner_note=scanner_note,
             recommended_import_tool=recommended_import_tool,
         )
 
@@ -47213,8 +47261,17 @@ class DoxaBase:
         *,
         trig: GraphExportRecord,
         revision_snapshots: RevisionSnapshotBundleExportRecord,
+        decision: str,
+        scanner_clean: bool,
+        shareability_review_required: bool,
+        shareability_review_status: str,
+        would_block_sensitive_export: bool,
         sensitive_literal_count: int,
+        graph_sensitive_literal_count: int,
+        snapshot_sensitive_literal_count: int,
         privacy_warnings: list[str],
+        warnings: list[str],
+        scanner_note: str,
         recommended_import_tool: str,
     ) -> dict[str, Any]:
         return {
@@ -47283,8 +47340,17 @@ class DoxaBase:
             "final_snapshot_evidence_status": "history_plus_snapshot_rows",
             "revision_iris": revision_snapshots.revision_iris,
             "snapshot_graph_roles": revision_snapshots.graph_roles,
+            "decision": decision,
+            "scanner_clean": scanner_clean,
+            "shareability_review_required": shareability_review_required,
+            "shareability_review_status": shareability_review_status,
+            "would_block_sensitive_export": would_block_sensitive_export,
             "sensitive_literal_count": sensitive_literal_count,
+            "graph_sensitive_literal_count": graph_sensitive_literal_count,
+            "snapshot_sensitive_literal_count": snapshot_sensitive_literal_count,
             "privacy_warnings": privacy_warnings,
+            "warnings": warnings,
+            "scanner_note": scanner_note,
         }
 
     def import_handoff_bundle(
@@ -47509,6 +47575,18 @@ class DoxaBase:
                 "Handoff bundle manifest records potential sensitive terms in "
                 "the exported artifacts. Import may still be useful locally, but "
                 "do not share the artifacts until privacy review is complete."
+            )
+        shareability_review_required = manifest.get("shareability_review_required")
+        shareability_review_status = manifest.get("shareability_review_status")
+        if (
+            shareability_review_required is True
+            and shareability_review_status == "required_not_completed"
+        ):
+            warnings.append(
+                "Handoff bundle manifest is scanner-clean only unless "
+                "sensitive_literal_count is nonzero; shareability review is "
+                "still required before sharing artifacts beyond the intended "
+                "receiver."
             )
         if trig_path == snapshot_path:
             warnings.append(

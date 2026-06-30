@@ -1847,8 +1847,16 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     ]
     assert result["revision_iris"] == [staged["revision_iri"]]
     assert result["snapshot_graph_roles"] == ["map"]
+    assert result["decision"] == "clean_by_scanner_only"
+    assert result["scanner_clean"] is True
+    assert result["shareability_review_required"] is True
+    assert result["shareability_review_status"] == "required_not_completed"
+    assert result["would_block_sensitive_export"] is False
     assert result["sensitive_literal_count"] == 0
+    assert result["graph_sensitive_literal_count"] == 0
+    assert result["snapshot_sensitive_literal_count"] == 0
     assert result["privacy_warnings"] == []
+    assert any("Scanner-clean means" in warning for warning in result["warnings"])
     assert result["artifact_kind"] == "handoff_bundle"
     assert result["importable"] is True
     assert result["recommended_import_tool"] == "doxabase.import_handoff_bundle"
@@ -1873,6 +1881,14 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest["importable"] is True
     assert manifest["recommended_import_tool"] == "doxabase.import_handoff_bundle"
     assert manifest["recovery_complete"] is True
+    assert manifest["decision"] == "clean_by_scanner_only"
+    assert manifest["scanner_clean"] is True
+    assert manifest["shareability_review_required"] is True
+    assert manifest["shareability_review_status"] == "required_not_completed"
+    assert manifest["would_block_sensitive_export"] is False
+    assert manifest["graph_sensitive_literal_count"] == 0
+    assert manifest["snapshot_sensitive_literal_count"] == 0
+    assert any("Scanner-clean means" in warning for warning in manifest["warnings"])
     assert manifest["artifacts"]["trig"]["path"] == str(trig_path)
     assert manifest["artifacts"]["trig"]["artifact_kind"] == "handoff_trig"
     assert manifest["artifacts"]["revision_snapshots"]["path"] == str(snapshot_path)
@@ -1910,6 +1926,10 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert dry_run["suggested_next_actions"][0]["tool_name"] == (
         "import_handoff_bundle"
     )
+    assert any(
+        "shareability review is still required" in warning
+        for warning in dry_run["warnings"]
+    )
     assert (
         manifest_receiver.describe_revision_snapshot_evidence(
             staged["revision_iri"]
@@ -1942,7 +1962,10 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_plan"]["lanes"][0]["next_action"][
         "tool_name"
     ] == "apply_staged_revision"
-    assert manifest_import["warnings"] == []
+    assert any(
+        "shareability review is still required" in warning
+        for warning in manifest_import["warnings"]
+    )
 
     relative_manifest_path = tmp_path / "relative-handoff-manifest.json"
     relative_manifest = json.loads(json.dumps(manifest))
