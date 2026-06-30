@@ -566,6 +566,12 @@ class GraphExportRecord:
 class ContextSliceExportRecord:
     path: str | None
     format: str
+    decision: str
+    scanner_clean: bool
+    shareability_review_required: bool
+    shareability_review_status: str
+    would_block_sensitive_export: bool
+    handoff_fit: str
     profile: str
     seeds: list[ResourceSummary]
     graphs: list[str]
@@ -45425,6 +45431,20 @@ class DoxaBase:
         return ContextSliceExportRecord(
             path=path_value,
             format="trig",
+            decision=(
+                "block"
+                if sensitive_literal_count
+                else "clean_by_scanner_only"
+            ),
+            scanner_clean=sensitive_literal_count == 0,
+            shareability_review_required=True,
+            shareability_review_status="required_not_completed",
+            would_block_sensitive_export=sensitive_literal_count > 0,
+            handoff_fit=(
+                "resource_scoped_review_context_not_recovery_complete"
+                if "history" in graph_names
+                else "resource_scoped_review_context"
+            ),
             profile=context.profile,
             seeds=[
                 self._privacy_redacted_resource_summary(seed)

@@ -2515,12 +2515,21 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     )
 
     assert preflight.path is None
+    assert preflight.decision == "clean_by_scanner_only"
+    assert preflight.scanner_clean is True
+    assert preflight.shareability_review_required is True
+    assert preflight.shareability_review_status == "required_not_completed"
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.handoff_fit == "resource_scoped_review_context"
     assert preflight.graphs == ["map"]
     assert preflight.graph_counts["map"] > 0
     assert preflight.sensitive_literal_count == 0
     assert preflight.matches == []
     assert preflight.include_seed_graphs is False
-    assert any("Immutable seed graph triples were omitted" in warning for warning in preflight.warnings)
+    assert any(
+        "Immutable seed graph triples were omitted" in warning
+        for warning in preflight.warnings
+    )
     assert preflight.suggested_next_actions[0].tool_name == "export_context_slice"
     assert preflight.suggested_next_actions[0].arguments["fail_on_sensitive"] is True
     assert fake_secret not in json.dumps(to_dict(preflight))
@@ -2536,6 +2545,12 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     export_text = export_path.read_text(encoding="utf-8")
 
     assert export.path == str(export_path)
+    assert export.decision == "clean_by_scanner_only"
+    assert export.scanner_clean is True
+    assert export.shareability_review_required is True
+    assert export.shareability_review_status == "required_not_completed"
+    assert export.would_block_sensitive_export is False
+    assert export.handoff_fit == "resource_scoped_review_context"
     assert export.bytes_written > 0
     assert export.sensitive_literal_count == 0
     assert export.suggested_next_actions == []
@@ -2545,7 +2560,9 @@ def test_context_slice_export_is_importable_and_resource_scoped(
 
     dataset = Dataset()
     dataset.parse(export_path, format="trig")
-    graph_iris = {str(context.identifier) for context in dataset.graphs() if len(context)}
+    graph_iris = {
+        str(context.identifier) for context in dataset.graphs() if len(context)
+    }
     assert graph_iris == {"https://richcanopy.org/graph/map"}
 
     round_trip = DoxaBase.create(tmp_path / "round-trip-context.sqlite")
@@ -2576,6 +2593,12 @@ def test_context_slice_export_redacts_sensitive_seed_descriptions(
     )
 
     assert preflight.sensitive_literal_count >= 1
+    assert preflight.decision == "block"
+    assert preflight.scanner_clean is False
+    assert preflight.shareability_review_required is True
+    assert preflight.shareability_review_status == "required_not_completed"
+    assert preflight.would_block_sensitive_export is True
+    assert preflight.handoff_fit == "resource_scoped_review_context"
     assert preflight.seeds[0].description == (
         "[REDACTED:fake_secret_marker]"
     )
@@ -2627,6 +2650,9 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
     )
 
     assert "history" in preflight.graphs
+    assert preflight.handoff_fit == (
+        "resource_scoped_review_context_not_recovery_complete"
+    )
     assert preflight.recovery_complete is False
     assert any(
         "not a recovery-complete revision handoff" in warning
@@ -2654,6 +2680,9 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
 
     assert export.path == str(export_path)
     assert "history" in export.graphs
+    assert export.handoff_fit == (
+        "resource_scoped_review_context_not_recovery_complete"
+    )
     assert any(
         "not a recovery-complete revision handoff" in warning
         for warning in export.warnings

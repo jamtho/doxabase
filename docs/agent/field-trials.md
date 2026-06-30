@@ -299,6 +299,11 @@ few useful gaps:
   immutable seed graphs by default so the resulting TriG can import into a
   fresh capsule. Treat `describe_context_slice(include_trig=true)` as
   inspection text, not an import/recovery bundle.
+  A later privacy handoff trial confirmed graph-level and recovery-complete
+  exports block on unrelated sensitive-looking graph siblings, while
+  resource-scoped context exports can stay clean and round-trip. Context-slice
+  export records now expose explicit `decision`, `scanner_clean`, shareability
+  review, and `handoff_fit` fields so agents do not infer the route from counts.
 - A human-review artifact trial showed grouped staged-revision Markdown was
   mechanically complete but too technical at the top. `export_staged_revisions`
   now opens with a `Reviewer Decision Matrix` that gives row numbers, plain

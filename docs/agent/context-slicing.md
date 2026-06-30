@@ -234,6 +234,11 @@ private or noisy resources. By contrast, `describe_context_slice(include_trig=Tr
 is an inspection surface; it may include base ontology or base shape triples
 selected for route context and should not be assumed to be a recovery or
 shareable handoff bundle.
+Context-slice export records include preflight-style routing fields:
+`decision`, `scanner_clean`, `shareability_review_required`,
+`shareability_review_status`, `would_block_sensitive_export`, and
+`handoff_fit`. Use them for unattended routing instead of inferring shareability
+from `sensitive_literal_count` alone.
 Scanner-clean context-slice exports only prove that the selected slice triples
 passed the scanner. They may omit staged patch payload literals, unrelated
 history rows, or stored revision snapshots that a full handoff would scan. For

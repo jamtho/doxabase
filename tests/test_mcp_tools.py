@@ -7281,6 +7281,12 @@ def test_describe_context_slice_tool_reports_sensitive_selected_triples(
         limit=5,
     )
     assert preflight["sensitive_literal_count"] >= 1
+    assert preflight["decision"] == "block"
+    assert preflight["scanner_clean"] is False
+    assert preflight["shareability_review_required"] is True
+    assert preflight["shareability_review_status"] == "required_not_completed"
+    assert preflight["would_block_sensitive_export"] is True
+    assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert fake_secret not in json.dumps(preflight["matches"])
 
 
@@ -7317,6 +7323,12 @@ def test_context_slice_export_tools_return_json_like_payload(
 
     assert preflight["path"] is None
     assert preflight["format"] == "trig"
+    assert preflight["decision"] == "clean_by_scanner_only"
+    assert preflight["scanner_clean"] is True
+    assert preflight["shareability_review_required"] is True
+    assert preflight["shareability_review_status"] == "required_not_completed"
+    assert preflight["would_block_sensitive_export"] is False
+    assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert preflight["profile"] == "dataset_brief"
     assert preflight["seeds"][0]["iri"] == dataset
     assert preflight["graphs"] == ["map"]
@@ -7351,6 +7363,12 @@ def test_context_slice_export_tools_return_json_like_payload(
     )
 
     assert export["path"] == str(export_path)
+    assert export["decision"] == "clean_by_scanner_only"
+    assert export["scanner_clean"] is True
+    assert export["shareability_review_required"] is True
+    assert export["shareability_review_status"] == "required_not_completed"
+    assert export["would_block_sensitive_export"] is False
+    assert export["handoff_fit"] == "resource_scoped_review_context"
     assert export["bytes_written"] > 0
     assert export["sensitive_literal_count"] == 0
     assert export["artifact_kind"] == "context_slice_trig"

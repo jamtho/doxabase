@@ -1120,10 +1120,14 @@ when a handoff should include only the selected resource neighborhood rather
 than every resource in a graph role. It reuses `describe_context_slice`
 selection, omits immutable seed graphs by default, scans only the selected
 export triples for credential-like graph terms, and returns the same
+`decision`, `scanner_clean`, `shareability_review_required`,
+`shareability_review_status`, `would_block_sensitive_export`,
 `sensitive_literal_count`, `privacy_warnings`, `warnings`, and suggested-action
-style used by broader export preflights. `scanner-clean` is still not a
+style used by broader export preflights. `scanner_clean=true` is still not a
 shareability proof; local paths, endpoints, and confidential project facts need
-human review. If the selected slice includes `history` graph triples, the
+human review. `handoff_fit` is `resource_scoped_review_context` for ordinary
+slice exports and `resource_scoped_review_context_not_recovery_complete` when
+history graph triples are included. If the selected slice includes `history`, the
 preflight warning and suggested actions also point to
 `export_handoff_bundle`; context slices can import revision review context but
 do not carry the revision snapshot rows needed for exact recovery.

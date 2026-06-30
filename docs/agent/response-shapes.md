@@ -1032,6 +1032,12 @@ return a `ContextSliceExportRecord`:
 ```python
 export.path
 export.format
+export.decision
+export.scanner_clean
+export.shareability_review_required
+export.shareability_review_status
+export.would_block_sensitive_export
+export.handoff_fit
 export.profile
 export.seeds
 export.graphs
@@ -1061,9 +1067,16 @@ export.recovery_complete
 
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
 and `bytes_written` is `0`; it includes a suggested `export_context_slice`
-action. `export_context_slice()` writes TriG and usually returns no further
-export action. If the selected triples include `history`, both helpers warn that
-the slice is not a recovery-complete revision handoff and include an
+action. `decision` is `block` when selected export triples have sensitive-looking
+terms and `clean_by_scanner_only` otherwise; `scanner_clean` is the matching
+boolean, while `shareability_review_required` remains true because scanner-clean
+is not proof that a resource-scoped bundle is appropriate to share.
+`handoff_fit` is `resource_scoped_review_context` for ordinary context-slice
+exports and `resource_scoped_review_context_not_recovery_complete` when the
+selected triples include `history`.
+`export_context_slice()` writes TriG and usually returns no further export
+action. If the selected triples include `history`, both helpers warn that the
+slice is not a recovery-complete revision handoff and include an
 `export_handoff_bundle` action, optionally narrowed to the revision IRIs visible
 in the slice. The helper scans only the selected context-slice export triples
 and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
