@@ -49953,6 +49953,33 @@ class DoxaBase:
                         ),
                     )
                 )
+            if record.graph_sensitive_literal_count and record.graphs:
+                arguments = {
+                    "seed_iris": ["<target-resource-iri>"],
+                    "profile": "dataset_brief",
+                    "max_triples": 500,
+                    "limit": max(record.limit, 20),
+                }
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Preflight resource-scoped context slice",
+                        tool_name="preflight_context_slice_export",
+                        mcp_tool_name="doxabase.preflight_context_slice_export",
+                        arguments=arguments,
+                        reason=(
+                            "If the intended handoff only needs clean context "
+                            "around known resources, preflight a context-slice "
+                            "export instead of weakening fail_on_sensitive on "
+                            "the blocked broader export. Context-slice exports "
+                            "are importable review context, not recovery-complete "
+                            "revision handoffs."
+                        ),
+                        call=self._suggested_call_string(
+                            "preflight_context_slice_export",
+                            arguments,
+                        ),
+                    )
+                )
             return actions
 
         if record.export_kind == "graph":

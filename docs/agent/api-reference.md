@@ -135,6 +135,12 @@ preflight reports `decision="clean_by_scanner_only"` and still sets
 `shareability_review_status="required_not_completed"`; agents must separately
 decide whether paths, endpoints, history payloads, or project facts are
 appropriate to share.
+When a broad graph/TriG/handoff preflight blocks and the task has a known target
+resource, follow the suggested
+`preflight_context_slice_export(seed_iris=["<target-resource-iri>"])` route to
+test a narrower review-context bundle. Context-slice exports can be imported
+with `import_trig`, but they are not recovery-complete because they omit
+SQLite-side revision snapshot rows.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
 faithful RDF exports and do not by themselves trigger `privacy_warnings`.

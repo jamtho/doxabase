@@ -3345,6 +3345,31 @@ few useful gaps:
   than correctness: `list_resource_revisions()` now includes a page-scoped
   chronological `timeline` for first-pass resource-history answers before
   opening lineage or diff cards.
+- A privacy/resource-scope trial confirmed full project handoff preflight can
+  correctly block on an unrelated dirty sibling while
+  `preflight_context_slice_export` / `export_context_slice` still safely
+  round-trip clean resource-scoped review context. Blocked broad preflight
+  responses now suggest context-slice preflight with a target-resource
+  placeholder so agents do not treat the block as all-or-nothing or weaken
+  `fail_on_sensitive`.
+- A multi-revision recovery trial confirmed the normal drift path is
+  self-guiding through `plan_staged_revision_recovery`,
+  `mutation_frontier_items`, dry-run batch restage, real batch restage, apply,
+  and session replan. Same-slot repair actions already appear as
+  `mutation_frontier_items[]` with `item_kind="helper_action"`; unattended
+  scripts must not use `mutation_frontier_iris` as the complete executor queue.
+- A project-brief frontier trial found `project_brief` is a strong local
+  frontier guard: it avoids low-limit traps, surfaces hidden query/profile
+  queues, and keeps stale-seed recovery ahead of mutation. It is not a strategic
+  ambition engine for multi-day repo work; the outer loop still needs a
+  deliberate build-priority selector or a future strategic-frontier helper.
+- A non-tabular asset workflow trial confirmed current helpers can model image
+  or document bundles without fake tables or columns using non-tabular
+  datasets, storage/layout facts, asset-level relationships, observations,
+  patterns, and context slices. The next genuine non-tabular gaps are common
+  image/document `rc:FileFormat` terms and optional relationship endpoint
+  role/order support; using `derivation_properties` for endpoint roles is
+  shape-invalid and should be avoided.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

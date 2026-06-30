@@ -2303,7 +2303,20 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     assert preflight.scanner_note in preflight.warnings
     assert [
         action.tool_name for action in preflight.suggested_next_actions
-    ] == ["scan_sensitive_literals", "export_preflight"]
+    ] == [
+        "scan_sensitive_literals",
+        "export_preflight",
+        "preflight_context_slice_export",
+    ]
+    slice_action = preflight.suggested_next_actions[-1]
+    assert slice_action.arguments == {
+        "seed_iris": ["<target-resource-iri>"],
+        "profile": "dataset_brief",
+        "max_triples": 500,
+        "limit": 20,
+    }
+    assert "review context" in slice_action.reason
+    assert "not recovery-complete" in slice_action.reason
     assert fake_secret not in json.dumps(to_dict(preflight))
 
 

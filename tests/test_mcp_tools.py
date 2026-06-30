@@ -1710,6 +1710,12 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     )
     assert result["matches"][0]["match_id"].startswith("redacted-sha256:")
     assert result["suggested_next_actions"][0]["tool_name"] == "scan_sensitive_literals"
+    assert result["suggested_next_actions"][-1]["tool_name"] == (
+        "preflight_context_slice_export"
+    )
+    assert result["suggested_next_actions"][-1]["arguments"]["seed_iris"] == [
+        "<target-resource-iri>"
+    ]
     assert fake_secret not in json.dumps(result)
 
 

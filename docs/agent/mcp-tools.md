@@ -88,6 +88,11 @@ and `shareability_review_status="required_not_completed"` because scanner-clean
 is not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. Follow the suggested export action with
 `fail_on_sensitive=true` after that separate review.
+When a broader graph or handoff preflight blocks but the intended handoff only
+needs clean context around known resources, the blocked response suggests
+`preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`. Use that
+route for importable resource-scoped review context; do not treat it as a
+recovery-complete revision handoff.
 In lazy tool-discovery environments, search for the exact dotted name
 `doxabase.export_preflight` if a bare `export_preflight` or `preflight` lookup
 does not expose the tool.
