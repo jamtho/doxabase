@@ -15410,6 +15410,7 @@ class DoxaBase:
         accepted_recommendation_indexes: Iterable[int] | None,
         graph: TypingLiteral["map"] = "map",
         allow_sampled_row_count_updates: bool = False,
+        allow_pending_profile_updates: bool = False,
         summary: str | None = None,
         rationale: str | None = None,
         created_at: datetime | str | None = None,
@@ -15435,6 +15436,18 @@ class DoxaBase:
             evidence_iri=evidence_iri,
             graph=graph,
         )
+        if (
+            draft.pending_staged_profile_update_iris
+            and not allow_pending_profile_updates
+        ):
+            pending = ", ".join(draft.pending_staged_profile_update_iris[:3])
+            raise DoxaBaseError(
+                "stage_profile_map_updates found pending staged profile map "
+                "update(s) for the same dataset/evidence pair: "
+                f"{pending}. Review them with plan_staged_revision_recovery "
+                "or pass allow_pending_profile_updates=True only after "
+                "confirming another staged profile update is intentional."
+            )
         supporting_pattern_values = self._string_values(
             "supporting_patterns",
             supporting_patterns,
@@ -15913,7 +15926,9 @@ class DoxaBase:
             pending_intro = (
                 "Pending staged profile map update(s) already anchor this "
                 "dataset/evidence pair; review them before staging another "
-                "profile-derived map update. "
+                "profile-derived map update, then pass "
+                "allow_pending_profile_updates=True only if another staged "
+                "update is intentional. "
             )
         return SuggestedNextAction(
             action_label="Review and stage profile map updates",

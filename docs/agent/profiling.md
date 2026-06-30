@@ -98,7 +98,10 @@ If same dataset/evidence profile map updates are already staged, the draft sets
 `pending_staged_profile_update_iris` and puts a
 `plan_staged_revision_recovery` action first in `profile_map_updates`. Review
 that staged frontier before using any following `stage_profile_map_updates`
-action for a deliberate alternative or duplicate.
+action for a deliberate alternative or duplicate. Direct
+`stage_profile_map_updates` calls reject this pending same dataset/evidence case
+by default; pass `allow_pending_profile_updates=true` only after review confirms
+another staged update is intentional.
 Grouped action source blocks expose stable `route_group_key` and
 `route_step_key` fields. Use the group key to connect a draft lane, such as a
 profile map-update duplicate group or metric/type advisory group, to later
@@ -169,12 +172,14 @@ If `candidate_count` is `0`, no Markdown artifact is written and the returned
 If `project_brief` shows `staged_frontier_review` or a profile task with
 `pending_staged_profile_update_iris`, run `plan_staged_revision_recovery` or
 review the staged profile-map update before calling `stage_profile_map_updates`
-again for the same dataset/evidence. Other staged revisions that merely share
-the same profile evidence remain staged-frontier work, but they should not be
-treated as duplicate profile-map-update staging. Pending profile-map updates
-only demote pure map-update reruns; if scalar conflict, metric vocabulary, or
-type advisory lanes remain open, `project_brief` keeps the `profile_review` task
-at normal priority and its reason says advisory/conflict lanes remain open.
+again for the same dataset/evidence. The staging helper enforces this by
+default and requires `allow_pending_profile_updates=true` for intentional
+duplicates after review. Other staged revisions that merely share the same
+profile evidence remain staged-frontier work, but they should not be treated as
+duplicate profile-map-update staging. Pending profile-map updates only demote
+pure map-update reruns; if scalar conflict, metric vocabulary, or type advisory
+lanes remain open, `project_brief` keeps the `profile_review` task at normal
+priority and its reason says advisory/conflict lanes remain open.
 For any `profile_review` task, keep `profile_evidence_iri` with the work item.
 It distinguishes multiple profile drafts on the same dataset even when their
 first suggested action is the same dataset-level `describe_query_context` call.

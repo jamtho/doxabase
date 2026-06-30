@@ -27962,6 +27962,13 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         staged_from_suggestion.staged_revision.revision_iri
     ]
     assert rerun_draft.suggested_next_actions[0] == pending_action
+    with pytest.raises(DoxaBaseError, match="pending staged profile map update"):
+        db.stage_profile_map_updates(**duplicate_stage_action.arguments)
+    forced_duplicate = db.stage_profile_map_updates(
+        **duplicate_stage_action.arguments,
+        allow_pending_profile_updates=True,
+    )
+    assert forced_duplicate.staged_revision is not None
 
     row_count = draft.recommendations[0]
     assert row_count.action == "replace_map_value"
@@ -32768,6 +32775,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
         evidence,
         accepted_recommendation_indexes=[0],
         allow_sampled_row_count_updates=True,
+        allow_pending_profile_updates=True,
     )
     assert override.staged_recommendation_indexes == [0]
     assert override.status_counts == {"staged": 1, "skipped": 0, "not_selected": 1}

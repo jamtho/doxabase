@@ -566,6 +566,7 @@ def stage_profile_map_updates_tool(
     accepted_recommendation_indexes: list[int],
     graph: str = "map",
     allow_sampled_row_count_updates: bool = False,
+    allow_pending_profile_updates: bool = False,
     summary: str | None = None,
     rationale: str | None = None,
     created_at: str | None = None,
@@ -582,6 +583,7 @@ def stage_profile_map_updates_tool(
             accepted_recommendation_indexes=accepted_recommendation_indexes,
             graph=graph,  # type: ignore[arg-type]
             allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+            allow_pending_profile_updates=allow_pending_profile_updates,
             summary=summary,
             rationale=rationale,
             created_at=created_at,

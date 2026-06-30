@@ -3248,10 +3248,11 @@ few useful gaps:
   on empty revision lists. `project_brief` now points stale-seed health tasks to
   handoff preflight even when `current_staged_revision_count=0`, and empty
   snapshot bundles import with an empty recovery plan. The storage/query and
-  staged-recovery workflows passed; profile promotion passed but exposed a next
-  candidate fix: direct `stage_profile_map_updates` can still create duplicate
-  staged rows if called with stale args after the draft already warned about
-  pending same dataset/evidence work.
+  staged-recovery workflows passed. Profile promotion passed but exposed stale
+  direct-call same-pair staging noise: `stage_profile_map_updates` now rejects
+  pending same dataset/evidence staged profile updates by default and requires
+  `allow_pending_profile_updates=true` only after review confirms another staged
+  update is intentional.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

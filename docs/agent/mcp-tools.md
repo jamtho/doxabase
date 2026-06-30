@@ -632,7 +632,10 @@ When same dataset/evidence profile map updates are already staged, the draft
 sets `pending_staged_profile_update_iris` and the `profile_map_updates` group
 starts with `plan_staged_revision_recovery` for those staged rows. Treat any
 following `stage_profile_map_updates` action as available only after reviewing
-the pending staged work.
+the pending staged work; direct staging rejects another same dataset/evidence
+profile-map update by default, so pass
+`allow_pending_profile_updates=true` only when another staged profile update is
+intentional.
 `query_context_review` appears first when the dataset already has physical-query
 metadata such as a path template or layout, but `describe_query_context` still
 reports blocking physical metadata issues. Its action points to
@@ -721,7 +724,10 @@ is accepted, skips accepted sampled row-count recommendations unless
 stage for explicit non-table assets. It also skips accepted scalar
 recommendations when the accepted set contains multiple disagreeing
 same-evidence values for the same map assertion; rerun the call with one chosen
-value after review. Optional `supporting_claims`,
+value after review. If another current staged profile-map update already
+anchors the same dataset/evidence pair, the helper raises before staging unless
+`allow_pending_profile_updates=true` is passed after explicit review. Optional
+`supporting_claims`,
 `supporting_patterns`, and `revision_anchors` are passed through to the staged
 revision when at least one recommendation creates a patch; caller anchors are
 merged with the automatic profile-derived anchors.
