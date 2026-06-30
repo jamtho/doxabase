@@ -2682,6 +2682,8 @@ class RelationshipDescription:
     relationship_type: str | None
     source_dataset: ResourceSummary | None
     target_dataset: ResourceSummary | None
+    source_datasets: list[ResourceSummary]
+    target_datasets: list[ResourceSummary]
     foreign_key_from: ResourceSummary | None
     foreign_key_to: ResourceSummary | None
     referential_integrity: ResourceSummary | None
@@ -28988,6 +28990,8 @@ class DoxaBase:
         description: str | None = None,
         source_dataset: str | None = None,
         target_dataset: str | None = None,
+        source_datasets: Iterable[str] | str | None = None,
+        target_datasets: Iterable[str] | str | None = None,
         from_column: str | None = None,
         to_column: str | None = None,
         identifying_columns: Iterable[str] | str | None = None,
@@ -29012,6 +29016,16 @@ class DoxaBase:
         group_by_column_values = self._string_values(
             "group_by_columns",
             group_by_columns,
+        )
+        source_dataset_values = self._relationship_endpoint_values(
+            "source_datasets",
+            source_dataset,
+            source_datasets,
+        )
+        target_dataset_values = self._relationship_endpoint_values(
+            "target_datasets",
+            target_dataset,
+            target_datasets,
         )
         aggregated_column_values = self._normalise_aggregated_column_specs(
             aggregated_columns,
@@ -29040,15 +29054,25 @@ class DoxaBase:
             raise DoxaBaseError(
                 "shared_identifier relationships require at least two identifying_columns"
             )
+        endpoint_pair_present = bool(source_dataset_values and target_dataset_values)
         if relationship_type == "derivation" and (
-            not source_column_values or not derived_column_values
+            (not source_column_values or not derived_column_values)
+            and not endpoint_pair_present
         ):
             raise DoxaBaseError(
-                "derivation relationships require source_columns and derived_columns"
+                "derivation relationships require source_columns and "
+                "derived_columns, or source_datasets and target_datasets for "
+                "asset-level derivations"
             )
-        if relationship_type == "aggregation" and not aggregated_column_values:
+        if (
+            relationship_type == "aggregation"
+            and not aggregated_column_values
+            and not endpoint_pair_present
+        ):
             raise DoxaBaseError(
-                "aggregation relationships require at least one aggregated_columns entry"
+                "aggregation relationships require at least one "
+                "aggregated_columns entry, or source_datasets and "
+                "target_datasets for asset-level aggregations"
             )
         self._validate_relationship_column_resources(
             from_column=from_column,
@@ -29066,20 +29090,20 @@ class DoxaBase:
         graph.add((subject, RDF.type, URIRef(self.expand_iri(resource_type))))
         self._add_optional_literal(graph, subject, str(RDFS.label), label)
         self._add_optional_literal(graph, subject, str(RDFS.comment), description)
-        if source_dataset is not None:
+        for source_dataset_value in source_dataset_values:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:sourceDataset")),
-                    self._resource_ref("source_dataset", source_dataset),
+                    self._resource_ref("source_datasets", source_dataset_value),
                 )
             )
-        if target_dataset is not None:
+        for target_dataset_value in target_dataset_values:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:targetDataset")),
-                    self._resource_ref("target_dataset", target_dataset),
+                    self._resource_ref("target_datasets", target_dataset_value),
                 )
             )
         if relationship_type == "foreign_key":
@@ -29274,6 +29298,18 @@ class DoxaBase:
             graph="map",
             triples=triples,
         )
+
+    def _relationship_endpoint_values(
+        self,
+        plural_name: str,
+        singular_value: str | None,
+        plural_values: Iterable[str] | str | None,
+    ) -> list[str]:
+        values: list[str] = []
+        if singular_value is not None:
+            values.extend(self._string_values(plural_name, singular_value))
+        values.extend(self._string_values(plural_name, plural_values))
+        return list(dict.fromkeys(values))
 
     def _validate_relationship_column_resources(
         self,
@@ -49406,21 +49442,31 @@ class DoxaBase:
             )
 
         for relationship_iri in self._subjects(data_graphs, "rc:sourceDataset", dataset_iri):
+            relationship_direction = self._dataset_endpoint_relationship_direction(
+                relationship_iri,
+                lookup_graphs,
+                source_side=True,
+            )
             for target_iri in self._objects(data_graphs, relationship_iri, "rc:targetDataset"):
                 related.append(
                     self._related_dataset(
                         target_iri,
-                        "source_of",
+                        relationship_direction,
                         relationship_iri,
                         lookup_graphs,
                     )
                 )
         for relationship_iri in self._subjects(data_graphs, "rc:targetDataset", dataset_iri):
+            relationship_direction = self._dataset_endpoint_relationship_direction(
+                relationship_iri,
+                lookup_graphs,
+                source_side=False,
+            )
             for source_iri in self._objects(data_graphs, relationship_iri, "rc:sourceDataset"):
                 related.append(
                     self._related_dataset(
                         source_iri,
-                        "target_of",
+                        relationship_direction,
                         relationship_iri,
                         lookup_graphs,
                     )
@@ -49443,6 +49489,29 @@ class DoxaBase:
                 for item in related
             }.values()
         )
+
+    def _dataset_endpoint_relationship_direction(
+        self,
+        relationship_iri: str,
+        lookup_graphs: list[str],
+        *,
+        source_side: bool,
+    ) -> str:
+        relationship_kind = self._first_matching_type(
+            self._types_from_graphs(lookup_graphs, relationship_iri),
+            [
+                "rc:ForeignKey",
+                "rc:SharedIdentifier",
+                "rc:Derivation",
+                "rc:Aggregation",
+                "rc:Relationship",
+            ],
+        )
+        if relationship_kind == self.expand_iri("rc:Derivation"):
+            return "source_of_derivation" if source_side else "derived_from"
+        if relationship_kind == self.expand_iri("rc:Aggregation"):
+            return "source_of_aggregation" if source_side else "aggregated_from"
+        return "source_of" if source_side else "target_of"
 
     def _related_datasets_from_column_relationship(
         self,
@@ -49494,35 +49563,43 @@ class DoxaBase:
             for column in relationship.source_columns
             if column.owning_dataset_iri is not None
         }
+        source_datasets.update(
+            dataset.iri for dataset in relationship.source_datasets
+        )
         derived_datasets = {
             column.owning_dataset_iri
             for column in relationship.derived_columns
             if column.owning_dataset_iri is not None
         }
-        if dataset_iri in source_datasets:
-            for related_dataset_iri in sorted(derived_datasets - {dataset_iri}):
-                related.append(
-                    self._related_dataset(
-                        related_dataset_iri,
-                        "source_of_derivation",
-                        relationship.iri,
-                        lookup_graphs,
+        derived_datasets.update(
+            dataset.iri for dataset in relationship.target_datasets
+        )
+        if relationship.relationship_kind == self.expand_iri("rc:Derivation"):
+            if dataset_iri in source_datasets:
+                for related_dataset_iri in sorted(derived_datasets - {dataset_iri}):
+                    related.append(
+                        self._related_dataset(
+                            related_dataset_iri,
+                            "source_of_derivation",
+                            relationship.iri,
+                            lookup_graphs,
+                        )
                     )
-                )
-        if dataset_iri in derived_datasets:
-            for related_dataset_iri in sorted(source_datasets - {dataset_iri}):
-                related.append(
-                    self._related_dataset(
-                        related_dataset_iri,
-                        "derived_from",
-                        relationship.iri,
-                        lookup_graphs,
+            if dataset_iri in derived_datasets:
+                for related_dataset_iri in sorted(source_datasets - {dataset_iri}):
+                    related.append(
+                        self._related_dataset(
+                            related_dataset_iri,
+                            "derived_from",
+                            relationship.iri,
+                            lookup_graphs,
+                        )
                     )
-                )
 
         aggregation_source_datasets: set[str] = set()
-        if relationship.source_dataset is not None:
-            aggregation_source_datasets.add(relationship.source_dataset.iri)
+        aggregation_source_datasets.update(
+            dataset.iri for dataset in relationship.source_datasets
+        )
         for column in relationship.group_by_columns:
             if column.owning_dataset_iri is not None:
                 aggregation_source_datasets.add(column.owning_dataset_iri)
@@ -49539,8 +49616,9 @@ class DoxaBase:
                 )
 
         aggregation_target_datasets: set[str] = set()
-        if relationship.target_dataset is not None:
-            aggregation_target_datasets.add(relationship.target_dataset.iri)
+        aggregation_target_datasets.update(
+            dataset.iri for dataset in relationship.target_datasets
+        )
         for aggregated_column in relationship.aggregated_columns:
             if (
                 aggregated_column.target_column is not None
@@ -49550,30 +49628,31 @@ class DoxaBase:
                     aggregated_column.target_column.owning_dataset_iri
                 )
 
-        if dataset_iri in aggregation_source_datasets:
-            for related_dataset_iri in sorted(
-                aggregation_target_datasets - {dataset_iri}
-            ):
-                related.append(
-                    self._related_dataset(
-                        related_dataset_iri,
-                        "source_of_aggregation",
-                        relationship.iri,
-                        lookup_graphs,
+        if relationship.relationship_kind == self.expand_iri("rc:Aggregation"):
+            if dataset_iri in aggregation_source_datasets:
+                for related_dataset_iri in sorted(
+                    aggregation_target_datasets - {dataset_iri}
+                ):
+                    related.append(
+                        self._related_dataset(
+                            related_dataset_iri,
+                            "source_of_aggregation",
+                            relationship.iri,
+                            lookup_graphs,
+                        )
                     )
-                )
-        if dataset_iri in aggregation_target_datasets:
-            for related_dataset_iri in sorted(
-                aggregation_source_datasets - {dataset_iri}
-            ):
-                related.append(
-                    self._related_dataset(
-                        related_dataset_iri,
-                        "aggregated_from",
-                        relationship.iri,
-                        lookup_graphs,
+            if dataset_iri in aggregation_target_datasets:
+                for related_dataset_iri in sorted(
+                    aggregation_source_datasets - {dataset_iri}
+                ):
+                    related.append(
+                        self._related_dataset(
+                            related_dataset_iri,
+                            "aggregated_from",
+                            relationship.iri,
+                            lookup_graphs,
+                        )
                     )
-                )
         return related
 
     def _related_dataset(
@@ -49965,16 +50044,18 @@ class DoxaBase:
                 "rc:Relationship",
             ],
         )
-        source_dataset = self._first_object(
+        source_dataset_iris = self._objects(
             data_graphs,
             relationship_iri,
             "rc:sourceDataset",
         )
-        target_dataset = self._first_object(
+        target_dataset_iris = self._objects(
             data_graphs,
             relationship_iri,
             "rc:targetDataset",
         )
+        source_dataset = source_dataset_iris[0] if source_dataset_iris else None
+        target_dataset = target_dataset_iris[0] if target_dataset_iris else None
         foreign_key_from = self._first_object(
             data_graphs,
             relationship_iri,
@@ -50002,6 +50083,14 @@ class DoxaBase:
         target_dataset_summary = self._optional_resource_summary(
             lookup_graphs,
             target_dataset,
+        )
+        source_dataset_summaries = self._resource_summaries(
+            lookup_graphs,
+            source_dataset_iris,
+        )
+        target_dataset_summaries = self._resource_summaries(
+            lookup_graphs,
+            target_dataset_iris,
         )
         foreign_key_from_summary = self._optional_resource_summary(
             lookup_graphs,
@@ -50049,6 +50138,8 @@ class DoxaBase:
             relationship_type=self._relationship_type_token(relationship_kind),
             source_dataset=source_dataset_summary,
             target_dataset=target_dataset_summary,
+            source_datasets=source_dataset_summaries,
+            target_datasets=target_dataset_summaries,
             foreign_key_from=foreign_key_from_summary,
             foreign_key_to=foreign_key_to_summary,
             referential_integrity=self._optional_resource_summary(
@@ -50076,7 +50167,7 @@ class DoxaBase:
             source_caveats=self._relationship_source_caveats(
                 data_graphs,
                 lookup_graphs,
-                source_dataset_summary,
+                source_dataset_summaries,
                 foreign_key_from_summary,
                 source_columns,
                 group_by_columns,
@@ -50141,14 +50232,14 @@ class DoxaBase:
         self,
         data_graphs: list[str],
         lookup_graphs: list[str],
-        source_dataset: ResourceSummary | None,
+        source_datasets: list[ResourceSummary],
         foreign_key_from: ResourceSummary | None,
         source_columns: list[ResourceSummary],
         group_by_columns: list[ResourceSummary],
         aggregated_columns: list[AggregatedColumnDescription],
     ) -> list[CaveatDescription]:
         source_resources: list[str] = []
-        if source_dataset is not None:
+        for source_dataset in source_datasets:
             source_resources.append(source_dataset.iri)
         if foreign_key_from is not None:
             source_resources.append(foreign_key_from.iri)

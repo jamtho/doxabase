@@ -294,13 +294,11 @@ rc:AggregationShape a sh:NodeShape ;
     sh:targetClass rc:Aggregation ;
     sh:property [
         sh:path rc:sourceDataset ;
-        sh:maxCount 1 ;
         sh:nodeKind sh:IRI ;
         sh:message "sourceDataset should be a named data asset resource." ;
     ] ;
     sh:property [
         sh:path rc:targetDataset ;
-        sh:maxCount 1 ;
         sh:nodeKind sh:IRI ;
         sh:message "targetDataset should be a named data asset resource." ;
     ] ;

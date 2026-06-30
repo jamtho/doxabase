@@ -141,10 +141,13 @@ paths it already knows how to walk.
 
 A non-tabular relationship trial found that asset-level derivations and
 aggregations could be squeezed through column relationship fields by passing
-dataset IRIs as if they were columns. That is now guarded against, but the
-broader frontier remains: when a workflow needs first-class no-column asset
-relationships, treat that as a modelling/design task rather than a helper
-workaround.
+dataset IRIs as if they were columns. That is now guarded against, and simple
+endpoint-only asset relationships can be recorded with
+`record_map_relationship(..., source_datasets=[...], target_datasets=[...])`
+without column fields. The broader frontier remains richer asset relationship
+semantics: input roles, transform functions, ordering, selection scope, and
+competing RDF framings still need observations, patterns, staged
+systematisation, or a future dedicated primitive.
 
 ## Safety
 

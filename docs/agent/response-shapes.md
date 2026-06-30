@@ -2454,6 +2454,8 @@ relationship.relationship_kind_label
 relationship.relationship_type        # helper token, such as "foreign_key"
 relationship.source_dataset
 relationship.target_dataset
+relationship.source_datasets
+relationship.target_datasets
 relationship.foreign_key_from
 relationship.foreign_key_to
 relationship.referential_integrity
@@ -2470,8 +2472,12 @@ relationship.source_caveats
 
 For foreign keys, use `foreign_key_from` and `foreign_key_to`; there are no
 generic `from_column` or `to_column` response fields. For derivations, use
-`source_columns` and `derived_columns`. For aggregations, use `group_by_columns`
-and `aggregated_columns`.
+`source_columns` and `derived_columns` when columns are involved, and
+`source_datasets` / `target_datasets` for no-column asset-level endpoints. For
+aggregations, use `group_by_columns` and `aggregated_columns` when columns are
+involved, and `source_datasets` / `target_datasets` for no-column asset-level
+rollups. The singular `source_dataset` and `target_dataset` fields are
+compatibility shortcuts to the first endpoint when present.
 
 `dataset.profile_observations` contains recent dataset-scoped
 `ProfileObservationSummary` items for observations whose `observed_asset` is the

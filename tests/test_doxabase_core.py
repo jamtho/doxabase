@@ -124,7 +124,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     graphs = {graph.name: graph for graph in overview.named_graphs}
     assert graphs["base_ontology"].triple_count == 1242
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1232
+    assert graphs["base_shapes"].triple_count == 1230
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -20972,6 +20972,78 @@ def test_validation_rejects_data_assets_in_relationship_column_predicates(
     assert not validation.conforms
     assert "Relationship column predicates must not point to data asset resources" in (
         validation.report_text
+    )
+
+
+def test_record_map_relationship_supports_asset_level_endpoints(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/asset-frontier#"
+    raw_bags = f"{base}raw_sonar_bag_files"
+    navigation = f"{base}navigation_corrections_yaml"
+    mosaic = f"{base}survey_mosaic_geotiff"
+    contact_sheet = f"{base}qa_contact_sheet_png"
+
+    db.record_map_dataset(raw_bags, label="Raw side-scan sonar bag files")
+    db.record_map_dataset(navigation, label="Navigation correction pack")
+    db.record_map_dataset(mosaic, label="Survey mosaic GeoTIFF")
+    db.record_map_dataset(contact_sheet, label="QA contact sheet PNG")
+    db.record_map_relationship(
+        f"{base}mosaic_from_bags_and_navigation",
+        relationship_type="derivation",
+        label="mosaic from bags and navigation corrections",
+        source_datasets=[raw_bags, navigation],
+        target_datasets=[mosaic],
+        derivation_properties=["rc:Deterministic", "rc:Lossy"],
+    )
+    db.record_map_relationship(
+        f"{base}contact_sheet_from_mosaic",
+        relationship_type="aggregation",
+        label="contact sheet from mosaic",
+        source_datasets=[mosaic],
+        target_datasets=[contact_sheet],
+    )
+
+    assert db.validate_graph(scope="all").conforms
+
+    mosaic_description = db.describe_dataset(mosaic)
+    derivation = next(
+        relationship
+        for relationship in mosaic_description.relationships
+        if relationship.relationship_type == "derivation"
+    )
+    assert {dataset.iri for dataset in derivation.source_datasets} == {
+        raw_bags,
+        navigation,
+    }
+    assert [dataset.iri for dataset in derivation.target_datasets] == [mosaic]
+    assert derivation.source_columns == []
+    assert derivation.derived_columns == []
+    assert {related.relationship for related in mosaic_description.related_datasets} >= {
+        "derived_from",
+        "source_of_aggregation",
+    }
+    assert not any(
+        related.relationship == "aggregated_from"
+        and related.relationship_kind == RC + "Derivation"
+        for related in mosaic_description.related_datasets
+    )
+
+    raw_description = db.describe_dataset(raw_bags)
+    assert any(
+        related.iri == mosaic
+        and related.relationship == "source_of_derivation"
+        and related.relationship_kind == RC + "Derivation"
+        for related in raw_description.related_datasets
+    )
+
+    contact_description = db.describe_dataset(contact_sheet)
+    assert any(
+        related.iri == mosaic
+        and related.relationship == "aggregated_from"
+        and related.relationship_kind == RC + "Aggregation"
+        for related in contact_description.related_datasets
     )
 
 

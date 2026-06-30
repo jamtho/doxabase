@@ -286,15 +286,19 @@ target columns from source columns.
 Relationship column fields are for column resources. The helper rejects known
 data assets, datasets, or tables in `from_column`, `to_column`,
 `identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
-and aggregate mapping column fields. For no-column asset-level derivation or
-aggregation, use `source_dataset` / `target_dataset` plus observations,
-patterns, or staged systematisation until a dedicated asset-relationship helper
-exists.
+and aggregate mapping column fields.
 
-Aggregation relationships can carry `source_dataset`, `target_dataset`,
-`group_by_columns`, and `aggregated_columns`. Each `aggregated_columns` entry
-uses `target_column`, `source_columns`, optional `aggregation_function`, and
-optional `within_group_ordering`:
+For no-column asset-level derivation or aggregation, use `source_datasets` and
+`target_datasets` without column fields. The singular `source_dataset` and
+`target_dataset` arguments are still accepted as compatibility shortcuts for
+one endpoint each. Use observations, patterns, or staged systematisation when
+the relationship needs richer asset roles, transform details, or competing RDF
+framings beyond endpoint routing.
+
+Column-shaped aggregation relationships can carry `source_dataset`,
+`target_dataset`, `group_by_columns`, and `aggregated_columns`. Each
+`aggregated_columns` entry uses `target_column`, `source_columns`, optional
+`aggregation_function`, and optional `within_group_ordering`:
 
 ```python
 record_map_relationship_tool(

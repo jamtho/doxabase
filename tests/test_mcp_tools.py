@@ -9573,6 +9573,45 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     assert validate_graph_tool(db, scope="map")["conforms"] is True
 
 
+def test_record_map_relationship_tool_accepts_asset_level_endpoints(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-assets#"
+    raw = f"{base}raw_packets"
+    correction = f"{base}navigation_corrections"
+    mosaic = f"{base}survey_mosaic"
+
+    record_map_dataset_tool(db, iri=raw, label="Raw packets")
+    record_map_dataset_tool(db, iri=correction, label="Navigation corrections")
+    record_map_dataset_tool(db, iri=mosaic, label="Survey mosaic")
+    result = record_map_relationship_tool(
+        db,
+        iri=f"{base}mosaic_derivation",
+        relationship_type="derivation",
+        label="mosaic derivation",
+        source_datasets=[raw, correction],
+        target_datasets=[mosaic],
+    )
+
+    assert result["resource_type"] == RC + "Derivation"
+    description = describe_dataset_tool(db, iri=mosaic)
+    relationship = description["relationships"][0]
+    assert {dataset["iri"] for dataset in relationship["source_datasets"]} == {
+        raw,
+        correction,
+    }
+    assert [dataset["iri"] for dataset in relationship["target_datasets"]] == [
+        mosaic
+    ]
+    assert any(
+        related["relationship"] == "derived_from"
+        and related["relationship_kind"] == RC + "Derivation"
+        for related in description["related_datasets"]
+    )
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
 def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)

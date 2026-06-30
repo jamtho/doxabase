@@ -1054,7 +1054,10 @@ predicate in the replacement set and clears it.
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,
 `source_columns`, optional `aggregation_function`, and optional
-`within_group_ordering`. Relationship column fields must point to column
+`within_group_ordering`. For no-column asset-level derivations or aggregations,
+pass `source_datasets` and `target_datasets`; the singular `source_dataset` and
+`target_dataset` arguments remain compatibility shortcuts. Relationship column
+fields must point to column
 resources; known data assets, datasets, and tables are rejected in those slots.
 Dataset descriptions expose all partition columns as
 `partition_columns`; the older singular `partition_column` field remains as a
