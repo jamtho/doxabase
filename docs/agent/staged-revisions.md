@@ -1352,3 +1352,9 @@ staged revisions store snapshot rows for exact count/digest drift reporting. It
 does not yet support rich semantic merge diagnostics, rebasing, approval state
 machines, or historical graph checkout/replay. Use `list_graph_versions` for a
 read-only timeline of stored graph snapshots.
+When a same-slot staged map assertion drifts, the practical route is
+read-only version browsing plus structured repair: compare the stored snapshot
+with current graph using `describe_graph_version_diff`, run
+`draft_staged_revision_rebase(staged_iri)`, then call the returned
+`stage_map_assertion_change` action with its `arguments`. Prefer those
+structured arguments over the human-readable `action.call` string.

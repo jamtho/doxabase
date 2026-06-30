@@ -83,6 +83,16 @@ count/digest and snapshot-evidence status. It is not checkout/replay; call
 stored version with the current graph, or
 `describe_revision_graph_snapshot(..., include_triples=True)` for exact stored
 triples on a specific version when that is necessary and safe to inspect.
+For singleton-slot drift repair, prefer a no-string-parsing route:
+`list_graph_versions("map", exact_only=True)` to orient on available snapshots,
+`describe_graph_version_diff("map", revision_iri)` to inspect the exact current
+delta, `check_staged_revision_apply(staged_iri)` to confirm the stale row and
+drift relevance, then `draft_staged_revision_rebase(staged_iri)`. If the draft
+offers `preferred_action` or a `stage_map_assertion_change` repair action, call
+the tool with that action's structured `arguments`; do not parse `action.call`.
+This gives a clean same-slot successor for supported slots such as
+`rc:rowSemantics` without checking out a historical graph or hand-editing patch
+Turtle.
 Use `describe_revision_lineage(revision_iri)` when you already have any staged
 source, restaged successor, or applied event IRI and need the graph-level
 restage/apply chain, current/latest pointers, alternatives, and next route
