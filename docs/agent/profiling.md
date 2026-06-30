@@ -239,6 +239,9 @@ applying anything: one framing might define an ontology
 fallback without promoting a metric term yet. Use `stage_systematisation` for
 those alternatives when the graph move needs modelling judgement, and export the
 grouped staged review before selecting a durable path.
+`draft_profile_map_updates.mixed_support_review_groups` is the compact route for
+those comparisons: it groups shared support patterns, review lanes, semantic
+moves, advisory indexes, and suggested calls before anything is staged.
 Generated mutating advisory actions for `stage_map_assertion_change`,
 `stage_pattern_promotion`, and `stage_systematisation` already include
 `profile_route_sources` in their arguments. Preserve that argument when calling

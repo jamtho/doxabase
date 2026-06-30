@@ -566,8 +566,10 @@ expectations before applying it unchanged.
 If the same promotion pattern supports both metric vocabulary and type review,
 both advisory rows expose `mixed_support_patterns` and `mixed_support_note`;
 grouped promotion/assertion actions also include
-`source_profile_advisory.mixed_support` plus a review-note cue. Inspect the
-shared pattern before promoting or asserting either lane independently; when
+`source_profile_advisory.mixed_support` plus a review-note cue.
+`mixed_support_review_groups` lifts those shared-support comparisons to the top
+level with review lanes, semantic moves, advisory indexes, and suggested calls.
+Inspect the group before promoting or asserting either lane independently; when
 both lanes generate staged drafts, review or export those drafts together before
 applying either lane on its own.
 The draft

@@ -3026,6 +3026,13 @@ few useful gaps:
   gap was first-hop salience: privacy/export review lived only in `health_tasks`,
   so `project_brief` now exposes `safety_first_action` for blocking
   `privacy_export_review` before the normal `frontier_first_action`.
+- A profile-frontier trial confirmed agents can keep map updates, metric
+  vocabulary, value-type assertions, and alternative systematisations in one
+  review bundle, but mixed-support comparisons were too easy to miss before
+  staging. `draft_profile_map_updates` now exposes
+  `mixed_support_review_groups` so shared support patterns, review lanes,
+  semantic moves, and suggested calls are visible together before applying any
+  one lane.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

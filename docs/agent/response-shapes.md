@@ -1670,6 +1670,8 @@ draft.suggested_next_calls
 draft.suggested_next_action_groups
 draft.suggested_next_call_groups
 draft.advisory_followthrough_plan
+draft.mixed_support_review_groups
+draft.mixed_support_review_group_count
 draft.review_note
 ```
 
@@ -1897,7 +1899,11 @@ generic review-first comment. If the same promotion pattern is also used by a
 metric advisory, `mixed_support_patterns`, `mixed_support_pattern_count`, and
 `mixed_support_note` flag the shared evidence; grouped promotion and
 `stage_map_assertion_change` actions also carry this cue in
-`source_profile_advisory.mixed_support` and review notes. Use
+`source_profile_advisory.mixed_support` and review notes. Top-level
+`mixed_support_review_groups[]` collects grouped metric/type actions that share
+support patterns, including review lanes, semantic moves, suggested calls, and
+represented advisory indexes; read it before applying or exporting one lane
+independently. Use
 `type_advisory_count` and `type_advisory_status_counts` for queue routing before
 reading full advisory rows. For `type_finding_unmapped_column`,
 `related_recommendation_indexes` points at the matching

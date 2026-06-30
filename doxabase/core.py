@@ -2798,6 +2798,30 @@ class ProfileAdvisoryFollowthroughPlanItem:
 
 
 @dataclass(frozen=True)
+class ProfileMixedSupportReviewGroup:
+    group_index: int
+    pattern_iris: list[str]
+    pattern_count: int
+    review_lanes: list[str]
+    semantic_moves: list[str]
+    route_group_keys: list[str]
+    route_step_keys: list[str]
+    route_anchor_iris: list[str]
+    route_pattern_iris: list[str]
+    action_count: int
+    tool_names: list[str]
+    action_labels: list[str]
+    suggested_next_calls: list[str]
+    metric_advisory_indexes: list[int]
+    type_advisory_indexes: list[int]
+    duplicate_group_keys: list[str]
+    duplicate_advisory_indexes: list[int]
+    duplicate_profile_observation_iris: list[str]
+    source_profile_advisories: list[dict[str, Any]]
+    note: str
+
+
+@dataclass(frozen=True)
 class ProfileMapUpdateDraft:
     dataset: ResourceSummary
     evidence: EvidenceDescription
@@ -2824,6 +2848,8 @@ class ProfileMapUpdateDraft:
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
     suggested_next_call_groups: dict[str, list[str]]
     advisory_followthrough_plan: list[ProfileAdvisoryFollowthroughPlanItem]
+    mixed_support_review_groups: list[ProfileMixedSupportReviewGroup]
+    mixed_support_review_group_count: int
     review_note: str
 
 
@@ -13689,6 +13715,9 @@ class DoxaBase:
             metric_advisories=metric_advisories,
             type_advisories=type_advisories,
         )
+        mixed_support_review_groups = self._profile_mixed_support_review_groups(
+            suggested_next_action_groups
+        )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
@@ -13725,6 +13754,8 @@ class DoxaBase:
             suggested_next_action_groups=suggested_next_action_groups,
             suggested_next_call_groups=suggested_next_call_groups,
             advisory_followthrough_plan=advisory_followthrough_plan,
+            mixed_support_review_groups=mixed_support_review_groups,
+            mixed_support_review_group_count=len(mixed_support_review_groups),
             review_note=(
                 self._profile_map_update_draft_review_note(
                     query_context_review_actions=query_context_review_actions,
@@ -13733,6 +13764,118 @@ class DoxaBase:
                     ),
                 )
             ),
+        )
+
+    def _profile_mixed_support_review_groups(
+        self,
+        suggested_next_action_groups: Mapping[str, list[SuggestedNextAction]],
+    ) -> list[ProfileMixedSupportReviewGroup]:
+        grouped: dict[tuple[str, ...], dict[str, Any]] = {}
+        group_order: list[tuple[str, ...]] = []
+        for review_lane in ("metric_vocabulary_review", "profile_type_review"):
+            for action in suggested_next_action_groups.get(review_lane, []):
+                source = getattr(action, "source_profile_advisory", None)
+                if not isinstance(source, MappingABC):
+                    continue
+                mixed_support = source.get("mixed_support")
+                if not isinstance(mixed_support, MappingABC):
+                    continue
+                pattern_iris = tuple(
+                    self._string_values_from_any(
+                        mixed_support.get("pattern_iris")
+                    )
+                )
+                if not pattern_iris:
+                    continue
+                if pattern_iris not in grouped:
+                    grouped[pattern_iris] = {
+                        "pattern_iris": list(pattern_iris),
+                        "review_lanes": [],
+                        "semantic_moves": [],
+                        "route_group_keys": [],
+                        "route_step_keys": [],
+                        "route_anchor_iris": [],
+                        "route_pattern_iris": [],
+                        "tool_names": [],
+                        "action_labels": [],
+                        "suggested_next_calls": [],
+                        "metric_advisory_indexes": [],
+                        "type_advisory_indexes": [],
+                        "duplicate_group_keys": [],
+                        "duplicate_advisory_indexes": [],
+                        "duplicate_profile_observation_iris": [],
+                        "source_profile_advisories": [],
+                    }
+                    group_order.append(pattern_iris)
+                item = grouped[pattern_iris]
+                self._append_unique(item["review_lanes"], review_lane)
+                semantic_move = self._profile_advisory_semantic_move(
+                    action,
+                    source,
+                )
+                if semantic_move is not None:
+                    self._append_unique(item["semantic_moves"], semantic_move)
+                route_group_key = source.get("route_group_key")
+                if isinstance(route_group_key, str):
+                    self._append_unique(
+                        item["route_group_keys"],
+                        route_group_key,
+                    )
+                self._append_unique(item["tool_names"], action.tool_name)
+                self._append_unique(item["action_labels"], action.action_label)
+                if action.call:
+                    self._append_unique(item["suggested_next_calls"], action.call)
+                self._append_profile_followthrough_source_fields(item, source)
+
+        return [
+            self._profile_mixed_support_review_group(
+                group_index=group_index,
+                item=grouped[key],
+            )
+            for group_index, key in enumerate(group_order)
+        ]
+
+    @staticmethod
+    def _profile_mixed_support_review_group(
+        *,
+        group_index: int,
+        item: Mapping[str, Any],
+    ) -> ProfileMixedSupportReviewGroup:
+        pattern_iris = list(item["pattern_iris"])
+        review_lanes = list(item["review_lanes"])
+        semantic_moves = list(item["semantic_moves"])
+        note = (
+            "Shared profile support pattern(s) feed multiple review lanes. "
+            "Compare the grouped actions before applying, exporting, or "
+            "treating any one lane as settled."
+        )
+        if review_lanes:
+            note = f"{note} Review lanes: {', '.join(review_lanes)}."
+        if semantic_moves:
+            note = f"{note} Semantic moves: {', '.join(semantic_moves)}."
+        return ProfileMixedSupportReviewGroup(
+            group_index=group_index,
+            pattern_iris=pattern_iris,
+            pattern_count=len(pattern_iris),
+            review_lanes=review_lanes,
+            semantic_moves=semantic_moves,
+            route_group_keys=list(item["route_group_keys"]),
+            route_step_keys=list(item["route_step_keys"]),
+            route_anchor_iris=list(item["route_anchor_iris"]),
+            route_pattern_iris=list(item["route_pattern_iris"]),
+            action_count=len(item["suggested_next_calls"]),
+            tool_names=list(item["tool_names"]),
+            action_labels=list(item["action_labels"]),
+            suggested_next_calls=list(item["suggested_next_calls"]),
+            metric_advisory_indexes=list(item["metric_advisory_indexes"]),
+            type_advisory_indexes=list(item["type_advisory_indexes"]),
+            duplicate_group_keys=list(item["duplicate_group_keys"]),
+            duplicate_advisory_indexes=list(item["duplicate_advisory_indexes"]),
+            duplicate_profile_observation_iris=list(
+                item["duplicate_profile_observation_iris"]
+            ),
+            source_profile_advisories=list(item["source_profile_advisories"]),
+            note=note,
         )
 
     def _profile_map_update_draft_action_groups(

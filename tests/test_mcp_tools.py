@@ -8458,6 +8458,22 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     ]
     assert "Mixed support" in grouped_metric_action["reason"]
     assert "Mixed support" in grouped_type_action["arguments"]["review_note"]
+    assert result["mixed_support_review_group_count"] == 1
+    mixed_group = result["mixed_support_review_groups"][0]
+    assert mixed_group["pattern_iris"] == [pattern["pattern_iri"]]
+    assert mixed_group["review_lanes"] == [
+        "metric_vocabulary_review",
+        "profile_type_review",
+    ]
+    assert set(mixed_group["semantic_moves"]) == {
+        "assert_map_type",
+        "caveat_fallback",
+        "define_metric",
+        "define_value_type",
+    }
+    assert mixed_group["metric_advisory_indexes"] == [0]
+    assert mixed_group["type_advisory_indexes"] == [0]
+    assert "Compare the grouped actions" in mixed_group["note"]
 
 
 def test_stage_profile_map_updates_tool_returns_json_like_payload(

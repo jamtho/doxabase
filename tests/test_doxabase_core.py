@@ -28077,6 +28077,23 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
         "other_review_lanes": ["metric_vocabulary_review"],
         "note": type_advisory.mixed_support_note,
     }
+    assert draft.mixed_support_review_group_count == 1
+    mixed_group = draft.mixed_support_review_groups[0]
+    assert mixed_group.pattern_iris == [pattern.pattern_iri]
+    assert mixed_group.pattern_count == 1
+    assert mixed_group.review_lanes == [
+        "metric_vocabulary_review",
+        "profile_type_review",
+    ]
+    assert set(mixed_group.semantic_moves) == {
+        "assert_map_type",
+        "caveat_fallback",
+        "define_metric",
+        "define_value_type",
+    }
+    assert mixed_group.metric_advisory_indexes == [0]
+    assert mixed_group.type_advisory_indexes == [0]
+    assert "Compare the grouped actions" in mixed_group.note
 
 
 def test_stage_profile_map_updates_keeps_mixed_advisory_vocabulary_out_of_map_patch(
