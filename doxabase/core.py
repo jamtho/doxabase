@@ -196,6 +196,18 @@ REQUIRED_REVISION_STANCE_ONTOLOGY_TERMS = (
     "rc:CandidateRevision",
 )
 
+STAGED_REVIEW_DECISIONS = {
+    "accepted_elsewhere": "rc:AcceptedElsewhereDecision",
+    "superseded": "rc:SupersededDecision",
+    "discarded": "rc:DiscardedDecision",
+    "no_effective_change": "rc:NoEffectiveChangeDecision",
+}
+
+REQUIRED_STAGED_REVIEW_DECISION_ONTOLOGY_TERMS = (
+    "rc:StagedRevisionReviewDecision",
+    *STAGED_REVIEW_DECISIONS.values(),
+)
+
 PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
     {
         "dataset_row_count_snapshot",
@@ -670,6 +682,34 @@ class GraphRevisionRecord:
     revision_type: str
     graph: str
     triples: int
+
+
+@dataclass(frozen=True)
+class StagedRevisionReviewResolutionSummary:
+    resolution_revision_iri: str
+    decision: str
+    decision_iri: str | None
+    decision_label: str | None
+    summary: str | None
+    rationale: str | None
+    created_at: str | None
+    created_by: str | None
+
+
+@dataclass(frozen=True)
+class StagedRevisionReviewDecisionRecord:
+    resolution_revision_iri: str
+    staged_revision_iri: str
+    decision: str
+    decision_iri: str
+    graph: str
+    triples: int
+    current_application_status: str | None
+    current_stale_resolution_state: str | None
+    current_next_action: RevisionNextAction | None
+    closes_current_staged_work: bool
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1991,6 +2031,9 @@ class GraphRevisionDescription:
     created_by: str | None
     export_path: str | None
     applies_staged_revision: str | None
+    resolves_staged_revision: str | None
+    staged_review_decision: str | None
+    staged_review_decision_label: str | None
     applied_source: AppliedStagedRevisionSourceSummary | None
     validation_scope: str | None
     validation_conforms: bool | None
@@ -2034,6 +2077,7 @@ class GraphRevisionListItem:
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
+    review_resolution: StagedRevisionReviewResolutionSummary | None
     stale_resolution_state: str | None
     application_status: str | None
     application_decision: str | None
@@ -2363,6 +2407,7 @@ class StagedGraphRevisionDescription:
     restaged_by: ResourceSummary | None
     current_restaged_by: ResourceSummary | None
     applied_by: ResourceSummary | None
+    review_resolution: StagedRevisionReviewResolutionSummary | None
     application_status: str | None
     restage_reason: str | None
     changed_graphs: list[str]
@@ -7103,6 +7148,16 @@ class DoxaBase:
             revision_iri,
             "rc:appliesStagedRevision",
         )
+        resolves_staged_revision = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:resolvesStagedRevision",
+        )
+        staged_review_decision = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:stagedRevisionReviewDecision",
+        )
         patch_iris = self._objects(data_graphs, revision_iri, "rc:hasGraphPatch")
         patches = [
             self._describe_staged_graph_patch(patch_iri, data_graphs)
@@ -7147,6 +7202,11 @@ class DoxaBase:
             created_by=self._first_object(data_graphs, revision_iri, "rc:createdBy"),
             export_path=self._first_object(data_graphs, revision_iri, "rc:exportPath"),
             applies_staged_revision=applies_staged_revision,
+            resolves_staged_revision=resolves_staged_revision,
+            staged_review_decision=staged_review_decision,
+            staged_review_decision_label=self._label_for_resource(
+                staged_review_decision
+            ),
             applied_source=(
                 self._applied_staged_revision_source_summary(
                     applies_staged_revision
@@ -7962,6 +8022,14 @@ class DoxaBase:
                 revision_iri,
                 graphs=data_graphs,
             )
+            review_resolution = (
+                self._staged_review_resolution_for_staged_iri(
+                    revision_iri,
+                    graphs=data_graphs,
+                )
+                if patch_iris
+                else None
+            )
 
             item_record_kind = self._graph_revision_record_kind(
                 item_revision_type,
@@ -7981,12 +8049,14 @@ class DoxaBase:
                 item_record_kind == "staged_patch"
                 and applied_by is None
                 and current_restaged_by is None
+                and review_resolution is None
             )
             not_current_staged_work_reason = (
                 self._not_current_staged_work_reason(
                     record_kind=item_record_kind,
                     applied_by=applied_by,
                     current_restaged_by=current_restaged_by,
+                    review_resolution=review_resolution,
                 )
                 if not is_current_staged_work
                 else None
@@ -8102,6 +8172,7 @@ class DoxaBase:
                     restaged_from=restaged_from,
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
+                    review_resolution=review_resolution,
                     stale_resolution_state=item_stale_resolution_state,
                     application_status=application_status,
                     application_decision=application_decision,
@@ -10428,12 +10499,15 @@ class DoxaBase:
         record_kind: str,
         applied_by: str | None,
         current_restaged_by: str | None,
+        review_resolution: StagedRevisionReviewResolutionSummary | None = None,
     ) -> str:
         if record_kind == "staged_patch":
             if applied_by is not None:
                 return "already_applied_source"
             if current_restaged_by is not None:
                 return "superseded_by_restage"
+            if review_resolution is not None:
+                return "review_resolved"
             return "not_current_staged_patch"
         if record_kind == "applied_event":
             return "applied_event_record"
@@ -10495,6 +10569,8 @@ class DoxaBase:
             return "applied_event"
         if has_patch_payload:
             return "staged_patch"
+        if revision_type == self.expand_iri("rc:StagedRevisionReviewResolution"):
+            return "staged_review_resolution"
         if revision_type == self.expand_iri("rc:ExportRevision"):
             return "export_record"
         if revision_type == self.expand_iri("rc:ImportRevision"):
@@ -10529,6 +10605,83 @@ class DoxaBase:
             has_patch_payload=bool(patch_iris),
             applies_staged_revision=applies_staged_revision,
         )
+
+    def _staged_review_resolution_for_staged_iri(
+        self,
+        staged_revision_iri: str,
+        *,
+        graphs: list[str] | None = None,
+    ) -> StagedRevisionReviewResolutionSummary | None:
+        summaries = self._staged_review_resolution_summaries_for_staged_iri(
+            staged_revision_iri,
+            graphs=graphs,
+        )
+        return summaries[0] if summaries else None
+
+    def _staged_review_resolution_summaries_for_staged_iri(
+        self,
+        staged_revision_iri: str,
+        *,
+        graphs: list[str] | None = None,
+    ) -> list[StagedRevisionReviewResolutionSummary]:
+        staged_revision_value = self.expand_iri(staged_revision_iri)
+        data_graphs = graphs or self._expand_graphs(["history"])
+        decision_by_iri = {
+            self.expand_iri(value): key
+            for key, value in STAGED_REVIEW_DECISIONS.items()
+        }
+        summaries: list[StagedRevisionReviewResolutionSummary] = []
+        for resolution_iri in self._subjects(
+            data_graphs,
+            "rc:resolvesStagedRevision",
+            staged_revision_value,
+        ):
+            decision_iri = self._first_object(
+                data_graphs,
+                resolution_iri,
+                "rc:stagedRevisionReviewDecision",
+            )
+            summaries.append(
+                StagedRevisionReviewResolutionSummary(
+                    resolution_revision_iri=resolution_iri,
+                    decision=(
+                        decision_by_iri.get(decision_iri)
+                        if decision_iri is not None
+                        else None
+                    )
+                    or "unknown",
+                    decision_iri=decision_iri,
+                    decision_label=self._label_for_resource(decision_iri),
+                    summary=self._first_object(
+                        data_graphs,
+                        resolution_iri,
+                        "rc:summary",
+                    ),
+                    rationale=self._first_object(
+                        data_graphs,
+                        resolution_iri,
+                        "rc:revisionRationale",
+                    ),
+                    created_at=self._first_object(
+                        data_graphs,
+                        resolution_iri,
+                        "rc:createdAt",
+                    ),
+                    created_by=self._first_object(
+                        data_graphs,
+                        resolution_iri,
+                        "rc:createdBy",
+                    ),
+                )
+            )
+        summaries.sort(
+            key=lambda item: (
+                item.created_at or "",
+                item.resolution_revision_iri,
+            ),
+            reverse=True,
+        )
+        return summaries
 
     def describe_staged_revision(
         self,
@@ -10676,6 +10829,10 @@ class DoxaBase:
             restaged_by=restaged_by,
             current_restaged_by=current_restaged_by,
             applied_by=applied_by,
+            review_resolution=self._staged_review_resolution_for_staged_iri(
+                revision_iri,
+                graphs=data_graphs,
+            ),
             application_status="already_applied" if applied_by is not None else None,
             restage_reason=self._staged_revision_restage_reason(
                 restaged_from=restaged_from,
@@ -32831,6 +32988,12 @@ class DoxaBase:
                 "Cannot stage a repaired successor for a staged revision that "
                 f"has already been applied by '{source.applied_by.iri}'."
             )
+        if source.review_resolution is not None:
+            raise DoxaBaseError(
+                "Cannot stage a repaired successor for a staged revision that "
+                "has a recorded review resolution "
+                f"'{source.review_resolution.resolution_revision_iri}'."
+            )
         return source.iri
 
     def draft_staged_revision_rebase(
@@ -37549,6 +37712,12 @@ class DoxaBase:
         )
         staged = preview.staged
         check = preview.check
+        if staged.review_resolution is not None:
+            raise DoxaBaseError(
+                "Staged revision cannot be applied because it has a recorded "
+                "review resolution "
+                f"'{staged.review_resolution.resolution_revision_iri}'."
+            )
         if check.already_applied_by is not None:
             raise DoxaBaseError(
                 f"Staged revision '{iri}' has already been applied by "
@@ -37671,6 +37840,214 @@ class DoxaBase:
             validation_result_count=check.validation_result_count or 0,
             validation_results=check.validation_results,
         )
+
+    def record_staged_revision_review_decision(
+        self,
+        iri: str,
+        decision: str,
+        rationale: str,
+        *,
+        summary: str | None = None,
+        resolution_revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        allow_mutation_target: bool = False,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> StagedRevisionReviewDecisionRecord:
+        staged = self.describe_staged_revision(iri)
+        existing_resolution = self._staged_review_resolution_for_staged_iri(
+            staged.iri
+        )
+        if existing_resolution is not None:
+            raise DoxaBaseError(
+                "Staged revision already has a review resolution recorded by "
+                f"'{existing_resolution.resolution_revision_iri}'."
+            )
+        was_current_staged_work = (
+            staged.applied_by is None and staged.current_restaged_by is None
+        )
+        normalized_decision = self._normalize_staged_review_decision(decision)
+        decision_iri = self.expand_iri(STAGED_REVIEW_DECISIONS[normalized_decision])
+        self._ensure_staged_review_decision(decision_iri)
+        check = self.check_staged_revision_apply(
+            staged.iri,
+            validation_scope=validation_scope,
+        )
+        if not allow_mutation_target and self._staged_review_decision_targets_mutation(
+            staged,
+            check,
+        ):
+            raise DoxaBaseError(
+                "Refusing to record a staged review decision for a current "
+                "mutation-target row. Review/apply, restage, or repair it, or "
+                "pass allow_mutation_target=True when a human or agent has "
+                "explicitly decided to close this staged proposal without a "
+                "graph mutation."
+            )
+
+        rationale_value = rationale.strip()
+        if not rationale_value:
+            raise DoxaBaseError("rationale must not be empty")
+        summary_value = (
+            summary.strip()
+            if summary is not None and summary.strip()
+            else self._staged_review_decision_default_summary(
+                staged,
+                normalized_decision,
+            )
+        )
+        included_graphs = list(dict.fromkeys(["history", *staged.changed_graphs]))
+        revision_record = self.record_graph_revision(
+            summary=summary_value,
+            rationale=rationale_value,
+            changed_graphs=["history"],
+            revision_type="rc:StagedRevisionReviewResolution",
+            included_graphs=included_graphs,
+            revision_iri=resolution_revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            revision_anchors=[staged.iri],
+            validation_scope=check.validation_scope,
+            validation_conforms=check.validation_conforms,
+            validation_result_count=check.validation_result_count,
+            validation_results=check.validation_results,
+        )
+
+        metadata = Graph()
+        self._bind_prefixes(metadata)
+        subject = URIRef(revision_record.revision_iri)
+        metadata.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:resolvesStagedRevision")),
+                URIRef(staged.iri),
+            )
+        )
+        metadata.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:stagedRevisionReviewDecision")),
+                URIRef(decision_iri),
+            )
+        )
+        self._add_optional_literal(metadata, subject, "rc:reviewNote", review_note)
+        self._add_optional_literal(
+            metadata,
+            subject,
+            "rc:reviewRecommendation",
+            review_recommendation,
+        )
+        extra_triples = self._insert_graph("history", metadata)
+        suggested_next_actions = self._staged_review_decision_next_actions(
+            staged.iri,
+            revision_record.revision_iri,
+        )
+        return StagedRevisionReviewDecisionRecord(
+            resolution_revision_iri=revision_record.revision_iri,
+            staged_revision_iri=staged.iri,
+            decision=normalized_decision,
+            decision_iri=decision_iri,
+            graph="history",
+            triples=revision_record.triples + extra_triples,
+            current_application_status=check.status,
+            current_stale_resolution_state=check.stale_resolution_state,
+            current_next_action=check.next_action,
+            closes_current_staged_work=was_current_staged_work,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+        )
+
+    def _staged_review_decision_targets_mutation(
+        self,
+        staged: StagedGraphRevisionDescription,
+        check: StagedRevisionApplyCheck,
+    ) -> bool:
+        if staged.applied_by is not None or staged.current_restaged_by is not None:
+            return False
+        if check.next_action is None:
+            return False
+        return check.next_action.queue in {
+            "apply_after_review",
+            "restage_after_review",
+            "repair_or_replace",
+        }
+
+    def _staged_review_decision_default_summary(
+        self,
+        staged: StagedGraphRevisionDescription,
+        decision: str,
+    ) -> str:
+        label = decision.replace("_", " ")
+        staged_summary = staged.summary or staged.iri
+        return f"Recorded staged revision review decision: {label} - {staged_summary}"
+
+    def _staged_review_decision_next_actions(
+        self,
+        staged_revision_iri: str,
+        resolution_revision_iri: str,
+    ) -> list[SuggestedNextAction]:
+        actions = [
+            SuggestedNextAction(
+                action_label="Inspect review decision",
+                tool_name="describe_graph_revision",
+                mcp_tool_name="doxabase.describe_graph_revision",
+                arguments={"iri": resolution_revision_iri},
+                reason=(
+                    "Inspect the durable history event that recorded the staged "
+                    "review decision."
+                ),
+                call=self._suggested_call_string(
+                    "describe_graph_revision",
+                    {"iri": resolution_revision_iri},
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Inspect resolved staged revision",
+                tool_name="describe_staged_revision",
+                mcp_tool_name="doxabase.describe_staged_revision",
+                arguments={
+                    "iri": staged_revision_iri,
+                    "include_current_apply_check": True,
+                },
+                reason=(
+                    "Inspect the resolved staged row with its live apply check "
+                    "and review_resolution summary."
+                ),
+                call=self._suggested_call_string(
+                    "describe_staged_revision",
+                    {
+                        "iri": staged_revision_iri,
+                        "include_current_apply_check": True,
+                    },
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Replan current staged frontier",
+                tool_name="plan_staged_revision_recovery",
+                mcp_tool_name="doxabase.plan_staged_revision_recovery",
+                arguments={"current_staged_work_only": True},
+                reason=(
+                    "The resolved staged row is no longer current staged work; "
+                    "replan before choosing the next unattended mutation."
+                ),
+                call=self._suggested_call_string(
+                    "plan_staged_revision_recovery",
+                    {"current_staged_work_only": True},
+                ),
+            ),
+        ]
+        return actions
 
     @staticmethod
     def _post_apply_warnings(
@@ -46589,6 +46966,40 @@ class DoxaBase:
             "stance must be an rc:RevisionStance declared in base or project "
             "ontology. Use rc:CandidateRevision, another built-in revision "
             "stance, or a project term typed as rc:RevisionStance."
+        )
+
+    @staticmethod
+    def _normalize_staged_review_decision(decision: str) -> str:
+        normalized = decision.strip().lower().replace("-", "_")
+        if normalized not in STAGED_REVIEW_DECISIONS:
+            allowed = ", ".join(sorted(STAGED_REVIEW_DECISIONS))
+            raise DoxaBaseError(
+                "decision must be one of: " + allowed
+            )
+        return normalized
+
+    def _ensure_staged_review_decision(self, decision_iri: str) -> None:
+        decision_class_iri = self.expand_iri("rc:StagedRevisionReviewDecision")
+        ontology_graphs = self._expand_graphs(["ontology"])
+        if decision_class_iri in self._types_from_graphs(
+            ontology_graphs,
+            decision_iri,
+        ):
+            return
+        missing_seed_terms = self._missing_base_ontology_terms(
+            REQUIRED_STAGED_REVIEW_DECISION_ONTOLOGY_TERMS,
+        )
+        if missing_seed_terms:
+            raise DoxaBaseError(
+                "decision must be an rc:StagedRevisionReviewDecision declared "
+                "in base or project ontology. "
+                + self._stale_seed_recovery_message(missing_seed_terms)
+            )
+        raise DoxaBaseError(
+            "decision must be an rc:StagedRevisionReviewDecision declared in "
+            "base or project ontology. Use accepted_elsewhere, superseded, "
+            "discarded, no_effective_change, or a project term typed as "
+            "rc:StagedRevisionReviewDecision."
         )
 
     def _ensure_graph_patch_role(self, patch_role_iri: str) -> None:

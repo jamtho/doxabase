@@ -3843,6 +3843,7 @@ item.current_alternative_to
 item.restaged_from
 item.restaged_by
 item.current_restaged_by
+item.review_resolution
 item.stale_resolution_state
 item.application_status
 item.application_decision
@@ -3860,12 +3861,17 @@ item.suggested_next_calls
 ```
 
 `is_current_staged_work` is true for patch-backed staged revisions that have not
-already been applied and have not been superseded by a refreshed successor. Use
-`current_staged_work_only=True` when a list should show the live mutation-review
-queue instead of handled stale sources or applied history. The filter also
-computes apply checks, so the returned rows include current application status
-and suggested actions. `next_action` is a compact routing hint derived from
-those fields; `next_action_queue` groups the returned rows by queues such as
+already been applied, have not been superseded by a refreshed successor, and do
+not have a durable staged review resolution. Use
+`current_staged_work_only=True` when a list should show the live
+mutation-review queue instead of handled stale sources, reviewed-and-closed
+proposals, or applied history. When
+`not_current_staged_work_reason == "review_resolved"`, inspect
+`review_resolution` for the decision and resolution history event IRI. The
+filter also computes apply checks, so the returned rows include current
+application status and suggested actions. `next_action` is a compact routing
+hint derived from those fields; `next_action_queue` groups the returned rows by
+queues such as
 `apply_after_review`, `restage_after_review`, `repair_or_replace`,
 `inspect_already_applied`, `complete_handoff_import`, and `informational`.
 `complete_handoff_import` means a row's snapshot evidence found an incomplete
@@ -4458,6 +4464,9 @@ description.created_at
 description.created_by
 description.export_path
 description.applies_staged_revision
+description.resolves_staged_revision
+description.staged_review_decision
+description.staged_review_decision_label
 description.applied_source
 description.validation_scope
 description.validation_conforms
@@ -4475,12 +4484,14 @@ description.suggested_next_calls
 ```
 
 `record_kind` uses the same compact categories as list rows, for example
-`staged_patch`, `applied_event`, `export_record`, `import_record`, and
-`history_record`. For applied staged revision events, `applied_source` is a
-compact source card with staged summary, stance, review note/recommendation,
-restage links, staged validation headline, graph snapshots, patch counts, patch
-metadata without content, and support-link counts. It is meant for quick
-history scanning; call
+`staged_patch`, `applied_event`, `staged_review_resolution`, `export_record`,
+`import_record`, and `history_record`. For staged review resolution events,
+`resolves_staged_revision` names the staged source and
+`staged_review_decision` is the decision resource. For applied staged revision
+events, `applied_source` is a compact source card with staged summary, stance,
+review note/recommendation, restage links, staged validation headline, graph
+snapshots, patch counts, patch metadata without content, and support-link
+counts. It is meant for quick history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
 The `applied_source` relation fields are also nullable IRI strings.
@@ -5043,6 +5054,7 @@ description.restaged_from
 description.restaged_by
 description.current_restaged_by
 description.applied_by
+description.review_resolution
 description.application_status
 description.restage_reason
 description.changed_graphs

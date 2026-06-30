@@ -68,6 +68,7 @@ from doxabase.mcp_tools import (
     record_map_relationship_tool,
     record_map_storage_access_tool,
     record_graph_revision_tool,
+    record_staged_revision_review_decision_tool,
     record_observation_tool,
     record_pattern_tool,
     record_query_result_tool,
@@ -2433,6 +2434,51 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert export["format"] == "markdown"
     assert export_path.exists()
     assert "exploratory hunch" in export_path.read_text()
+
+    with pytest.raises(DoxaBaseError, match="current mutation-target row"):
+        record_staged_revision_review_decision_tool(
+            db,
+            iri=result["revision_iri"],
+            decision="discarded",
+            rationale="Reviewer decided not to keep this ready proposal.",
+        )
+
+    resolution = record_staged_revision_review_decision_tool(
+        db,
+        iri=result["revision_iri"],
+        decision="discarded",
+        rationale="Reviewer explicitly decided not to keep this ready proposal.",
+        allow_mutation_target=True,
+    )
+
+    assert resolution["staged_revision_iri"] == result["revision_iri"]
+    assert resolution["decision"] == "discarded"
+    assert resolution["decision_iri"] == RC + "DiscardedDecision"
+    assert resolution["current_application_status"] == "ready"
+    assert resolution["current_next_action"]["queue"] == "apply_after_review"
+    assert resolution["closes_current_staged_work"] is True
+    assert [
+        action["tool_name"] for action in resolution["suggested_next_actions"]
+    ] == [
+        "describe_graph_revision",
+        "describe_staged_revision",
+        "plan_staged_revision_recovery",
+    ]
+
+    resolved_description = describe_staged_revision_tool(db, result["revision_iri"])
+    assert resolved_description["review_resolution"]["decision"] == "discarded"
+    assert (
+        resolved_description["review_resolution"]["resolution_revision_iri"]
+        == resolution["resolution_revision_iri"]
+    )
+
+    decision_event = describe_graph_revision_tool(
+        db,
+        resolution["resolution_revision_iri"],
+    )
+    assert decision_event["record_kind"] == "staged_review_resolution"
+    assert decision_event["resolves_staged_revision"] == result["revision_iri"]
+    assert decision_event["staged_review_decision"] == RC + "DiscardedDecision"
 
 
 def test_staged_markdown_export_tools_return_privacy_warnings(

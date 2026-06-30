@@ -1231,6 +1231,9 @@ rc:RevisionStance a rdfs:Class ;
 rc:StagedRevisionRecoverySession a rdfs:Class ;
     rdfs:comment "A durable history resource that groups staged revision recovery sources, handoff context, and planning parameters so agents can replan a multi-step recovery workflow over time." .
 
+rc:StagedRevisionReviewDecision a rdfs:Class ;
+    rdfs:comment "A reviewer disposition for a staged revision that should be preserved in history without applying the staged patch payload." .
+
 rc:GraphPatchOperation a rdfs:Class ;
     rdfs:comment "A compact operation type for a staged graph patch." .
 
@@ -1281,6 +1284,16 @@ rc:appliesStagedRevision a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:GraphRevision ;
     rdfs:comment "Links an applied revision event to the staged graph revision it applied." .
+
+rc:resolvesStagedRevision a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:GraphRevision ;
+    rdfs:comment "Links a review-decision history event to the staged revision whose current staged-work route it closes." .
+
+rc:stagedRevisionReviewDecision a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:StagedRevisionReviewDecision ;
+    rdfs:comment "Machine-readable reviewer disposition recorded for a staged revision without applying its patch payload." .
 
 rc:sessionCreatedAt a rdf:Property ;
     rdfs:domain rc:StagedRevisionRecoverySession ;
@@ -1489,12 +1502,18 @@ rc:MapAuthoringRevision a rc:RevisionType ; rdfs:label "map authoring revision" 
 rc:FieldTrialRevision a rc:RevisionType ; rdfs:label "field trial revision" .
 rc:StagedRevision a rc:RevisionType ; rdfs:label "staged revision" .
 rc:AppliedStagedRevision a rc:RevisionType ; rdfs:label "applied staged revision" .
+rc:StagedRevisionReviewResolution a rc:RevisionType ; rdfs:label "staged revision review resolution" .
 
 rc:ExploratoryHunch a rc:RevisionStance ; rdfs:label "exploratory hunch" .
 rc:CandidateRevision a rc:RevisionStance ; rdfs:label "candidate revision" .
 rc:ConservativeCleanup a rc:RevisionStance ; rdfs:label "conservative cleanup" .
 rc:AlternativeSystematisation a rc:RevisionStance ; rdfs:label "alternative systematisation" .
 rc:SupersededRevision a rc:RevisionStance ; rdfs:label "superseded revision" .
+
+rc:AcceptedElsewhereDecision a rc:StagedRevisionReviewDecision ; rdfs:label "accepted elsewhere" .
+rc:SupersededDecision a rc:StagedRevisionReviewDecision ; rdfs:label "superseded" .
+rc:DiscardedDecision a rc:StagedRevisionReviewDecision ; rdfs:label "discarded" .
+rc:NoEffectiveChangeDecision a rc:StagedRevisionReviewDecision ; rdfs:label "no effective change" .
 
 rc:AdditionPatch a rc:GraphPatchOperation ; rdfs:label "addition patch" .
 rc:RemovalPatch a rc:GraphPatchOperation ; rdfs:label "removal patch" .

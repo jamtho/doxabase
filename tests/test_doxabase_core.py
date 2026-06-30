@@ -124,9 +124,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1284
+    assert graphs["base_ontology"].triple_count == 1304
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1259
+    assert graphs["base_shapes"].triple_count == 1270
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -10401,6 +10401,134 @@ def test_restaged_revision_with_realized_addition_reports_noop(
         "| 1 | Stage messages dataset | Inspect already-effective stale source |"
         in exported_text
     )
+
+    resolution = db.record_staged_revision_review_decision(
+        staged.revision_iri,
+        decision="no_effective_change",
+        rationale=(
+            "Reviewed the stale source and confirmed the same fact already "
+            "exists in the current map, so there is no useful staged mutation "
+            "left to perform."
+        ),
+        created_at="2026-06-01T10:05:00Z",
+        review_note="Closed after comparing patch-triple presence.",
+    )
+
+    assert resolution.staged_revision_iri == staged.revision_iri
+    assert resolution.decision == "no_effective_change"
+    assert resolution.decision_iri == RC + "NoEffectiveChangeDecision"
+    assert resolution.current_application_status == "conflict"
+    assert resolution.current_next_action is not None
+    assert resolution.current_next_action.action_type == "inspect_no_effective_change"
+    assert resolution.closes_current_staged_work is True
+    assert [
+        action.tool_name for action in resolution.suggested_next_actions
+    ] == [
+        "describe_graph_revision",
+        "describe_staged_revision",
+        "plan_staged_revision_recovery",
+    ]
+
+    decision_event = db.describe_graph_revision(resolution.resolution_revision_iri)
+    assert decision_event.record_kind == "staged_review_resolution"
+    assert decision_event.revision_type == RC + "StagedRevisionReviewResolution"
+    assert decision_event.resolves_staged_revision == staged.revision_iri
+    assert decision_event.staged_review_decision == RC + "NoEffectiveChangeDecision"
+    assert decision_event.staged_review_decision_label == "no effective change"
+
+    resolved_description = db.describe_staged_revision(staged.revision_iri)
+    assert resolved_description.review_resolution is not None
+    assert resolved_description.review_resolution.decision == "no_effective_change"
+    assert (
+        resolved_description.review_resolution.resolution_revision_iri
+        == resolution.resolution_revision_iri
+    )
+
+    full_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    resolved_item = next(
+        item for item in full_listing.revisions if item.iri == staged.revision_iri
+    )
+    assert resolved_item.is_current_staged_work is False
+    assert resolved_item.not_current_staged_work_reason == "review_resolved"
+    assert resolved_item.review_resolution is not None
+    assert resolved_item.review_resolution.decision == "no_effective_change"
+    assert resolved_item.application_status == "conflict"
+
+    current_work = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        current_staged_work_only=True,
+    )
+    assert staged.revision_iri not in [item.iri for item in current_work.revisions]
+
+    current_plan = db.plan_staged_revision_recovery(current_staged_work_only=True)
+    assert staged.revision_iri not in current_plan.processed_revision_iris
+
+
+def test_staged_review_decision_refuses_ready_mutation_target_by_default(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages dataset",
+        rationale="Exercise explicit review resolution override.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    with pytest.raises(DoxaBaseError, match="current mutation-target row"):
+        db.record_staged_revision_review_decision(
+            staged.revision_iri,
+            decision="discarded",
+            rationale="Reviewer decided not to keep this ready proposal.",
+        )
+
+    resolution = db.record_staged_revision_review_decision(
+        staged.revision_iri,
+        decision="discarded",
+        rationale="Reviewer explicitly decided not to keep this ready proposal.",
+        allow_mutation_target=True,
+    )
+
+    assert resolution.current_application_status == "ready"
+    assert resolution.closes_current_staged_work is True
+    current_work = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        current_staged_work_only=True,
+    )
+    assert current_work.count == 0
+
+    with pytest.raises(DoxaBaseError, match="recorded review resolution"):
+        db.apply_staged_revision(staged.revision_iri)
+
+    with pytest.raises(DoxaBaseError, match="recorded review resolution"):
+        db.stage_graph_revision(
+            summary="Try repaired messages dataset",
+            rationale="Should not restage a review-resolved source.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": """
+                        @prefix ex: <https://example.test/project#> .
+                        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                        ex:Messages a rc:Table .
+                    """,
+                }
+            ],
+            restages_revision=staged.revision_iri,
+        )
 
 
 def test_export_staged_revisions_dedupes_duplicate_inputs(

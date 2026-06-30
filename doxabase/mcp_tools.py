@@ -1724,6 +1724,36 @@ def record_graph_revision_tool(
     return to_dict(result)
 
 
+def record_staged_revision_review_decision_tool(
+    db: DoxaBase,
+    iri: str,
+    decision: str,
+    rationale: str,
+    summary: str | None = None,
+    resolution_revision_iri: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    review_note: str | None = None,
+    review_recommendation: str | None = None,
+    allow_mutation_target: bool = False,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    result = db.record_staged_revision_review_decision(
+        iri=iri,
+        decision=decision,
+        rationale=rationale,
+        summary=summary,
+        resolution_revision_iri=resolution_revision_iri,
+        created_at=created_at,
+        created_by=created_by,
+        review_note=review_note,
+        review_recommendation=review_recommendation,
+        allow_mutation_target=allow_mutation_target,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def stage_graph_revision_tool(
     db: DoxaBase,
     summary: str,

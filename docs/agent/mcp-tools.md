@@ -1613,6 +1613,20 @@ observations/claims/patterns/evidence, optional `revision_anchors`, validation
 result, export path, and graph-count snapshots. It does not compute diffs or
 apply graph edits.
 
+`doxabase.record_staged_revision_review_decision`
+
+Records a durable reviewer decision for one staged revision without applying
+its patch payload. Use it after reviewing an informational `noop` or
+already-effective stale row and deciding there is no useful graph mutation left
+to perform. Supported `decision` values are `accepted_elsewhere`, `superseded`,
+`discarded`, and `no_effective_change`. The helper writes a
+`rc:StagedRevisionReviewResolution` history event linked with
+`rc:resolvesStagedRevision`, and the staged source then drops out of
+`current_staged_work_only=True` queues while staying visible in full history
+with `review_resolution`. By default it refuses live mutation targets routed to
+apply, restage, or repair; pass `allow_mutation_target=true` only after explicit
+review decides to close that proposal without mutating the graph.
+
 `doxabase.search_staged_patch_payloads`
 
 Search current staged `rc:patchContent` Turtle and route hits to owning

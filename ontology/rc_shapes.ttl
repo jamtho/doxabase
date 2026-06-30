@@ -1140,6 +1140,19 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:message "appliesStagedRevision should name one staged GraphRevision resource." ;
     ] ;
     sh:property [
+        sh:path rc:resolvesStagedRevision ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:GraphRevision ;
+        sh:message "resolvesStagedRevision should name one staged GraphRevision resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:stagedRevisionReviewDecision ;
+        sh:maxCount 1 ;
+        sh:class rc:StagedRevisionReviewDecision ;
+        sh:message "stagedRevisionReviewDecision must be an rc:StagedRevisionReviewDecision if declared." ;
+    ] ;
+    sh:property [
         sh:path rc:evidence ;
         sh:nodeKind sh:IRI ;
         sh:class rc:Evidence ;

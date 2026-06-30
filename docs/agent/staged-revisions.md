@@ -966,6 +966,14 @@ These rows route compact `next_action` to `inspect_no_effective_change` in the
 already-effective stale source" in grouped Markdown decision matrices. Do not
 call them `already_applied`; only an applied revision event proves durable
 review lineage.
+After review confirms that a `noop` or already-effective stale row should not
+keep returning to the current staged frontier, call
+`record_staged_revision_review_decision(decision="no_effective_change", ...)`
+or another supported decision. That writes a history-only
+`StagedRevisionReviewResolution` linked to the staged source, preserves the row
+in full revision history, and removes it from `current_staged_work_only=True`
+queues. The helper refuses apply/restage/repair mutation targets unless
+`allow_mutation_target=True` is set after explicit review.
 If `blocking_reasons` contains `patch_conflict`, the stored patch itself could
 not be replayed. Inspect `patch_checks[].conflict` and export the staged
 revision before mutating. Common causes are malformed stored patch Turtle or a

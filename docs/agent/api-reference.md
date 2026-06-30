@@ -1115,6 +1115,18 @@ revision anchors, validation results, export paths, and graph-count snapshots.
 It does not compute diffs or apply graph edits. Use support links for evidence
 behind a revision; use anchors for resources the revision is about.
 
+`record_staged_revision_review_decision()` writes a history-only reviewer
+disposition for one staged revision without applying its patch payload. Use it
+after reviewing an informational `noop` or already-effective stale source and
+deciding the staged row should be closed rather than restaged again. Supported
+decisions are `accepted_elsewhere`, `superseded`, `discarded`, and
+`no_effective_change`. The record is an `rc:StagedRevisionReviewResolution`
+linked to the staged source with `rc:resolvesStagedRevision`; the staged source
+remains visible in full history with `review_resolution`, but is no longer
+selected by `current_staged_work_only=True` frontiers. The helper refuses
+current apply/restage/repair targets unless `allow_mutation_target=True` is
+passed after explicit review.
+
 `stage_graph_revision()` writes a reviewable staged revision to `history`
 without mutating the target graph. Pass Turtle payloads in `additions` and/or
 `removals`, set a stance such as `rc:ExploratoryHunch` or

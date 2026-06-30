@@ -67,6 +67,7 @@ from doxabase.mcp_tools import (
     record_map_relationship_tool,
     record_map_storage_access_tool,
     record_graph_revision_tool,
+    record_staged_revision_review_decision_tool,
     record_observation_tool,
     record_pattern_tool,
     record_query_result_tool,
@@ -91,7 +92,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
 class _LazyDoxaBase:
@@ -1822,6 +1823,37 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_scope=validation_scope,
             validation_conforms=validation_conforms,
             validation_result_count=validation_result_count,
+        )
+
+    @server.tool(name="doxabase.record_staged_revision_review_decision")
+    def record_staged_revision_review_decision(
+        iri: str,
+        decision: str,
+        rationale: str,
+        summary: str | None = None,
+        resolution_revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        allow_mutation_target: bool = False,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a durable review decision that closes a staged row without applying it."""
+
+        return record_staged_revision_review_decision_tool(
+            db,
+            iri=iri,
+            decision=decision,
+            rationale=rationale,
+            summary=summary,
+            resolution_revision_iri=resolution_revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            allow_mutation_target=allow_mutation_target,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.stage_graph_revision")

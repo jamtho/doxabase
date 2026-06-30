@@ -1557,6 +1557,14 @@ few useful gaps:
   of manufacturing a no-op. The direct restage helper now rejects the same route
   for future calls. This is deliberately not `already_applied`; only an applied
   revision event records durable review lineage.
+- A follow-up stale/no-op closure trial showed that informational rows can still
+  trap unattended agents in repeated inspect/export loops if review intent has
+  nowhere durable to land. `record_staged_revision_review_decision` now records
+  a history-only disposition such as `no_effective_change`, keeps the staged row
+  visible in full history with `review_resolution`, and removes it from
+  `current_staged_work_only=True` frontiers. It refuses apply/restage/repair
+  mutation targets unless an explicit override records that review decided to
+  close the proposal without mutating.
 - Post-rebuild workflow trials found four handoff polish points. Query contexts
   with both profile-run evidence and a real query target now have regression
   coverage for the intended action order: inspect `describe_profile_run` before
