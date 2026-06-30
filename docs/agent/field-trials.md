@@ -3170,6 +3170,12 @@ few useful gaps:
   `scanner_clean`, sensitive-count, and `shareability_review_status` metadata
   into both the result and manifest; `import_handoff_bundle` warns receivers
   when shareability review remains incomplete.
+- A profile insight closure trial found the candidate rows preserved partial
+  semantic-move state, but the top-level open-lane rollup could still
+  whole-route-close a type-review group after `assert_map_type`. The rollup now
+  closes only the direct semantic move, keeps `define_value_type` open when its
+  vocabulary promotion is not staged, and suppresses only the fallback
+  alternative after a direct map assertion.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

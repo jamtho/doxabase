@@ -38981,6 +38981,7 @@ class DoxaBase:
         direct_satisfied_moves_by_route_key: dict[str, list[str]] = {}
         direct_satisfied_route_steps: set[str] = set()
         legacy_direct_satisfied_route_keys: set[str] = set()
+        fallback_satisfied_route_keys: set[str] = set()
         for candidate in candidates:
             for group in candidate.profile_route_groups:
                 route_group_key = group.get("route_group_key")
@@ -39010,12 +39011,10 @@ class DoxaBase:
                         semantic_move,
                     )
                 direct_satisfied_route_steps.update(direct_route_step_keys)
-                # A value-type vocabulary promotion is a prerequisite, not the
-                # final map assertion for the profile type lane.
-                if not direct_semantic_moves or set(direct_semantic_moves) - {
-                    "define_value_type",
-                }:
+                if not direct_semantic_moves:
                     legacy_direct_satisfied_route_keys.add(route_group_key)
+                if "assert_map_type" in direct_semantic_moves:
+                    fallback_satisfied_route_keys.add(route_group_key)
         candidate_iris_by_route_key: dict[str, list[str]] = {}
         for candidate in candidates:
             for group in candidate.profile_route_groups:
@@ -39053,6 +39052,12 @@ class DoxaBase:
             ):
                 continue
             if route_group_key in legacy_direct_satisfied_route_keys:
+                continue
+            if (
+                isinstance(semantic_move, str)
+                and semantic_move == "caveat_fallback"
+                and route_group_key in fallback_satisfied_route_keys
+            ):
                 continue
             lane = by_lane.get(review_lane)
             if lane is None:

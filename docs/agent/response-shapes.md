@@ -2420,6 +2420,10 @@ route groups and open lanes. Read them before treating a vocabulary-definition
 row as complete profile type followthrough: a bundle can report
 `closed_semantic_moves=["define_value_type"]` while
 `remaining_semantic_moves` still includes `assert_map_type`.
+The reverse can also happen: a direct `assert_map_type` staged assertion closes
+the map assertion and suppresses the fallback alternative, but
+`define_value_type` remains open until the vocabulary promotion route is staged
+or otherwise resolved.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports
 only `project_metric_defined`, those inspection-only metric routes are not
 reported as open review lanes. Use the metric context actions for handoff

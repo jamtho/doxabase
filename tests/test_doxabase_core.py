@@ -28631,6 +28631,124 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert "caveat_fallback" not in final_review.remaining_semantic_moves
 
 
+def test_profile_type_assertion_leaves_value_type_promotion_lane_open(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an undefined project value type.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    profile = db.describe_profile_run(
+        dataset,
+        evidence,
+    ).mapped_column_profile_observations[0]
+    target_pattern = db.record_pattern(
+        summary="Status code value needs vocabulary.",
+        pattern_text=(
+            "Status code value means the reviewed order lifecycle domain, not "
+            "only the integer storage representation."
+        ),
+        rationale="The pattern and profile run share the same evidence.",
+        pattern_targets=[status_value_type],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+    )
+    implication_pattern = db.record_pattern(
+        summary="Orders status profile implies a value type.",
+        pattern_text=(
+            "The Orders status profile implies a reusable project value type "
+            "before status codes are promoted into current map assertions."
+        ),
+        rationale="The pattern and profile run share the same evidence.",
+        pattern_targets=[status_column],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+        map_implications=[status_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = draft.type_advisories[0]
+    value_type_plan = next(
+        item
+        for item in draft.advisory_followthrough_plan
+        if item.semantic_move == "define_value_type"
+    )
+    value_type_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:valueType"
+    ][0]
+    value_type_args = dict(value_type_action.arguments)
+    value_type_args["supporting_patterns"] = [
+        target_pattern.pattern_iri,
+        implication_pattern.pattern_iri,
+    ]
+
+    staged_assertion = db.stage_map_assertion_change(**value_type_args)
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-type-assertion-first.md",
+    )
+
+    candidate = next(
+        candidate
+        for candidate in review.candidates
+        if candidate.revision_iri == staged_assertion.revision_iri
+    )
+    route_group = {
+        group["route_group_key"]: group for group in candidate.profile_route_groups
+    }[value_type_plan.route_group_key]
+    assert route_group["match_strength"] == "direct_action"
+    assert route_group["closed_semantic_moves"] == ["assert_map_type"]
+    assert "define_value_type" in route_group["remaining_semantic_moves"]
+    assert "caveat_fallback" in route_group["semantic_moves"]
+
+    open_lanes = {
+        lane.review_lane: lane for lane in review.open_profile_review_lanes
+    }
+    assert set(open_lanes) == {"profile_type_review"}
+    assert open_lanes["profile_type_review"].route_group_keys == [
+        value_type_plan.route_group_key
+    ]
+    assert open_lanes["profile_type_review"].closed_semantic_moves == [
+        "assert_map_type"
+    ]
+    assert open_lanes["profile_type_review"].remaining_semantic_moves == [
+        "define_value_type"
+    ]
+    assert review.closed_semantic_moves == ["assert_map_type"]
+    assert review.remaining_semantic_moves == ["define_value_type"]
+
+
 def test_profile_type_assertion_route_source_closes_only_selected_advisory(
     tmp_path: Path,
 ) -> None:
@@ -28744,8 +28862,14 @@ def test_profile_type_assertion_route_source_closes_only_selected_advisory(
         for lane in review.open_profile_review_lanes
         for route_group_key in lane.route_group_keys
     }
-    assert status_route_key not in open_route_keys
+    assert status_route_key in open_route_keys
     assert channel_route_key in open_route_keys
+    assert "assert_map_type" not in route_groups[status_route_key][
+        "remaining_semantic_moves"
+    ]
+    assert "define_value_type" in route_groups[status_route_key][
+        "remaining_semantic_moves"
+    ]
 
 
 def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
