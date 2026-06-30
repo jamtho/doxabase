@@ -4236,6 +4236,10 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["suggested_next_actions"][0]["arguments"]["revision_iris"] == (
         revision_iris
     )
+    assert (
+        result["suggested_next_actions"][0]["arguments"]["fail_on_sensitive"]
+        is True
+    )
     assert result["suggested_next_actions"][0]["arguments"]["path"].startswith(
         "/tmp/systematisation-review-"
     )
@@ -9320,6 +9324,13 @@ def test_search_staged_patch_payloads_tool_returns_json_like_payload(
     assert "literal" in match["matched_term_roles"]
     assert match["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
+    )
+    assert match["suggested_next_actions"][1]["tool_name"] == (
+        "export_staged_revisions"
+    )
+    assert (
+        match["suggested_next_actions"][1]["arguments"]["fail_on_sensitive"]
+        is True
     )
     assert result["suggested_next_actions"][0] == match["suggested_next_actions"][0]
 

@@ -1959,8 +1959,9 @@ to the final written artifact, after the warning block has been inserted. Pass
 should raise before writing if the generated bundle contains credential-like or
 secret-looking literals.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
-to reduce collisions across concurrent runs; callers may override the path. This
-is for human/agent review.
+to reduce collisions across concurrent runs and include
+`fail_on_sensitive=true` by default; callers may override the path. This is for
+human/agent review.
 
 ### doxabase.export_staged_revisions
 
@@ -1968,7 +1969,8 @@ Writes one Markdown review bundle for several staged revisions in caller-chosen
 order. Use it after `stage_systematisation` when failed, repaired, and
 alternative framings should travel together for review. Pass
 `executive_summary` when the bundle should open with the agent's current
-provisional verdict. The summary table includes each staged revision's current
+provisional verdict. Suggested grouped staged-review export actions include
+`fail_on_sensitive=true` by default. The summary table includes each staged revision's current
 apply status, decision, current validation state, and staged-time validation
 result. The returned payload includes `revision_summaries` with the same status
 rows as structured data: current apply status, blockers, validation state,

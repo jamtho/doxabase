@@ -12638,10 +12638,13 @@ class DoxaBase:
                     "path": self._staged_patch_payload_search_export_path(
                         staged.iri
                     ),
+                    "fail_on_sensitive": True,
                 },
                 reason=(
                     "Export the owning staged revision as a review artifact "
-                    "with full Turtle payload and current apply routing."
+                    "with full Turtle payload and current apply routing. The "
+                    "suggested call blocks if scanner-matching content appears "
+                    "before export."
                 ),
                 call=self._suggested_call_string(
                     "export_staged_revisions",
@@ -12650,6 +12653,7 @@ class DoxaBase:
                         "path": self._staged_patch_payload_search_export_path(
                             staged.iri
                         ),
+                        "fail_on_sensitive": True,
                     },
                 ),
             ),
@@ -24434,11 +24438,14 @@ class DoxaBase:
                             "profile-metric-vocabulary-pending",
                             pending_staged_promotion_values,
                         ),
+                        "fail_on_sensitive": True,
                     },
                     (
                         "Write a grouped review bundle for pending staged metric "
                         "vocabulary skeletons before deciding whether new metric "
-                        "promotion work is still needed."
+                        "promotion work is still needed. The suggested call "
+                        "blocks if scanner-matching content appears before "
+                        "export."
                     ),
                     action_label="Export pending metric vocabulary promotions",
                 )
@@ -32709,10 +32716,12 @@ class DoxaBase:
                     "systematisation-review",
                     revision_iris,
                 ),
+                "fail_on_sensitive": True,
             },
             (
                 "Write a grouped Markdown review bundle before choosing among "
-                "the staged framings."
+                "the staged framings. The suggested call blocks if "
+                "scanner-matching content appears before export."
             ),
             "Export staged framing bundle",
         )
@@ -34771,6 +34780,12 @@ class DoxaBase:
             reason: str,
             action_label: str | None = None,
         ) -> None:
+            if tool_name in {"export_staged_revision", "export_staged_revisions"}:
+                arguments = {**arguments, "fail_on_sensitive": True}
+                reason = (
+                    f"{reason} The suggested call blocks if scanner-matching "
+                    "content appears before export."
+                )
             actions.append(
                 SuggestedNextAction(
                     action_label=action_label

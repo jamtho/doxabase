@@ -5785,6 +5785,7 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
         "Review patch conflict",
         "Export conflict bundle",
     ]
+    assert check.suggested_next_actions[1].arguments["fail_on_sensitive"] is True
     assert check.patch_checks[0].target_graph == unknown_graph
     assert check.patch_checks[0].can_apply is False
     assert check.patch_checks[0].conflict is not None
@@ -13091,6 +13092,7 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     ] == ["source", "alternative"]
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
+    assert draft.suggested_next_actions[0].arguments["fail_on_sensitive"] is True
     draft_export_path = draft.suggested_next_actions[0].arguments["path"]
     assert draft_export_path.startswith("/tmp/systematisation-review-")
     assert draft_export_path.endswith(".md")
@@ -13099,25 +13101,29 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         for action in draft.suggested_next_actions
         if action.tool_name == "check_staged_revision_apply"
     ] == [{"iri": revision_iri} for revision_iri in revision_iris]
-    first_export_path = next(
-        action.arguments["path"]
+    first_export_action = next(
+        action
         for action in db.check_staged_revision_apply(
             revision_iris[0],
         ).suggested_next_actions
         if action.tool_name == "export_staged_revision"
     )
-    second_export_path = next(
-        action.arguments["path"]
+    second_export_action = next(
+        action
         for action in db.check_staged_revision_apply(
             revision_iris[1],
         ).suggested_next_actions
         if action.tool_name == "export_staged_revision"
     )
+    first_export_path = first_export_action.arguments["path"]
+    second_export_path = second_export_action.arguments["path"]
     assert first_export_path.startswith("/tmp/staged-revision-review-")
     assert second_export_path.startswith("/tmp/staged-revision-review-")
     assert first_export_path.endswith(".md")
     assert second_export_path.endswith(".md")
     assert first_export_path != second_export_path
+    assert first_export_action.arguments["fail_on_sensitive"] is True
+    assert second_export_action.arguments["fail_on_sensitive"] is True
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("patterns") == before_patterns_count
 
@@ -22809,6 +22815,9 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
         "export_staged_revisions",
         "list_resource_revisions",
     ]
+    assert (
+        match.suggested_next_actions[1].arguments["fail_on_sensitive"] is True
+    )
     assert results.suggested_next_actions[0].arguments == {
         "iri": staged.revision_iri,
         "include_current_apply_check": True,
