@@ -437,9 +437,17 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["health_tasks"], list)
     assert "next_best_expansion" in result
     assert "full_frontier_expansion" in result
+    assert "safety_first_action" in result
+    assert "safety_first_call" in result
+    assert "safety_first_source" in result
     assert "frontier_first_action" in result
     assert "frontier_first_call" in result
     assert "frontier_first_source" in result
+    if result["safety_first_action"] is not None:
+        assert result["safety_first_call"] == result["safety_first_action"]["call"]
+        assert result["safety_first_source"] in {
+            "health_tasks:privacy_export_review"
+        }
     if result["frontier_first_action"] is not None:
         assert result["frontier_first_call"] == result["frontier_first_action"][
             "call"

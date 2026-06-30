@@ -201,6 +201,9 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "suggested_next_call": "project_brief(...)",
         ...
     },
+    "safety_first_action": {...},
+    "safety_first_call": "export_preflight(...)",
+    "safety_first_source": "health_tasks:privacy_export_review",
     "frontier_first_action": {...},
     "frontier_first_call": "project_brief(...)",
     "frontier_first_source": "full_frontier_expansion",
@@ -385,10 +388,13 @@ show all currently counted task payloads and hidden profile draft candidates.
 Use it when avoiding iterative frontier reruns matters more than preserving the
 smallest bounded display.
 `frontier_first_action` is the canonical first hop for unattended frontier
-loops. It prefers `full_frontier_expansion`, then `next_best_expansion`, then
-the first returned `recommended_next_tasks[]` action. `frontier_first_call` is
-the display call for that action, and `frontier_first_source` records which
-queue or expansion supplied it.
+loops after safety review. Check `safety_first_action` first; when the default
+handoff-bundle preflight finds potential sensitive terms, it points to
+`export_preflight` before expansion, export, or mutation-oriented work.
+`frontier_first_action` then prefers `full_frontier_expansion`, then
+`next_best_expansion`, then the first returned `recommended_next_tasks[]`
+action. `frontier_first_call` is the display call for that action, and
+`frontier_first_source` records which queue or expansion supplied it.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
 still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
 one-shot bound for every task payload currently counted in `queue_counts`.

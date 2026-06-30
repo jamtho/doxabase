@@ -445,6 +445,9 @@ class ProjectBrief:
     health_tasks: list[ProjectBriefHealthTask]
     next_best_expansion: ProjectBriefHealthTask | None
     full_frontier_expansion: ProjectBriefHealthTask | None
+    safety_first_action: SuggestedNextAction | None
+    safety_first_call: str | None
+    safety_first_source: str | None
     frontier_first_action: SuggestedNextAction | None
     frontier_first_call: str | None
     frontier_first_source: str | None
@@ -3916,6 +3919,9 @@ class DoxaBase:
             suggested_profile_candidate_limit=suggested_profile_candidate_limit,
             health_tasks=health_tasks,
         )
+        safety_first_source, safety_first_action = (
+            self._project_brief_safety_first_action(health_tasks)
+        )
         frontier_first_source, frontier_first_action = (
             self._project_brief_frontier_first_action(
                 full_frontier_expansion=full_frontier_expansion,
@@ -3944,6 +3950,13 @@ class DoxaBase:
             health_tasks=health_tasks,
             next_best_expansion=next_best_expansion,
             full_frontier_expansion=full_frontier_expansion,
+            safety_first_action=safety_first_action,
+            safety_first_call=(
+                safety_first_action.call
+                if safety_first_action is not None
+                else None
+            ),
+            safety_first_source=safety_first_source,
             frontier_first_action=frontier_first_action,
             frontier_first_call=(
                 frontier_first_action.call
@@ -4283,6 +4296,22 @@ class DoxaBase:
                 else None
             ),
         )
+
+    @staticmethod
+    def _project_brief_safety_first_action(
+        health_tasks: list[ProjectBriefHealthTask],
+    ) -> tuple[str | None, SuggestedNextAction | None]:
+        for task in health_tasks:
+            if (
+                task.task_type == "privacy_export_review"
+                and task.suggested_next_action is not None
+                and (task.sensitive_literal_count or 0) > 0
+            ):
+                return (
+                    "health_tasks:privacy_export_review",
+                    task.suggested_next_action,
+                )
+        return None, None
 
     @staticmethod
     def _project_brief_frontier_first_action(

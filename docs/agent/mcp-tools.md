@@ -123,7 +123,10 @@ repeating visible recommended tasks; it expands both `limit` and
 `profile_candidate_limit` enough to expose the currently counted task frontier
 and hidden profile draft candidates together.
 For scripts, prefer `frontier_first_action` / `frontier_first_call` as the
-canonical first hop. That field chooses `full_frontier_expansion` first, then
+canonical frontier hop. Check `safety_first_action` / `safety_first_call` first;
+when a blocking privacy/export health task exists, it points to the redacted
+`export_preflight` review before any expansion or mutation-oriented work.
+`frontier_first_action` still chooses `full_frontier_expansion` first, then
 `next_best_expansion`, then the first returned recommended task, and
 `frontier_first_source` records which surface supplied it.
 Then read `health_tasks`, which is not limited by `recommended_next_tasks` and

@@ -1186,6 +1186,14 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert [
         task.task_type for task in brief.health_tasks
     ] == ["expand_project_brief", "privacy_export_review"]
+    assert brief.safety_first_action is not None
+    assert brief.safety_first_action == privacy_task.suggested_next_action
+    assert brief.safety_first_call == privacy_task.suggested_next_call
+    assert brief.safety_first_source == "health_tasks:privacy_export_review"
+    assert (
+        brief.frontier_first_action
+        == brief.full_frontier_expansion.suggested_next_action
+    )
     handoff_preflight = db.export_preflight(
         export_kind="handoff_bundle",
         graphs=["project"],
@@ -1223,6 +1231,8 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
         "graphs": ["project"],
         "limit": 20,
     }
+    assert brief.safety_first_action == privacy_task.suggested_next_action
+    assert brief.safety_first_source == "health_tasks:privacy_export_review"
     assert brief.datasets[0].dataset.description == (
         "[REDACTED:fake_secret_marker]"
     )

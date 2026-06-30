@@ -303,10 +303,13 @@ context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
 For unattended project-frontier loops, prefer
-`brief.frontier_first_action` / `brief.frontier_first_call` over manually
-choosing between `full_frontier_expansion`, `next_best_expansion`, and
-`recommended_next_tasks[0]`. `brief.frontier_first_source` records which surface
-supplied the selected first hop.
+`brief.safety_first_action` / `brief.safety_first_call` first when present; it
+routes blocking privacy/export health checks before expansion, export, or
+mutation work. Then use `brief.frontier_first_action` /
+`brief.frontier_first_call` over manually choosing between
+`full_frontier_expansion`, `next_best_expansion`, and
+`recommended_next_tasks[0]`. The corresponding `*_source` field records which
+surface supplied the selected hop.
 
 `describe_dataset()` returns bounded context for one dataset/table: row
 semantics, entity/snapshot keys, columns, physical/value types, path templates,

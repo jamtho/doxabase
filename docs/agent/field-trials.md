@@ -3020,6 +3020,12 @@ few useful gaps:
   The broader frontier remains first-class handoff-manifest import/recovery and
   a durable rebase/version session object that groups source rows, selected
   repair choices, successors, applied events, and snapshot evidence.
+- A project-brief/privacy trial confirmed low-limit briefs still expose staged,
+  query-repair, profile-review, and expansion frontiers while export preflight
+  blocks scanner-positive handoff/profile artifacts with redacted snippets. The
+  gap was first-hop salience: privacy/export review lived only in `health_tasks`,
+  so `project_brief` now exposes `safety_first_action` for blocking
+  `privacy_export_review` before the normal `frontier_first_action`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
