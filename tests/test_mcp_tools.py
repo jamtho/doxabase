@@ -31,6 +31,7 @@ from doxabase.mcp_tools import (
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
+    draft_systematisation_shared_context_rerun_tool,
     export_context_slice_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
@@ -154,6 +155,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.draft_staged_revision_rebase" in tool_names
+    assert "doxabase.draft_systematisation_shared_context_rerun" in tool_names
     assert "doxabase.plan_staged_revision_recovery" in tool_names
     assert "doxabase.start_staged_revision_recovery_session" in tool_names
     assert "doxabase.describe_staged_revision_recovery_session" in tool_names
@@ -2345,6 +2347,220 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     ]
     assert result["bundle_summary"]["requires_recheck_after_each_apply"] is False
     assert result["note"].startswith("Read-only staged revision recovery plan")
+
+
+def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shared_ontology = """
+        @prefix ex: <https://example.test/shared-recovery#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:ReviewScope a rdfs:Class ;
+            rdfs:label "Review scope" .
+
+        ex:requiredColumn a rdf:Property ;
+            rdfs:label "required column" .
+
+        ex:ReviewScopePattern a rdfs:Class ;
+            rdfs:subClassOf rc:Pattern ;
+            rdfs:label "Review scope pattern" .
+    """
+    shared_shape = """
+        @prefix ex: <https://example.test/shared-recovery#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+        ex:ReviewScopeShape a sh:NodeShape ;
+            sh:targetClass ex:ReviewScope ;
+            sh:property [
+                sh:path ex:requiredColumn ;
+                sh:minCount 1 ;
+                sh:nodeKind sh:IRI ;
+                sh:message "Review scopes must name a required column."
+            ] .
+    """
+    map_framing = """
+        @prefix ex: <https://example.test/shared-recovery#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:orders_status_scope a ex:ReviewScope ;
+            rdfs:label "Orders status review scope" ;
+            ex:requiredColumn ex:orders_status .
+    """
+    pattern_framing = """
+        @prefix ex: <https://example.test/shared-recovery#> .
+        @prefix dcterms: <http://purl.org/dc/terms/> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:orders_status_scope_pattern a rc:Pattern, ex:ReviewScopePattern ;
+            rdfs:label "Orders status review pattern" ;
+            rc:summary "Orders status review needs semantic context." ;
+            rc:patternText "Keep the status review as lore until more tables agree." ;
+            rc:rationale "The pattern is a fallback to the map scope." ;
+            rc:patternTarget ex:orders_status ;
+            rc:evidence ex:orders_status_scope_evidence ;
+            rc:patternStability rc:EmergingPattern .
+
+        ex:orders_status_scope_evidence a rc:Evidence ;
+            rc:summary "Synthetic support." ;
+            dcterms:source "test://shared-recovery" .
+    """
+
+    draft = stage_systematisation_tool(
+        db,
+        summary="Recover shared review scope alternatives",
+        intent="Probe shared context in recovery lanes.",
+        shared_additions=[
+            {"graph": "ontology", "content": shared_ontology},
+            {"graph": "shapes", "content": shared_shape},
+        ],
+        framings=[
+            {"label": "Map scope", "graph": "map", "content": map_framing},
+            {
+                "label": "Pattern fallback",
+                "graph": "patterns",
+                "content": pattern_framing,
+            },
+        ],
+        validation_scope="all",
+    )
+    revision_iris = [
+        revision["revision_iri"] for revision in draft["staged_revisions"]
+    ]
+    assert draft["next_action_queue_item_counts"] == {"apply_after_review": 2}
+
+    replace_graph_triples_tool(
+        db,
+        graph="ontology",
+        additions="""
+            @prefix ex: <https://example.test/shared-recovery#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:UnrelatedRecoveryDriftTerm a rdfs:Class ;
+                rdfs:label "Unrelated recovery drift term" .
+        """,
+        allow_count_change=True,
+    )
+
+    plan = plan_staged_revision_recovery_tool(
+        db,
+        revision_iris=revision_iris,
+        drift_detail="exact",
+    )
+
+    assert plan["lane_counts"] == {"restage_after_review": 2}
+    assert plan["bundle_summary"]["shared_context_graphs"] == [
+        "ontology",
+        "shapes",
+    ]
+    assert [
+        summary["target_graph"]
+        for summary in plan["bundle_summary"]["shared_context_patch_summaries"]
+    ] == ["ontology", "shapes"]
+    assert (
+        plan["bundle_summary"][
+            "fallback_revision_iris_with_shared_semantic_context"
+        ]
+        == revision_iris[1:]
+    )
+    assert [
+        warning["warning_code"]
+        for warning in plan["bundle_summary"]["shared_semantic_context_warnings"]
+    ] == ["shared_semantic_context_applies_to_all_framings"]
+    assert [
+        (
+            lane["lane"],
+            lane["shared_context_applies"],
+            lane["shared_context_patch_count"],
+            lane["shared_context_graphs"],
+        )
+        for lane in plan["lanes"]
+    ] == [
+        ("restage_after_review", True, 2, ["ontology", "shapes"]),
+        ("restage_after_review", True, 2, ["ontology", "shapes"]),
+    ]
+
+    rerun_draft = draft_systematisation_shared_context_rerun_tool(
+        db,
+        revision_iris=revision_iris,
+        shared_context_target_revision_iris=[revision_iris[0]],
+    )
+
+    assert rerun_draft["result_kind"] == (
+        "systematisation_shared_context_rerun_draft"
+    )
+    assert rerun_draft["mode"] == "read_only_draft"
+    assert rerun_draft["shared_context_graphs"] == ["ontology", "shapes"]
+    assert rerun_draft["shared_context_target_revision_iris"] == [
+        revision_iris[0]
+    ]
+    assert [
+        (
+            framing["source_revision_iri"],
+            framing["receives_shared_context"],
+            framing["moved_shared_patch_count"],
+        )
+        for framing in rerun_draft["framings"]
+    ] == [
+        (revision_iris[0], True, 2),
+        (revision_iris[1], False, 0),
+    ]
+    rerun_args = rerun_draft["stage_systematisation_arguments"]
+    assert "shared_additions" not in rerun_args
+    assert rerun_args["link_alternatives"] is False
+    assert [framing["label"] for framing in rerun_args["framings"]] == [
+        "Map scope",
+        "Pattern fallback",
+    ]
+    assert [
+        [patch["graph"] for patch in framing["additions"]]
+        for framing in rerun_args["framings"]
+    ] == [["ontology", "shapes", "map"], ["patterns"]]
+    assert rerun_draft["suggested_next_actions"][0]["tool_name"] == (
+        "stage_systematisation"
+    )
+
+    rerun = stage_systematisation_tool(db, **rerun_args)
+
+    assert rerun["next_action_queue_item_counts"] == {"apply_after_review": 2}
+    assert [
+        warning["warning_code"] for warning in rerun["structured_warnings"]
+    ] == []
+
+    session = start_staged_revision_recovery_session_tool(
+        db,
+        revision_iris=revision_iris,
+        drift_detail="exact",
+    )
+    assert [
+        (
+            lane["lane"],
+            lane["shared_context_applies"],
+            lane["shared_context_patch_count"],
+            lane["shared_context_graphs"],
+        )
+        for lane in session["current_plan"]["lanes"]
+    ] == [
+        ("restage_after_review", True, 2, ["ontology", "shapes"]),
+        ("restage_after_review", True, 2, ["ontology", "shapes"]),
+    ]
+
+    restaged = restage_staged_revisions_tool(db, revision_iris, dry_run=False)
+
+    assert restaged["restaged_revision_iris"]
+    assert restaged["bundle_summary"]["shared_context_graphs"] == [
+        "ontology",
+        "shapes",
+    ]
+    assert all(
+        summary["shared_context_patch_count"] == 2
+        and summary["shared_context_graphs"] == ["ontology", "shapes"]
+        for summary in restaged["revision_summaries"]
+    )
 
 
 def test_staged_revision_recovery_session_tools_return_json_like_payload(

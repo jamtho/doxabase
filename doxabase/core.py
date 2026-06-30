@@ -1141,6 +1141,34 @@ class SystematisationDraftRecord:
 
 
 @dataclass(frozen=True)
+class SystematisationSharedContextRerunFraming:
+    source_revision_iri: str
+    label: str
+    receives_shared_context: bool
+    moved_shared_patch_count: int
+    framing_patch_count: int
+    target_graphs: list[str]
+    validation_scope: str | None
+
+
+@dataclass(frozen=True)
+class SystematisationSharedContextRerunDraft:
+    result_kind: str
+    helper: str
+    mode: str
+    source_revision_iris: list[str]
+    shared_context_target_revision_iris: list[str]
+    shared_context_graphs: list[str]
+    shared_context_patch_summaries: list[SystematisationSharedPatchSummary]
+    framings: list[SystematisationSharedContextRerunFraming]
+    stage_systematisation_arguments: dict[str, Any]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    warnings: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class PostApplyRecheckRevision:
     iri: str
     changed_graphs: list[str]
@@ -1497,6 +1525,9 @@ class StagedRevisionRecoveryLane:
     not_restageable_reason: str | None
     summary: str | None
     changed_graphs: list[str]
+    shared_context_applies: bool
+    shared_context_patch_count: int
+    shared_context_graphs: list[str]
     status_before: str
     decision_before: str
     routing_decision_before: str
@@ -33543,6 +33574,16 @@ class DoxaBase:
             if current_summary is not None
             else []
         )
+        shared_context_patch_count = (
+            current_summary.shared_context_patch_count
+            if current_summary is not None
+            else 0
+        )
+        shared_context_graphs = (
+            current_summary.shared_context_graphs
+            if current_summary is not None
+            else []
+        )
         repair_draft: StagedRevisionRebaseDraft | None = None
         repair_draft_error: str | None = None
         warning: str | None = None
@@ -33644,6 +33685,11 @@ class DoxaBase:
                 not_restageable_reason=item.not_restageable_reason,
                 summary=item.summary,
                 changed_graphs=changed_graphs,
+                shared_context_applies=bool(
+                    shared_context_patch_count or shared_context_graphs
+                ),
+                shared_context_patch_count=shared_context_patch_count,
+                shared_context_graphs=shared_context_graphs,
                 status_before=item.status_before,
                 decision_before=item.decision_before,
                 routing_decision_before=item.routing_decision_before,
@@ -43660,6 +43706,388 @@ class DoxaBase:
             ]
         )
         return "\n".join(lines)
+
+    def draft_systematisation_shared_context_rerun(
+        self,
+        revision_iris: Iterable[str] | str,
+        shared_context_target_revision_iris: Iterable[str] | str,
+        *,
+        summary: str | None = None,
+        intent: str | None = None,
+        rationale: str | None = None,
+        link_alternatives: bool = False,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> SystematisationSharedContextRerunDraft:
+        source_iris = list(
+            dict.fromkeys(
+                self._string_values("revision_iris", revision_iris, required=True)
+            )
+        )
+        target_iris = list(
+            dict.fromkeys(
+                self._string_values(
+                    "shared_context_target_revision_iris",
+                    shared_context_target_revision_iris,
+                    required=True,
+                )
+            )
+        )
+        source_set = set(source_iris)
+        unknown_targets = [iri for iri in target_iris if iri not in source_set]
+        if unknown_targets:
+            raise DoxaBaseError(
+                "shared_context_target_revision_iris must be a subset of "
+                "revision_iris; unknown target(s): "
+                + ", ".join(unknown_targets)
+            )
+
+        descriptions = [self.describe_staged_revision(iri) for iri in source_iris]
+        shared_role = self.expand_iri("rc:SharedContextPatch")
+        semantic_shared_graphs = {"ontology", "shapes"}
+        shared_patch_keys: set[tuple[str, str, str, str]] = set()
+        shared_patch_summaries = (
+            self._staged_revisions_shared_semantic_context_patch_summaries(
+                descriptions
+            )
+        )
+        for description in descriptions:
+            for patch in description.patches:
+                if (
+                    patch.patch_role == shared_role
+                    and patch.target_graph in semantic_shared_graphs
+                ):
+                    shared_patch_keys.add(self._staged_patch_identity(patch))
+        if not shared_patch_keys:
+            raise DoxaBaseError(
+                "Selected revisions do not contain shared ontology/shapes "
+                "context patches."
+            )
+
+        summary_value = (
+            summary.strip()
+            if summary is not None and summary.strip()
+            else self._systematisation_summary_from_descriptions(descriptions)
+        )
+        intent_value = (
+            intent.strip()
+            if intent is not None and intent.strip()
+            else self._common_systematisation_rationale_field(
+                descriptions,
+                "Systematisation intent:",
+            )
+            or (
+                "Rerun staged systematisation with shared semantic context "
+                "moved into selected framing patches."
+            )
+        )
+        rationale_value = (
+            rationale.strip()
+            if rationale is not None and rationale.strip()
+            else self._common_systematisation_rationale_field(
+                descriptions,
+                "Overall rationale:",
+            )
+        )
+        validation_scope_value = (
+            validation_scope
+            or self._common_systematisation_validation_scope(descriptions)
+            or "all"
+        )
+
+        stage_args: dict[str, Any] = {
+            "summary": summary_value,
+            "intent": intent_value,
+            "framings": [],
+            "link_alternatives": link_alternatives,
+            "validation_scope": validation_scope_value,
+        }
+        anchors = self._ordered_resource_summary_iris(
+            summary
+            for description in descriptions
+            for summary in description.revision_anchors
+        )
+        if anchors:
+            stage_args["anchors"] = anchors
+        if rationale_value:
+            stage_args["rationale"] = rationale_value
+        supporting_observations = self._ordered_resource_summary_iris(
+            summary
+            for description in descriptions
+            for summary in description.supporting_observations
+        )
+        supporting_claims = self._ordered_resource_summary_iris(
+            summary
+            for description in descriptions
+            for summary in description.supporting_claims
+        )
+        supporting_patterns = self._ordered_resource_summary_iris(
+            summary
+            for description in descriptions
+            for summary in description.supporting_patterns
+        )
+        evidence = self._ordered_resource_summary_iris(
+            summary for description in descriptions for summary in description.evidence
+        )
+        if supporting_observations:
+            stage_args["supporting_observations"] = supporting_observations
+        if supporting_claims:
+            stage_args["supporting_claims"] = supporting_claims
+        if supporting_patterns:
+            stage_args["supporting_patterns"] = supporting_patterns
+        if evidence:
+            stage_args["evidence"] = evidence
+
+        target_set = set(target_iris)
+        framing_records: list[SystematisationSharedContextRerunFraming] = []
+        framing_args: list[dict[str, Any]] = []
+        warnings: list[str] = []
+        for description in descriptions:
+            receives_shared_context = description.iri in target_set
+            additions: list[dict[str, str]] = []
+            removals: list[dict[str, str]] = []
+            moved_shared_patch_count = 0
+            framing_patch_count = 0
+            for patch in description.patches:
+                is_semantic_shared_patch = (
+                    patch.patch_role == shared_role
+                    and patch.target_graph in semantic_shared_graphs
+                    and self._staged_patch_identity(patch) in shared_patch_keys
+                )
+                if is_semantic_shared_patch and not receives_shared_context:
+                    continue
+                if is_semantic_shared_patch:
+                    moved_shared_patch_count += 1
+                else:
+                    framing_patch_count += 1
+                self._append_patch_description_spec(
+                    patch,
+                    additions=additions,
+                    removals=removals,
+                )
+            label = self._systematisation_framing_label(description)
+            framing: dict[str, Any] = {"label": label}
+            if additions:
+                framing["additions"] = additions
+            if removals:
+                framing["removals"] = removals
+            if description.revision_stance:
+                framing["stance"] = description.revision_stance
+            framing_rationale = self._systematisation_rationale_field(
+                description.rationale,
+                "Framing rationale:",
+            )
+            if framing_rationale:
+                framing["rationale"] = framing_rationale
+            if description.review_note:
+                framing["review_note"] = description.review_note
+            if description.review_recommendation:
+                framing["review_recommendation"] = description.review_recommendation
+            if (
+                description.validation_scope
+                and description.validation_scope != validation_scope_value
+            ):
+                framing["validation_scope"] = description.validation_scope
+            framing_args.append(framing)
+            framing_records.append(
+                SystematisationSharedContextRerunFraming(
+                    source_revision_iri=description.iri,
+                    label=label,
+                    receives_shared_context=receives_shared_context,
+                    moved_shared_patch_count=moved_shared_patch_count,
+                    framing_patch_count=framing_patch_count,
+                    target_graphs=sorted(set(description.changed_graphs)),
+                    validation_scope=description.validation_scope,
+                )
+            )
+
+        stage_args["framings"] = framing_args
+        if len(target_iris) == len(source_iris):
+            warnings.append(
+                "All source framings were selected to keep shared semantic "
+                "context. The generated rerun removes the shared patch role, "
+                "but ontology/shapes context will still be present on every "
+                "framing."
+            )
+        action = SuggestedNextAction(
+            action_label="Rerun with shared context moved into selected framings",
+            tool_name="stage_systematisation",
+            mcp_tool_name="doxabase.stage_systematisation",
+            arguments=stage_args,
+            reason=(
+                "Read-only draft: rerun the systematisation with shared "
+                "ontology/shapes patches copied into only the selected framing "
+                "patches, avoiding manual Turtle reconstruction."
+            ),
+            call=self._suggested_call_string("stage_systematisation", stage_args),
+        )
+        return SystematisationSharedContextRerunDraft(
+            result_kind="systematisation_shared_context_rerun_draft",
+            helper="draft_systematisation_shared_context_rerun",
+            mode="read_only_draft",
+            source_revision_iris=source_iris,
+            shared_context_target_revision_iris=target_iris,
+            shared_context_graphs=sorted(
+                {summary.target_graph for summary in shared_patch_summaries}
+            ),
+            shared_context_patch_summaries=shared_patch_summaries,
+            framings=framing_records,
+            stage_systematisation_arguments=stage_args,
+            suggested_next_actions=[action],
+            suggested_next_calls=[action.call] if action.call else [],
+            warnings=warnings,
+            note=(
+                "Review the selected target framings semantically before "
+                "calling stage_systematisation. This helper drafts arguments "
+                "only; it does not stage, restage, apply, or edit RDF."
+            ),
+        )
+
+    @staticmethod
+    def _ordered_resource_summary_iris(
+        summaries: Iterable[ResourceSummary],
+    ) -> list[str]:
+        return list(dict.fromkeys(summary.iri for summary in summaries))
+
+    @staticmethod
+    def _staged_patch_identity(
+        patch: StagedGraphPatchDescription,
+    ) -> tuple[str, str, str, str]:
+        return (
+            patch.operation or "",
+            patch.target_graph or "",
+            patch.format or "",
+            patch.content or "",
+        )
+
+    def _append_patch_description_spec(
+        self,
+        patch: StagedGraphPatchDescription,
+        *,
+        additions: list[dict[str, str]],
+        removals: list[dict[str, str]],
+    ) -> None:
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        spec = {
+            "graph": self._required_staged_patch_target_graph(patch),
+            "content": self._required_staged_patch_field(
+                patch,
+                "content",
+                patch.content,
+            ),
+            "format": self._required_staged_patch_field(
+                patch,
+                "format",
+                patch.format,
+            ),
+        }
+        operation = self._required_staged_patch_field(
+            patch,
+            "operation",
+            patch.operation,
+        )
+        if operation == addition_operation:
+            additions.append(spec)
+            return
+        if operation == removal_operation:
+            removals.append(spec)
+            return
+        raise DoxaBaseError(
+            f"Cannot draft systematisation rerun for unsupported patch "
+            f"operation '{operation}'"
+        )
+
+    @staticmethod
+    def _systematisation_rationale_field(
+        rationale: str | None,
+        field_prefix: str,
+    ) -> str | None:
+        if not rationale:
+            return None
+        for line in rationale.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(field_prefix):
+                return stripped[len(field_prefix) :].strip() or None
+        return None
+
+    def _common_systematisation_rationale_field(
+        self,
+        descriptions: Iterable[StagedGraphRevisionDescription],
+        field_prefix: str,
+    ) -> str | None:
+        values = [
+            value
+            for value in (
+                self._systematisation_rationale_field(
+                    description.rationale,
+                    field_prefix,
+                )
+                for description in descriptions
+            )
+            if value
+        ]
+        if not values:
+            return None
+        first = values[0]
+        if all(value == first for value in values):
+            return first
+        return None
+
+    @staticmethod
+    def _common_systematisation_validation_scope(
+        descriptions: Iterable[StagedGraphRevisionDescription],
+    ) -> str | None:
+        scopes = [
+            description.validation_scope
+            for description in descriptions
+            if description.validation_scope
+        ]
+        if not scopes:
+            return None
+        first = scopes[0]
+        if all(scope == first for scope in scopes):
+            return first
+        return None
+
+    def _systematisation_framing_label(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> str:
+        label = self._systematisation_rationale_field(
+            description.rationale,
+            "Framing:",
+        )
+        if label:
+            return label
+        if description.summary and ": " in description.summary:
+            return description.summary.rsplit(": ", 1)[1]
+        return description.summary or description.iri
+
+    @staticmethod
+    def _systematisation_summary_from_descriptions(
+        descriptions: list[StagedGraphRevisionDescription],
+    ) -> str:
+        prefixes = [
+            description.summary.rsplit(": ", 1)[0]
+            for description in descriptions
+            if description.summary and ": " in description.summary
+        ]
+        if prefixes:
+            first = prefixes[0]
+            if len(prefixes) == len(descriptions) and all(
+                prefix == first for prefix in prefixes
+            ):
+                return first
+        if descriptions and descriptions[0].summary:
+            return f"{descriptions[0].summary} shared-context rerun"
+        return "Shared-context systematisation rerun"
 
     def _staged_revision_markdown(
         self,

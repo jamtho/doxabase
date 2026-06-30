@@ -5462,6 +5462,9 @@ lane.batch_action
 lane.not_restageable_reason
 lane.summary
 lane.changed_graphs
+lane.shared_context_applies
+lane.shared_context_patch_count
+lane.shared_context_graphs
 lane.status_before
 lane.decision_before
 lane.routing_decision_before
@@ -5508,6 +5511,10 @@ already-applied source can have `resolved_target_iri` set to the applied event
 and `row_is_target=False`. An applied-event input is already the resolved row:
 `batch_action` is `skipped_applied_event`, `not_restageable_reason` is
 `applied_event_record`, and `row_is_target=True`.
+When `lane.shared_context_applies=true`, the current staged row carries shared
+`ontology` or `shapes` context patches. Use `lane.shared_context_graphs` as the
+lane-first warning, then inspect `plan.bundle_summary.shared_context_*` or a
+grouped export before restaging or applying fallback alternatives.
 When count or digest drift routes a lane, read
 `lane.exact_drift_summary[]` first. It is a compact per-graph summary with
 `has_count_drift`, `has_snapshot_digest_drift`, `count_drift_deltas`,
@@ -5658,6 +5665,36 @@ drafted repair mutation, `next_action_queue_item.resolved_target_iri` can be
 `None` and `row_is_target=False` because the action creates a new repaired
 successor rather than pointing at an existing row. In that case drive the call
 from `next_action.arguments`, especially `restages_revision`.
+
+### Systematisation Shared-Context Rerun Draft
+
+`db.draft_systematisation_shared_context_rerun(...)` returns a
+`SystematisationSharedContextRerunDraft`:
+
+```python
+draft.result_kind
+draft.helper
+draft.mode
+draft.source_revision_iris
+draft.shared_context_target_revision_iris
+draft.shared_context_graphs
+draft.shared_context_patch_summaries
+draft.framings[]
+draft.stage_systematisation_arguments
+draft.suggested_next_actions
+draft.suggested_next_calls
+draft.warnings
+draft.note
+```
+
+Use it after semantic review chooses which staged systematisation rows should
+keep shared `ontology` or `shapes` context. Each `draft.framings[]` row names
+the source staged revision, whether it receives the moved shared context,
+`moved_shared_patch_count`, original `framing_patch_count`, target graphs, and
+validation scope. `stage_systematisation_arguments` is the complete rerun
+payload: shared context patches are copied into only the selected framings'
+ordinary additions/removals, so fallback framings no longer need manual Turtle
+surgery to avoid provisional vocabulary or shapes.
 
 `draft.lineage` is compact lineage context:
 

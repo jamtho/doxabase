@@ -387,6 +387,29 @@ def draft_staged_revision_rebase_tool(
     )
 
 
+def draft_systematisation_shared_context_rerun_tool(
+    db: DoxaBase,
+    revision_iris: list[str],
+    shared_context_target_revision_iris: list[str],
+    summary: str | None = None,
+    intent: str | None = None,
+    rationale: str | None = None,
+    link_alternatives: bool = False,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    return to_dict(
+        db.draft_systematisation_shared_context_rerun(
+            revision_iris=revision_iris,
+            shared_context_target_revision_iris=shared_context_target_revision_iris,
+            summary=summary,
+            intent=intent,
+            rationale=rationale,
+            link_alternatives=link_alternatives,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+        )
+    )
+
+
 def plan_staged_revision_recovery_tool(
     db: DoxaBase,
     revision_iris: list[str] | None = None,

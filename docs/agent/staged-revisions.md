@@ -322,6 +322,15 @@ Compact cookbook for a mixed stale queue:
    mechanical restage worklist; do not feed `repair_or_replace`,
    `skipped_not_restageable`, informational, or already-applied rows into a bulk
    restage.
+   When a lane has `shared_context_applies=true`, read
+   `shared_context_graphs` and the plan or export
+   `bundle_summary.shared_context_*` fields before mutating it; shared staged
+   ontology/shapes may be present on fallback alternatives that should be rerun
+   without that semantic context. If semantic review selects which framings
+   should keep the shared context, call
+   `draft_systematisation_shared_context_rerun(...)` to get a complete
+   `stage_systematisation` rerun payload instead of manually copying Turtle out
+   of `describe_staged_revision`.
    For stale rows, read `lane.exact_drift_summary[]` before drilling into full
    apply-check payloads. It names the graph, whether the blocker is count drift
    and/or snapshot digest drift, count deltas, patch-triple status counts, exact

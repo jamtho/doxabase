@@ -1843,6 +1843,23 @@ inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one
 ready row, then rerun this helper before taking the next mutation.
 
+### doxabase.draft_systematisation_shared_context_rerun
+
+Drafts a read-only `stage_systematisation` rerun for staged systematisation
+rows that carry shared `ontology` or `shapes` context. Use it after
+`plan_staged_revision_recovery` or grouped export shows
+`shared_context_applies=true` / `shared_semantic_context_applies_to_all_framings`
+and semantic review has chosen which framings should keep the provisional
+vocabulary or shape context.
+
+Pass the grouped `revision_iris` plus
+`shared_context_target_revision_iris`, the subset that should receive the moved
+shared context. The helper copies stored `rc:SharedContextPatch` Turtle into
+those framings' ordinary additions/removals, leaves fallback framings with only
+their own `rc:FramingPatch` content, and returns
+`stage_systematisation_arguments` plus a ready suggested action. It does not
+stage, restage, apply, or write files.
+
 ### doxabase.start_staged_revision_recovery_session
 
 Persists a durable staged recovery session in the `history` graph and returns

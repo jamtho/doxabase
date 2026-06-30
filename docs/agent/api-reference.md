@@ -1174,6 +1174,13 @@ indexes to move into per-framing patches if fallback alternatives should avoid
 that provisional semantic context. The warning also carries
 `shared_patch_summaries` and
 `fallback_revision_iris_with_shared_semantic_context` for structured inspection.
+If the staged rows already exist and semantic review has selected which
+framings should keep shared ontology/shapes context, call
+`draft_systematisation_shared_context_rerun(revision_iris=[...],
+shared_context_target_revision_iris=[...])`. It returns a read-only
+`stage_systematisation_arguments` payload with shared context patches copied
+into only the selected framings' additions/removals, avoiding manual Turtle
+copying from `describe_staged_revision`.
 Pass `profile_route_sources` when a caller-authored framing is meant to resolve
 a route from `draft_profile_map_updates`, for example
 `profile_route_sources=[query_action.source_query_context]` for a

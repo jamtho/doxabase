@@ -74,6 +74,11 @@ fallback's own `FramingPatch` content into that fallback, remove shared
 ontology/shapes from the rerun, then check/export the rerun. This still requires
 semantic judgement: use review notes, evidence, and target framing intent to
 decide which framing keeps the ontology or shape context.
+When the staged rows are available in the capsule, prefer
+`draft_systematisation_shared_context_rerun(revision_iris=[...],
+shared_context_target_revision_iris=[...])` after that semantic choice. It emits
+the complete `stage_systematisation` arguments with shared ontology/shapes moved
+into the selected framings, so agents do not need to copy Turtle by hand.
 
 ## Project Ontology And Shapes
 

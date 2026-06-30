@@ -3144,6 +3144,13 @@ few useful gaps:
   of query-repair queues while preserving storage, layout, caveat, observation,
   evidence, and pattern context. Candidate-layout warnings on non-tabular assets
   are context-review signals, not instructions to force a query-planning repair.
+- A shared ontology/shapes systematisation recovery trial confirmed grouped
+  exports preserve shared-context warnings, but lane-first recovery and manual
+  rerun reconstruction were still weak spots. Recovery lanes now surface
+  `shared_context_applies`, `shared_context_patch_count`, and
+  `shared_context_graphs`; use
+  `draft_systematisation_shared_context_rerun` after semantic review selects
+  which framings should keep the provisional ontology or shape context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -30,6 +30,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_map_assertion_change_tool,
     draft_staged_revision_rebase_tool,
+    draft_systematisation_shared_context_rerun_tool,
     export_context_slice_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
@@ -87,7 +88,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
 class _LazyDoxaBase:
@@ -705,6 +706,31 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         return draft_staged_revision_rebase_tool(
             db,
             iri=iri,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.draft_systematisation_shared_context_rerun")
+    def draft_systematisation_shared_context_rerun(
+        revision_iris: list[str],
+        shared_context_target_revision_iris: list[str],
+        summary: str | None = None,
+        intent: str | None = None,
+        rationale: str | None = None,
+        link_alternatives: bool = False,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Draft a stage_systematisation rerun with shared context moved."""
+
+        return draft_systematisation_shared_context_rerun_tool(
+            db,
+            revision_iris=revision_iris,
+            shared_context_target_revision_iris=(
+                shared_context_target_revision_iris
+            ),
+            summary=summary,
+            intent=intent,
+            rationale=rationale,
+            link_alternatives=link_alternatives,
             validation_scope=validation_scope,
         )
 
