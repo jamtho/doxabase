@@ -224,6 +224,16 @@ definition move, not the later map assertion. The bundle-level
 `remaining_semantic_moves` fields repeat this distinction for unattended
 scripts, and the Markdown review summary renders a `Semantic Move Closure`
 section before the open-lane table.
+Use the profile bundle's semantic apply-gate fields for executor decisions:
+`bulk_apply_allowed`, `safe_single_apply_candidate_revision_iris`,
+`semantic_apply_gate_summary`, `semantic_apply_gate_counts`, and each
+candidate's `semantic_apply_role`, `apply_cardinality`, and
+`safe_single_apply_candidate`. Closed semantic moves, an empty open-lane list,
+or staged rows in `apply_after_review` mean mechanical readiness and lane
+accounting; they are not permission to bulk apply metric/type/query/fallback
+semantic choices. A bundle with semantic candidates should be treated as
+choose-one-and-recheck unless the apply gate explicitly says bulk apply is
+allowed.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

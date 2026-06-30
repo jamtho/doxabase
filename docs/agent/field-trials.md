@@ -3399,6 +3399,31 @@ few useful gaps:
   SHACL, so repeated read-only checks are expensive. Profile insight review
   export now shares a scoped apply-check cache across those read-only phases;
   keep mutating apply paths on fresh previews.
+- A profile apply-gate scratch trial staged an ordinary profile map update,
+  metric vocabulary promotion, value-type promotion, map type assertion, and
+  systematisation fallbacks from one mixed-support profile run. Every staged row
+  was mechanically ready, but the profile insight bundle correctly reported
+  `bulk_apply_allowed=false`, no safe-single candidates, and role-separated
+  semantic candidates. Use the semantic apply-gate fields, not
+  `check_staged_revision_apply().status`, `apply_after_review`, closed semantic
+  moves, or changed graph roles, to decide whether unattended apply is allowed.
+- A privacy/export handoff trial confirmed broad dirty handoff preflight blocks
+  both graph terms and staged snapshot rows, while a clean context-slice export
+  for the target remains usable. A local-only dirty handoff manifest can still
+  be imported for recovery when `fail_on_sensitive=false`; the receiver sees the
+  manifest block/shareability status, imports snapshot evidence to
+  `history_plus_snapshot_rows`, follows the recovered session, and can apply the
+  staged row with exact diff context. Do not reshare artifacts whose manifest
+  still says `decision="block"` or shareability review is incomplete.
+- A database-backed query-planning trial confirmed the repair loop from
+  misplaced/root-only relation metadata to storage-access-owned relation
+  identifier works: after staged repairs, `draft_query_plan` produced
+  `handoff_kind="database_relation_handoff"` with a relation identifier and
+  connection reference but no executable scan function, and
+  `record_query_result` preserved an external relation handle as evidence.
+  Evidence-seeded `resource_brief` slices preserve the source spans, though
+  generic route labels and the `scanned_source_paths` name still deserve a doc
+  example for database handles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

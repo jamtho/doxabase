@@ -1446,6 +1446,14 @@ class ProfileInsightReviewCandidate:
     matched_supporting_pattern_iris: list[str]
     matched_revision_anchor_iris: list[str]
     explicit: bool
+    semantic_apply_role: str = "supporting_context"
+    semantic_choice_group_key: str | None = None
+    apply_cardinality: str = "inspect_only"
+    bulk_apply_allowed: bool = False
+    safe_single_apply_candidate: bool = False
+    semantic_apply_gate_reason: str = (
+        "No profile apply gate was computed for this candidate."
+    )
 
 
 @dataclass(frozen=True)
@@ -1484,6 +1492,13 @@ class ProfileInsightReviewBundleRecord:
     importable: bool = False
     recommended_import_tool: str | None = None
     recovery_complete: bool = False
+    semantic_apply_gate_summary: str = ""
+    bulk_apply_allowed: bool = False
+    safe_single_apply_candidate_revision_iris: list[str] = field(
+        default_factory=list
+    )
+    semantic_apply_gate_counts: dict[str, int] = field(default_factory=dict)
+    semantic_apply_gate_blocking_reasons: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -40373,6 +40388,16 @@ class DoxaBase:
             candidates,
             open_profile_review_lanes,
         )
+        (
+            semantic_apply_gate_summary,
+            bulk_apply_allowed,
+            safe_single_apply_candidate_revision_iris,
+            semantic_apply_gate_counts,
+            semantic_apply_gate_blocking_reasons,
+        ) = self._profile_insight_semantic_apply_gate_summary(
+            candidates,
+            open_profile_review_lanes,
+        )
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
             with self._scoped_staged_apply_check_cache(apply_check_cache):
@@ -40390,6 +40415,9 @@ class DoxaBase:
                         remaining_semantic_moves=remaining_semantic_moves,
                         semantic_move_closure_summary=(
                             semantic_move_closure_summary
+                        ),
+                        semantic_apply_gate_summary=(
+                            semantic_apply_gate_summary
                         ),
                         executive_summary=executive_summary,
                     ),
@@ -40428,6 +40456,15 @@ class DoxaBase:
                 "Follow remaining draft advisory or conflict lanes separately if "
                 "expected scalar conflict, metric, or type review revisions are "
                 "not staged yet."
+            ),
+            semantic_apply_gate_summary=semantic_apply_gate_summary,
+            bulk_apply_allowed=bulk_apply_allowed,
+            safe_single_apply_candidate_revision_iris=(
+                safe_single_apply_candidate_revision_iris
+            ),
+            semantic_apply_gate_counts=semantic_apply_gate_counts,
+            semantic_apply_gate_blocking_reasons=(
+                semantic_apply_gate_blocking_reasons
             ),
         )
 
@@ -40814,6 +40851,9 @@ class DoxaBase:
             profile_route_sources=candidate_route_sources,
             direct_review_lane=direct_review_lane,
         )
+        apply_gate = self._profile_insight_candidate_apply_gate(
+            profile_route_groups
+        )
         return ProfileInsightReviewCandidate(
             revision_iri=description.iri,
             summary=description.summary,
@@ -40828,7 +40868,131 @@ class DoxaBase:
             matched_supporting_pattern_iris=matched_patterns,
             matched_revision_anchor_iris=matched_anchors,
             explicit=explicit,
+            **apply_gate,
         )
+
+    @staticmethod
+    def _profile_insight_candidate_apply_gate(
+        profile_route_groups: Iterable[MappingABC[str, Any]],
+    ) -> dict[str, Any]:
+        groups = [dict(group) for group in profile_route_groups]
+        direct_groups = [
+            group
+            for group in groups
+            if group.get("match_strength") == "direct_action"
+        ]
+        direct_lanes = sorted(
+            {
+                str(group.get("review_lane"))
+                for group in direct_groups
+                if group.get("review_lane")
+            }
+        )
+        direct_semantic_moves = list(
+            dict.fromkeys(
+                str(move)
+                for group in direct_groups
+                for move in group.get("direct_semantic_moves", [])
+                if isinstance(move, str)
+            )
+        )
+        semantic_review_lanes = {
+            "metric_vocabulary_review",
+            "profile_type_review",
+            "query_context_review",
+        }
+        semantic_context_groups = [
+            group
+            for group in groups
+            if str(group.get("review_lane") or "") in semantic_review_lanes
+            or any(
+                isinstance(move, str)
+                for move in group.get("semantic_moves", [])
+            )
+        ]
+        support_semantic_groups = [
+            group
+            for group in semantic_context_groups
+            if group.get("match_strength") != "direct_action"
+            or group.get("review_lane") != "profile_map_updates"
+        ]
+
+        def choice_key() -> str | None:
+            for group in direct_groups:
+                if group.get("direct_semantic_moves"):
+                    value = group.get("route_group_key")
+                    return str(value) if value else None
+            for group in semantic_context_groups:
+                value = group.get("route_group_key")
+                if value:
+                    return str(value)
+            for group in direct_groups:
+                value = group.get("route_group_key")
+                if value:
+                    return str(value)
+            return None
+
+        role = "supporting_context"
+        apply_cardinality = "inspect_only"
+        safe_single_apply_candidate = False
+        bulk_apply_allowed = False
+        reason = (
+            "Included for shared profile support only; inspect it as context, "
+            "not as an apply candidate for this profile lane."
+        )
+
+        if direct_groups:
+            apply_cardinality = "one_semantic_choice_then_recheck"
+            reason = (
+                "Direct profile semantic, vocabulary, type, or query candidate; "
+                "choose deliberately and recheck before any further apply."
+            )
+            if "caveat_fallback" in direct_semantic_moves:
+                role = "semantic_fallback_candidate"
+            elif (
+                "define_metric" in direct_semantic_moves
+                or "metric_vocabulary_review" in direct_lanes
+            ):
+                role = "metric_vocabulary_candidate"
+            elif (
+                "assert_map_type" in direct_semantic_moves
+                or "profile_type_review" in direct_lanes
+            ):
+                role = "profile_type_candidate"
+            elif "define_value_type" in direct_semantic_moves:
+                role = "value_type_vocabulary_candidate"
+            elif "query_context_review" in direct_lanes:
+                role = "query_context_repair_candidate"
+            elif direct_lanes == ["profile_map_updates"]:
+                if support_semantic_groups:
+                    role = "profile_map_update_with_semantic_context"
+                    apply_cardinality = "single_after_semantic_review"
+                    reason = (
+                        "Direct profile map update also shares metric, type, "
+                        "query, or fallback review context; review those "
+                        "semantic lanes before applying."
+                    )
+                else:
+                    role = "ordinary_profile_map_update"
+                    apply_cardinality = "single_after_review"
+                    safe_single_apply_candidate = True
+                    bulk_apply_allowed = True
+                    reason = (
+                        "Direct profile map update without metric, type, query, "
+                        "or fallback review context; apply only after review and "
+                        "recheck the staged frontier."
+                    )
+            else:
+                role = "profile_review_candidate"
+
+        return {
+            "semantic_apply_role": role,
+            "semantic_choice_group_key": choice_key(),
+            "apply_cardinality": apply_cardinality,
+            "bulk_apply_allowed": bulk_apply_allowed,
+            "safe_single_apply_candidate": safe_single_apply_candidate,
+            "semantic_apply_gate_reason": reason,
+        }
 
     @staticmethod
     def _profile_insight_candidate_route_source(
@@ -41297,6 +41461,76 @@ class DoxaBase:
             )
         return closed_semantic_moves, remaining_semantic_moves, summary
 
+    @staticmethod
+    def _profile_insight_semantic_apply_gate_summary(
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> tuple[str, bool, list[str], dict[str, int], list[str]]:
+        role_counts: dict[str, int] = {}
+        for candidate in candidates:
+            role_counts[candidate.semantic_apply_role] = (
+                role_counts.get(candidate.semantic_apply_role, 0) + 1
+            )
+        safe_single_apply_candidate_revision_iris = [
+            candidate.revision_iri
+            for candidate in candidates
+            if candidate.safe_single_apply_candidate
+        ]
+        blocked_candidates = [
+            candidate
+            for candidate in candidates
+            if not candidate.safe_single_apply_candidate
+        ]
+        counts = {
+            **role_counts,
+            "candidate_count": len(candidates),
+            "safe_single_apply_candidates": len(
+                safe_single_apply_candidate_revision_iris
+            ),
+            "blocked_candidates": len(blocked_candidates),
+            "open_profile_review_lanes": len(open_profile_review_lanes),
+        }
+        blocking_reasons: list[str] = []
+        if blocked_candidates:
+            blocking_reasons.append("semantic_or_support_candidate_present")
+        if open_profile_review_lanes:
+            blocking_reasons.append("open_profile_review_lanes_present")
+        if not candidates:
+            blocking_reasons.append("no_profile_candidates")
+
+        bulk_apply_allowed = (
+            bool(candidates)
+            and not blocked_candidates
+            and not open_profile_review_lanes
+            and all(candidate.bulk_apply_allowed for candidate in candidates)
+        )
+        if bulk_apply_allowed:
+            summary = (
+                "All exported profile candidates are ordinary profile map "
+                "updates with no open profile review lanes. Bulk application is "
+                "mechanically allowed, but callers should still recheck staged "
+                "readiness after mutation."
+            )
+        elif not candidates:
+            summary = (
+                "No profile-linked staged candidates were exported, so there is "
+                "nothing to apply from this bundle."
+            )
+        else:
+            summary = (
+                "Do not bulk apply this profile insight bundle. Apply only a "
+                "safe_single_apply_candidate after review, or choose one "
+                "semantic candidate deliberately and recheck before any further "
+                "mutation."
+            )
+        return (
+            summary,
+            bulk_apply_allowed,
+            safe_single_apply_candidate_revision_iris,
+            counts,
+            blocking_reasons,
+        )
+
     def _profile_insight_review_executive_summary(
         self,
         dataset: ResourceSummary,
@@ -41307,6 +41541,7 @@ class DoxaBase:
         closed_semantic_moves: list[str],
         remaining_semantic_moves: list[str],
         semantic_move_closure_summary: str,
+        semantic_apply_gate_summary: str,
         executive_summary: str | None = None,
     ) -> str:
         label = dataset.label or dataset.iri
@@ -41332,6 +41567,12 @@ class DoxaBase:
             sections.append(
                 f"### Semantic Move Closure\n\n{closure_markdown}"
             )
+        apply_gate_markdown = self._profile_insight_apply_gate_markdown(
+            candidates,
+            semantic_apply_gate_summary=semantic_apply_gate_summary,
+        )
+        if apply_gate_markdown:
+            sections.append(f"### Semantic Apply Gate\n\n{apply_gate_markdown}")
         open_lanes_markdown = self._profile_insight_open_review_lanes_markdown(
             open_profile_review_lanes
         )
@@ -41393,6 +41634,47 @@ class DoxaBase:
                     )
                     + " |"
                 )
+        return "\n".join(lines)
+
+    def _profile_insight_apply_gate_markdown(
+        self,
+        candidates: list[ProfileInsightReviewCandidate],
+        *,
+        semantic_apply_gate_summary: str,
+    ) -> str:
+        if not candidates:
+            return ""
+        lines = [
+            semantic_apply_gate_summary,
+            "",
+            (
+                "| Row | Candidate | Role | Cardinality | Safe single | "
+                "Bulk candidate | Choice group |"
+            ),
+            "|---|---|---|---|---|---|---|",
+        ]
+        for index, candidate in enumerate(candidates, start=1):
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(
+                            candidate.summary or candidate.revision_iri
+                        ),
+                        self._markdown_table_cell(
+                            candidate.semantic_apply_role
+                        ),
+                        self._markdown_table_cell(candidate.apply_cardinality),
+                        "yes" if candidate.safe_single_apply_candidate else "no",
+                        "yes" if candidate.bulk_apply_allowed else "no",
+                        self._markdown_table_cell(
+                            candidate.semantic_choice_group_key or "none"
+                        ),
+                    ]
+                )
+                + " |"
+            )
         return "\n".join(lines)
 
     def _profile_insight_open_review_lanes_markdown(

@@ -15397,6 +15397,31 @@ def test_stage_systematisation_routes_profile_sources_per_framing(
         "assert_map_type",
         "caveat_fallback",
     }
+    assert review.bulk_apply_allowed is False
+    assert review.safe_single_apply_candidate_revision_iris == []
+    assert review.semantic_apply_gate_counts["blocked_candidates"] == 2
+    assert "semantic_or_support_candidate_present" in (
+        review.semantic_apply_gate_blocking_reasons
+    )
+    assert direct_candidate.semantic_apply_role == "profile_type_candidate"
+    assert direct_candidate.semantic_choice_group_key == route_group_key
+    assert direct_candidate.apply_cardinality == (
+        "one_semantic_choice_then_recheck"
+    )
+    assert direct_candidate.safe_single_apply_candidate is False
+    assert direct_candidate.bulk_apply_allowed is False
+    assert fallback_candidate.semantic_apply_role == (
+        "semantic_fallback_candidate"
+    )
+    assert fallback_candidate.semantic_choice_group_key == route_group_key
+    assert fallback_candidate.apply_cardinality == (
+        "one_semantic_choice_then_recheck"
+    )
+    exported = (tmp_path / "status-type-review.md").read_text(encoding="utf-8")
+    assert "### Semantic Apply Gate" in exported
+    assert "Do not bulk apply this profile insight bundle" in exported
+    assert "profile_type_candidate" in exported
+    assert "semantic_fallback_candidate" in exported
 
 
 def test_stage_systematisation_warns_on_unusable_profile_route_sources(
@@ -29241,6 +29266,61 @@ def test_profile_insight_review_bundle_reuses_apply_checks(
 
     assert result.candidate_revision_iris == [staged.revision_iri]
     assert validate_preview_call_count == 1
+
+
+def test_profile_insight_review_bundle_marks_plain_map_update_safe_single(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-gate#Orders"
+    evidence = "https://example.test/profile-gate#OrdersProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders profile found a row-count drift.",
+        evidence_summary="Synthetic full-table profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0],
+    )
+
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-insight-map-only-review.md",
+    )
+
+    assert result.bulk_apply_allowed is True
+    assert result.safe_single_apply_candidate_revision_iris == [
+        staged.staged_revision.revision_iri
+    ]
+    assert result.semantic_apply_gate_counts["safe_single_apply_candidates"] == 1
+    assert result.semantic_apply_gate_blocking_reasons == []
+    candidate = result.candidates[0]
+    assert candidate.semantic_apply_role == "ordinary_profile_map_update"
+    assert candidate.apply_cardinality == "single_after_review"
+    assert candidate.safe_single_apply_candidate is True
+    assert candidate.bulk_apply_allowed is True
+    exported = (tmp_path / "profile-insight-map-only-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "### Semantic Apply Gate" in exported
+    assert "Bulk application is mechanically allowed" in exported
 
 
 def test_profile_insight_route_bridge_groups_repeated_lane_labels(

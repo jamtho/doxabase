@@ -2335,6 +2335,11 @@ result.artifact_kind
 result.importable
 result.recommended_import_tool
 result.recovery_complete
+result.semantic_apply_gate_summary
+result.bulk_apply_allowed
+result.safe_single_apply_candidate_revision_iris
+result.semantic_apply_gate_counts
+result.semantic_apply_gate_blocking_reasons
 ```
 
 `result_kind` is `profile_insight_review_bundle`. `export` is the nested
@@ -2367,6 +2372,12 @@ candidate.matched_profile_observation_iris
 candidate.matched_supporting_pattern_iris
 candidate.matched_revision_anchor_iris
 candidate.explicit
+candidate.semantic_apply_role
+candidate.semantic_choice_group_key
+candidate.apply_cardinality
+candidate.bulk_apply_allowed
+candidate.safe_single_apply_candidate
+candidate.semantic_apply_gate_reason
 ```
 
 `relation_reasons` can include `explicit_revision_iri`,
@@ -2430,6 +2441,22 @@ The reverse can also happen: a direct `assert_map_type` staged assertion closes
 the map assertion and suppresses the fallback alternative, but
 `define_value_type` remains open until the vocabulary promotion route is staged
 or otherwise resolved.
+For executor decisions, prefer the semantic apply-gate fields over inferred
+queue state. `candidate.semantic_apply_role` distinguishes
+`ordinary_profile_map_update`, semantic fallback, metric vocabulary, value-type,
+profile-type, query-context repair, and support-only rows.
+`candidate.apply_cardinality` tells whether the row is inspect-only,
+single-after-review, or one semantic choice before recheck.
+`candidate.safe_single_apply_candidate` is the per-row safe-single flag;
+`result.safe_single_apply_candidate_revision_iris` collects those rows.
+`result.bulk_apply_allowed` is true only when all exported candidates are
+ordinary profile map updates and no profile review lanes remain open. Treat
+`closed_semantic_moves`, an empty `open_profile_review_lanes`, or
+`apply_after_review` on the nested staged export as mechanical/readiness
+signals, not permission to bulk apply semantic metric/type/query/fallback
+candidates. When `result.bulk_apply_allowed` is false, read
+`semantic_apply_gate_summary` and apply at most one reviewed semantic choice
+before rerunning the staged/profile review.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports
 only `project_metric_defined`, those inspection-only metric routes are not
 reported as open review lanes. Use the metric context actions for handoff
@@ -2441,6 +2468,9 @@ Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
 When semantic moves are present, Markdown also includes a `Semantic Move
 Closure` summary and the open-lane table repeats closed and remaining moves.
+Markdown also includes a `Semantic Apply Gate` table whenever profile candidates
+are exported; scripts should use the JSON fields above, but the table gives
+Markdown-only reviewers the same role/cardinality warning.
 When open lanes exist, the summary also includes an `Open Profile Review Lanes`
 table before the bridge.
 The bridge includes the grouped bundle row number and candidate summary beside
