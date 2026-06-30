@@ -1318,6 +1318,11 @@ facts directly. Use `source_profile_evidence` to verify the source query result
 or profile run, `reviewed_overlay` to audit the supplied storage metadata, and
 `stage_arguments` only after confirming the overlay describes the queried
 source data rather than query text, logs, or result output.
+`reviewed_overlay` echoes the generated or caller-supplied storage/layout IRIs,
+labels, protocol, root, access mode, location kind, path templates, file format,
+compression, endpoint/bucket/prefix/region/path-style fields, credential
+reference, layout verification status/note, and replaced dataset verification
+values so scripts do not have to parse Turtle patch content for audit.
 When existing dataset-level layout verification status or note values would
 conflict with the reviewed overlay, `reviewed_overlay` lists the replaced values
 and `stage_arguments["removals"]` carries the Turtle removal patch. Preserve

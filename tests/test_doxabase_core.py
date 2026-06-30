@@ -19423,6 +19423,8 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root=str(warehouse),
         location_kind="directory",
+        storage_label="Reviewed Orders storage route",
+        physical_layout_label="Reviewed Orders CSV layout",
         path_templates=["orders.csv"],
         file_format="rc:CSV",
         layout_verification_note=(
@@ -19443,7 +19445,21 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert draft.source_profile_evidence["result_sources"] == [str(result_path)]
     assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
     assert draft.source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
+    assert draft.reviewed_overlay["storage_access_iri"] == draft.storage_access_iri
+    assert draft.reviewed_overlay["physical_layout_iri"] == draft.physical_layout_iri
+    assert draft.reviewed_overlay["storage_label"] == "Reviewed Orders storage route"
+    assert draft.reviewed_overlay["physical_layout_label"] == (
+        "Reviewed Orders CSV layout"
+    )
     assert draft.reviewed_overlay["storage_root"] == str(warehouse)
+    assert draft.reviewed_overlay["access_mode"] == RC + "ReadOnlyAccess"
+    assert draft.reviewed_overlay["location_kind"] == "directory"
+    assert draft.reviewed_overlay["endpoint_profile"] is None
+    assert draft.reviewed_overlay["bucket_name"] is None
+    assert draft.reviewed_overlay["key_prefix"] is None
+    assert draft.reviewed_overlay["region"] is None
+    assert draft.reviewed_overlay["path_style_access"] is None
+    assert draft.reviewed_overlay["credential_reference"] is None
     assert draft.reviewed_overlay["path_templates"] == ["orders.csv"]
     assert draft.reviewed_overlay["file_format"] == RC + "CSV"
     assert draft.reviewed_overlay["layout_verification_status"] == (
@@ -19473,6 +19489,76 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert plan.scan.uri_template == str(csv_path)
     assert plan.review_gate.ready_for_execution_attempt is True
     assert db.validate_graph(scope="all").conforms
+
+
+def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    result = db.record_query_result(
+        summary="Orders query scanned reviewed S3-compatible Parquet objects.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="duckdb",
+        query_hash="sha256:orders-s3-overlay",
+        result_sources=["s3://orders-reviewed/results/orders-summary.json"],
+        scanned_source_paths=["s3://orders-reviewed/warehouse/orders/*.parquet"],
+        sample_size=12,
+        sample_scope="Reviewed S3-compatible Orders prefix.",
+        sample_method="External read-only DuckDB aggregate query.",
+        row_count=12,
+    )
+
+    draft = db.draft_query_evidence_storage_overlay(
+        dataset,
+        result.evidence_iri,
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://orders-reviewed",
+        location_kind="prefix",
+        storage_access_iri="https://example.test/project#orders_s3_access",
+        physical_layout_iri="https://example.test/project#orders_parquet_layout",
+        storage_label="Reviewed Orders S3-compatible route",
+        physical_layout_label="Reviewed Orders Parquet layout",
+        endpoint_profile="local-minio",
+        bucket_name="orders-reviewed",
+        key_prefix="warehouse/orders/",
+        region="us-east-1",
+        path_style_access=True,
+        credential_reference="env:ORDERS_READONLY",
+        path_templates=["warehouse/orders/*.parquet"],
+        file_format="rc:Parquet",
+        compression_codec="rc:SnappyCompression",
+        layout_verification_note=(
+            "Reviewed query evidence scanned the S3-compatible Orders prefix."
+        ),
+    )
+
+    overlay = draft.reviewed_overlay
+    assert overlay["storage_access_iri"] == (
+        "https://example.test/project#orders_s3_access"
+    )
+    assert overlay["physical_layout_iri"] == (
+        "https://example.test/project#orders_parquet_layout"
+    )
+    assert overlay["storage_label"] == "Reviewed Orders S3-compatible route"
+    assert overlay["physical_layout_label"] == "Reviewed Orders Parquet layout"
+    assert overlay["storage_protocol"] == RC + "S3CompatibleStorage"
+    assert overlay["storage_root"] == "s3://orders-reviewed"
+    assert overlay["access_mode"] == RC + "ReadOnlyAccess"
+    assert overlay["location_kind"] == "prefix"
+    assert overlay["endpoint_profile"] == "local-minio"
+    assert overlay["bucket_name"] == "orders-reviewed"
+    assert overlay["key_prefix"] == "warehouse/orders/"
+    assert overlay["region"] == "us-east-1"
+    assert overlay["path_style_access"] is True
+    assert overlay["credential_reference"] == "env:ORDERS_READONLY"
+    assert overlay["path_templates"] == ["warehouse/orders/*.parquet"]
+    assert overlay["file_format"] == RC + "Parquet"
+    assert overlay["compression_codec"] == RC + "SnappyCompression"
+    assert draft.validation_conforms is True
+    assert "orders-reviewed" in draft.additions[0]["content"]
 
 
 def test_query_evidence_storage_overlay_replaces_dataset_layout_status(

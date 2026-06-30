@@ -19118,9 +19118,20 @@ class DoxaBase:
             ),
         )
         reviewed_overlay = {
+            "storage_access_iri": storage_access_value,
+            "physical_layout_iri": physical_layout_value,
+            "storage_label": storage_label,
+            "physical_layout_label": physical_layout_label,
             "storage_protocol": str(storage_protocol_ref),
             "storage_root": storage_root_value,
+            "access_mode": str(access_mode_ref) if access_mode_ref is not None else None,
             "location_kind": location_kind_value,
+            "endpoint_profile": endpoint_profile,
+            "bucket_name": bucket_name,
+            "key_prefix": key_prefix,
+            "region": region,
+            "path_style_access": path_style_access,
+            "credential_reference": credential_reference,
             "path_templates": path_template_values,
             "file_format": str(file_format_ref),
             "compression_codec": (

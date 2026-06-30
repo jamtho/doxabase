@@ -88,6 +88,9 @@ and `shareability_review_status="required_not_completed"` because scanner-clean
 is not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. Follow the suggested export action with
 `fail_on_sensitive=true` after that separate review.
+In lazy tool-discovery environments, search for the exact dotted name
+`doxabase.export_preflight` if a bare `export_preflight` or `preflight` lookup
+does not expose the tool.
 
 Privacy/export route matrix:
 
@@ -1111,10 +1114,13 @@ The helper does not infer storage values from query text, result artifacts, or
 logs. The caller supplies reviewed values such as `storage_protocol`,
 `storage_root`, `location_kind`, `path_templates`, `file_format`, optional
 endpoint/credential hints, compression, and a layout verification note. The
-response echoes those reviewed values in `reviewed_overlay`, reports the source
-query context and source profile/query evidence, previews validation for the
-Turtle addition, and returns `stage_arguments` plus a `stage_graph_revision`
-suggested action. Treat
+response echoes those reviewed values in `reviewed_overlay`, including generated
+or caller-supplied storage/layout IRIs, labels, access mode,
+endpoint/bucket/prefix/region/path-style fields, credential reference,
+compression, and replaced dataset verification values. It also reports the
+source query context and source profile/query evidence, previews validation for
+the Turtle addition, and returns `stage_arguments` plus a
+`stage_graph_revision` suggested action. Treat
 `source_profile_evidence.scanned_source_paths` as reviewed provenance context
 for choosing those values, not as an automatically accepted storage root.
 Call that staged-revision helper, check/apply the staged row, then rerun

@@ -3314,6 +3314,27 @@ few useful gaps:
   apply-check listing and reuse the checks already computed during dry-run
   planning; the same 20-row recovery plan dropped from about 19 seconds to
   about 10 seconds.
+- An MCP surface audit found `doxabase.project_brief` and
+  `doxabase.export_preflight` were registered and test-covered, but Codex lazy
+  tool discovery could miss bare underscore searches such as `export_preflight`.
+  Search exact dotted names before treating documented MCP tools as absent; the
+  server instructions and start-here route now name these high-priority tools
+  explicitly.
+- A stale-seed recovery handoff trial on the local capsule confirmed the
+  documented `project_brief` -> `export_preflight` -> handoff export/import
+  route works without user input when run on `/tmp` copies. The fresh receiver
+  capsule had current seed graph counts, matching mutable project counts, no
+  remaining `seed_recovery_review`, and conforming validation. For trials that
+  must be strictly non-mutating, use a copy or a SQLite read-only URI; normal
+  open paths can perform SQLite maintenance even when graph facts are not
+  intentionally changed.
+- An AIS DailyIndex overlay trial showed `describe_query_context` and singleton
+  evidence inspection were mostly self-guiding, but a stale-seed source capsule
+  blocks `draft_query_evidence_storage_overlay` before stage arguments can be
+  returned. Follow the seed-recovery safety route first. On a fresh recovered
+  capsule the overlay draft succeeded; `reviewed_overlay` now echoes optional
+  non-secret storage and orientation fields so agents can audit the reviewed S3
+  route without parsing the Turtle patch.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

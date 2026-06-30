@@ -170,7 +170,11 @@ Start with `describe_query_context(dataset_iri)`:
    `draft_query_evidence_storage_overlay` skeleton action. Replace every
    placeholder named in its `placeholder_fields` / `reviewed_value_fields` and
    supply `required_extra_arguments` after reviewing the actual source; the
-   helper does not infer storage values from query artifacts.
+   helper does not infer storage values from query artifacts. After the draft,
+   use `reviewed_overlay` to audit the supplied non-secret storage/layout IRIs,
+   labels, access mode, endpoint/bucket/prefix/region/path-style fields,
+   credential reference, compression, and verification fields without parsing
+   Turtle patch content.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
    For non-database storage with `location_kind="object"`, prefer the exact

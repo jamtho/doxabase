@@ -129,6 +129,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     tools = await server.list_tools()
     tool_names = {tool.name for tool in tools}
 
+    assert "doxabase.project_brief" in server.instructions
+    assert "doxabase.export_preflight" in server.instructions
     assert "doxabase.list_docs" in tool_names
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names

@@ -105,10 +105,13 @@ If the MCP docs tools are not exposed in the current session, follow the same
 route by reading the matching files in `docs/agent/` directly.
 In lazy or deferred tool environments, a documented MCP tool may be available
 only after exact discovery; search for the exact name such as
-`doxabase.get_doc`, `doxabase.describe_dataset`, `doxabase.list_entities`,
+`doxabase.project_brief`, `doxabase.export_preflight`, `doxabase.get_doc`,
+`doxabase.describe_dataset`, `doxabase.list_entities`,
 `doxabase.describe_context_slice`, or `doxabase.graph_overview` before assuming
-it is missing. `doxabase.search` searches RDF literals in the capsule, not these
-agent docs; use `list_docs`/`get_doc` or local files for doc search.
+it is missing. Bare underscore searches such as `export_preflight` may miss a
+tool that exact dotted-name discovery can find. `doxabase.search` searches RDF
+literals in the capsule, not these agent docs; use `list_docs`/`get_doc` or
+local files for doc search.
 MCP tools operate on the configured server capsule. For disposable scratch
 trials, use Python MCP helper functions against
 `DoxaBase.create(path, overwrite=True)`, or start a fresh MCP server with
