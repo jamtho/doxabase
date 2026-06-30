@@ -1688,6 +1688,12 @@ For scripts that intend to mutate, use `mutation_frontier_items` as the complete
 worklist. It includes existing apply/restage/repair targets and same-slot repair
 helper actions that create a successor; `mutation_frontier_iris` is the
 compatibility list for existing resolved target IRIs only.
+Before using that worklist, check `mutation_allowed_after`. If it is
+`handoff_preflight_required_before_mutation`, run the imports in
+`blocking_preflight_actions` / `blocking_preflight_calls` and rerun the plan
+before mutating. `semantic_review_required_before_mutation` means no handoff
+preflight is blocking the current frontier, but the reviewed lane semantics
+still apply. `no_mutation_frontier` means there is no mutation worklist.
 For multi-step or imported recovery work, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
 handoff_manifest_path=...)` before mutating. The session stores the ordered

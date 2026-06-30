@@ -5355,6 +5355,16 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
         "path_is_placeholder": True,
     }
     assert plan.suggested_next_actions[0].tool_name == "import_revision_snapshots"
+    assert (
+        plan.mutation_allowed_after
+        == "handoff_preflight_required_before_mutation"
+    )
+    assert [
+        action.tool_name for action in plan.blocking_preflight_actions
+    ] == ["import_revision_snapshots"]
+    assert plan.blocking_preflight_calls == [
+        plan.suggested_next_actions[0].call
+    ]
 
     grouped_export_path = tmp_path / "rdf-only-grouped-review.md"
     grouped_export = imported.export_staged_revisions(
@@ -23868,6 +23878,13 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
         "missing_history_graph": [staged.revision_iri]
     }
     assert snapshot_first_plan.suggested_next_actions[0].tool_name == "import_trig"
+    assert snapshot_first_plan.mutation_allowed_after == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert [
+        action.tool_name
+        for action in snapshot_first_plan.blocking_preflight_actions
+    ] == ["import_trig"]
     snapshot_first_lane = snapshot_first_plan.lanes[0]
     assert snapshot_first_lane.lane == "complete_handoff_import"
     assert snapshot_first_lane.batch_action == "skipped_snapshot_rows_without_history"
@@ -23914,6 +23931,12 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     }
     assert plan.lanes[0].next_action is not None
     assert plan.lanes[0].next_action.tool_name == "import_trig"
+    assert plan.mutation_allowed_after == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert [action.tool_name for action in plan.blocking_preflight_actions] == [
+        "import_trig"
+    ]
 
 
 def test_scratch_capsule_observation_write_recovers_search_index(

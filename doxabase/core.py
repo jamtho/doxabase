@@ -1645,6 +1645,9 @@ class StagedRevisionRecoveryPlan:
     mutation_frontier_items: list[StagedRevisionMutationFrontierItem]
     helper_mutation_frontier_actions: list[SuggestedNextAction]
     helper_mutation_frontier_calls: list[str]
+    mutation_allowed_after: str
+    blocking_preflight_actions: list[SuggestedNextAction]
+    blocking_preflight_calls: list[str]
     requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
     would_restage_revision_iris: list[str]
@@ -32787,6 +32790,17 @@ class DoxaBase:
             lanes,
             would_restage_revision_iris=batch.would_restage_revision_iris,
         )
+        blocking_preflight_actions = (
+            self._staged_recovery_blocking_preflight_actions(
+                suggested_next_actions
+            )
+        )
+        mutation_allowed_after = (
+            self._staged_recovery_mutation_allowed_after(
+                blocking_preflight_actions=blocking_preflight_actions,
+                mutation_frontier_items=mutation_frontier_items,
+            )
+        )
         processed_revision_iris = list(dict.fromkeys(selected_revision_iris))
         current_revision_by_source = {
             **batch.current_revision_by_source,
@@ -32866,6 +32880,11 @@ class DoxaBase:
                 action.call
                 for action in helper_mutation_frontier_actions
                 if action.call
+            ],
+            mutation_allowed_after=mutation_allowed_after,
+            blocking_preflight_actions=blocking_preflight_actions,
+            blocking_preflight_calls=[
+                action.call for action in blocking_preflight_actions if action.call
             ],
             requires_recheck_after_each_apply=requires_recheck_after_each_apply,
             semantic_review_required_queue_counts=(
@@ -33875,6 +33894,9 @@ class DoxaBase:
             mutation_frontier_items=[],
             helper_mutation_frontier_actions=[],
             helper_mutation_frontier_calls=[],
+            mutation_allowed_after="no_mutation_frontier",
+            blocking_preflight_actions=[],
+            blocking_preflight_calls=[],
             requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
             would_restage_revision_iris=[],
@@ -34547,6 +34569,28 @@ class DoxaBase:
         return self._dedupe_suggested_next_actions(
             [*handoff_preflight_actions, *review_first_actions, *mutation_actions]
         )
+
+    @staticmethod
+    def _staged_recovery_blocking_preflight_actions(
+        suggested_next_actions: Iterable[SuggestedNextAction],
+    ) -> list[SuggestedNextAction]:
+        return [
+            action
+            for action in suggested_next_actions
+            if action.tool_name in {"import_revision_snapshots", "import_trig"}
+        ]
+
+    @staticmethod
+    def _staged_recovery_mutation_allowed_after(
+        *,
+        blocking_preflight_actions: list[SuggestedNextAction],
+        mutation_frontier_items: list[StagedRevisionMutationFrontierItem],
+    ) -> str:
+        if blocking_preflight_actions:
+            return "handoff_preflight_required_before_mutation"
+        if mutation_frontier_items:
+            return "semantic_review_required_before_mutation"
+        return "no_mutation_frontier"
 
     @staticmethod
     def _staged_recovery_order_lanes(

@@ -2356,6 +2356,12 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
         "apply_after_review": 1
     }
     assert result["mutation_frontier_iris"] == [staged["revision_iri"]]
+    assert (
+        result["mutation_allowed_after"]
+        == "semantic_review_required_before_mutation"
+    )
+    assert result["blocking_preflight_actions"] == []
+    assert result["blocking_preflight_calls"] == []
     assert result["requires_recheck_after_each_apply"] is False
     lane = result["lanes"][0]
     assert lane["source_revision_iri"] == staged["revision_iri"]
@@ -2709,6 +2715,15 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
     )
+    assert result["mutation_allowed_after"] == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert result["blocking_preflight_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert result["blocking_preflight_calls"] == [
+        result["suggested_next_actions"][0]["call"]
+    ]
     assert result["lanes"][0]["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
     )

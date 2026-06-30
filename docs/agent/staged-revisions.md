@@ -288,9 +288,13 @@ classification; inspect it with `describe_graph_revision` or
 `describe_applied_revision_diff`.
 When RDF/history handoffs have incomplete snapshot evidence, top-level
 `suggested_next_actions` starts with `import_revision_snapshots` or `import_trig`
-preflight before apply/restage actions. After those preflight actions, when
-`would_restage_revision_iris` is non-empty, top-level `suggested_next_actions`
-includes a batch
+preflight before apply/restage actions. The same imports appear in
+`blocking_preflight_actions`, and `mutation_allowed_after` is
+`handoff_preflight_required_before_mutation`. Do not drive
+`mutation_frontier_items` until those preflight imports are complete and a fresh
+plan no longer reports blocking preflight actions. After those preflight
+actions, when `would_restage_revision_iris` is non-empty, top-level
+`suggested_next_actions` includes a batch
 `restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
 worklist. Use it before creating successors; row-level `restage_staged_revision`
 actions remain available for focused single-row review.
@@ -312,9 +316,9 @@ Compact cookbook for a mixed stale queue:
 
 1. `plan = plan_staged_revision_recovery(current_staged_work_only=True,
    include_drafts=True, drift_detail="exact")`.
-2. If `plan.suggested_next_actions` starts with `import_trig` or
-   `import_revision_snapshots`, complete the handoff import first and rerun the
-   plan.
+2. If `plan.mutation_allowed_after` is
+   `handoff_preflight_required_before_mutation`, run
+   `plan.blocking_preflight_calls` first and rerun the plan.
 3. For multi-step work, start a session from `plan.processed_revision_iris`.
    Session creation records source revisions and planning parameters only; it
    does not mutate project graphs.

@@ -5432,6 +5432,9 @@ plan.mutation_frontier_iris
 plan.mutation_frontier_items
 plan.helper_mutation_frontier_actions
 plan.helper_mutation_frontier_calls
+plan.mutation_allowed_after
+plan.blocking_preflight_actions
+plan.blocking_preflight_calls
 plan.requires_recheck_after_each_apply
 plan.semantic_review_required_queue_counts
 plan.would_restage_revision_iris
@@ -5669,8 +5672,15 @@ actions that create a successor and therefore have no existing target IRI.
 apply/restage/repair queues; it intentionally excludes informational rows,
 already-applied inspection targets, and repair helper calls that do not resolve
 to an existing target IRI.
-For same-slot repair lanes before a successor exists, this field can be empty
-even when the lane is actionable. When `include_drafts=True`,
+`mutation_allowed_after` is the plan-level preflight gate for unattended
+mutation. When it is `handoff_preflight_required_before_mutation`, complete the
+actions in `blocking_preflight_actions` / `blocking_preflight_calls` and rerun
+the planner before using `mutation_frontier_items`. When it is
+`semantic_review_required_before_mutation`, no import preflight is blocking the
+current mutation frontier, but the lane review semantics still apply. When it is
+`no_mutation_frontier`, the plan has no mutation worklist.
+For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
+can be empty even when the lane is actionable. When `include_drafts=True`,
 `helper_mutation_frontier_actions` gives the deduped preferred helper mutation
 actions for those repair lanes, and `helper_mutation_frontier_calls` gives their
 display calls. If that list is empty, drive the repair from
@@ -5694,8 +5704,10 @@ row, then rerun `plan_staged_revision_recovery()` before the next mutation.
 `requires_recheck_after_each_apply` is the boolean form of that same sequencing
 hazard.
 When lane snapshot evidence is incomplete, `plan.suggested_next_actions` promotes
-`import_revision_snapshots` or `import_trig` before mutation actions. Treat
-normal lane queues as post-preflight routes until that import is complete. When
+`import_revision_snapshots` or `import_trig` before mutation actions, and the
+same actions appear in `blocking_preflight_actions`. Treat normal lane queues
+and `mutation_frontier_items` as post-preflight routes until that import is
+complete. When
 handoff evidence is complete and `would_restage_revision_iris` is non-empty,
 `plan.suggested_next_actions[0]` is a batch
 `restage_staged_revisions` dry-run action with

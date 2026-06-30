@@ -3192,6 +3192,14 @@ few useful gaps:
   snapshot, applied-diff, and graph-version-diff helpers now promote
   snapshot-evidence import actions such as `import_revision_snapshots` or
   `import_trig` into top-level `suggested_next_actions`.
+- A project-brief/frontier recovery trial found that
+  `plan_staged_revision_recovery()` exposed apply/restage mutation frontier
+  items even when imported handoff evidence still needed `import_trig` or
+  `import_revision_snapshots` first. The plan now reports
+  `mutation_allowed_after="handoff_preflight_required_before_mutation"` plus
+  `blocking_preflight_actions` / `blocking_preflight_calls`; unattended agents
+  should complete those imports and rerun the planner before using
+  `mutation_frontier_items`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
