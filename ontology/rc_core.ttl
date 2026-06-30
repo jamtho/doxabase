@@ -666,6 +666,11 @@ rc:JSONL a rc:FileFormat ; rdfs:label "JSONL" .
 rc:NDJSON a rc:FileFormat ; rdfs:label "NDJSON" .
 rc:PlainText a rc:FileFormat ; rdfs:label "Plain Text" .
 rc:Markdown a rc:FileFormat ; rdfs:label "Markdown" .
+rc:JPEG a rc:FileFormat ; rdfs:label "JPEG" .
+rc:PNG a rc:FileFormat ; rdfs:label "PNG" .
+rc:TIFF a rc:FileFormat ; rdfs:label "TIFF" .
+rc:GeoTIFF a rc:FileFormat ; rdfs:label "GeoTIFF" .
+rc:PDF a rc:FileFormat ; rdfs:label "PDF" .
 rc:PostgreSQLTable a rc:FileFormat ; rdfs:label "PostgreSQL Table" .
 rc:SQLiteTable a rc:FileFormat ; rdfs:label "SQLite Table" .
 rc:MySQLTable a rc:FileFormat ; rdfs:label "MySQL Table" .

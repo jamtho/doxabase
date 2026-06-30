@@ -1058,9 +1058,12 @@ executable query planning. Do not use `location_kind="local_path"`; local
 filesystem belongs in `storage_protocol="rc:LocalFilesystemStorage"` and
 `location_kind` describes the root shape. Resource-valued fields across these
 helpers expect IRIs/CURIEs, not prose: use terms such as `rc:EventRow`,
-`rc:Parquet`, or project IRIs for datasets, columns, caveats, and relationship
-endpoints. Put ordinary explanation in descriptions, notes, observations, or
-patterns.
+`rc:Parquet`, `rc:PNG`, `rc:GeoTIFF`, or project IRIs for datasets, columns,
+caveats, and relationship endpoints. Put ordinary explanation in descriptions,
+notes, observations, or patterns. Common base file-format terms include
+`rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`, `rc:TIFF`,
+`rc:GeoTIFF`, and `rc:PDF`; define a project-local `rc:FileFormat` only when
+the base vocabulary lacks the reviewed format.
 For `record_map_partition_scheme`, `redundant_partition_key` is one of those
 resource-valued fields, usually the partition column IRI/CURIE. Keep literal
 placeholder names such as `date` or `event_date` in `path_template`.

@@ -49,9 +49,13 @@ Link partition schemes to datasets with
 take a `partition_schemes` argument.
 Resource-valued fields across these helpers expect IRIs or CURIEs, not
 descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
-`rc:Parquet`, or a project IRI for columns, datasets, caveats, storage access,
-and relationship endpoints. Put ordinary explanation in `description`,
-`layout_verification_note`, caveat text, observations, or patterns.
+`rc:Parquet`, `rc:PNG`, `rc:GeoTIFF`, or a project IRI for columns, datasets,
+caveats, storage access, and relationship endpoints. Common base file-format
+terms include `rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`,
+`rc:TIFF`, `rc:GeoTIFF`, and `rc:PDF`; define a project-local
+`rc:FileFormat` only when the base vocabulary lacks the reviewed format. Put
+ordinary explanation in `description`, `layout_verification_note`, caveat text,
+observations, or patterns.
 `schema_stability` accepts `rc:FixedSchema`, `rc:InferredSchema`, or
 `rc:VariableSchema`. `layout_verification_status` accepts
 `rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,

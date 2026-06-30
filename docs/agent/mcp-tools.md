@@ -1517,7 +1517,9 @@ Records or updates file-format/compression layout metadata and can link it to
 datasets. Use `layout_verification_status` and `layout_verification_note` when
 the physical format or layout has only been generated, proposed, listed, or
 query-verified. Use IRIs or CURIEs for resource-valued controls such as
-`file_format`, `compression_codec`, and `datasets`.
+`file_format`, `compression_codec`, and `datasets`. Common base file-format
+CURIEs include `rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`,
+`rc:TIFF`, `rc:GeoTIFF`, and `rc:PDF`.
 
 `doxabase.record_map_partition_scheme`
 

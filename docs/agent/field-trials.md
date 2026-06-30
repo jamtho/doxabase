@@ -3366,10 +3366,12 @@ few useful gaps:
 - A non-tabular asset workflow trial confirmed current helpers can model image
   or document bundles without fake tables or columns using non-tabular
   datasets, storage/layout facts, asset-level relationships, observations,
-  patterns, and context slices. The next genuine non-tabular gaps are common
-  image/document `rc:FileFormat` terms and optional relationship endpoint
-  role/order support; using `derivation_properties` for endpoint roles is
-  shape-invalid and should be avoided.
+  patterns, and context slices. Base vocabulary now includes common
+  image/document `rc:FileFormat` terms (`rc:JPEG`, `rc:PNG`, `rc:TIFF`,
+  `rc:GeoTIFF`, and `rc:PDF`), so agents do not need project-local terms for
+  those formats. Optional relationship endpoint role/order support remains the
+  next genuine non-tabular modeling gap; using `derivation_properties` for
+  endpoint roles is shape-invalid and should be avoided.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

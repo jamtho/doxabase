@@ -123,7 +123,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1246
+    assert graphs["base_ontology"].triple_count == 1256
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1230
     assert graphs["base_shapes"].mutable is False
@@ -22665,6 +22665,40 @@ def test_record_map_relationship_supports_asset_level_endpoints(
         and related.relationship_kind == RC + "Aggregation"
         for related in contact_description.related_datasets
     )
+
+
+def test_non_tabular_file_formats_have_core_labels(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/non-tabular-formats#"
+    assets = {
+        "raw_images": ("Raw image tiles", "rc:JPEG", "JPEG"),
+        "mask_tiles": ("Mask tiles", "rc:PNG", "PNG"),
+        "orthomosaic": ("Orthomosaic", "rc:GeoTIFF", "GeoTIFF"),
+        "scan_pages": ("Scanned pages", "rc:TIFF", "TIFF"),
+        "report": ("Review report", "rc:PDF", "PDF"),
+    }
+
+    for local_name, (label, file_format, expected_label) in assets.items():
+        dataset = f"{base}{local_name}"
+        db.record_map_dataset(dataset, label=label, is_table=False)
+        db.record_map_physical_layout(
+            f"{base}{local_name}_layout",
+            label=f"{label} layout",
+            file_format=file_format,
+            layout_verification_status="rc:GeneratedFromManifestLayout",
+            datasets=[dataset],
+        )
+
+        description = db.describe_dataset(dataset)
+        assert RC + "Dataset" in description.types
+        assert RC + "Table" not in description.types
+        assert description.physical_layouts[0].file_format is not None
+        assert description.physical_layouts[0].file_format.iri == (
+            db.expand_iri(file_format)
+        )
+        assert description.physical_layouts[0].file_format.label == expected_label
+
+    assert db.validate_graph(scope="all").conforms
 
 
 @pytest.mark.parametrize(
