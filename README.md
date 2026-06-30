@@ -195,7 +195,7 @@ uv run python tools/validate_rdf.py
 Run tests:
 
 ```bash
-uv run pytest -q -n 8
+uv run pytest -q -n auto
 ```
 
 For focused debugging, run the relevant test file or node serially first, then

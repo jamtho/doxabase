@@ -36,6 +36,8 @@ GraphStorageRow = tuple[str, str, str, str, str, str | None, str | None]
 ROOT = Path(__file__).resolve().parents[1]
 BASE_ONTOLOGY_PATH = ROOT / "ontology" / "rc_core.ttl"
 BASE_SHAPES_PATH = ROOT / "ontology" / "rc_shapes.ttl"
+SeedGraphCacheKey = tuple[str, str, int, int]
+_SEED_GRAPH_CACHE: dict[SeedGraphCacheKey, Graph] = {}
 
 SEARCH_INDEX_SQL = """
 CREATE VIRTUAL TABLE IF NOT EXISTS literal_search USING fts5(
@@ -4063,7 +4065,29 @@ class DoxaBase:
             if not system_seed or source_path is None:
                 continue
             if self.triple_count(name) == 0:
-                self.import_turtle(source_path, graph=name, replace=True, allow_immutable=True)
+                self._ensure_mutable(name, allow_immutable=True)
+                self._ensure_graph(name)
+                self._insert_graph(name, self._seed_graph_for_path(source_path))
+
+    def _seed_graph_for_path(self, source_path: Path) -> Graph:
+        source_path = Path(source_path)
+        stat = source_path.stat()
+        cache_key = (
+            str(source_path.resolve()),
+            "turtle",
+            stat.st_mtime_ns,
+            stat.st_size,
+        )
+        cached = _SEED_GRAPH_CACHE.get(cache_key)
+        if cached is None:
+            cached = self._parse_rdf_payload(
+                source_path,
+                format="turtle",
+                payload_name="source",
+                parser_context="import_turtle",
+            )
+            _SEED_GRAPH_CACHE[cache_key] = cached
+        return cached
 
     def graph_overview(self, limit: int = 100) -> GraphOverview:
         graph_rows = self._conn.execute(

@@ -38,13 +38,15 @@ For repository verification after implementing a trial-driven fix, prefer the
 parallel full-suite gate:
 
 ```bash
-uv run pytest -q -n 8
+uv run pytest -q -n auto
 uv run python tools/validate_rdf.py
 ```
 
 Serial pytest remains useful for a single focused test or debugging output, but
 the full DoxaBase suite is integration-heavy enough that serial runs materially
-slow the autonomous loop.
+slow the autonomous loop. On the June 2026 development container, `-n auto`
+completed the full suite in about 37 seconds after parsed seed RDF caching,
+versus about 46 seconds with `-n 8`.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
