@@ -3512,6 +3512,13 @@ class ContextSlice:
     truncated: bool
     truncation_scope: str
     trig: str | None
+    sensitive_literal_count: int
+    returned_match_count: int
+    omitted_match_count: int
+    privacy_scan_limit: int
+    matches: list[SensitiveLiteralMatch]
+    privacy_warnings: list[str]
+    scanner_note: str | None
     seed_profile_observations: list[ProfileObservationSummary]
     dataset_contexts: list[DatasetDescription]
     pattern_contexts: list[PatternDescription]
@@ -9561,9 +9568,12 @@ class DoxaBase:
         max_triples: int = 500,
         include_trig: bool = False,
         graph_iri_prefix: str = RCG_PREFIX,
+        privacy_scan_limit: int = 20,
     ) -> ContextSlice:
         if max_triples < 1:
             raise DoxaBaseError("max_triples must be at least 1")
+        if privacy_scan_limit < 1:
+            raise DoxaBaseError("privacy_scan_limit must be at least 1")
         if profile not in {
             "dataset_brief",
             "pattern_brief",
@@ -11043,6 +11053,25 @@ class DoxaBase:
         graph_counts: dict[str, int] = {}
         for triple in triples:
             graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
+        sensitive_literal_count, matches, omitted_match_count = (
+            self._context_slice_sensitive_matches(
+                triples,
+                limit=privacy_scan_limit,
+            )
+        )
+        privacy_warnings = self._sensitive_literal_warnings(
+            match_count=sensitive_literal_count,
+            omitted_match_count=omitted_match_count,
+        )
+        scanner_note = (
+            "Context-slice privacy scan covers only the returned raw triples. "
+            "This describe_context_slice payload may still contain unredacted "
+            "raw triples, TriG, labels, summaries, and project facts; use "
+            "preflight_context_slice_export or export_preflight before sharing "
+            "or writing handoff artifacts."
+            if sensitive_literal_count
+            else None
+        )
         route_counts = self._context_slice_route_counts(resources)
         if profile == "deep_lore" and not self._context_slice_has_lore_routes(
             route_counts,
@@ -11058,7 +11087,20 @@ class DoxaBase:
                 truncated=truncated,
             )
         )
+        warnings.extend(privacy_warnings)
+        if scanner_note is not None:
+            warnings.append(scanner_note)
         suggested_next_actions = [
+            *self._context_slice_privacy_next_actions(
+                seed_iris=seeds,
+                profile=profile,
+                max_triples=max(candidate_triple_count, max_triples)
+                if truncated
+                else max_triples,
+                privacy_scan_limit=privacy_scan_limit,
+                sensitive_literal_count=sensitive_literal_count,
+                truncated=truncated,
+            ),
             *resource_brief_recovery_actions.values(),
             *self._context_slice_next_actions(
                 seed_iris=seeds,
@@ -11106,6 +11148,13 @@ class DoxaBase:
             truncated=truncated,
             truncation_scope="triples_only",
             trig=trig,
+            sensitive_literal_count=sensitive_literal_count,
+            returned_match_count=len(matches),
+            omitted_match_count=omitted_match_count,
+            privacy_scan_limit=privacy_scan_limit,
+            matches=matches,
+            privacy_warnings=privacy_warnings,
+            scanner_note=scanner_note,
             seed_profile_observations=list(seed_profile_observations.values()),
             dataset_contexts=list(dataset_contexts.values()),
             pattern_contexts=list(pattern_contexts.values()),
@@ -11115,6 +11164,50 @@ class DoxaBase:
                 action.call for action in suggested_next_actions
             ],
         )
+
+    def _context_slice_privacy_next_actions(
+        self,
+        *,
+        seed_iris: list[str],
+        profile: str,
+        max_triples: int,
+        privacy_scan_limit: int,
+        sensitive_literal_count: int,
+        truncated: bool,
+    ) -> list[SuggestedNextAction]:
+        if sensitive_literal_count == 0:
+            return []
+        arguments = {
+            "seed_iris": seed_iris,
+            "profile": profile,
+            "max_triples": max_triples,
+            "include_seed_graphs": True,
+            "limit": privacy_scan_limit,
+        }
+        truncation_note = (
+            " The current slice is truncated, so this action uses the full "
+            "candidate triple cap rather than the returned cap."
+            if truncated
+            else ""
+        )
+        return [
+            SuggestedNextAction(
+                action_label="Preflight context-slice privacy",
+                tool_name="preflight_context_slice_export",
+                mcp_tool_name="doxabase.preflight_context_slice_export",
+                arguments=arguments,
+                reason=(
+                    "Selected raw context-slice triples matched the sensitive-term "
+                    "scanner. Use the redacted export preflight before sharing "
+                    "slice content or writing an importable handoff artifact."
+                    f"{truncation_note}"
+                ),
+                call=self._suggested_call_string(
+                    "preflight_context_slice_export",
+                    arguments,
+                ),
+            )
+        ]
 
     def _context_slice_next_actions(
         self,

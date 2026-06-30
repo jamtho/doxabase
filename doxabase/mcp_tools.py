@@ -563,6 +563,7 @@ def describe_context_slice_tool(
     profile: str = "dataset_brief",
     max_triples: int = 500,
     include_trig: bool = False,
+    privacy_scan_limit: int = 20,
 ) -> dict[str, Any]:
     return to_dict(
         db.describe_context_slice(
@@ -570,6 +571,7 @@ def describe_context_slice_tool(
             profile=profile,  # type: ignore[arg-type]
             max_triples=max_triples,
             include_trig=include_trig,
+            privacy_scan_limit=privacy_scan_limit,
         )
     )
 

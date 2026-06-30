@@ -947,6 +947,13 @@ context.max_triples
 context.truncated
 context.truncation_scope
 context.trig
+context.sensitive_literal_count
+context.returned_match_count
+context.omitted_match_count
+context.privacy_scan_limit
+context.matches
+context.privacy_warnings
+context.scanner_note
 context.seed_profile_observations
 context.dataset_contexts
 context.pattern_contexts
@@ -957,6 +964,13 @@ context.suggested_next_calls
 
 `seed_iris` is the input argument name. The returned field is `seeds` in Python
 and `result["seeds"]` in MCP payloads.
+`sensitive_literal_count`, `matches`, `privacy_warnings`, and `scanner_note`
+come from scanning the returned raw triples only. Match rows are redacted, but
+`triples`, `trig`, labels, descriptions, evidence summaries, and other
+structured context remain faithful inspection content and can still contain raw
+project terms. When `truncated=true`, a zero count is not privacy clearance for
+the omitted candidate triples; follow the suggested `preflight_context_slice_export`
+action, which uses the full candidate triple cap when scanner hits were found.
 
 `db.preflight_context_slice_export(...)` and `db.export_context_slice(...)`
 return a `ContextSliceExportRecord`:

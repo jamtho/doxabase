@@ -344,6 +344,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         profile: str = "dataset_brief",
         max_triples: int = 500,
         include_trig: bool = False,
+        privacy_scan_limit: int = 20,
     ) -> dict[str, Any]:
         """Return a route-explained graph slice around datasets, patterns, or lore."""
 
@@ -353,6 +354,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             profile=profile,
             max_triples=max_triples,
             include_trig=include_trig,
+            privacy_scan_limit=privacy_scan_limit,
         )
 
     @server.tool(name="doxabase.preflight_context_slice_export")

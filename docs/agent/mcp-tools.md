@@ -60,6 +60,12 @@ in `ResourceSummary` cards, including `project_brief` resource descriptions and
 context-slice export `seeds[]` labels/descriptions. This protects response
 summaries; RDF exports remain faithful and should still use `fail_on_sensitive`
 when shareable output must block.
+`describe_context_slice` now includes redacted scanner metadata for the returned
+raw triples, but its inspection payload remains faithful: raw `triples`, `trig`,
+labels, summaries, and revision/evidence context can still contain project
+terms. Report `sensitive_literal_count`, `privacy_warnings`, and redacted
+`matches`; do not paste full context-slice JSON or TriG before preflight when
+the content may travel outside the local project.
 The scan is not a general path/shareability hygiene check: non-secret local
 paths, object-store URIs, endpoint URLs, and relative paths are preserved in
 exports and do not by themselves trigger `privacy_warnings`. Keep user-specific

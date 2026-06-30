@@ -217,6 +217,12 @@ Useful fields:
 - `truncated`: true when `max_triples` cut off the selected triples. The
   truncation scope is `triples_only`: resources, route counts, and structured
   contexts still describe the full selected slice.
+- `sensitive_literal_count`, `matches`, `privacy_warnings`, and `scanner_note`:
+  a conservative scan of the returned raw triples. Match rows are redacted, but
+  this does not redact the rest of the `describe_context_slice` payload.
+  Do not paste full slice JSON, raw `triples`, or `trig` into reports before
+  reviewing the privacy warning and using an export preflight when the content
+  may travel outside the local project.
 
 Use `preflight_context_slice_export()` and `export_context_slice()` when the
 handoff needs an importable, resource-scoped TriG artifact. These helpers reuse
@@ -234,6 +240,10 @@ history rows, or stored revision snapshots that a full handoff would scan. For
 staged/privacy review, run `export_preflight(export_kind="handoff_bundle")` or
 the grouped staged/profile export with `fail_on_sensitive=True` rather than
 treating a clean slice as whole-capsule privacy clearance.
+If `describe_context_slice` itself reports scanner matches, follow its
+`Preflight context-slice privacy` action. That action keeps match rows redacted
+and, for truncated slices, raises `max_triples` to the full candidate triple cap
+before asking an agent to share or write a bundle.
 
 If a context-slice export includes the `history` graph, treat it as importable
 review context, not a recovery-complete revision handoff. It can carry

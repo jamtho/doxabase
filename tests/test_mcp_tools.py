@@ -7013,6 +7013,64 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     )
 
 
+def test_describe_context_slice_tool_reports_sensitive_selected_triples(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_CONTEXT_SLICE_DESCRIBE"
+    dataset = "https://example.test/project#SensitiveDescribeSlice"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Sensitive describe slice",
+        description=f"Synthetic fixture {fake_secret}.",
+        is_table=True,
+    )
+
+    result = describe_context_slice_tool(
+        db,
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=100,
+        include_trig=True,
+        privacy_scan_limit=5,
+    )
+
+    assert result["sensitive_literal_count"] >= 1
+    assert result["returned_match_count"] == len(result["matches"])
+    assert result["omitted_match_count"] == (
+        result["sensitive_literal_count"] - result["returned_match_count"]
+    )
+    assert result["privacy_scan_limit"] == 5
+    assert result["privacy_warnings"]
+    assert result["scanner_note"] in result["warnings"]
+    assert fake_secret not in json.dumps(result["matches"])
+    assert fake_secret not in " ".join(result["privacy_warnings"])
+    assert fake_secret not in result["scanner_note"]
+    assert fake_secret in json.dumps(result["triples"])
+    assert fake_secret in result["trig"]
+
+    privacy_action = result["suggested_next_actions"][0]
+    assert privacy_action["tool_name"] == "preflight_context_slice_export"
+    assert privacy_action["arguments"] == {
+        "seed_iris": [dataset],
+        "profile": "dataset_brief",
+        "max_triples": 100,
+        "include_seed_graphs": True,
+        "limit": 5,
+    }
+    preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=100,
+        include_seed_graphs=True,
+        limit=5,
+    )
+    assert preflight["sensitive_literal_count"] >= 1
+    assert fake_secret not in json.dumps(preflight["matches"])
+
+
 def test_context_slice_export_tools_return_json_like_payload(
     tmp_path: Path,
 ) -> None:

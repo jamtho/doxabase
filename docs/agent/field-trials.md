@@ -2963,6 +2963,20 @@ few useful gaps:
   could use stronger modelling-choice summaries. Recovery lanes now carry
   `exact_drift_summary` so cold agents can report count/digest drift evidence
   before drilling into full apply-check payloads.
+- A follow-up four-trial frontier wave confirmed that broader steering keeps
+  surfacing independent workflow gaps. Context-slice privacy trials showed raw
+  `describe_context_slice` payloads can expose planted scanner hits even when
+  export/preflight surfaces redact correctly; context slices now return redacted
+  scanner metadata and a privacy preflight action, while raw triples/TriG remain
+  faithful inspection content. Profile value-type trials found
+  `export_profile_insight_review_bundle` can over-close a shared route group
+  after staging only a value-type vocabulary promotion, leaving the map
+  `rc:valueType` assertion open in the live draft. Project-brief onboarding
+  trials showed low-limit briefs expand correctly but the lane recipes deserve a
+  compact `project_brief` doc or read-only profile review action. Grouped
+  review-bundle trials showed awkward modelling choices need stronger
+  top-level decision summaries, structured framing roles, and common support
+  rollups.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
