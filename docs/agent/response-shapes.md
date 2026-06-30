@@ -5669,20 +5669,25 @@ same as the mutation or inspection target. Repair lanes may include
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
 `mutation_frontier_items` is the preferred complete mutation worklist for
 automation. Items with `item_kind="revision_target"` point at existing
-apply/restage/repair targets and preserve collapsed `source_revision_iris` and
-`row_iris`; items with `item_kind="helper_action"` carry same-slot repair helper
-actions that create a successor and therefore have no existing target IRI.
+apply/restage targets and repair targets only when the selected repair action is
+mutating; they preserve collapsed `source_revision_iris` and `row_iris`. Items
+with `item_kind="helper_action"` carry same-slot repair helper actions that
+create a successor and therefore have no existing target IRI.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
-apply/restage/repair queues; it intentionally excludes informational rows,
-already-applied inspection targets, and repair helper calls that do not resolve
-to an existing target IRI.
+apply/restage queues plus mutating repair targets; it intentionally excludes
+informational rows, already-applied inspection targets, diagnostic
+repair-inspection rows, and repair helper calls that do not resolve to an
+existing target IRI.
 `mutation_allowed_after` is the plan-level preflight gate for unattended
 mutation. When it is `handoff_preflight_required_before_mutation`, complete the
 actions in `blocking_preflight_actions` / `blocking_preflight_calls` and rerun
 the planner before using `mutation_frontier_items`. When it is
 `semantic_review_required_before_mutation`, no import preflight is blocking the
 current mutation frontier, but the lane review semantics still apply. When it is
-`no_mutation_frontier`, the plan has no mutation worklist.
+`repair_inspection_required_before_mutation`, repair lanes exist but their
+current route is diagnostic inspection or a read-only repair draft rather than
+an executable mutation. When it is `no_mutation_frontier`, the plan has no
+mutation worklist.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty even when the lane is actionable. When `include_drafts=True`,
 `helper_mutation_frontier_actions` gives the deduped preferred helper mutation
@@ -5696,6 +5701,9 @@ When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the
 draft helper again unless it still appears in `lane.suggested_next_actions`.
+Those diagnostic repair lanes stay visible in `lanes`, `next_action_queue`, and
+`repair_or_replace_source_revision_iris`, but they are intentionally absent from
+`mutation_frontier_items` until a concrete repair mutation is available.
 
 `would_restage_revision_iris` is a mechanical restage worklist after review, not
 an apply queue. `repair_or_replace_source_revision_iris` lists source rows whose

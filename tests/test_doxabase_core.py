@@ -8365,6 +8365,20 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     )
     plan = db.plan_staged_revision_recovery([source.revision_iri])
     assert plan.repair_first_revision_iris == [source.revision_iri]
+    assert plan.next_action_queue == {
+        "repair_or_replace": [source.revision_iri],
+    }
+    assert plan.mutation_frontier_iris == []
+    assert plan.mutation_frontier_items == []
+    assert (
+        plan.mutation_allowed_after
+        == "repair_inspection_required_before_mutation"
+    )
+    assert any(
+        "diagnostic inspection" in warning
+        and "not represented by mutation_frontier_iris" in warning
+        for warning in plan.warnings
+    )
     lane = plan.lanes[0]
     assert lane.repair_draft is not None
     assert lane.repair_draft.draft_kind == "validation_repair_needed"

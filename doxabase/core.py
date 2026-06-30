@@ -208,6 +208,19 @@ QUERY_REPAIR_PREDICATE_CURIES = frozenset(
     }
 )
 
+STAGED_RECOVERY_MUTATING_TOOL_NAMES = frozenset(
+    {
+        "apply_staged_revision",
+        "restage_staged_revision",
+        "restage_staged_revisions",
+        "stage_graph_revision",
+        "stage_map_assertion_change",
+        "stage_pattern_promotion",
+        "stage_profile_map_updates",
+        "stage_systematisation",
+    }
+)
+
 
 def to_jsonable(value: Any) -> Any:
     """Return a JSON-like plain-Python representation of DoxaBase API values."""
@@ -32803,6 +32816,17 @@ class DoxaBase:
                 "in helper_mutation_frontier_actions and are not represented by "
                 "mutation_frontier_iris."
             )
+        repair_inspection_required = (
+            self._staged_recovery_repair_inspection_required(lanes)
+        )
+        if repair_inspection_required:
+            warnings.append(
+                "Plan includes repair_or_replace lanes whose selected action is "
+                "diagnostic inspection or a read-only repair draft; these rows "
+                "remain in lanes and next_action_queue but are not represented "
+                "by mutation_frontier_iris or mutation_frontier_items until a "
+                "concrete repair mutation is chosen."
+            )
         resolved_target_groups = self._staged_recovery_resolved_target_groups(
             lanes,
             requested_revision_iris=requested_revision_iris,
@@ -32832,6 +32856,7 @@ class DoxaBase:
             self._staged_recovery_mutation_allowed_after(
                 blocking_preflight_actions=blocking_preflight_actions,
                 mutation_frontier_items=mutation_frontier_items,
+                repair_inspection_required=repair_inspection_required,
             )
         )
         processed_revision_iris = list(dict.fromkeys(selected_revision_iris))
@@ -34148,11 +34173,16 @@ class DoxaBase:
                 if item is not None
                 else lane.resolved_target_iri
             )
+            if queue not in mutation_queues or target_iri is None:
+                continue
             if (
-                queue not in mutation_queues
-                or target_iri is None
-                or lane.next_action is None
+                queue == "repair_or_replace"
+                and not DoxaBase._staged_recovery_action_is_mutating(
+                    lane.next_action
+                )
             ):
+                continue
+            if lane.next_action is None:
                 continue
             action_by_target.setdefault((queue, target_iri), lane.next_action)
 
@@ -34166,6 +34196,11 @@ class DoxaBase:
             action = action_by_target.get(
                 (group.queue, group.resolved_target_iri)
             )
+            if (
+                group.queue == "repair_or_replace"
+                and not DoxaBase._staged_recovery_action_is_mutating(action)
+            ):
+                continue
             items.append(
                 StagedRevisionMutationFrontierItem(
                     item_kind="revision_target",
@@ -34565,6 +34600,33 @@ class DoxaBase:
                 actions.append(lane.repair_draft.preferred_action)
         return self._dedupe_suggested_next_actions(actions)
 
+    @staticmethod
+    def _staged_recovery_action_is_mutating(
+        action: SuggestedNextAction | RevisionNextAction | None,
+    ) -> bool:
+        if action is None:
+            return False
+        return action.tool_name in STAGED_RECOVERY_MUTATING_TOOL_NAMES
+
+    @staticmethod
+    def _staged_recovery_repair_inspection_required(
+        lanes: Iterable[StagedRevisionRecoveryLane],
+    ) -> bool:
+        for lane in lanes:
+            if lane.lane != "repair_or_replace":
+                continue
+            if DoxaBase._staged_recovery_action_is_mutating(lane.next_action):
+                continue
+            preferred_action = (
+                lane.repair_draft.preferred_action
+                if lane.repair_draft is not None
+                else None
+            )
+            if DoxaBase._staged_recovery_action_is_mutating(preferred_action):
+                continue
+            return True
+        return False
+
     def _staged_recovery_suggested_next_actions(
         self,
         lanes: Iterable[StagedRevisionRecoveryLane],
@@ -34618,11 +34680,14 @@ class DoxaBase:
         *,
         blocking_preflight_actions: list[SuggestedNextAction],
         mutation_frontier_items: list[StagedRevisionMutationFrontierItem],
+        repair_inspection_required: bool = False,
     ) -> str:
         if blocking_preflight_actions:
             return "handoff_preflight_required_before_mutation"
         if mutation_frontier_items:
             return "semantic_review_required_before_mutation"
+        if repair_inspection_required:
+            return "repair_inspection_required_before_mutation"
         return "no_mutation_frontier"
 
     @staticmethod
@@ -38740,19 +38805,26 @@ class DoxaBase:
     def _revision_mutation_frontier_iris(
         queue_items: Iterable[RevisionNextActionQueueItem],
     ) -> list[str]:
-        mutation_queues = {
-            "apply_after_review",
-            "restage_after_review",
-            "repair_or_replace",
-        }
         frontier: list[str] = []
         for item in queue_items:
-            if item.queue not in mutation_queues:
-                continue
-            if item.resolved_target_iri is None:
+            if not DoxaBase._revision_next_action_queue_item_is_mutation_target(
+                item
+            ):
                 continue
             DoxaBase._append_unique(frontier, item.resolved_target_iri)
         return frontier
+
+    @staticmethod
+    def _revision_next_action_queue_item_is_mutation_target(
+        item: RevisionNextActionQueueItem,
+    ) -> bool:
+        if item.resolved_target_iri is None:
+            return False
+        if item.queue in {"apply_after_review", "restage_after_review"}:
+            return True
+        if item.queue != "repair_or_replace":
+            return False
+        return item.tool_name in STAGED_RECOVERY_MUTATING_TOOL_NAMES
 
     @staticmethod
     def _semantic_review_required_queue_counts(

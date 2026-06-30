@@ -1692,15 +1692,19 @@ For read-only planning over mixed source/current handoffs, prefer
 while `resolved_target_groups[]` collapses stale sources, refreshed successors,
 and applied-event aliases into a deduped target-family worklist.
 For scripts that intend to mutate, use `mutation_frontier_items` as the complete
-worklist. It includes existing apply/restage/repair targets and same-slot repair
-helper actions that create a successor; `mutation_frontier_iris` is the
-compatibility list for existing resolved target IRIs only.
+worklist. It includes existing apply/restage targets, repair targets only when
+the selected repair action is mutating, and same-slot repair helper actions that
+create a successor; `mutation_frontier_iris` is the compatibility list for
+existing resolved target IRIs only.
 Before using that worklist, check `mutation_allowed_after`. If it is
 `handoff_preflight_required_before_mutation`, run the imports in
 `blocking_preflight_actions` / `blocking_preflight_calls` and rerun the plan
 before mutating. `semantic_review_required_before_mutation` means no handoff
 preflight is blocking the current frontier, but the reviewed lane semantics
-still apply. `no_mutation_frontier` means there is no mutation worklist.
+still apply. `repair_inspection_required_before_mutation` means repair lanes
+exist, but their current route is diagnostic inspection or a read-only repair
+draft rather than an executable mutation. `no_mutation_frontier` means there is
+no mutation worklist.
 For multi-step or imported recovery work, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
 handoff_manifest_path=...)` before mutating. The session stores the ordered

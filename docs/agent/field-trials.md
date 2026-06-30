@@ -3224,6 +3224,14 @@ few useful gaps:
   `project_brief` now recursively redacts embedded profile draft actions for
   orientation safety. Direct `draft_profile_map_updates` responses still retain
   raw executable action payloads for local mutation review.
+- A staged conflict/rebase/version trial showed the recovery planner correctly
+  handled mechanical restage, apply-one-then-replan, graph-version diffs, and
+  handoff import gates, but `mutation_frontier_iris` could still include a
+  validation-repair row whose next concrete action was diagnostic inspection.
+  Repair lanes with only inspection or read-only repair-draft actions now stay
+  visible in `lanes` and `next_action_queue` but are excluded from
+  `mutation_frontier_iris` / `mutation_frontier_items`, with
+  `mutation_allowed_after="repair_inspection_required_before_mutation"`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

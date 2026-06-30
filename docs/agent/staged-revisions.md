@@ -250,11 +250,13 @@ events. When explicit inputs include both stale sources and their successors,
 `source_revision_iris`, `requested_revision_iris`, current/restage/applied
 context, and alternative-set metadata. Use `mutation_frontier_iris` as the
 compact deduped set of resolved
-apply/restage/repair targets; it excludes informational handled-stale rows,
-already-applied inspection targets, and repair helper calls that do not resolve
-to an existing IRI. Prefer `mutation_frontier_items` for unattended mutation
-loops: it combines existing revision targets with helper actions for repair
-lanes that create a successor and therefore have no current target IRI. Treat
+apply/restage targets and repair lanes only when the selected repair action is
+a concrete mutation; it excludes informational handled-stale rows,
+already-applied inspection targets, diagnostic repair-inspection rows, and
+repair helper calls that do not resolve to an existing IRI. Prefer
+`mutation_frontier_items` for unattended mutation loops: it combines existing
+revision targets with helper actions for repair lanes that create a successor
+and therefore have no current target IRI. Treat
 `lane_counts` and `next_action_queue_item_counts` as source-row counts, not a
 deduped apply/restage list; explicit inputs that include both a stale source and
 its restaged successor can count two `apply_after_review` lanes while the
@@ -272,7 +274,10 @@ existing revision target. In current responses this appears as a
 `helper_mutation_frontier_actions` / `helper_mutation_frontier_calls` as the
 top-level deduped list of preferred repair helper mutations. If that list is
 empty, fall back to `lane.next_action.arguments` or
-`lane.repair_draft.preferred_action.arguments` for that reviewed repair.
+`lane.repair_draft.preferred_action.arguments` for that reviewed repair. When a
+repair lane only has diagnostic inspection or a read-only repair draft, it is
+not part of `mutation_frontier_items`; follow the lane's inspection/export/draft
+actions first.
 When helper mutation actions are present, the planner also warns that they are
 not represented by `mutation_frontier_iris`; treat that warning as an unattended
 loop guard, not as a blocker.
