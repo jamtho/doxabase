@@ -2586,6 +2586,7 @@ class QueryRepairActionGroup:
     already_satisfied_action_count: int
     pending_required_extra_arguments: list[str]
     pending_action_options: list[dict[str, Any]]
+    group_advisories: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -17831,9 +17832,60 @@ class DoxaBase:
                         pending_required_extra_arguments
                     ),
                     pending_action_options=pending_action_options,
+                    group_advisories=(
+                        self._query_repair_action_group_advisories(issue)
+                    ),
                 )
             )
         return groups
+
+    def _query_repair_action_group_advisories(
+        self,
+        issue: QueryPlanningIssue,
+    ) -> list[dict[str, Any]]:
+        if issue.details is None:
+            return []
+        fixture_hint = issue.details.get("fixture_staleness_hint")
+        if not isinstance(fixture_hint, MappingABC):
+            return []
+        hint_type = fixture_hint.get("hint_type")
+        if hint_type != "known_fixture_tables_without_storage_accesses":
+            return []
+        project_brief_action = {
+            "action_label": "Review fixture staleness health task",
+            "tool_name": "project_brief",
+            "mcp_tool_name": "doxabase.project_brief",
+            "arguments": {},
+            "reason": (
+                "Known AIS or Polymarket fixture tables are present without "
+                "storage access metadata; review the grouped health task before "
+                "staging individual query repairs."
+            ),
+            "call": self._suggested_call_string("project_brief", {}),
+        }
+        return [
+            {
+                "code": "query_fixture_staleness_review",
+                "severity": "warning",
+                "source": "issue.details.fixture_staleness_hint",
+                "hint_type": hint_type,
+                "recommended_handling": "review_fixture_staleness_before_staging",
+                "suppression_policy": "review_group_before_member_mutation",
+                "reason": fixture_hint.get("message"),
+                "suggested_next_action": project_brief_action,
+                "suggested_next_call": project_brief_action["call"],
+                "fixture_names": list(fixture_hint.get("fixture_names") or []),
+                "known_fixture_table_iris": list(
+                    fixture_hint.get("known_fixture_table_iris") or []
+                ),
+                "dataset_matches_known_fixture": bool(
+                    fixture_hint.get("dataset_matches_known_fixture")
+                ),
+                "storage_access_count": fixture_hint.get(
+                    "global_storage_access_count"
+                ),
+            }
+        ]
 
     def _query_context_issues_with_pending_repair_actions(
         self,

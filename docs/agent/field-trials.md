@@ -1565,6 +1565,12 @@ few useful gaps:
   `current_staged_work_only=True` frontiers. It refuses apply/restage/repair
   mutation targets unless an explicit override records that review decided to
   close the proposal without mutating.
+- A query-repair routing trial showed the fixture-staleness warning worked in
+  project brief and issue details, but could still be missed by agents that
+  drove repairs directly from `suggested_repair_action_groups`. Repair groups
+  now expose `group_advisories` with the same `query_fixture_staleness_review`
+  anti-loop cue before scripts stage repeated missing-storage repairs for stale
+  AIS or Polymarket fixture capsules.
 - Post-rebuild workflow trials found four handoff polish points. Query contexts
   with both profile-run evidence and a real query target now have regression
   coverage for the intended action order: inspect `describe_profile_run` before

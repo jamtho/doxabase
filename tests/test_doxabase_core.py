@@ -18594,6 +18594,22 @@ def test_describe_query_context_flags_known_fixture_without_storage_access(
     assert dataset in fixture_hint["known_fixture_table_iris"]
     assert "stale or intentionally reduced" in fixture_hint["message"]
 
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_code == "missing_storage_access"
+    assert repair_group.action_status_counts == {"pending_review": 3}
+    assert len(repair_group.group_advisories) == 1
+    advisory = repair_group.group_advisories[0]
+    assert advisory["code"] == "query_fixture_staleness_review"
+    assert advisory["recommended_handling"] == (
+        "review_fixture_staleness_before_staging"
+    )
+    assert advisory["suppression_policy"] == "review_group_before_member_mutation"
+    assert advisory["fixture_names"] == ["AIS"]
+    assert advisory["storage_access_count"] == 0
+    assert advisory["dataset_matches_known_fixture"] is True
+    assert dataset in advisory["known_fixture_table_iris"]
+    assert advisory["suggested_next_action"]["tool_name"] == "project_brief"
+
 
 def test_describe_query_context_matches_current_polymarket_fixture_names(
     tmp_path: Path,

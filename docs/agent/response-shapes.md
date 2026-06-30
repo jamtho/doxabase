@@ -2837,6 +2837,7 @@ repair_group.skippable_action_count
 repair_group.already_satisfied_action_count
 repair_group.pending_required_extra_arguments
 repair_group.pending_action_options
+repair_group.group_advisories
 ```
 
 `group_name` is currently `query_repair_review`. `issue_index` points back into
@@ -2846,6 +2847,12 @@ hint without its `actions` array so scripts can inspect source/target metadata,
 candidate reviewed values, and mismatch reasons. Jump back to
 `query.issues[issue_index].details` for sibling issue details such as fixture
 staleness hints.
+`group_advisories` carries group-level warnings copied from sibling issue
+details when a script might otherwise follow only the lifted repair group. For
+example, known AIS or Polymarket fixture tables with zero storage accesses add
+`code="query_fixture_staleness_review"` and
+`recommended_handling="review_fixture_staleness_before_staging"`. This is an
+anti-loop advisory: it does not remove actions or mark them skipped.
 `actions` preserves the original ordered repair action templates. Copy an
 action's `arguments` or fill its `arguments_template`, add every
 `required_extra_arguments` value such as `rationale`, replace fields named in

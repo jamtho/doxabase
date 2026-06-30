@@ -1018,7 +1018,11 @@ without recording graph-revision rationale. If
 `issues[].details.fixture_staleness_hint` is present,
 known AIS or Polymarket fixture tables exist but the capsule has zero
 `rc:StorageAccess` resources; treat that as a stale/reduced fixture capsule and
-load fresh fixtures into scratch before judging query-target behavior.
+load fresh fixtures into scratch before judging query-target behavior. The
+lifted `suggested_repair_action_groups[]` row also carries this warning in
+`group_advisories`, so scripts that use the repair-group lane directly can
+review the fixture-health condition before staging repeated missing-storage
+repairs.
 `project_brief.health_tasks[]` also surfaces this as
 `query_fixture_staleness_review` when the current frontier contains query repair
 work, with `fixture_names`, `known_fixture_table_iris`, `storage_access_count`,

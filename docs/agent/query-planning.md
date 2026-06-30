@@ -36,8 +36,9 @@ Before fixture query-planning trials against the active MCP capsule, sanity-chec
 `storage_accesses == 0`, treat that capsule as stale or intentionally reduced
 and load the current fixtures into a scratch capsule before drawing product
 conclusions about query-target behavior. `describe_query_context` now carries
-the same warning in `missing_storage_access.details.fixture_staleness_hint` when
-known fixture tables are present with no storage access resources.
+the same warning in `missing_storage_access.details.fixture_staleness_hint` and
+on the lifted repair group's `group_advisories` when known fixture tables are
+present with no storage access resources.
 
 The reduced Polymarket fixture can already contain enough storage, layout, and
 partition metadata to produce a non-executed file handoff. For example,
@@ -329,6 +330,13 @@ Start with `describe_query_context(dataset_iri)`:
    returned `staged_review` rows ahead of fresh query-repair staging tasks; use
    `health_tasks` / `omitted_queue_counts` to widen the brief if a fresh repair
    queue is omitted by a low limit.
+   Repair groups can carry `group_advisories` for group-level routing warnings.
+   For known AIS or Polymarket fixture tables with zero storage accesses, the
+   missing-storage repair group repeats the fixture-staleness cue there so
+   scripts that follow only `suggested_repair_action_groups` still pause before
+   staging repeated per-table repairs. The advisory does not remove or mark
+   actions as skipped; it says to review the stale/reduced fixture condition
+   first.
    If `project_brief.health_tasks[]` includes
    `query_fixture_staleness_review`, known AIS or Polymarket fixture tables are
    present while `storage_accesses` is zero. Treat that as an advisory

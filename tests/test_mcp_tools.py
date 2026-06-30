@@ -7743,6 +7743,36 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     ]
 
 
+def test_describe_query_context_tool_surfaces_fixture_staleness_group_advisory(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="AIS Daily Broadcast Positions",
+        is_table=True,
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "missing_storage_access"
+    assert len(repair_group["group_advisories"]) == 1
+    advisory = repair_group["group_advisories"][0]
+    assert advisory["code"] == "query_fixture_staleness_review"
+    assert advisory["recommended_handling"] == (
+        "review_fixture_staleness_before_staging"
+    )
+    assert advisory["suppression_policy"] == "review_group_before_member_mutation"
+    assert advisory["fixture_names"] == ["AIS"]
+    assert advisory["storage_access_count"] == 0
+    assert advisory["dataset_matches_known_fixture"] is True
+    assert dataset in advisory["known_fixture_table_iris"]
+    assert advisory["suggested_next_action"]["tool_name"] == "project_brief"
+
+
 def test_stage_query_storage_access_repair_tool_stages_new_storage_link(
     tmp_path: Path,
 ) -> None:
