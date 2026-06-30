@@ -49390,10 +49390,17 @@ class DoxaBase:
             for triple in context.triples
             if include_seed_graphs or triple.graph not in SEED_GRAPH_NAMES
         ]
+        export_triples = self._context_slice_export_history_validation_closure(
+            export_triples
+        )
         graph_counts: dict[str, int] = {}
         for triple in export_triples:
             graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
         graph_names = list(graph_counts)
+        candidate_triple_count = max(
+            context.candidate_triple_count,
+            len(export_triples),
+        )
         sensitive_literal_count, matches, omitted_match_count = (
             self._context_slice_sensitive_matches(export_triples, limit=limit)
         )
@@ -49495,9 +49502,9 @@ class DoxaBase:
             graphs=graph_names,
             graph_counts=graph_counts,
             triples=len(export_triples),
-            candidate_triple_count=context.candidate_triple_count,
+            candidate_triple_count=candidate_triple_count,
             omitted_triple_count=max(
-                context.candidate_triple_count - len(export_triples),
+                candidate_triple_count - len(export_triples),
                 0,
             ),
             max_triples=max_triples,
@@ -49514,6 +49521,76 @@ class DoxaBase:
             scanner_note=scanner_note,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
+    def _context_slice_export_history_validation_closure(
+        self,
+        triples: Iterable[ResourceTriple],
+    ) -> list[ResourceTriple]:
+        selected = list(triples)
+        closure_predicates = {
+            self.expand_iri("rc:hasGraphPatch"),
+            self.expand_iri("rc:hasGraphSnapshot"),
+            self.expand_iri("rc:hasValidationResult"),
+        }
+        closure_types = {
+            self.expand_iri("rc:GraphPatch"),
+            self.expand_iri("rc:GraphSnapshot"),
+            PREFIXES["sh"] + "ValidationResult",
+        }
+        seen = {self._resource_triple_key(triple) for triple in selected}
+        queue: list[str] = []
+        queued: set[str] = set()
+
+        def enqueue(subject: str) -> None:
+            if subject not in queued:
+                queued.add(subject)
+                queue.append(subject)
+
+        for triple in selected:
+            if triple.graph != "history":
+                continue
+            if (
+                triple.predicate in closure_predicates
+                and triple.object_kind in {"uri", "bnode"}
+            ):
+                enqueue(triple.object)
+            if triple.predicate == str(RDF.type) and triple.object in closure_types:
+                enqueue(triple.subject)
+            elif set(triple.subject_types) & closure_types:
+                enqueue(triple.subject)
+
+        while queue:
+            subject = queue.pop(0)
+            for triple in self._resource_triples(
+                ["history"],
+                subject=subject,
+                limit=None,
+            ):
+                triple_key = self._resource_triple_key(triple)
+                if triple_key in seen:
+                    continue
+                seen.add(triple_key)
+                selected.append(triple)
+                if (
+                    triple.predicate in closure_predicates
+                    and triple.object_kind in {"uri", "bnode"}
+                ):
+                    enqueue(triple.object)
+        return selected
+
+    @staticmethod
+    def _resource_triple_key(
+        triple: ResourceTriple,
+    ) -> tuple[str, str, str, str, str, str | None, str | None]:
+        return (
+            triple.graph,
+            triple.subject,
+            triple.predicate,
+            triple.object,
+            triple.object_kind,
+            triple.object_datatype,
+            triple.object_lang,
         )
 
     def _context_slice_export_truncation_warnings(

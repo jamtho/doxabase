@@ -3540,6 +3540,15 @@ few useful gaps:
   and applied-source exports/context slices still recovered the review trail.
   Unattended scripts should require safe-list cardinality plus a ready apply
   check before applying even when the decision label says bulk apply.
+- A four-trial broad workflow wave found repeated friction in history-bearing
+  context-slice handoffs: query-evidence overlays, controlled graph replacement,
+  and non-tabular deep-lore slices imported into fresh receivers but failed
+  `validate_graph(scope="all")` when selected `history` triples referenced
+  partial `rc:GraphPatch` or `rc:GraphSnapshot` resources. Context-slice export
+  now adds the direct patch/snapshot/validation-result triples needed for
+  receiver validation and scans that closure, while still warning that SQLite
+  revision snapshot rows are absent and `export_handoff_bundle` is required for
+  exact recovery.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -3333,6 +3333,63 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
     assert export.suggested_next_actions[0].arguments["revision_iris"] == [
         staged.revision_iri
     ]
+    export_text = export_path.read_text(encoding="utf-8")
+    assert "patchContent" in export_text
+    assert "graphRole" in export_text
+    assert "tripleCount" in export_text
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_trig(export_path)
+    assert imported["history"] == export.graph_counts["history"]
+    assert imported["map"] == export.graph_counts["map"]
+    validation = receiver.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_context_slice_export_scans_history_validation_closure(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_HISTORY_CLOSURE"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    staged = db.stage_graph_revision(
+        summary="Stage Orders private comment",
+        rationale="Exercise context-slice preflight scanning of selected patch payloads.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{dataset}> rdfs:comment "Synthetic marker {fake_secret}." .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        included_graphs=["map"],
+    )
+
+    preflight = db.preflight_context_slice_export(
+        staged.revision_iri,
+        profile="deep_lore",
+        max_triples=400,
+        limit=5,
+    )
+
+    assert preflight.decision == "block"
+    assert preflight.would_block_sensitive_export is True
+    assert preflight.sensitive_literal_count >= 1
+    assert any("patchContent" in match.predicate for match in preflight.matches)
+    assert fake_secret not in json.dumps(to_dict(preflight))
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        db.export_context_slice(
+            tmp_path / "blocked-history-context.trig",
+            staged.revision_iri,
+            profile="deep_lore",
+            max_triples=400,
+            fail_on_sensitive=True,
+        )
 
 
 def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:

@@ -1265,7 +1265,10 @@ slice exports and `resource_scoped_review_context_not_recovery_complete` when
 history graph triples are included. If the selected slice includes `history`, the
 preflight warning and suggested actions also point to
 `export_handoff_bundle`; context slices can import revision review context but
-do not carry the revision snapshot rows needed for exact recovery.
+do not carry the revision snapshot rows needed for exact recovery. Selected
+history references pull in direct `rc:GraphPatch`, `rc:GraphSnapshot`, and
+validation-result triples so a fresh receiver can validate the imported review
+slice; that closure is also included in the preflight privacy scan.
 If the selected slice is truncated, `graphs` and `graph_counts` describe only
 the capped raw triples selected for export, not every structured resource role.
 Read the truncation warning for selected surface roles and omitted graph roles;
@@ -1286,7 +1289,9 @@ already contain the standard base ontology and shape seed graphs. Prefer this
 helper over `describe_context_slice(include_trig=true)` when the artifact must
 round-trip into a fresh capsule or avoid unrelated graph siblings. A written
 slice with `history` graph triples still has `recovery_complete=false` and
-returns an `export_handoff_bundle` action for recovery-complete handoff needs.
+returns an `export_handoff_bundle` action for recovery-complete handoff needs,
+even though selected patch/snapshot resources are validation-complete in the
+TriG review artifact.
 
 `doxabase.describe_pattern`
 

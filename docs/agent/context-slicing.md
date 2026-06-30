@@ -241,8 +241,11 @@ Context-slice export records include preflight-style routing fields:
 `handoff_fit`. Use them for unattended routing instead of inferring shareability
 from `sensitive_literal_count` alone.
 Scanner-clean context-slice exports only prove that the selected slice triples
-passed the scanner. They may omit staged patch payload literals, unrelated
-history rows, or stored revision snapshots that a full handoff would scan. For
+passed the scanner. History-bearing exports add the direct `rc:GraphPatch`,
+`rc:GraphSnapshot`, and validation-result triples needed for an imported review
+slice to validate, so selected staged patch payload literals are part of the
+preflight/export scan. They may still omit unrelated history rows or stored
+revision snapshots that a full handoff would scan. For
 staged/privacy review, run `export_preflight(export_kind="handoff_bundle")` or
 the grouped staged/profile export with `fail_on_sensitive=True` rather than
 treating a clean slice as whole-capsule privacy clearance.
@@ -259,8 +262,9 @@ before asking an agent to share or write a bundle.
 
 If a context-slice export includes the `history` graph, treat it as importable
 review context, not a recovery-complete revision handoff. It can carry
-`rc:GraphRevision` metadata, but it does not include SQLite-side revision
-snapshot rows. The export warning and suggested actions point to
+`rc:GraphRevision` metadata plus selected patch/snapshot validation closure, but
+it does not include SQLite-side revision snapshot rows. The export warning and
+suggested actions point to
 `export_handoff_bundle` when another capsule needs exact applied diffs,
 stale-drift checks, or staged-revision recovery.
 
