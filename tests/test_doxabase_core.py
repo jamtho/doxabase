@@ -2867,6 +2867,117 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert round_trip.search("Sensitive payroll", graph="map").matches == []
 
 
+def test_privacy_handoff_fallback_keeps_clean_slice_when_staged_markdown_is_dirty(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shareable = "https://example.test/project#ShareableOrders"
+    shareable_storage = db.record_map_storage_access(
+        "https://example.test/project#shareable_orders_storage",
+        label="Shareable orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/tmp/shareable/orders.parquet",
+        location_kind="object",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        shareable,
+        label="Shareable orders",
+        is_table=True,
+        storage_accesses=[shareable_storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage clean review row",
+        rationale="Clean staged row for export-time drift privacy coverage.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CleanReviewProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_REVIEW_ARTIFACT_DRIFT"
+    db.record_map_storage_access(
+        "https://example.test/project#dirty_storage",
+        label="Dirty storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/dirty.csv",
+        location_kind="object",
+    )
+
+    handoff_preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        revision_iris=[staged.revision_iri],
+        limit=5,
+    )
+    assert handoff_preflight.decision == "block"
+    assert handoff_preflight.would_block_sensitive_export is True
+    assert handoff_preflight.graph_sensitive_literal_count >= 1
+    assert handoff_preflight.snapshot_sensitive_literal_count == 0
+    assert "preflight_context_slice_export" in [
+        action.tool_name for action in handoff_preflight.suggested_next_actions
+    ]
+    assert fake_secret not in json.dumps(to_dict(handoff_preflight))
+
+    slice_preflight = db.preflight_context_slice_export(
+        [shareable],
+        profile="dataset_brief",
+        max_triples=200,
+        limit=5,
+    )
+    assert slice_preflight.decision == "clean_by_scanner_only"
+    assert slice_preflight.scanner_clean is True
+    assert slice_preflight.would_block_sensitive_export is False
+    assert slice_preflight.shareability_review_status == "required_not_completed"
+
+    slice_path = tmp_path / "shareable-context-slice.trig"
+    slice_export = db.export_context_slice(
+        slice_path,
+        [shareable],
+        profile="dataset_brief",
+        max_triples=200,
+        fail_on_sensitive=True,
+    )
+    slice_text = slice_path.read_text(encoding="utf-8")
+    assert slice_export.importable is True
+    assert slice_export.recovery_complete is False
+    assert "ShareableOrders" in slice_text
+    assert "dirty_storage" not in slice_text
+    assert fake_secret not in slice_text
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    assert receiver.import_trig(slice_path) == {"map": slice_export.triples}
+
+    staged_description = db.describe_staged_revision(staged.revision_iri)
+    assert fake_secret not in (staged_description.patches[0].content or "")
+
+    grouped_path = tmp_path / "clean-staged-after-dirty-drift.md"
+    grouped_export = db.export_staged_revisions([staged.revision_iri], grouped_path)
+    grouped_text = grouped_path.read_text(encoding="utf-8")
+    assert grouped_export.sensitive_literal_count >= 1
+    assert grouped_export.privacy_warnings
+    assert fake_secret not in " ".join(grouped_export.privacy_warnings)
+    assert fake_secret in grouped_text
+    assert "target_count_drift" in grouped_text
+
+    blocked_grouped_path = tmp_path / "blocked-clean-staged-after-drift.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True") as excinfo:
+        db.export_staged_revisions(
+            [staged.revision_iri],
+            blocked_grouped_path,
+            fail_on_sensitive=True,
+        )
+    assert fake_secret not in str(excinfo.value)
+    assert not blocked_grouped_path.exists()
+
+
 def test_query_failure_evidence_slice_exports_when_broad_handoff_blocks_sensitive_unrelated_graph_content(
     tmp_path: Path,
 ) -> None:

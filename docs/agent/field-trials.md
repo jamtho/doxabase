@@ -185,6 +185,15 @@ semantics: input roles, transform functions, ordering, selection scope, and
 competing RDF framings still need observations, patterns, staged
 systematisation, or a future dedicated primitive.
 
+A privacy/export review-artifact trial found that the safe unattended handoff
+route is a matrix, not a single scanner result. If broad
+`export_preflight(export_kind="handoff_bundle")` blocks on unrelated project
+content, use `preflight_context_slice_export` / `export_context_slice` for
+resource-scoped importable review context and keep `fail_on_sensitive=true`.
+Do not treat a clean staged patch as automatically shareable Markdown: staged
+review exports include live apply-check drift, so current graph content outside
+the patch can still make the generated Markdown dirty.
+
 ## Safety
 
 Use a scratch capsule, for example:

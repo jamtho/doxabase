@@ -113,6 +113,14 @@ Privacy/export route matrix:
 | Context slice TriG | `preflight_context_slice_export(...)` | `export_context_slice(..., fail_on_sensitive=true)` |
 | Staged/profile Markdown review | Attempt the relevant export with `fail_on_sensitive=true` | `export_staged_revision`, `export_staged_revisions`, or `export_profile_insight_review_bundle` |
 
+Staged/profile Markdown has no separate export preflight because the generated
+review text depends on live apply checks and route accounting. Treat
+`fail_on_sensitive=true` as the preflight: a staged row whose patch is clean can
+still produce dirty Markdown if export-time drift or validation context quotes
+unrelated current graph content. When a broad handoff preflight blocks, do not
+share an apparently clean staged/profile Markdown review unless that export
+succeeds with `fail_on_sensitive=true`.
+
 `project_brief` privacy health follows the handoff-bundle route, so its
 `sensitive_literal_count` can include both current project graph matches and
 stored revision-snapshot matches.
