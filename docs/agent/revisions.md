@@ -79,6 +79,8 @@ browsing rather than revision-record routing. It lists stored snapshots for one
 graph role with `snapshot_semantics` values such as `staged_before_graph`,
 `applied_after_graph`, and `recorded_graph_snapshot`, plus the role-local
 count/digest and snapshot-evidence status. It is not checkout/replay; call
+`describe_graph_version_diff(graph_role, before_revision_iri)` to compare a
+stored version with the current graph, or
 `describe_revision_graph_snapshot(..., include_triples=True)` for exact stored
 triples on a specific version when that is necessary and safe to inspect.
 Use `describe_revision_lineage(revision_iri)` when you already have any staged
@@ -711,8 +713,10 @@ For a graph-role timeline over stored snapshots, use
 content digests; `applied_source` gives compact intent context; the staged
 source gives the full intended patch. The diff helper compares the staged
 source's before snapshots with the applied event's after snapshots for changed
-graphs. It does not browse arbitrary historical graph versions, and
-`list_graph_versions` still does not provide checkout/replay.
+graphs. Use `describe_graph_version_diff(graph_role, before_revision_iri)` for
+arbitrary stored-version-to-current comparison, or pass `after_revision_iri` to
+compare two stored versions. `list_graph_versions` still does not provide
+checkout/replay.
 
 ## Limits
 

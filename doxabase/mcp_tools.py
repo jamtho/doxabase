@@ -204,6 +204,29 @@ def describe_applied_revision_diff_tool(
     )
 
 
+def describe_graph_version_diff_tool(
+    db: DoxaBase,
+    graph_role: str,
+    before_revision_iri: str,
+    after_revision_iri: str | None = None,
+    compare_to_current: bool = True,
+    graph: str | None = "history",
+    include_triples: bool = False,
+    max_triples: int = 500,
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_graph_version_diff(
+            graph_role=graph_role,
+            before_revision_iri=before_revision_iri,
+            after_revision_iri=after_revision_iri,
+            compare_to_current=compare_to_current,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
+    )
+
+
 def list_graph_revisions_tool(
     db: DoxaBase,
     revision_type: str | None = None,

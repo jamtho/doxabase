@@ -349,12 +349,24 @@ when a workflow needs the timeline of `map`, `ontology`, `patterns`, or another
 graph role without scripting over revision rows. Rows include `revision_iri`,
 `record_kind`, `snapshot_semantics`, `triple_count`, `content_digest`,
 `count_basis`, `exact_snapshot_available`, `snapshot_evidence_status`, lineage
-links, and suggested calls to `describe_revision_graph_snapshot`.
+links, and suggested calls to `describe_revision_graph_snapshot` and, for exact
+rows, `describe_graph_version_diff`.
 `snapshot_semantics` distinguishes `staged_before_graph`,
 `applied_after_graph`, and `recorded_graph_snapshot`. Set `exact_only=True` to
 hide RDF-only count/digest snapshots, and `include_current=False` when a caller
 only wants historical snapshot rows. This is stored-snapshot timeline browsing,
 not temporal checkout or replay.
+
+`doxabase.describe_graph_version_diff`
+
+Compares one stored graph-version snapshot with either another stored version
+or the current live graph for the same graph role. Call it after
+`list_graph_versions` when an agent needs to answer "what changed since this
+version?" rather than merely inspect count/digest metadata. Pass
+`after_revision_iri` to compare two stored snapshots; omit it to compare the
+`before_revision_iri` snapshot with the current graph. Exact added/removed
+triple counts are reported when stored rows are available, and
+`include_triples=true` includes bounded changed-triple arrays.
 
 `doxabase.describe_revision_lineage`
 

@@ -3883,7 +3883,53 @@ next?" `snapshot_semantics` labels staged-source rows as
 history rows as `recorded_graph_snapshot`. The current live graph summary is in
 `current_graph` unless `include_current=False`. This helper lists stored
 snapshots and their count/digest evidence; it does not checkout historical graph
-state or replay revisions.
+state or replay revisions. Exact version rows suggest
+`describe_graph_version_diff()` to compare that stored version with the current
+live graph.
+
+`db.describe_graph_version_diff(graph_role, before_revision_iri, ...)` returns
+`GraphVersionDiffDescription`:
+
+```python
+diff.graph_role
+diff.graph
+diff.before_revision_iri
+diff.after_revision_iri
+diff.compare_to_current
+diff.after_target_kind
+diff.before_snapshot
+diff.after_snapshot
+diff.current_graph
+diff.count_basis
+diff.before_triple_count
+diff.after_triple_count
+diff.count_delta
+diff.before_content_digest
+diff.after_content_digest
+diff.digest_changed
+diff.exact_changed_triples_available
+diff.exact_changed_triples_included
+diff.triples_added_count
+diff.triples_removed_count
+diff.triples_added_truncated
+diff.triples_removed_truncated
+diff.max_triples
+diff.triples_added
+diff.triples_removed
+diff.suggested_next_actions
+diff.suggested_next_calls
+diff.note
+```
+
+Use `describe_graph_version_diff("map", revision_iri)` after
+`list_graph_versions("map")` when the question is "what changed between this
+stored version and the current graph?" Pass `after_revision_iri=...` to compare
+two stored graph versions instead. `after_target_kind` is
+`current_graph` or `stored_revision_snapshot`; `after_snapshot` is populated
+only for stored-version comparisons, and `current_graph` is populated only for
+snapshot-to-current comparisons. When `exact_changed_triples_available=True`,
+the helper can report exact added/removed triples; pass `include_triples=True`
+only when those triples are safe and useful to inspect.
 
 First-read triage fields:
 

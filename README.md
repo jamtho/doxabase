@@ -125,6 +125,8 @@ Implemented:
   revision event in history.
 - `describe_applied_revision_diff()` for stored before/after snapshot diffs on
   applied staged revision events, with exact triple arrays opt-in.
+- `describe_graph_version_diff()` for comparing a stored graph-version snapshot
+  with another stored snapshot or the current live graph.
 - `draft_staged_revision_rebase()` for read-only repair planning when a staged
   revision routes to repair/replace rather than mechanical restage.
 - `plan_staged_revision_recovery()` and `restage_staged_revisions()` for
@@ -306,17 +308,19 @@ Useful first tool calls for an agent:
     still-useful staged proposal stale
 30. `doxabase.describe_applied_revision_diff` when an applied staged revision
     needs stored before/after snapshot diff counts or opt-in exact triples
-31. `doxabase.apply_staged_revision` when a staged proposal should become
+31. `doxabase.describe_graph_version_diff` when a stored graph version should
+    be compared with another stored version or the current live graph
+32. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-32. `doxabase.record_map_dataset` and related map helpers for current-best facts
-33. `doxabase.validate_graph` with `scope="all"`
-34. `doxabase.export_preflight` before unattended or shareable RDF/snapshot
+33. `doxabase.record_map_dataset` and related map helpers for current-best facts
+34. `doxabase.validate_graph` with `scope="all"`
+35. `doxabase.export_preflight` before unattended or shareable RDF/snapshot
     exports, so scanner-clean and block decisions are explicit before choosing
     paths
-35. `doxabase.export_trig` when you need a named-graph project review bundle
-36. `doxabase.record_graph_revision` when the bundle/change rationale should be
+36. `doxabase.export_trig` when you need a named-graph project review bundle
+37. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-37. `doxabase.describe_graph_revision` when reviewing a history record
+38. `doxabase.describe_graph_revision` when reviewing a history record
 
 Use `doxabase.load_example_fixtures` only in a fresh scratch or example capsule,
 after confirming you are not attached to a real project capsule.

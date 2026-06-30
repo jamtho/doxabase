@@ -2045,6 +2045,38 @@ class GraphVersionList:
 
 
 @dataclass(frozen=True)
+class GraphVersionDiffDescription:
+    graph_role: str
+    graph: str | None
+    before_revision_iri: str
+    after_revision_iri: str | None
+    compare_to_current: bool
+    after_target_kind: str
+    before_snapshot: RevisionGraphSnapshotDescription
+    after_snapshot: RevisionGraphSnapshotDescription | None
+    current_graph: GraphSnapshotDescription | None
+    count_basis: str
+    before_triple_count: int | None
+    after_triple_count: int | None
+    count_delta: int | None
+    before_content_digest: str | None
+    after_content_digest: str | None
+    digest_changed: bool | None
+    exact_changed_triples_available: bool
+    exact_changed_triples_included: bool
+    triples_added_count: int | None
+    triples_removed_count: int | None
+    triples_added_truncated: bool
+    triples_removed_truncated: bool
+    max_triples: int
+    triples_added: list[GraphTripleDescription]
+    triples_removed: list[GraphTripleDescription]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class RevisionLineageDescription:
     selected_revision: GraphRevisionListItem
     selected_revision_iri: str
@@ -7903,6 +7935,189 @@ class DoxaBase:
             ),
         )
 
+    def describe_graph_version_diff(
+        self,
+        graph_role: str,
+        before_revision_iri: str,
+        *,
+        after_revision_iri: str | None = None,
+        compare_to_current: bool = True,
+        graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
+    ) -> GraphVersionDiffDescription:
+        if graph_role not in self._known_graph_names():
+            raise DoxaBaseError(f"Unknown graph role: {graph_role}")
+        if max_triples < 1:
+            raise DoxaBaseError("max_triples must be at least 1")
+        effective_compare_to_current = after_revision_iri is None and compare_to_current
+        if after_revision_iri is None and not effective_compare_to_current:
+            raise DoxaBaseError(
+                "after_revision_iri is required when compare_to_current is False"
+            )
+
+        before_snapshot = self.describe_revision_graph_snapshot(
+            before_revision_iri,
+            graph_role,
+            graph=graph,
+            include_triples=False,
+        )
+        before_rows: set[GraphStorageRow] | None = None
+        after_rows: set[GraphStorageRow] | None = None
+        after_snapshot: RevisionGraphSnapshotDescription | None = None
+        current_graph: GraphSnapshotDescription | None = None
+        after_triple_count: int | None
+        after_content_digest: str | None
+        after_target_kind: str
+
+        if before_snapshot.exact_snapshot_available:
+            before_rows = set(
+                self._graph_snapshot_storage_rows(
+                    before_snapshot.revision_iri,
+                    graph_role,
+                )
+            )
+
+        if after_revision_iri is None:
+            after_target_kind = "current_graph"
+            current_graph = GraphSnapshotDescription(
+                graph_role=graph_role,
+                triple_count=self.triple_count(graph_role),
+                content_digest=self._graph_content_digest(graph_role),
+            )
+            after_triple_count = current_graph.triple_count
+            after_content_digest = current_graph.content_digest
+            after_rows = set(self._graph_storage_rows(graph_role))
+        else:
+            after_target_kind = "stored_revision_snapshot"
+            after_snapshot = self.describe_revision_graph_snapshot(
+                after_revision_iri,
+                graph_role,
+                graph=graph,
+                include_triples=False,
+            )
+            after_triple_count = after_snapshot.triple_count
+            after_content_digest = after_snapshot.content_digest
+            if after_snapshot.exact_snapshot_available:
+                after_rows = set(
+                    self._graph_snapshot_storage_rows(
+                        after_snapshot.revision_iri,
+                        graph_role,
+                    )
+                )
+
+        exact_available = before_rows is not None and after_rows is not None
+        triples_added: list[GraphTripleDescription] = []
+        triples_removed: list[GraphTripleDescription] = []
+        triples_added_count: int | None = None
+        triples_removed_count: int | None = None
+        triples_added_truncated = False
+        triples_removed_truncated = False
+        exact_included = False
+
+        if exact_available:
+            added_rows = self._sort_graph_storage_rows(after_rows - before_rows)
+            removed_rows = self._sort_graph_storage_rows(before_rows - after_rows)
+            triples_added_count = len(added_rows)
+            triples_removed_count = len(removed_rows)
+            if include_triples:
+                exact_included = True
+                triples_added_truncated = triples_added_count > max_triples
+                triples_removed_truncated = triples_removed_count > max_triples
+                triples_added = [
+                    self._graph_triple_description(row)
+                    for row in added_rows[:max_triples]
+                ]
+                triples_removed = [
+                    self._graph_triple_description(row)
+                    for row in removed_rows[:max_triples]
+                ]
+                note = (
+                    "Exact graph-version changed triples are included from "
+                    "stored snapshot rows and the selected after target."
+                )
+                if triples_added_truncated or triples_removed_truncated:
+                    note = (
+                        "Exact graph-version changed triples are available and "
+                        "included up to max_triples per added/removed array."
+                    )
+            else:
+                triples_added_truncated = triples_added_count > 0
+                triples_removed_truncated = triples_removed_count > 0
+                note = (
+                    "Exact graph-version changed triples are available but "
+                    "omitted; call describe_graph_version_diff(..., "
+                    "include_triples=True) to include arrays."
+                )
+        else:
+            note = (
+                "Exact graph-version changed triples are unavailable because "
+                "one or both comparison points lack stored snapshot rows."
+            )
+            if after_target_kind == "current_graph":
+                note = (
+                    "Exact graph-version changed triples are unavailable "
+                    "because the before revision lacks stored snapshot rows."
+                )
+
+        count_delta = (
+            after_triple_count - before_snapshot.triple_count
+            if after_triple_count is not None
+            and before_snapshot.triple_count is not None
+            else None
+        )
+        digest_changed = (
+            after_content_digest != before_snapshot.content_digest
+            if after_content_digest is not None
+            and before_snapshot.content_digest is not None
+            else None
+        )
+        suggested_next_actions = self._graph_version_diff_suggested_actions(
+            graph_role=graph_role,
+            before_revision_iri=before_snapshot.revision_iri,
+            after_revision_iri=(
+                after_snapshot.revision_iri if after_snapshot is not None else None
+            ),
+            compare_to_current=effective_compare_to_current,
+            exact_available=exact_available,
+            include_triples=include_triples,
+            has_changes=bool(triples_added_count or triples_removed_count),
+        )
+        return GraphVersionDiffDescription(
+            graph_role=graph_role,
+            graph=graph,
+            before_revision_iri=before_snapshot.revision_iri,
+            after_revision_iri=(
+                after_snapshot.revision_iri if after_snapshot is not None else None
+            ),
+            compare_to_current=effective_compare_to_current,
+            after_target_kind=after_target_kind,
+            before_snapshot=before_snapshot,
+            after_snapshot=after_snapshot,
+            current_graph=current_graph,
+            count_basis="target_graph_only",
+            before_triple_count=before_snapshot.triple_count,
+            after_triple_count=after_triple_count,
+            count_delta=count_delta,
+            before_content_digest=before_snapshot.content_digest,
+            after_content_digest=after_content_digest,
+            digest_changed=digest_changed,
+            exact_changed_triples_available=exact_available,
+            exact_changed_triples_included=exact_included,
+            triples_added_count=triples_added_count,
+            triples_removed_count=triples_removed_count,
+            triples_added_truncated=triples_added_truncated,
+            triples_removed_truncated=triples_removed_truncated,
+            max_triples=max_triples,
+            triples_added=triples_added,
+            triples_removed=triples_removed,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+            note=note,
+        )
+
     def _graph_version_snapshot_for_revision(
         self,
         revision: GraphRevisionListItem,
@@ -7941,6 +8156,32 @@ class DoxaBase:
                 ),
             )
         ]
+        if snapshot.exact_snapshot_available:
+            suggested_next_actions.append(
+                SuggestedNextAction(
+                    action_label="Compare graph version to current",
+                    tool_name="describe_graph_version_diff",
+                    mcp_tool_name="doxabase.describe_graph_version_diff",
+                    arguments={
+                        "graph_role": graph_role,
+                        "before_revision_iri": revision.iri,
+                        "compare_to_current": True,
+                    },
+                    reason=(
+                        "Compare this stored graph version with the current "
+                        "live graph, including exact changed triples when "
+                        "include_triples=True is safe and useful."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_graph_version_diff",
+                        {
+                            "graph_role": graph_role,
+                            "before_revision_iri": revision.iri,
+                            "compare_to_current": True,
+                        },
+                    ),
+                )
+            )
         suggested_next_actions = self._with_revision_snapshot_evidence_actions(
             suggested_next_actions,
             snapshot.snapshot_evidence,
@@ -8007,6 +8248,90 @@ class DoxaBase:
             status = version.snapshot_evidence_status
             counts[status] = counts.get(status, 0) + 1
         return counts
+
+    def _graph_version_diff_suggested_actions(
+        self,
+        *,
+        graph_role: str,
+        before_revision_iri: str,
+        after_revision_iri: str | None,
+        compare_to_current: bool,
+        exact_available: bool,
+        include_triples: bool,
+        has_changes: bool,
+    ) -> list[SuggestedNextAction]:
+        actions = [
+            SuggestedNextAction(
+                action_label="Inspect before snapshot",
+                tool_name="describe_revision_graph_snapshot",
+                mcp_tool_name="doxabase.describe_revision_graph_snapshot",
+                arguments={
+                    "iri": before_revision_iri,
+                    "graph_role": graph_role,
+                },
+                reason=(
+                    "Inspect the stored before snapshot metadata or exact "
+                    "triples for this graph role."
+                ),
+                call=self._suggested_call_string(
+                    "describe_revision_graph_snapshot",
+                    {
+                        "iri": before_revision_iri,
+                        "graph_role": graph_role,
+                    },
+                ),
+            )
+        ]
+        if after_revision_iri is not None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect after snapshot",
+                    tool_name="describe_revision_graph_snapshot",
+                    mcp_tool_name="doxabase.describe_revision_graph_snapshot",
+                    arguments={
+                        "iri": after_revision_iri,
+                        "graph_role": graph_role,
+                    },
+                    reason=(
+                        "Inspect the stored after snapshot metadata or exact "
+                        "triples for this graph role."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_revision_graph_snapshot",
+                        {
+                            "iri": after_revision_iri,
+                            "graph_role": graph_role,
+                        },
+                    ),
+                )
+            )
+        if exact_available and has_changes and not include_triples:
+            arguments: dict[str, Any] = {
+                "graph_role": graph_role,
+                "before_revision_iri": before_revision_iri,
+                "include_triples": True,
+            }
+            if after_revision_iri is not None:
+                arguments["after_revision_iri"] = after_revision_iri
+            elif compare_to_current:
+                arguments["compare_to_current"] = True
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Include changed triples",
+                    tool_name="describe_graph_version_diff",
+                    mcp_tool_name="doxabase.describe_graph_version_diff",
+                    arguments=arguments,
+                    reason=(
+                        "Exact changed triples are available; include them "
+                        "when the diff content is safe and useful to inspect."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_graph_version_diff",
+                        arguments,
+                    ),
+                )
+            )
+        return actions
 
     @staticmethod
     def _graph_revision_list_counts(
@@ -52203,12 +52528,14 @@ class DoxaBase:
             sources=list(
                 dict.fromkeys(self._objects(graphs, evidence_iri, str(DCTERMS.source)))
             ),
-            source_spans=[
-                self._describe_source_span(span_iri, graphs)
-                for span_iri in dict.fromkeys(
-                    self._objects(graphs, evidence_iri, "rc:sourceSpan")
-                )
-            ],
+            source_spans=self._sort_source_span_descriptions(
+                [
+                    self._describe_source_span(span_iri, graphs)
+                    for span_iri in dict.fromkeys(
+                        self._objects(graphs, evidence_iri, "rc:sourceSpan")
+                    )
+                ]
+            ),
             query_execution_status=self._first_object(
                 graphs,
                 evidence_iri,
@@ -52236,6 +52563,26 @@ class DoxaBase:
             end_line=self._int_object(graphs, source_span_iri, "rc:endLine"),
             source_kind=source_kind,
             source_kind_label=self._label_for_resource(source_kind),
+        )
+
+    def _sort_source_span_descriptions(
+        self,
+        spans: Iterable[SourceSpanDescription],
+    ) -> list[SourceSpanDescription]:
+        priority_by_kind = {
+            self.expand_iri("rc:QuerySource"): 0,
+            self.expand_iri("rc:DataSampleSource"): 1,
+        }
+        return sorted(
+            spans,
+            key=lambda span: (
+                priority_by_kind.get(span.source_kind or "", 2),
+                span.source_path or "",
+                span.source_section or "",
+                span.start_line or 0,
+                span.end_line or 0,
+                span.iri,
+            ),
         )
 
     def _describe_staged_graph_patch(

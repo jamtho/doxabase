@@ -17,6 +17,7 @@ from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_profile_run_tool,
     describe_graph_revision_tool,
+    describe_graph_version_diff_tool,
     describe_pattern_tool,
     describe_query_context_tool,
     describe_revision_graph_snapshot_tool,
@@ -147,6 +148,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_revision_snapshot_evidence" in tool_names
     assert "doxabase.describe_revision_graph_snapshot" in tool_names
     assert "doxabase.describe_applied_revision_diff" in tool_names
+    assert "doxabase.describe_graph_version_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.list_graph_versions" in tool_names
     assert "doxabase.describe_revision_lineage" in tool_names
@@ -3875,6 +3877,96 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert [row["revision_iri"] for row in exact_staged["versions"]] == [
         staged["revision_iri"]
     ]
+
+
+def test_describe_graph_version_diff_tool_returns_json_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first_staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    first_applied = apply_staged_revision_tool(
+        db,
+        first_staged["revision_iri"],
+        created_at="2026-06-01T10:01:00Z",
+    )
+    second_staged = stage_graph_revision_tool(
+        db,
+        summary="Stage message label",
+        rationale="A later revision extends the map after the first snapshot.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Messages rdfs:label "Messages" .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    apply_staged_revision_tool(
+        db,
+        second_staged["revision_iri"],
+        created_at="2026-06-01T10:03:00Z",
+    )
+
+    stored_diff = describe_graph_version_diff_tool(
+        db,
+        graph_role="map",
+        before_revision_iri=first_staged["revision_iri"],
+        after_revision_iri=first_applied["applied_revision_iri"],
+    )
+
+    assert stored_diff["after_target_kind"] == "stored_revision_snapshot"
+    assert stored_diff["compare_to_current"] is False
+    assert stored_diff["before_triple_count"] == 0
+    assert stored_diff["after_triple_count"] == 1
+    assert stored_diff["count_delta"] == 1
+    assert stored_diff["exact_changed_triples_available"] is True
+    assert stored_diff["exact_changed_triples_included"] is False
+    assert stored_diff["triples_added_count"] == 1
+    assert stored_diff["triples_added"] == []
+    assert stored_diff["after_snapshot"]["revision_iri"] == (
+        first_applied["applied_revision_iri"]
+    )
+
+    current_diff = describe_graph_version_diff_tool(
+        db,
+        graph_role="map",
+        before_revision_iri=first_applied["applied_revision_iri"],
+        include_triples=True,
+    )
+
+    assert current_diff["after_revision_iri"] is None
+    assert current_diff["compare_to_current"] is True
+    assert current_diff["after_target_kind"] == "current_graph"
+    assert current_diff["current_graph"]["triple_count"] == db.triple_count("map")
+    assert current_diff["after_snapshot"] is None
+    assert current_diff["count_delta"] == 1
+    assert current_diff["exact_changed_triples_included"] is True
+    assert current_diff["triples_added_count"] == 1
+    assert len(current_diff["triples_added"]) == 1
+    assert current_diff["suggested_next_actions"][0]["tool_name"] == (
+        "describe_revision_graph_snapshot"
+    )
 
 
 def test_list_resource_revisions_tool_returns_json_like_payload(

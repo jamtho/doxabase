@@ -15,6 +15,7 @@ from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_context_slice_tool,
     describe_graph_revision_tool,
+    describe_graph_version_diff_tool,
     describe_pattern_tool,
     describe_profile_run_tool,
     describe_query_context_tool,
@@ -521,6 +522,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         return describe_applied_revision_diff_tool(
             db,
             iri=iri,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
+
+    @server.tool(name="doxabase.describe_graph_version_diff")
+    def describe_graph_version_diff(
+        graph_role: str,
+        before_revision_iri: str,
+        after_revision_iri: str | None = None,
+        compare_to_current: bool = True,
+        graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
+    ) -> dict[str, Any]:
+        """Compare a stored graph version to another version or current graph."""
+
+        return describe_graph_version_diff_tool(
+            db,
+            graph_role=graph_role,
+            before_revision_iri=before_revision_iri,
+            after_revision_iri=after_revision_iri,
+            compare_to_current=compare_to_current,
             graph=graph,
             include_triples=include_triples,
             max_triples=max_triples,

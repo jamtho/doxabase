@@ -1604,6 +1604,13 @@ revision IRI, `record_kind`, lineage links, role-local count/digest,
 Set `exact_only=True` to keep only rows with exact stored snapshot quads. This
 is a read-only timeline browser over stored revision snapshots, not a graph
 checkout or replay API.
+`describe_graph_version_diff(graph_role, before_revision_iri,
+after_revision_iri=None, compare_to_current=True, graph="history",
+include_triples=False, max_triples=500)` compares a stored graph-version
+snapshot with either another stored snapshot or the current live graph. It
+returns before/after count and digest metadata plus exact added/removed triple
+counts when stored rows are available. Changed-triple arrays are omitted by
+default; pass `include_triples=True` to include them, capped by `max_triples`.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
 or missing project/history RDF. Those actions mark placeholder paths with

@@ -11971,6 +11971,14 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert staged_row.suggested_next_actions[0].tool_name == (
         "describe_revision_graph_snapshot"
     )
+    assert staged_row.suggested_next_actions[1].tool_name == (
+        "describe_graph_version_diff"
+    )
+    assert staged_row.suggested_next_actions[1].arguments == {
+        "graph_role": "map",
+        "before_revision_iri": staged.revision_iri,
+        "compare_to_current": True,
+    }
 
     assert applied_row.record_kind == "applied_event"
     assert applied_row.snapshot_semantics == "applied_after_graph"
@@ -12001,6 +12009,144 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert second_page.count == 2
     assert second_page.returned_count == 1
     assert second_page.versions[0].revision_iri == staged.revision_iri
+
+
+def test_describe_graph_version_diff_compares_versions_and_current(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first_staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    first_applied = db.apply_staged_revision(
+        first_staged.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    second_staged = db.stage_graph_revision(
+        summary="Stage messages label and orders table",
+        rationale="A later revision extends the map after the first snapshot.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Messages rdfs:label "Messages" .
+                    ex:Orders a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    second_applied = db.apply_staged_revision(
+        second_staged.revision_iri,
+        created_at="2026-06-01T10:03:00Z",
+    )
+
+    stored_diff = db.describe_graph_version_diff(
+        "map",
+        first_staged.revision_iri,
+        after_revision_iri=first_applied.applied_revision_iri,
+    )
+
+    assert stored_diff.graph_role == "map"
+    assert stored_diff.graph == "history"
+    assert stored_diff.before_revision_iri == first_staged.revision_iri
+    assert stored_diff.after_revision_iri == first_applied.applied_revision_iri
+    assert stored_diff.compare_to_current is False
+    assert stored_diff.after_target_kind == "stored_revision_snapshot"
+    assert stored_diff.before_snapshot.triple_count == 0
+    assert stored_diff.after_snapshot is not None
+    assert stored_diff.after_snapshot.triple_count == 1
+    assert stored_diff.current_graph is None
+    assert stored_diff.count_basis == "target_graph_only"
+    assert stored_diff.before_triple_count == 0
+    assert stored_diff.after_triple_count == 1
+    assert stored_diff.count_delta == 1
+    assert stored_diff.digest_changed is True
+    assert stored_diff.exact_changed_triples_available is True
+    assert stored_diff.exact_changed_triples_included is False
+    assert stored_diff.triples_added_count == 1
+    assert stored_diff.triples_removed_count == 0
+    assert stored_diff.triples_added_truncated is True
+    assert stored_diff.triples_removed_truncated is False
+    assert [action.tool_name for action in stored_diff.suggested_next_actions] == [
+        "describe_revision_graph_snapshot",
+        "describe_revision_graph_snapshot",
+        "describe_graph_version_diff",
+    ]
+
+    current_diff = db.describe_graph_version_diff(
+        "map",
+        first_applied.applied_revision_iri,
+        include_triples=True,
+        max_triples=1,
+    )
+
+    assert current_diff.after_revision_iri is None
+    assert current_diff.compare_to_current is True
+    assert current_diff.after_target_kind == "current_graph"
+    assert current_diff.before_snapshot.triple_count == 1
+    assert current_diff.after_snapshot is None
+    assert current_diff.current_graph is not None
+    assert current_diff.current_graph.triple_count == db.triple_count("map")
+    assert current_diff.after_triple_count == db.triple_count("map")
+    assert current_diff.count_delta == 2
+    assert current_diff.digest_changed is True
+    assert current_diff.exact_changed_triples_available is True
+    assert current_diff.exact_changed_triples_included is True
+    assert current_diff.triples_added_count == 2
+    assert current_diff.triples_removed_count == 0
+    assert current_diff.triples_added_truncated is True
+    assert current_diff.triples_removed_truncated is False
+    assert current_diff.max_triples == 1
+    assert len(current_diff.triples_added) == 1
+    assert current_diff.triples_removed == []
+    assert {triple.subject for triple in current_diff.triples_added} <= {
+        "https://example.test/project#Messages",
+        "https://example.test/project#Orders",
+    }
+    assert "Exact graph-version changed triples" in current_diff.note
+
+    same_current_diff = db.describe_graph_version_diff(
+        "map",
+        second_applied.applied_revision_iri,
+    )
+    assert same_current_diff.count_delta == 0
+    assert same_current_diff.digest_changed is False
+    assert same_current_diff.triples_added_count == 0
+    assert same_current_diff.triples_removed_count == 0
+    assert [
+        action.tool_name for action in same_current_diff.suggested_next_actions
+    ] == ["describe_revision_graph_snapshot"]
+
+    with pytest.raises(DoxaBaseError, match="after_revision_iri is required"):
+        db.describe_graph_version_diff(
+            "map",
+            first_applied.applied_revision_iri,
+            compare_to_current=False,
+        )
+    with pytest.raises(DoxaBaseError, match="max_triples must be at least 1"):
+        db.describe_graph_version_diff(
+            "map",
+            first_applied.applied_revision_iri,
+            max_triples=0,
+        )
 
 
 def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
