@@ -2226,6 +2226,9 @@ result.candidate_count
 result.candidates
 result.open_profile_review_lanes
 result.open_profile_review_lane_count
+result.closed_semantic_moves
+result.remaining_semantic_moves
+result.semantic_move_closure_summary
 result.export
 result.warnings
 result.review_note
@@ -2280,7 +2283,8 @@ scan, `candidate.explicit` is still false; inspect the nested
 `profile_route_keys` names matched draft `route_group_key` values; each
 `profile_route_groups[]` row has `route_group_key`, `review_lane`,
 `route_step_keys`, `direct_route_step_keys`, `semantic_moves`,
-`direct_semantic_moves`, `matched_by`, and `match_strength`. Strength values are
+`direct_semantic_moves`, `closed_semantic_moves`,
+`remaining_semantic_moves`, `matched_by`, and `match_strength`. Strength values are
 `direct_action`, `strong_support`, or `related_support`: direct means the staged
 row appears to implement that draft lane, while strong/related support means it
 shares profile observations, support patterns, or anchors with the lane. The
@@ -2294,8 +2298,9 @@ persisted/generated route sources can be direct; fresh live draft follow-up
 routes for the same lane are support until staged separately.
 When several semantic moves share one `route_group_key`, for example
 `define_value_type` and `assert_map_type` inside `profile_type_review`, a direct
-candidate only closes the moves named in `direct_semantic_moves`. Other live
-steps in the same route group stay in `open_profile_review_lanes`.
+candidate only closes the moves named in `direct_semantic_moves` /
+`closed_semantic_moves`. Other live steps in the same route group stay in
+`remaining_semantic_moves` and `open_profile_review_lanes`.
 `open_profile_review_lanes[]` groups live draft route groups that still do not
 have a direct candidate for the same route semantic move or exact route step:
 
@@ -2304,6 +2309,8 @@ lane.review_lane
 lane.route_group_count
 lane.route_group_keys
 lane.route_step_keys
+lane.closed_semantic_moves
+lane.remaining_semantic_moves
 lane.action_count
 lane.matched_candidate_revision_iris
 lane.matched_candidate_count
@@ -2314,6 +2321,12 @@ review, and query-context repair lanes visible after one related staged row has
 been exported. `matched_candidate_revision_iris` can name support-only staged
 rows that should travel with the lane, but it does not mean the lane is
 satisfied unless the lane is absent from `open_profile_review_lanes`.
+`closed_semantic_moves`, `remaining_semantic_moves`, and
+`semantic_move_closure_summary` are bundle-level rollups over direct candidate
+route groups and open lanes. Read them before treating a vocabulary-definition
+row as complete profile type followthrough: a bundle can report
+`closed_semantic_moves=["define_value_type"]` while
+`remaining_semantic_moves` still includes `assert_map_type`.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports
 only `project_metric_defined`, those inspection-only metric routes are not
 reported as open review lanes. Use the metric context actions for handoff
@@ -2323,6 +2336,8 @@ written; inspect `warnings` and `open_profile_review_lanes` rather than
 assuming the `path` argument was created.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
+When semantic moves are present, Markdown also includes a `Semantic Move
+Closure` summary and the open-lane table repeats closed and remaining moves.
 When open lanes exist, the summary also includes an `Open Profile Review Lanes`
 table before the bridge.
 The bridge includes the grouped bundle row number and candidate summary beside

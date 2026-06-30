@@ -27711,8 +27711,14 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert route_groups["profile_type_review"]["direct_semantic_moves"] == [
         "define_value_type"
     ]
+    assert route_groups["profile_type_review"]["closed_semantic_moves"] == [
+        "define_value_type"
+    ]
     assert "assert_map_type" in route_groups["profile_type_review"][
         "semantic_moves"
+    ]
+    assert "assert_map_type" in route_groups["profile_type_review"][
+        "remaining_semantic_moves"
     ]
     open_lanes = {
         lane.review_lane: lane for lane in review.open_profile_review_lanes
@@ -27721,6 +27727,12 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert open_lanes["profile_type_review"].route_group_keys == [
         value_type_plan.route_group_key
     ]
+    assert open_lanes["profile_type_review"].closed_semantic_moves == [
+        "define_value_type"
+    ]
+    assert "assert_map_type" in open_lanes[
+        "profile_type_review"
+    ].remaining_semantic_moves
     assert open_lanes["profile_type_review"].matched_candidate_revision_iris == [
         staged.iri
     ]
@@ -27728,6 +27740,18 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         value_type_plan.route_step_keys
     )
     assert open_lanes["profile_type_review"].action_count == 4
+    assert review.closed_semantic_moves == ["define_value_type"]
+    assert "assert_map_type" in review.remaining_semantic_moves
+    assert review.semantic_move_closure_summary.startswith(
+        "Closed semantic moves: define_value_type."
+    )
+    exported = (tmp_path / "orders-profile-type-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "### Semantic Move Closure" in exported
+    assert "Closed semantic moves: define_value_type" in exported
+    assert "Remaining semantic moves:" in exported
+    assert "assert_map_type" in exported
 
 
 def test_profile_type_assertion_route_source_closes_only_selected_advisory(
@@ -30145,15 +30169,25 @@ def test_applied_metric_promotion_closes_profile_review_lane(
 
     assert review.candidate_revision_iris == [staged_iri]
     assert review.open_profile_review_lanes == []
+    assert review.closed_semantic_moves == ["define_metric"]
+    assert review.remaining_semantic_moves == []
+    assert review.semantic_move_closure_summary == (
+        "Closed semantic moves: define_metric. No semantic moves remain open "
+        "in the live draft lanes."
+    )
     candidate = review.candidates[0]
     assert any(
         group["review_lane"] == "metric_vocabulary_review"
         and group["match_strength"] == "direct_action"
+        and group["closed_semantic_moves"] == ["define_metric"]
+        and group["remaining_semantic_moves"] == []
         for group in candidate.profile_route_groups
     )
     exported = (tmp_path / "orders-profile-metric-review.md").read_text(
         encoding="utf-8"
     )
+    assert "### Semantic Move Closure" in exported
+    assert "Closed semantic moves: define_metric" in exported
     assert "### Open Profile Review Lanes" not in exported
 
 

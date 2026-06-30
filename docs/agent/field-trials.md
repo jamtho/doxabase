@@ -2988,6 +2988,12 @@ few useful gaps:
   nested grouped-bundle sequencing hazard after a real batch restage; batch
   restage responses now mirror `requires_recheck_after_each_apply` and
   `sequential_apply_recheck_candidate_iris` at top level.
+- A profile-to-map promotion trial confirmed query review, profile map updates,
+  metric vocabulary, and value-type vocabulary can travel together in one review
+  bundle, but vocabulary definition closure was still too indirect. Profile
+  insight review bundles now expose semantic move closure rollups so agents can
+  see, for example, `define_value_type` closed while `assert_map_type` remains
+  open.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1333,6 +1333,8 @@ class ProfileInsightOpenReviewLane:
     route_group_count: int
     route_group_keys: list[str]
     route_step_keys: list[str]
+    closed_semantic_moves: list[str]
+    remaining_semantic_moves: list[str]
     action_count: int
     matched_candidate_revision_iris: list[str]
     matched_candidate_count: int
@@ -1351,6 +1353,9 @@ class ProfileInsightReviewBundleRecord:
     candidates: list[ProfileInsightReviewCandidate]
     open_profile_review_lanes: list[ProfileInsightOpenReviewLane]
     open_profile_review_lane_count: int
+    closed_semantic_moves: list[str]
+    remaining_semantic_moves: list[str]
+    semantic_move_closure_summary: str
     export: StagedGraphRevisionsExportRecord | None
     warnings: list[str]
     review_note: str
@@ -36371,6 +36376,14 @@ class DoxaBase:
             profile_route_sources,
             candidates,
         )
+        (
+            closed_semantic_moves,
+            remaining_semantic_moves,
+            semantic_move_closure_summary,
+        ) = self._profile_insight_semantic_move_closure(
+            candidates,
+            open_profile_review_lanes,
+        )
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
             export = self.export_staged_revisions(
@@ -36383,6 +36396,11 @@ class DoxaBase:
                     evidence_value,
                     candidates,
                     open_profile_review_lanes=open_profile_review_lanes,
+                    closed_semantic_moves=closed_semantic_moves,
+                    remaining_semantic_moves=remaining_semantic_moves,
+                    semantic_move_closure_summary=(
+                        semantic_move_closure_summary
+                    ),
                     executive_summary=executive_summary,
                 ),
                 format=format,
@@ -36408,6 +36426,9 @@ class DoxaBase:
             candidates=candidates,
             open_profile_review_lanes=open_profile_review_lanes,
             open_profile_review_lane_count=len(open_profile_review_lanes),
+            closed_semantic_moves=closed_semantic_moves,
+            remaining_semantic_moves=remaining_semantic_moves,
+            semantic_move_closure_summary=semantic_move_closure_summary,
             export=export,
             warnings=warnings,
             review_note=(
@@ -36828,6 +36849,8 @@ class DoxaBase:
                     "direct_route_step_keys": [],
                     "semantic_moves": [],
                     "direct_semantic_moves": [],
+                    "closed_semantic_moves": [],
+                    "remaining_semantic_moves": [],
                     "matched_by": [],
                     "match_strength": match_strength,
                 },
@@ -36862,6 +36885,20 @@ class DoxaBase:
                     )
             for match in matched_by:
                 DoxaBase._append_unique(route_group["matched_by"], match)
+
+        for route_group in by_route_key.values():
+            closed_semantic_moves = [
+                move
+                for move in route_group.get("direct_semantic_moves") or []
+                if isinstance(move, str)
+            ]
+            remaining_semantic_moves = [
+                move
+                for move in route_group.get("semantic_moves") or []
+                if isinstance(move, str) and move not in closed_semantic_moves
+            ]
+            route_group["closed_semantic_moves"] = closed_semantic_moves
+            route_group["remaining_semantic_moves"] = remaining_semantic_moves
 
         return sorted(
             by_route_key.values(),
@@ -36992,6 +37029,7 @@ class DoxaBase:
         candidates: list[ProfileInsightReviewCandidate],
     ) -> list[ProfileInsightOpenReviewLane]:
         direct_satisfied_route_moves: set[tuple[str, str]] = set()
+        direct_satisfied_moves_by_route_key: dict[str, list[str]] = {}
         direct_satisfied_route_steps: set[str] = set()
         legacy_direct_satisfied_route_keys: set[str] = set()
         for candidate in candidates:
@@ -37014,6 +37052,13 @@ class DoxaBase:
                 for semantic_move in direct_semantic_moves:
                     direct_satisfied_route_moves.add(
                         (route_group_key, semantic_move)
+                    )
+                    DoxaBase._append_unique(
+                        direct_satisfied_moves_by_route_key.setdefault(
+                            route_group_key,
+                            [],
+                        ),
+                        semantic_move,
                     )
                 direct_satisfied_route_steps.update(direct_route_step_keys)
                 # A value-type vocabulary promotion is a prerequisite, not the
@@ -37066,11 +37111,26 @@ class DoxaBase:
                     "review_lane": review_lane,
                     "route_group_keys": [],
                     "route_step_keys": [],
+                    "closed_semantic_moves": [],
+                    "remaining_semantic_moves": [],
                     "action_count": 0,
                 }
                 by_lane[review_lane] = lane
                 lane_order.append(review_lane)
             DoxaBase._append_unique(lane["route_group_keys"], route_group_key)
+            for closed_semantic_move in direct_satisfied_moves_by_route_key.get(
+                route_group_key,
+                [],
+            ):
+                DoxaBase._append_unique(
+                    lane["closed_semantic_moves"],
+                    closed_semantic_move,
+                )
+            if isinstance(semantic_move, str):
+                DoxaBase._append_unique(
+                    lane["remaining_semantic_moves"],
+                    semantic_move,
+                )
             if isinstance(route_step_key, str):
                 DoxaBase._append_unique(lane["route_step_keys"], route_step_key)
             lane["action_count"] += 1
@@ -37094,6 +37154,8 @@ class DoxaBase:
                     route_group_count=len(lane["route_group_keys"]),
                     route_group_keys=lane["route_group_keys"],
                     route_step_keys=lane["route_step_keys"],
+                    closed_semantic_moves=lane["closed_semantic_moves"],
+                    remaining_semantic_moves=lane["remaining_semantic_moves"],
                     action_count=lane["action_count"],
                     matched_candidate_revision_iris=(
                         matched_candidate_revision_iris
@@ -37122,6 +37184,53 @@ class DoxaBase:
         label = dataset.label or dataset.iri
         return f"Profile insight review: {label}"
 
+    @staticmethod
+    def _profile_insight_semantic_move_closure(
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> tuple[list[str], list[str], str]:
+        closed_semantic_moves: list[str] = []
+        for candidate in candidates:
+            for group in candidate.profile_route_groups:
+                if group.get("match_strength") != "direct_action":
+                    continue
+                for move in group.get("closed_semantic_moves") or []:
+                    if isinstance(move, str):
+                        DoxaBase._append_unique(closed_semantic_moves, move)
+
+        remaining_semantic_moves: list[str] = []
+        for lane in open_profile_review_lanes:
+            for move in lane.remaining_semantic_moves:
+                DoxaBase._append_unique(remaining_semantic_moves, move)
+
+        if closed_semantic_moves and remaining_semantic_moves:
+            summary = (
+                "Closed semantic moves: "
+                + ", ".join(closed_semantic_moves)
+                + ". Remaining semantic moves: "
+                + ", ".join(remaining_semantic_moves)
+                + "."
+            )
+        elif closed_semantic_moves:
+            summary = (
+                "Closed semantic moves: "
+                + ", ".join(closed_semantic_moves)
+                + ". No semantic moves remain open in the live draft lanes."
+            )
+        elif remaining_semantic_moves:
+            summary = (
+                "No direct semantic moves are closed yet. Remaining semantic "
+                "moves: "
+                + ", ".join(remaining_semantic_moves)
+                + "."
+            )
+        else:
+            summary = (
+                "No semantic move closure signals were found in this profile "
+                "review bundle."
+            )
+        return closed_semantic_moves, remaining_semantic_moves, summary
+
     def _profile_insight_review_executive_summary(
         self,
         dataset: ResourceSummary,
@@ -37129,6 +37238,9 @@ class DoxaBase:
         candidates: list[ProfileInsightReviewCandidate],
         *,
         open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+        closed_semantic_moves: list[str],
+        remaining_semantic_moves: list[str],
+        semantic_move_closure_summary: str,
         executive_summary: str | None = None,
     ) -> str:
         label = dataset.label or dataset.iri
@@ -37144,6 +37256,16 @@ class DoxaBase:
             )
         )
         sections: list[str] = []
+        closure_markdown = self._profile_insight_semantic_move_closure_markdown(
+            closed_semantic_moves=closed_semantic_moves,
+            remaining_semantic_moves=remaining_semantic_moves,
+            semantic_move_closure_summary=semantic_move_closure_summary,
+            open_profile_review_lanes=open_profile_review_lanes,
+        )
+        if closure_markdown:
+            sections.append(
+                f"### Semantic Move Closure\n\n{closure_markdown}"
+            )
         open_lanes_markdown = self._profile_insight_open_review_lanes_markdown(
             open_profile_review_lanes
         )
@@ -37157,6 +37279,55 @@ class DoxaBase:
         if sections:
             return f"{summary}\n\n" + "\n\n".join(sections)
         return summary
+
+    def _profile_insight_semantic_move_closure_markdown(
+        self,
+        *,
+        closed_semantic_moves: list[str],
+        remaining_semantic_moves: list[str],
+        semantic_move_closure_summary: str,
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> str:
+        if not closed_semantic_moves and not remaining_semantic_moves:
+            return ""
+        lines = [semantic_move_closure_summary]
+        if open_profile_review_lanes:
+            lines.extend(
+                [
+                    "",
+                    (
+                        "| Review lane | Closed moves | Remaining moves | "
+                        "Matched exported revisions |"
+                    ),
+                    "|---|---|---|---|",
+                ]
+            )
+            for lane in open_profile_review_lanes:
+                matched_revisions = ", ".join(
+                    f"`{revision_iri}`"
+                    for revision_iri in lane.matched_candidate_revision_iris
+                )
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            self._markdown_table_cell(lane.review_lane),
+                            self._markdown_table_cell(
+                                ", ".join(lane.closed_semantic_moves)
+                                or "none"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(lane.remaining_semantic_moves)
+                                or "none"
+                            ),
+                            self._markdown_table_cell(
+                                matched_revisions or "none"
+                            ),
+                        ]
+                    )
+                    + " |"
+                )
+        return "\n".join(lines)
 
     def _profile_insight_open_review_lanes_markdown(
         self,
@@ -37172,9 +37343,9 @@ class DoxaBase:
             "",
             (
                 "| Review lane | Route groups | Actions | "
-                "Matched exported revisions |"
+                "Closed moves | Remaining moves | Matched exported revisions |"
             ),
-            "|---|---:|---:|---|",
+            "|---|---:|---:|---|---|---|",
         ]
         for lane in open_profile_review_lanes:
             matched_revisions = ", ".join(
@@ -37188,6 +37359,12 @@ class DoxaBase:
                         self._markdown_table_cell(lane.review_lane),
                         str(lane.route_group_count),
                         str(lane.action_count),
+                        self._markdown_table_cell(
+                            ", ".join(lane.closed_semantic_moves) or "none"
+                        ),
+                        self._markdown_table_cell(
+                            ", ".join(lane.remaining_semantic_moves) or "none"
+                        ),
                         self._markdown_table_cell(
                             matched_revisions or "none"
                         ),
