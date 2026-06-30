@@ -1362,6 +1362,27 @@ def import_revision_snapshots_tool(
     return to_dict(result)
 
 
+def import_handoff_bundle_tool(
+    db: DoxaBase,
+    manifest_path: str,
+    dry_run: bool = False,
+    replace: bool = False,
+    include_drafts: bool = True,
+    validation_scope: str | None = None,
+    drift_detail: str = "summary",
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(manifest_path)
+    result = db.import_handoff_bundle(
+        resolved_path,
+        dry_run=dry_run,
+        replace=replace,
+        include_drafts=include_drafts,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+        drift_detail=drift_detail,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def export_graph_tool(
     db: DoxaBase,
     path: str,

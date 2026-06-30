@@ -126,11 +126,18 @@ On the source capsule:
 
 On the receiving capsule:
 
-1. Import the project/history RDF with `import_trig(trig_path)`.
-2. If revision helpers report `history_only_count_digest`, import the companion
-   snapshot JSON with `import_revision_snapshots(revision_snapshot_path)`.
-3. If snapshot JSON arrived first and helpers report
-   `snapshot_rows_without_history`, import the project/history TriG.
+1. If a manifest arrived, call `import_handoff_bundle(manifest_path,
+   dry_run=True)` first to confirm the paired artifact paths, expected graph
+   roles, pre-import snapshot evidence, and proposed receiver action.
+2. Then call `import_handoff_bundle(manifest_path)`. The helper imports the
+   project/history TriG first, imports the companion snapshot JSON second, and
+   returns `post_trig_snapshot_evidence`, `post_import_snapshot_evidence`, and a
+   `plan_staged_revision_recovery` result for the manifest revisions.
+3. If no manifest arrived, import the project/history RDF with
+   `import_trig(trig_path)`, then import the companion snapshot JSON with
+   `import_revision_snapshots(revision_snapshot_path)`. If snapshot JSON arrived
+   first and helpers report `snapshot_rows_without_history`, import the
+   project/history TriG.
 4. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
    rows reach `history_plus_snapshot_rows`.
 5. Then call `check_staged_revision_apply()` for staged proposals,
@@ -143,9 +150,10 @@ On the receiving capsule:
    `plan_staged_revision_recovery(current_staged_work_only=True)` to verify the
    remaining staged queue.
 
-Suggested import actions may carry `path_is_placeholder=True`; replace those
-placeholder paths with the real handoff artifact paths before calling import
-tools.
+Suggested lower-level import actions may carry `path_is_placeholder=True`;
+replace those placeholder paths with the real handoff artifact paths before
+calling import tools. A manifest import avoids that translation when the paired
+manifest file is available.
 When reading a handoff manifest, distinguish the top-level paired operation from
 its component artifact records: the handoff bundle can be
 `recovery_complete=true` even though the nested TriG and snapshot JSON records
@@ -588,11 +596,15 @@ For a stale-restage-apply handoff between capsules:
    fail_on_sensitive=True)`.
    Include older stale ancestor IRIs explicitly if exact full-chain recovery
    matters beyond the direct staged source and applied event.
-5. On the receiving capsule, run `import_trig(project_path)` first. Before the
-   snapshot JSON import, expect `history_only_count_digest` and no exact triples.
-6. Run `import_revision_snapshots(snapshot_path)` and verify
+5. On the receiving capsule, prefer `import_handoff_bundle(manifest_path,
+   dry_run=True)` followed by `import_handoff_bundle(manifest_path)` when a
+   manifest was written. Without a manifest, run `import_trig(project_path)`
+   first. Before the snapshot JSON import, expect `history_only_count_digest`
+   and no exact triples.
+6. Without a manifest, run `import_revision_snapshots(snapshot_path)` and verify
    `post_import_snapshot_evidence` or `describe_revision_snapshot_evidence()`
-   reaches `history_plus_snapshot_rows`.
+   reaches `history_plus_snapshot_rows`. Manifest import returns that evidence
+   plus a staged recovery plan directly.
 7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
    triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
    for full before/after snapshot contents. Suggested import paths are

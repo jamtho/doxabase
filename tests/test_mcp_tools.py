@@ -41,6 +41,7 @@ from doxabase.mcp_tools import (
     export_trig_tool,
     get_doc_tool,
     graph_overview_tool,
+    import_handoff_bundle_tool,
     import_revision_snapshots_tool,
     import_trig_tool,
     list_docs_tool,
@@ -172,6 +173,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.export_handoff_bundle" in tool_names
     assert "doxabase.export_profile_insight_review_bundle" in tool_names
     assert "doxabase.export_revision_snapshots" in tool_names
+    assert "doxabase.import_handoff_bundle" in tool_names
     assert "doxabase.import_revision_snapshots" in tool_names
     assert "doxabase.replace_graph_triples" in tool_names
     assert "doxabase.export_staged_revision" in tool_names
@@ -1795,6 +1797,87 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         step["expected_snapshot_evidence_status"]
         for step in manifest["recommended_import_sequence"]
     ] == ["history_only_count_digest", "history_plus_snapshot_rows"]
+
+    manifest_receiver = DoxaBase.create(tmp_path / "manifest-receiver.sqlite")
+    dry_run = import_handoff_bundle_tool(
+        manifest_receiver,
+        manifest_path=str(manifest_path),
+        dry_run=True,
+    )
+    assert dry_run["dry_run"] is True
+    assert dry_run["paths"] == {
+        "trig": str(trig_path),
+        "revision_snapshots": str(snapshot_path),
+        "manifest": str(manifest_path),
+    }
+    assert dry_run["trig_imported"] == {}
+    assert dry_run["trig_total_imported"] == 0
+    assert dry_run["revision_snapshots"] is None
+    assert dry_run["recovery_plan"] is None
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in dry_run["pre_import_snapshot_evidence"]
+    } == {staged["revision_iri"]: "history_missing"}
+    assert dry_run["suggested_next_actions"][0]["tool_name"] == (
+        "import_handoff_bundle"
+    )
+    assert (
+        manifest_receiver.describe_revision_snapshot_evidence(
+            staged["revision_iri"]
+        ).status
+        == "history_missing"
+    )
+
+    manifest_import = import_handoff_bundle_tool(
+        manifest_receiver,
+        manifest_path=str(manifest_path),
+        drift_detail="exact",
+    )
+    assert manifest_import["dry_run"] is False
+    assert manifest_import["trig_total_imported"] > 0
+    assert manifest_import["revision_snapshots"]["imported_snapshot_count"] == 1
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in manifest_import["post_trig_snapshot_evidence"]
+    } == {staged["revision_iri"]: "history_only_count_digest"}
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in manifest_import["post_import_snapshot_evidence"]
+    } == {staged["revision_iri"]: "history_plus_snapshot_rows"}
+    assert manifest_import["recovery_plan"]["lane_counts"] == {
+        "apply_after_review": 1
+    }
+    assert manifest_import["recovery_plan"]["next_action_queue"] == {
+        "apply_after_review": [staged["revision_iri"]]
+    }
+    assert manifest_import["recovery_plan"]["lanes"][0]["next_action"][
+        "tool_name"
+    ] == "apply_staged_revision"
+    assert manifest_import["warnings"] == []
+
+    relative_manifest_path = tmp_path / "relative-handoff-manifest.json"
+    relative_manifest = json.loads(json.dumps(manifest))
+    relative_manifest["artifacts"]["trig"]["path"] = trig_path.name
+    relative_manifest["artifacts"]["revision_snapshots"]["path"] = snapshot_path.name
+    relative_manifest["recommended_import_sequence"][0]["path"] = trig_path.name
+    relative_manifest["recommended_import_sequence"][1]["path"] = snapshot_path.name
+    relative_manifest_path.write_text(
+        json.dumps(relative_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    relative_receiver = DoxaBase.create(tmp_path / "relative-receiver.sqlite")
+    relative_import = import_handoff_bundle_tool(
+        relative_receiver,
+        manifest_path=str(relative_manifest_path),
+    )
+    assert relative_import["paths"]["trig"] == str(tmp_path / trig_path.name)
+    assert relative_import["paths"]["revision_snapshots"] == str(
+        tmp_path / snapshot_path.name
+    )
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in relative_import["post_import_snapshot_evidence"]
+    } == {staged["revision_iri"]: "history_plus_snapshot_rows"}
 
     import_trig_tool(receiver, path=str(trig_path))
     before_snapshots = describe_revision_snapshot_evidence_tool(

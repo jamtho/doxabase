@@ -2086,6 +2086,18 @@ skipped by default; pass `replace=true` to overwrite them. The result includes
 `describe_revision_snapshot_evidence`; if rows were imported before history RDF,
 follow its `import_trig` action.
 
+`doxabase.import_handoff_bundle`
+
+Imports a handoff manifest written by `doxabase.export_handoff_bundle`. Use it
+when a receiver has the manifest as well as the paired project/history TriG and
+revision snapshot JSON artifacts. The helper resolves relative artifact paths
+from the manifest directory, reports pre-import snapshot evidence, imports the
+TriG first and snapshot JSON second, then returns post-import snapshot evidence
+plus `plan_staged_revision_recovery` for the manifest revisions. Pass
+`dry_run=true` to inspect the manifest paths and expected receiver action
+without mutating the capsule. Pass `replace=true` only when overwriting existing
+graph roles and stored snapshot pairs is intentional.
+
 `doxabase.export_graph`
 
 Exports one or more graph roles as one flattened RDF graph file. The default is
@@ -2173,6 +2185,8 @@ combined `sensitive_literal_count` and `privacy_warnings`.
 Read `recovery_complete` at the paired handoff level for the bundle as a whole;
 the nested TriG and snapshot JSON records are components and are not
 recovery-complete by themselves.
+When receiving a manifest, prefer `doxabase.import_handoff_bundle` over manually
+translating component paths and calling lower-level import tools.
 Use `doxabase.export_preflight(export_kind="handoff_bundle")` before choosing
 paths when you need to review both the RDF graph roles and stored snapshot rows
 without creating artifacts.

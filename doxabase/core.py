@@ -653,6 +653,31 @@ class RevisionSnapshotBundleImportRecord:
 
 
 @dataclass(frozen=True)
+class HandoffBundleImportRecord:
+    path: str
+    format: str
+    dry_run: bool
+    replace: bool
+    manifest: dict[str, Any]
+    paths: dict[str, str]
+    graph_roles: list[str]
+    snapshot_graph_roles: list[str]
+    revision_iris: list[str]
+    pre_import_snapshot_evidence: list[RevisionSnapshotEvidenceStatus]
+    trig_imported: dict[str, int]
+    trig_total_imported: int
+    post_trig_snapshot_evidence: list[RevisionSnapshotEvidenceStatus]
+    revision_snapshots: RevisionSnapshotBundleImportRecord | None
+    post_import_snapshot_evidence: list[RevisionSnapshotEvidenceStatus]
+    recovery_plan: StagedRevisionRecoveryPlan | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    warnings: list[str]
+    artifact_kind: str = "handoff_bundle_import"
+    recovery_complete: bool = True
+
+
+@dataclass(frozen=True)
 class StagedGraphPatchRecord:
     patch_iri: str
     operation: str
@@ -45326,6 +45351,268 @@ class DoxaBase:
             "sensitive_literal_count": sensitive_literal_count,
             "privacy_warnings": privacy_warnings,
         }
+
+    def import_handoff_bundle(
+        self,
+        manifest: str | Path,
+        *,
+        dry_run: bool = False,
+        replace: bool = False,
+        include_drafts: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
+    ) -> HandoffBundleImportRecord:
+        manifest_path = _existing_path(manifest)
+        source_label = str(manifest_path) if manifest_path is not None else "<string>"
+        try:
+            if manifest_path is not None:
+                payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            else:
+                payload = json.loads(str(manifest))
+        except json.JSONDecodeError as exc:
+            raise DoxaBaseError(
+                "Could not parse handoff bundle manifest JSON from "
+                f"{source_label}: {exc.msg} at line {exc.lineno} column {exc.colno}"
+            ) from exc
+        if not isinstance(payload, MappingABC):
+            raise DoxaBaseError("Handoff bundle manifest must be a JSON object")
+        if payload.get("format") != "doxabase.handoff_bundle.v1":
+            raise DoxaBaseError(
+                "Unsupported handoff bundle manifest format: "
+                f"{payload.get('format')!r}"
+            )
+        if payload.get("recovery_complete") is not True:
+            raise DoxaBaseError(
+                "Handoff bundle manifest is not marked recovery_complete=true"
+            )
+
+        base_path = manifest_path.parent if manifest_path is not None else Path.cwd()
+        trig_path = self._handoff_manifest_artifact_path(
+            payload,
+            "trig",
+            base_path=base_path,
+        )
+        snapshot_path = self._handoff_manifest_artifact_path(
+            payload,
+            "revision_snapshots",
+            base_path=base_path,
+        )
+        revision_iris = self._handoff_manifest_revision_iris(payload)
+        graph_roles = self._handoff_manifest_graph_roles(payload, "trig")
+        snapshot_graph_roles = self._handoff_manifest_graph_roles(
+            payload,
+            "revision_snapshots",
+        )
+        history_graphs = self._expand_graphs(["history"])
+        pre_import_snapshot_evidence = [
+            self._revision_snapshot_evidence_status(revision_iri, history_graphs)
+            for revision_iri in revision_iris
+        ]
+        warnings = self._handoff_manifest_import_warnings(
+            payload,
+            trig_path=trig_path,
+            snapshot_path=snapshot_path,
+        )
+
+        trig_imported: dict[str, int] = {}
+        post_trig_snapshot_evidence: list[RevisionSnapshotEvidenceStatus] = []
+        snapshot_import: RevisionSnapshotBundleImportRecord | None = None
+        post_import_snapshot_evidence = pre_import_snapshot_evidence
+        recovery_plan: StagedRevisionRecoveryPlan | None = None
+        if dry_run:
+            suggested_next_actions = [
+                self._import_handoff_bundle_suggested_action(
+                    manifest_path=source_label,
+                    replace=replace,
+                    include_drafts=include_drafts,
+                    validation_scope=validation_scope,
+                    drift_detail=drift_detail,
+                )
+            ]
+        else:
+            trig_imported = self.import_trig(trig_path, replace=replace)
+            post_trig_snapshot_evidence = [
+                self._revision_snapshot_evidence_status(
+                    revision_iri,
+                    history_graphs,
+                )
+                for revision_iri in revision_iris
+            ]
+            snapshot_import = self.import_revision_snapshots(
+                snapshot_path,
+                replace=replace,
+            )
+            post_import_snapshot_evidence = [
+                self._revision_snapshot_evidence_status(
+                    revision_iri,
+                    history_graphs,
+                )
+                for revision_iri in revision_iris
+            ]
+            recovery_plan = self.plan_staged_revision_recovery(
+                revision_iris,
+                current_staged_work_only=False,
+                include_drafts=include_drafts,
+                validation_scope=validation_scope,
+                drift_detail=drift_detail,
+            )
+            suggested_next_actions = recovery_plan.suggested_next_actions
+
+        return HandoffBundleImportRecord(
+            path=source_label,
+            format=str(payload["format"]),
+            dry_run=dry_run,
+            replace=replace,
+            manifest=dict(payload),
+            paths={
+                "trig": str(trig_path),
+                "revision_snapshots": str(snapshot_path),
+                **({"manifest": source_label} if manifest_path is not None else {}),
+            },
+            graph_roles=graph_roles,
+            snapshot_graph_roles=snapshot_graph_roles,
+            revision_iris=revision_iris,
+            pre_import_snapshot_evidence=pre_import_snapshot_evidence,
+            trig_imported=trig_imported,
+            trig_total_imported=sum(trig_imported.values()),
+            post_trig_snapshot_evidence=post_trig_snapshot_evidence,
+            revision_snapshots=snapshot_import,
+            post_import_snapshot_evidence=post_import_snapshot_evidence,
+            recovery_plan=recovery_plan,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+            warnings=warnings,
+        )
+
+    def _handoff_manifest_artifact_path(
+        self,
+        manifest: MappingABC[str, Any],
+        artifact_key: str,
+        *,
+        base_path: Path,
+    ) -> Path:
+        artifacts = manifest.get("artifacts")
+        if not isinstance(artifacts, MappingABC):
+            raise DoxaBaseError("Handoff bundle manifest must contain artifacts")
+        artifact = artifacts.get(artifact_key)
+        if not isinstance(artifact, MappingABC):
+            raise DoxaBaseError(
+                f"Handoff bundle manifest is missing artifacts.{artifact_key}"
+            )
+        path_value = artifact.get("path")
+        if not isinstance(path_value, str) or not path_value.strip():
+            raise DoxaBaseError(
+                f"Handoff bundle manifest artifacts.{artifact_key}.path "
+                "must be a non-empty string"
+            )
+        path = Path(path_value)
+        if not path.is_absolute():
+            path = base_path / path
+        if not path.exists():
+            raise DoxaBaseError(
+                "Handoff bundle artifact path does not exist: "
+                f"{path}. Check the manifest path or move the paired artifacts "
+                "next to the manifest."
+            )
+        return path
+
+    @staticmethod
+    def _handoff_manifest_revision_iris(
+        manifest: MappingABC[str, Any],
+    ) -> list[str]:
+        revision_iris = manifest.get("revision_iris")
+        if not isinstance(revision_iris, list):
+            raise DoxaBaseError(
+                "Handoff bundle manifest must contain revision_iris list"
+            )
+        values: list[str] = []
+        for value in revision_iris:
+            if not isinstance(value, str) or not value.strip():
+                raise DoxaBaseError(
+                    "Handoff bundle manifest revision_iris entries must be strings"
+                )
+            if value not in values:
+                values.append(value)
+        return values
+
+    @staticmethod
+    def _handoff_manifest_graph_roles(
+        manifest: MappingABC[str, Any],
+        artifact_key: str,
+    ) -> list[str]:
+        artifacts = manifest.get("artifacts")
+        if not isinstance(artifacts, MappingABC):
+            return []
+        artifact = artifacts.get(artifact_key)
+        if not isinstance(artifact, MappingABC):
+            return []
+        graph_roles = artifact.get("graph_roles")
+        if not isinstance(graph_roles, list):
+            return []
+        return [value for value in graph_roles if isinstance(value, str)]
+
+    @staticmethod
+    def _handoff_manifest_import_warnings(
+        manifest: MappingABC[str, Any],
+        *,
+        trig_path: Path,
+        snapshot_path: Path,
+    ) -> list[str]:
+        warnings: list[str] = []
+        sensitive_literal_count = manifest.get("sensitive_literal_count")
+        if isinstance(sensitive_literal_count, int) and sensitive_literal_count > 0:
+            warnings.append(
+                "Handoff bundle manifest records potential sensitive terms in "
+                "the exported artifacts. Import may still be useful locally, but "
+                "do not share the artifacts until privacy review is complete."
+            )
+        if trig_path == snapshot_path:
+            warnings.append(
+                "Handoff bundle manifest points TriG and snapshot artifacts to "
+                "the same path; import is likely to fail unless the manifest is "
+                "repaired."
+            )
+        return warnings
+
+    def _import_handoff_bundle_suggested_action(
+        self,
+        *,
+        manifest_path: str,
+        replace: bool,
+        include_drafts: bool,
+        validation_scope: str | None,
+        drift_detail: str,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "manifest_path": manifest_path,
+            "dry_run": False,
+            "replace": replace,
+            "include_drafts": include_drafts,
+            "drift_detail": drift_detail,
+        }
+        if validation_scope is not None:
+            arguments["validation_scope"] = validation_scope
+        return SuggestedNextAction(
+            action_label="Import handoff bundle",
+            tool_name="import_handoff_bundle",
+            mcp_tool_name="doxabase.import_handoff_bundle",
+            arguments=arguments,
+            reason=(
+                "Dry-run parsed a recovery-complete handoff manifest. Run the "
+                "real import to load project/history RDF first, then companion "
+                "revision snapshot rows, and return a staged recovery plan."
+            ),
+            call=self._suggested_call_string("import_handoff_bundle", arguments),
+        )
 
     @staticmethod
     def _preflight_handoff_bundle_export_paths(

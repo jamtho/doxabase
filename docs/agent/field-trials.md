@@ -3020,6 +3020,12 @@ few useful gaps:
   The broader frontier remains first-class handoff-manifest import/recovery and
   a durable rebase/version session object that groups source rows, selected
   repair choices, successors, applied events, and snapshot evidence.
+- A follow-up staged version/rebase trial found the manifest half of that
+  frontier was the next unattended blocker: receivers still had to translate
+  paired artifact paths from the manifest into separate `import_trig` and
+  `import_revision_snapshots` calls. `import_handoff_bundle` now consumes the
+  manifest directly, dry-runs receiver paths, imports TriG before snapshot rows,
+  returns snapshot evidence at each phase, and hands back a staged recovery plan.
 - A project-brief/privacy trial confirmed low-limit briefs still expose staged,
   query-repair, profile-review, and expansion frontiers while export preflight
   blocks scanner-positive handoff/profile artifacts with redacted snippets. The

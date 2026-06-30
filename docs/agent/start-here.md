@@ -48,8 +48,10 @@ When arriving cold, use this route before reading every reference doc.
    mutating lane to take after inspection.
    If it reports incomplete revision handoff import, read
    `doxabase.get_doc(doc_id="revisions", section="Staged Handoff Recovery Cookbook")`
-   and complete the `import_trig` / `import_revision_snapshots` sequence before
-   apply, restage, or exact-diff work.
+   and prefer `import_handoff_bundle(manifest_path)` when a manifest is
+   available. Otherwise complete the lower-level `import_trig` /
+   `import_revision_snapshots` sequence before apply, restage, or exact-diff
+   work.
 5. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
    predicates.
 6. Call `doxabase.search` for remembered terms, dataset names, caveats, source

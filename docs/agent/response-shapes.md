@@ -4610,6 +4610,43 @@ the recommended receiver sequence: `import_trig` should yield
 `history_only_count_digest`, then `import_revision_snapshots` should yield
 `history_plus_snapshot_rows`.
 
+`db.import_handoff_bundle(manifest, dry_run=False, replace=False)` returns
+`HandoffBundleImportRecord`:
+
+```python
+handoff.path
+handoff.format
+handoff.dry_run
+handoff.replace
+handoff.manifest
+handoff.paths
+handoff.graph_roles
+handoff.snapshot_graph_roles
+handoff.revision_iris
+handoff.pre_import_snapshot_evidence
+handoff.trig_imported
+handoff.trig_total_imported
+handoff.post_trig_snapshot_evidence
+handoff.revision_snapshots
+handoff.post_import_snapshot_evidence
+handoff.recovery_plan
+handoff.suggested_next_actions
+handoff.suggested_next_calls
+handoff.warnings
+handoff.artifact_kind
+handoff.recovery_complete
+```
+
+The helper consumes a `doxabase.handoff_bundle.v1` manifest and resolves paired
+artifact paths relative to the manifest directory. A dry run reports the paths,
+warnings, pre-import evidence, and the `import_handoff_bundle(...,
+dry_run=False)` action without importing anything. A real import loads the
+project/history TriG first, imports revision snapshot rows second, then runs
+`plan_staged_revision_recovery` for the manifest revisions. The nested
+`revision_snapshots` field has the same shape as
+`RevisionSnapshotBundleImportRecord`; `recovery_plan` has the same shape as
+`plan_staged_revision_recovery()`.
+
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:
 
