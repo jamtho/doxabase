@@ -1,3 +1,4 @@
+import csv
 import json
 import sqlite3
 import warnings
@@ -19543,6 +19544,150 @@ def test_local_csv_query_handoff_can_record_result_artifact(
     assert db.validate_graph(scope="all").conforms
     matches = db.search("Python CSV fallback", graph="observations")
     assert result.observation_iri in {match.iri for match in matches.matches}
+
+
+def test_local_csv_directory_wildcard_handoff_records_generic_result(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    first_partition = warehouse / "orders" / "event_date=2026-06-29"
+    second_partition = warehouse / "orders" / "event_date=2026-06-30"
+    first_partition.mkdir(parents=True)
+    second_partition.mkdir(parents=True)
+    first_csv = first_partition / "orders.csv"
+    second_csv = second_partition / "orders.csv"
+    first_csv.write_text(
+        "order_id,event_date,status,amount_cents\n"
+        "1,2026-06-29,paid,1200\n"
+        "2,2026-06-29,refunded,-300\n",
+        encoding="utf-8",
+    )
+    second_csv.write_text(
+        "order_id,event_date,status,amount_cents\n"
+        "3,2026-06-30,paid,3100\n"
+        "4,2026-06-30,pending,800\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "paid_orders_by_day.sql"
+    query_path.write_text(
+        "select event_date, count(*) as paid_orders "
+        "from orders where status = 'paid' group by event_date;\n",
+        encoding="utf-8",
+    )
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    dataset = f"{base}PartitionedOrders"
+    columns = [
+        db.record_map_column(
+            f"{base}partitioned_orders__{name}",
+            table_iri=dataset,
+            column_name=name,
+        )
+        for name in ("order_id", "event_date", "status", "amount_cents")
+    ]
+    storage = db.record_map_storage_access(
+        f"{base}partitioned_orders_storage",
+        label="Partitioned orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="directory",
+        storage_root=str(warehouse),
+        path_templates=["orders/event_date=*/orders.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}partitioned_orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_caveat(
+        f"{base}partitioned_orders_refund_caveat",
+        label="Refund caveat",
+        description=(
+            "Refunded rows carry negative amount_cents; paid-revenue aggregates "
+            "must filter deliberately."
+        ),
+        severity="rc:Moderate",
+        targets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Partitioned orders",
+        is_table=True,
+        columns=[column.iri for column in columns],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    plan = db.draft_query_plan(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert context.issues == []
+    assert [warning.code for warning in context.analysis_warnings] == [
+        "direct_analysis_caveat"
+    ]
+    assert plan.handoff_kind == "execution_attempt_ready"
+    assert plan.scan.function == "read_csv_auto"
+    assert plan.scan.uri_template == str(warehouse / "orders/event_date=*/orders.csv")
+    assert plan.scan.execution_attempt_ready is True
+    assert plan.review_gate.ready_for_execution_attempt is True
+
+    paid_by_date: dict[str, int] = {}
+    scanned_paths = sorted(
+        str(path)
+        for path in warehouse.glob("orders/event_date=*/orders.csv")
+    )
+    for path in scanned_paths:
+        with Path(path).open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                if row["status"] == "paid":
+                    paid_by_date[row["event_date"]] = (
+                        paid_by_date.get(row["event_date"], 0) + 1
+                    )
+    result_path = tmp_path / "paid_orders_by_day.result.json"
+    result_path.write_text(
+        json.dumps(paid_by_date, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = db.record_query_result(
+        summary=(
+            "Partitioned Orders paid-count aggregate ran with a Python CSV "
+            "fallback after the wildcard draft query handoff."
+        ),
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        result_sources=[str(result_path)],
+        scanned_source_paths=scanned_paths,
+    )
+
+    assert result.observation_type == "observation"
+    assert result.execution_status == "succeeded"
+    assert result.scanned_source_paths == scanned_paths
+    assert result.suggested_next_actions[0].tool_name == "describe_query_context"
+
+    result_slice = db.describe_context_slice(
+        result.observation_iri,
+        profile="deep_lore",
+        max_triples=200,
+    )
+    assert result_slice.route_counts["seed_observation"] == 1
+    assert result_slice.route_counts["observed_asset"] == 1
+    assert result_slice.route_counts["evidence"] == 1
+    assert result_slice.sensitive_literal_count == 0
+    preflight = db.preflight_context_slice_export(
+        result.observation_iri,
+        profile="deep_lore",
+        max_triples=200,
+    )
+    assert preflight.decision == "clean_by_scanner_only"
+    assert preflight.shareability_review_required is True
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(

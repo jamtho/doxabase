@@ -3385,6 +3385,14 @@ few useful gaps:
   `export_context_slice(profile="dataset_brief")` round-trips endpoint
   `rdf:type`, `endpointDataset`, `endpointDirection`, `endpointRole`, and
   `endpointOrder` triples.
+- A storage-aware query-planning strategy trial confirmed the happy path for
+  local directory storage with a wildcard CSV template: the dataset can reach
+  `ready_for_query_planning`, `draft_query_plan` can return
+  `execution_attempt_ready`, an external Python CSV fallback can record a
+  generic aggregate result with `record_query_result`, and observation/evidence
+  seeded `deep_lore` context slices carry the result evidence while dataset
+  slices stay focused on executable-catalog map facts. Scanner-clean preflights
+  still require shareability review because local paths are preserved.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

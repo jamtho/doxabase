@@ -494,6 +494,12 @@ as long as `engine` and `sample_method` say what actually ran.
 paths, and scanned source paths as structured evidence metadata, so custom
 evidence summaries still remain machine-readable in later query-context
 handoffs.
+Directory storage with a reviewed wildcard CSV path template can also reach
+`handoff_kind="execution_attempt_ready"`; after an external aggregate, seed
+`describe_context_slice(profile="deep_lore")` from the returned observation or
+evidence IRI when the result artifact and scanned source paths need to travel
+with the handoff. A dataset-seeded `dataset_brief` slice is the compact route
+for executable-catalog map facts, not for the query-result evidence itself.
 When `observed_asset` is supplied, follow the returned
 `suggested_next_actions`: profile-shaped results start with
 `describe_profile_run(dataset_iri=observed_asset, evidence_iri=...)`, and all
