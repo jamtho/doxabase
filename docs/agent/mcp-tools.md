@@ -1807,6 +1807,26 @@ inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one
 ready row, then rerun this helper before taking the next mutation.
 
+### doxabase.start_staged_revision_recovery_session
+
+Persists a durable staged recovery session in the `history` graph and returns
+the same live shape as `doxabase.describe_staged_revision_recovery_session`.
+Use it when a recovery will span several calls, especially after
+`import_handoff_bundle`, mixed restage/repair planning, or any queue where you
+must apply one row and replan before continuing. The session stores the ordered
+source revision list, optional handoff manifest path, initial lane counts, and
+planning parameters; it does not restage, apply, or otherwise mutate project
+graphs.
+
+### doxabase.describe_staged_revision_recovery_session
+
+Recomputes the current recovery plan for a persisted session. Read
+`session_status`, `source_states[]`, `current_plan.mutation_frontier_items`, and
+`suggested_next_actions` after every restage, repair staging, or apply. A
+complete session can still return inspection actions such as
+`describe_graph_revision` or `describe_applied_revision_diff`; those are review
+follow-ups, not remaining mutations.
+
 `doxabase.describe_applied_revision_diff`
 
 Returns stored before/after snapshot diffs for an applied staged revision. Pass

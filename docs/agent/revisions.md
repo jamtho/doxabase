@@ -138,12 +138,17 @@ On the receiving capsule:
    `import_revision_snapshots(revision_snapshot_path)`. If snapshot JSON arrived
    first and helpers report `snapshot_rows_without_history`, import the
    project/history TriG.
-4. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
+4. For multi-step recovery, start
+   `start_staged_revision_recovery_session(revision_iris=..., handoff_manifest_path=manifest_path)`
+   from the imported revision set and continue by rereading
+   `describe_staged_revision_recovery_session(session_iri)` after each restage,
+   repair, or apply.
+5. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
    rows reach `history_plus_snapshot_rows`.
-5. Then call `check_staged_revision_apply()` for staged proposals,
+6. Then call `check_staged_revision_apply()` for staged proposals,
    `describe_applied_revision_diff()` for applied events, or
    `describe_revision_lineage()` when you need the whole chain before mutating.
-6. For a cold continuation check, confirm
+7. For a cold continuation check, confirm
    `describe_revision_lineage().applied_revision_iri` /
    `latest_revision_iri`, inspect `describe_applied_revision_diff().graph_diffs`
    for the role-local changed-triple counts, and run

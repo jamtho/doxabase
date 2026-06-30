@@ -3026,6 +3026,15 @@ few useful gaps:
   `import_revision_snapshots` calls. `import_handoff_bundle` now consumes the
   manifest directly, dry-runs receiver paths, imports TriG before snapshot rows,
   returns snapshot evidence at each phase, and hands back a staged recovery plan.
+- A broader staged revision frontier trial then confirmed manifest import,
+  count-drift restage/apply, same-slot repair/apply, lineage, and exact applied
+  diffs all work across scratch handoffs. The remaining autonomy gap was
+  session-level continuity: agents had to keep the imported bundle, source
+  revisions, selected lane, successor, apply event, and replan checkpoints in
+  local notes. `start_staged_revision_recovery_session` now persists the ordered
+  source set and planning parameters, while
+  `describe_staged_revision_recovery_session` recomputes the live plan and
+  source states after each mutation.
 - A project-brief/privacy trial confirmed low-limit briefs still expose staged,
   query-repair, profile-review, and expansion frontiers while export preflight
   blocks scanner-positive handoff/profile artifacts with redacted snippets. The

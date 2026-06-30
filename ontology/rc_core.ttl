@@ -1186,6 +1186,9 @@ rc:RevisionType a rdfs:Class ;
 rc:RevisionStance a rdfs:Class ;
     rdfs:comment "The epistemic or creative posture of a staged revision, such as exploratory hunch, candidate revision, or conservative cleanup." .
 
+rc:StagedRevisionRecoverySession a rdfs:Class ;
+    rdfs:comment "A durable history resource that groups staged revision recovery sources, handoff context, and planning parameters so agents can replan a multi-step recovery workflow over time." .
+
 rc:GraphPatchOperation a rdfs:Class ;
     rdfs:comment "A compact operation type for a staged graph patch." .
 
@@ -1236,6 +1239,66 @@ rc:appliesStagedRevision a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:GraphRevision ;
     rdfs:comment "Links an applied revision event to the staged graph revision it applied." .
+
+rc:sessionCreatedAt a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "When a durable workflow session was started." .
+
+rc:sessionCreatedBy a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Agent, person, or process that started a durable workflow session." .
+
+rc:recoverySessionSourceRevision a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range rc:GraphRevision ;
+    rdfs:comment "A staged, restaged, or applied graph revision included in a staged recovery session." .
+
+rc:recoverySessionSourceRevisionList a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "JSON-encoded ordered source revision IRI list for deterministic recovery-session replanning." .
+
+rc:recoverySessionSourceCount a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Number of source revisions captured when a staged recovery session was started." .
+
+rc:recoverySessionHandoffManifestPath a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Local path to the handoff manifest associated with a staged recovery session, when known." .
+
+rc:recoverySessionInitialSelectionMode a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The recovery-plan selection mode used when a staged recovery session was started." .
+
+rc:recoverySessionCurrentStagedWorkOnly a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether the session was started from the current-staged-work-only recovery view." .
+
+rc:recoverySessionIncludeDrafts a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether recovery-session replans should include read-only repair drafts by default." .
+
+rc:recoverySessionValidationScope a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Validation scope used for recovery-session replans when one was supplied." .
+
+rc:recoverySessionDriftDetail a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Drift detail level used for recovery-session replans." .
+
+rc:recoverySessionInitialLaneCounts a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range xsd:string ;
+    rdfs:comment "JSON-encoded lane counts from the initial staged recovery plan." .
 
 rc:changedGraph a rdf:Property ;
     rdfs:domain rc:GraphRevision ;

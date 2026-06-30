@@ -173,7 +173,10 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Current staged frontier from `project_brief`: use
   `plan_staged_revision_recovery` first. Follow `mutation_frontier_iris`,
   row-level resolved targets, and repair lanes; apply at most one ready row,
-  then rerun the planner before the next mutation.
+  then rerun the planner before the next mutation. If the recovery will span
+  several calls or follows an imported handoff, start a
+  `start_staged_revision_recovery_session` and use
+  `describe_staged_revision_recovery_session` after each mutation.
 - Staged patch that may be ready to apply: use `check_staged_revision_apply`
   before `apply_staged_revision`.
 - Staged patch blocked by count drift or digest drift but still semantically

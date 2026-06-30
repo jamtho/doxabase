@@ -1649,6 +1649,13 @@ For scripts that intend to mutate, use `mutation_frontier_items` as the complete
 worklist. It includes existing apply/restage/repair targets and same-slot repair
 helper actions that create a successor; `mutation_frontier_iris` is the
 compatibility list for existing resolved target IRIs only.
+For multi-step or imported recovery work, call
+`start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
+handoff_manifest_path=...)` before mutating. The session stores the ordered
+source set and planning parameters in `history`; later
+`describe_staged_revision_recovery_session(session_iri)` calls recompute the
+live plan, source workflow states, applied events, and mutation frontier after
+each restage, repair, or apply.
 Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather
@@ -1708,7 +1715,9 @@ post-apply queue and how to route it. `post_apply_recheck_is_partial_queue` is
 always true: this is the affected-sibling subset, not the complete remaining
 frontier. Follow the top-level `suggested_next_actions[0]`
 `plan_staged_revision_recovery(current_staged_work_only=True)` before deciding
-the next mutation when unattended.
+the next mutation when unattended, or
+`describe_staged_revision_recovery_session(session_iri)` when the work is part
+of a persisted recovery session.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

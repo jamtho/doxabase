@@ -5241,6 +5241,78 @@ revision history. Explicit applied revision events are returned as
 `inspect_already_applied` / `applied_event_record` lanes with
 `describe_graph_revision` and `describe_applied_revision_diff` follow-ups.
 
+`db.start_staged_revision_recovery_session(...)` and
+`db.describe_staged_revision_recovery_session(session_iri)` return
+`StagedRevisionRecoverySessionDescription`:
+
+```python
+session.result_kind
+session.helper
+session.mode
+session.session_iri
+session.summary
+session.created_at
+session.created_by
+session.handoff_manifest_path
+session.source_revision_iris
+session.source_count
+session.session_status
+session.current_staged_work_only
+session.include_drafts
+session.validation_scope
+session.drift_detail
+session.initial_selection_mode
+session.initial_lane_counts
+session.current_plan
+session.source_states
+session.completed_source_revision_iris
+session.active_source_revision_iris
+session.applied_event_iris
+session.current_revision_by_source
+session.mutation_frontier_iris
+session.helper_mutation_frontier_calls
+session.suggested_next_actions
+session.suggested_next_calls
+session.warnings
+session.note
+session.created_triples
+```
+
+`start_...` writes one `rc:StagedRevisionRecoverySession` resource to the
+`history` graph and returns `mode="recorded_session"`. `describe_...` is
+read-only and returns `mode="read_only_description"`. Both include a live
+`current_plan`, so after each restage, helper repair, or apply, call
+`describe_...` rather than manually stitching together the old plan, the apply
+response, and lineage calls.
+
+Each `session.source_states[]` row is a
+`StagedRevisionRecoverySessionSourceState`:
+
+```python
+state.source_revision_iri
+state.lane
+state.batch_action
+state.current_revision_iri
+state.resolved_target_iri
+state.resolved_target_record_kind
+state.next_action_queue
+state.next_action_tool_name
+state.applied_revision_iri
+state.current_staged_revision_iri
+state.latest_revision_iri
+state.latest_role
+state.restage_chain_iris
+state.snapshot_status
+state.workflow_state
+```
+
+`workflow_state` is a compact continuity signal such as `active`, `applied`,
+`informational`, `needs_review`, or `missing`. `session_status` is `active`
+while a mutation frontier remains, `complete` when every source has an applied
+event, `review_or_inspect` when only non-mutating inspection remains, and
+`empty` for an intentionally empty session. Complete sessions can still return
+inspection follow-ups such as `describe_applied_revision_diff`.
+
 Each `plan.lanes[]` row is a `StagedRevisionRecoveryLane`:
 
 ```python

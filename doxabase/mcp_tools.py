@@ -387,6 +387,61 @@ def plan_staged_revision_recovery_tool(
     )
 
 
+def start_staged_revision_recovery_session_tool(
+    db: DoxaBase,
+    revision_iris: list[str] | None = None,
+    session_iri: str | None = None,
+    summary: str | None = None,
+    handoff_manifest_path: str | None = None,
+    current_staged_work_only: bool = True,
+    include_drafts: bool = True,
+    validation_scope: str | None = None,
+    drift_detail: str = "summary",
+    limit: int = 50,
+    offset: int = 0,
+    created_at: str | None = None,
+    created_by: str | None = None,
+) -> dict[str, Any]:
+    resolved_handoff_manifest_path = (
+        str(_resolve_path(handoff_manifest_path))
+        if handoff_manifest_path is not None
+        else None
+    )
+    return to_dict(
+        db.start_staged_revision_recovery_session(
+            revision_iris=revision_iris,
+            session_iri=session_iri,
+            summary=summary,
+            handoff_manifest_path=resolved_handoff_manifest_path,
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+            limit=limit,
+            offset=offset,
+            created_at=created_at,
+            created_by=created_by,
+        )
+    )
+
+
+def describe_staged_revision_recovery_session_tool(
+    db: DoxaBase,
+    session_iri: str,
+    include_drafts: bool | None = None,
+    validation_scope: str | None = None,
+    drift_detail: str | None = None,
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_staged_revision_recovery_session(
+            session_iri=session_iri,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+        )
+    )
+
+
 def describe_pattern_tool(
     db: DoxaBase,
     iri: str,

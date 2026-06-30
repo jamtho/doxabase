@@ -23,6 +23,7 @@ from doxabase.mcp_tools import (
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
+    describe_staged_revision_recovery_session_tool,
     describe_staged_revision_tool,
     draft_profile_map_updates_tool,
     draft_query_evidence_storage_overlay_tool,
@@ -78,13 +79,14 @@ from doxabase.mcp_tools import (
     stage_pattern_promotion_tool,
     stage_profile_map_updates_tool,
     stage_systematisation_tool,
+    start_staged_revision_recovery_session_tool,
     validate_graph_tool,
 )
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -689,6 +691,56 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             drift_detail=drift_detail,
             limit=limit,
             offset=offset,
+        )
+
+    @server.tool(name="doxabase.start_staged_revision_recovery_session")
+    def start_staged_revision_recovery_session(
+        revision_iris: list[str] | None = None,
+        session_iri: str | None = None,
+        summary: str | None = None,
+        handoff_manifest_path: str | None = None,
+        current_staged_work_only: bool = True,
+        include_drafts: bool = True,
+        validation_scope: str | None = None,
+        drift_detail: str = "summary",
+        limit: int = 50,
+        offset: int = 0,
+        created_at: str | None = None,
+        created_by: str | None = None,
+    ) -> dict[str, Any]:
+        """Persist a staged recovery session and return its live plan."""
+
+        return start_staged_revision_recovery_session_tool(
+            db,
+            revision_iris=revision_iris,
+            session_iri=session_iri,
+            summary=summary,
+            handoff_manifest_path=handoff_manifest_path,
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+            limit=limit,
+            offset=offset,
+            created_at=created_at,
+            created_by=created_by,
+        )
+
+    @server.tool(name="doxabase.describe_staged_revision_recovery_session")
+    def describe_staged_revision_recovery_session(
+        session_iri: str,
+        include_drafts: bool | None = None,
+        validation_scope: str | None = None,
+        drift_detail: str | None = None,
+    ) -> dict[str, Any]:
+        """Describe a persisted staged recovery session with a live replan."""
+
+        return describe_staged_revision_recovery_session_tool(
+            db,
+            session_iri=session_iri,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
         )
 
     @server.tool(name="doxabase.describe_pattern")

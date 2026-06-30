@@ -24,6 +24,7 @@ from doxabase.mcp_tools import (
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
+    describe_staged_revision_recovery_session_tool,
     describe_staged_revision_tool,
     draft_map_assertion_change_tool,
     draft_query_evidence_storage_overlay_tool,
@@ -79,6 +80,7 @@ from doxabase.mcp_tools import (
     stage_pattern_promotion_tool,
     stage_profile_map_updates_tool,
     stage_systematisation_tool,
+    start_staged_revision_recovery_session_tool,
     validate_graph_tool,
 )
 
@@ -151,6 +153,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.draft_staged_revision_rebase" in tool_names
     assert "doxabase.plan_staged_revision_recovery" in tool_names
+    assert "doxabase.start_staged_revision_recovery_session" in tool_names
+    assert "doxabase.describe_staged_revision_recovery_session" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_query_result" in tool_names
@@ -2276,6 +2280,71 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     ]
     assert result["bundle_summary"]["requires_recheck_after_each_apply"] is False
     assert result["note"].startswith("Read-only staged revision recovery plan")
+
+
+def test_staged_revision_recovery_session_tools_return_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    manifest_path = tmp_path / "handoff-manifest.json"
+
+    session = start_staged_revision_recovery_session_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+        summary="MCP recovery session",
+        handoff_manifest_path=str(manifest_path),
+        drift_detail="exact",
+    )
+
+    assert session["result_kind"] == "staged_revision_recovery_session"
+    assert session["helper"] == "start_staged_revision_recovery_session"
+    assert session["mode"] == "recorded_session"
+    assert session["session_status"] == "active"
+    assert session["source_revision_iris"] == [staged["revision_iri"]]
+    assert session["handoff_manifest_path"] == str(manifest_path)
+    assert session["current_plan"]["lane_counts"] == {"restage_after_review": 1}
+    assert session["source_states"][0]["workflow_state"] == "active"
+    assert session["source_states"][0]["next_action_tool_name"] == (
+        "restage_staged_revision"
+    )
+
+    restaged = restage_staged_revision_tool(db, staged["revision_iri"])
+    described = describe_staged_revision_recovery_session_tool(
+        db,
+        session_iri=session["session_iri"],
+        drift_detail="exact",
+    )
+
+    assert described["helper"] == "describe_staged_revision_recovery_session"
+    assert described["mode"] == "read_only_description"
+    assert described["current_plan"]["lane_counts"] == {"apply_after_review": 1}
+    assert described["source_states"][0]["current_revision_iri"] == (
+        restaged["revision_iri"]
+    )
+    assert described["source_states"][0]["next_action_tool_name"] == (
+        "apply_staged_revision"
+    )
 
 
 def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(

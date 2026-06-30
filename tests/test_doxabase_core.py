@@ -122,7 +122,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1192
+    assert graphs["base_ontology"].triple_count == 1242
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1219
     assert graphs["base_shapes"].mutable is False
@@ -7462,6 +7462,103 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
         repair.staged_revision.revision_iri
     )
     assert repair_check.status == "ready"
+
+
+def test_staged_revision_recovery_session_replans_live_state(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+
+    session = db.start_staged_revision_recovery_session(
+        [staged.revision_iri],
+        summary="Messages recovery session",
+        handoff_manifest_path="/tmp/messages-handoff-manifest.json",
+        drift_detail="exact",
+        created_at="2026-01-02T03:04:05+00:00",
+        created_by="https://example.test/agents#TrialAgent",
+    )
+
+    assert session.helper == "start_staged_revision_recovery_session"
+    assert session.mode == "recorded_session"
+    assert session.created_triples is not None
+    assert session.created_triples > 0
+    assert session.summary == "Messages recovery session"
+    assert session.created_at == "2026-01-02T03:04:05+00:00"
+    assert session.created_by == "https://example.test/agents#TrialAgent"
+    assert session.handoff_manifest_path == "/tmp/messages-handoff-manifest.json"
+    assert session.source_revision_iris == [staged.revision_iri]
+    assert session.initial_lane_counts == {"restage_after_review": 1}
+    assert session.session_status == "active"
+    assert session.current_plan.lane_counts == {"restage_after_review": 1}
+    assert session.source_states[0].workflow_state == "active"
+    assert session.source_states[0].lane == "restage_after_review"
+    assert session.source_states[0].next_action_tool_name == (
+        "restage_staged_revision"
+    )
+    session_resource = db.describe_resource(session.session_iri, graph="history")
+    assert any(
+        triple.predicate == str(RDF.type)
+        and triple.object == RC + "StagedRevisionRecoverySession"
+        for triple in session_resource.outgoing
+    )
+
+    restaged = db.restage_staged_revision(staged.revision_iri)
+    after_restage = db.describe_staged_revision_recovery_session(
+        session.session_iri,
+        drift_detail="exact",
+    )
+
+    assert after_restage.helper == "describe_staged_revision_recovery_session"
+    assert after_restage.mode == "read_only_description"
+    assert after_restage.session_status == "active"
+    assert after_restage.current_plan.lane_counts == {"apply_after_review": 1}
+    assert after_restage.source_states[0].current_revision_iri == (
+        restaged.revision_iri
+    )
+    assert after_restage.source_states[0].next_action_tool_name == (
+        "apply_staged_revision"
+    )
+
+    applied = db.apply_staged_revision(restaged.revision_iri)
+    after_apply = db.describe_staged_revision_recovery_session(
+        session.session_iri,
+        drift_detail="exact",
+    )
+
+    assert after_apply.session_status == "complete"
+    assert after_apply.current_plan.lane_counts == {"inspect_already_applied": 1}
+    assert after_apply.completed_source_revision_iris == [staged.revision_iri]
+    assert after_apply.active_source_revision_iris == []
+    assert after_apply.applied_event_iris == [applied.applied_revision_iri]
+    source_state = after_apply.source_states[0]
+    assert source_state.workflow_state == "applied"
+    assert source_state.applied_revision_iri == applied.applied_revision_iri
+    assert source_state.latest_role == "applied_event"
+    assert source_state.next_action_tool_name == "describe_graph_revision"
+    assert any(
+        action.tool_name == "describe_applied_revision_diff"
+        for action in after_apply.suggested_next_actions
+    )
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
