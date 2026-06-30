@@ -2379,6 +2379,13 @@ rerun `project_brief` in the fresh capsule. Pass `dry_run=true` to inspect the
 manifest paths and expected receiver action without mutating the capsule. Pass
 `replace=true` only when overwriting existing graph roles and stored snapshot
 pairs is intentional.
+Read `recovery_summary` first for a compact receiver smoke check. It reports
+snapshot evidence completeness/status counts, matching recovery-session counts,
+recovery lane and next-action queue counts, mutation-frontier IRIs, preserved
+profile route keys/group counts, the first structured follow-up action, and a
+`recommended_next_step` value such as `run_import_handoff_bundle`,
+`continue_imported_recovery_session`, `follow_recovery_plan_mutation_frontier`,
+or `resume_project_frontier`.
 If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is

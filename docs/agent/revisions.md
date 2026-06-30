@@ -159,6 +159,9 @@ On the receiving capsule:
    non-empty, follow the first
    `describe_staged_revision_recovery_session(session_iri=...)` suggested action
    before starting any receiver-local session.
+   Read `recovery_summary` first for a compact import smoke check over snapshot
+   completeness, matching sessions, lane/queue counts, mutation frontier, and
+   preserved profile route groups.
    The manifest-scoped recovery plan can include applied events and historical
    snapshot rows that are useful context but noisy for choosing the next live
    mutation. After import, rerun

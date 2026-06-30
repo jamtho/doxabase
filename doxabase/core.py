@@ -780,6 +780,33 @@ class RevisionSnapshotBundleImportRecord:
 
 
 @dataclass(frozen=True)
+class HandoffBundleRecoverySummary:
+    result_kind: str
+    dry_run: bool
+    revision_count: int
+    snapshot_evidence_complete: bool
+    snapshot_evidence_status_counts: dict[str, int]
+    incomplete_snapshot_revision_iris: list[str]
+    trig_total_imported: int
+    imported_snapshot_count: int
+    skipped_snapshot_count: int
+    imported_recovery_session_count: int
+    matching_recovery_session_count: int
+    matching_recovery_session_iris: list[str]
+    recovery_plan_available: bool
+    recovery_lane_counts: dict[str, int]
+    recovery_next_action_queue_item_counts: dict[str, int]
+    mutation_frontier_iris: list[str]
+    mutation_frontier_count: int
+    profile_route_revision_count: int
+    profile_route_group_count: int
+    profile_route_keys: list[str]
+    first_suggested_next_action: SuggestedNextAction | None
+    recommended_next_step: str
+    note: str
+
+
+@dataclass(frozen=True)
 class HandoffBundleImportRecord:
     path: str
     format: str
@@ -799,6 +826,7 @@ class HandoffBundleImportRecord:
     recovery_plan: StagedRevisionRecoveryPlan | None
     imported_recovery_session_iris: list[str]
     matching_recovery_session_iris: list[str]
+    recovery_summary: HandoffBundleRecoverySummary
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     warnings: list[str]
@@ -51759,6 +51787,18 @@ class DoxaBase:
                     self._post_handoff_import_project_brief_action()
                 ]
 
+        recovery_summary = self._handoff_bundle_recovery_summary(
+            dry_run=dry_run,
+            revision_iris=revision_iris,
+            snapshot_evidence=post_import_snapshot_evidence,
+            trig_total_imported=sum(trig_imported.values()),
+            revision_snapshots=snapshot_import,
+            imported_recovery_session_iris=imported_recovery_session_iris,
+            matching_recovery_session_iris=matching_recovery_session_iris,
+            recovery_plan=recovery_plan,
+            suggested_next_actions=suggested_next_actions,
+        )
+
         return HandoffBundleImportRecord(
             path=source_label,
             format=str(payload["format"]),
@@ -51782,11 +51822,126 @@ class DoxaBase:
             recovery_plan=recovery_plan,
             imported_recovery_session_iris=imported_recovery_session_iris,
             matching_recovery_session_iris=matching_recovery_session_iris,
+            recovery_summary=recovery_summary,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions if action.call
             ],
             warnings=warnings,
+        )
+
+    def _handoff_bundle_recovery_summary(
+        self,
+        *,
+        dry_run: bool,
+        revision_iris: list[str],
+        snapshot_evidence: list[RevisionSnapshotEvidenceStatus],
+        trig_total_imported: int,
+        revision_snapshots: RevisionSnapshotBundleImportRecord | None,
+        imported_recovery_session_iris: list[str],
+        matching_recovery_session_iris: list[str],
+        recovery_plan: StagedRevisionRecoveryPlan | None,
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> HandoffBundleRecoverySummary:
+        snapshot_status_counts: dict[str, int] = {}
+        for evidence in snapshot_evidence:
+            snapshot_status_counts[evidence.status] = (
+                snapshot_status_counts.get(evidence.status, 0) + 1
+            )
+        incomplete_snapshot_revision_iris = [
+            evidence.revision_iri
+            for evidence in snapshot_evidence
+            if evidence.status != "history_plus_snapshot_rows"
+        ]
+        if dry_run:
+            recommended_next_step = "run_import_handoff_bundle"
+        elif matching_recovery_session_iris:
+            recommended_next_step = "continue_imported_recovery_session"
+        elif recovery_plan is not None and recovery_plan.mutation_frontier_iris:
+            recommended_next_step = "follow_recovery_plan_mutation_frontier"
+        elif recovery_plan is not None and recovery_plan.processed_revision_iris:
+            recommended_next_step = "inspect_recovery_plan"
+        else:
+            recommended_next_step = "resume_project_frontier"
+
+        profile_route_keys: list[str] = []
+        profile_route_revision_count = 0
+        profile_route_group_count = 0
+        if recovery_plan is not None:
+            for summary in recovery_plan.revision_summaries:
+                if summary.profile_route_groups:
+                    profile_route_revision_count += 1
+                    profile_route_group_count += len(summary.profile_route_groups)
+                for key in summary.profile_route_keys:
+                    if key not in profile_route_keys:
+                        profile_route_keys.append(key)
+
+        first_action = suggested_next_actions[0] if suggested_next_actions else None
+        snapshot_evidence_complete = not incomplete_snapshot_revision_iris
+        if not revision_iris:
+            snapshot_note = "The manifest had no revision rows to recover."
+        elif snapshot_evidence_complete:
+            snapshot_note = (
+                "All manifest revisions have history RDF and exact stored "
+                "snapshot rows."
+            )
+        else:
+            snapshot_note = (
+                "Some manifest revisions still lack complete history/snapshot "
+                "evidence; inspect post_import_snapshot_evidence before relying "
+                "on exact drift or applied-diff rows."
+            )
+        note = (
+            f"{snapshot_note} recommended_next_step={recommended_next_step}."
+        )
+        return HandoffBundleRecoverySummary(
+            result_kind="handoff_bundle_recovery_summary",
+            dry_run=dry_run,
+            revision_count=len(revision_iris),
+            snapshot_evidence_complete=snapshot_evidence_complete,
+            snapshot_evidence_status_counts=snapshot_status_counts,
+            incomplete_snapshot_revision_iris=incomplete_snapshot_revision_iris,
+            trig_total_imported=trig_total_imported,
+            imported_snapshot_count=(
+                revision_snapshots.imported_snapshot_count
+                if revision_snapshots is not None
+                else 0
+            ),
+            skipped_snapshot_count=(
+                revision_snapshots.skipped_snapshot_count
+                if revision_snapshots is not None
+                else 0
+            ),
+            imported_recovery_session_count=len(imported_recovery_session_iris),
+            matching_recovery_session_count=len(matching_recovery_session_iris),
+            matching_recovery_session_iris=list(matching_recovery_session_iris),
+            recovery_plan_available=recovery_plan is not None,
+            recovery_lane_counts=(
+                dict(recovery_plan.lane_counts)
+                if recovery_plan is not None
+                else {}
+            ),
+            recovery_next_action_queue_item_counts=(
+                dict(recovery_plan.next_action_queue_item_counts)
+                if recovery_plan is not None
+                else {}
+            ),
+            mutation_frontier_iris=(
+                list(recovery_plan.mutation_frontier_iris)
+                if recovery_plan is not None
+                else []
+            ),
+            mutation_frontier_count=(
+                len(recovery_plan.mutation_frontier_iris)
+                if recovery_plan is not None
+                else 0
+            ),
+            profile_route_revision_count=profile_route_revision_count,
+            profile_route_group_count=profile_route_group_count,
+            profile_route_keys=profile_route_keys,
+            first_suggested_next_action=first_action,
+            recommended_next_step=recommended_next_step,
+            note=note,
         )
 
     def _recovery_session_iris(self, history_graphs: list[str]) -> list[str]:

@@ -3599,6 +3599,14 @@ few useful gaps:
   full-scan map update as a safe single even when metric/type/fallback lanes
   remain open, while scalar conflicts, query blockers, and already-applied rows
   remain blocked.
+- A handoff/export recovery trial confirmed manifest import, recovery-session
+  continuation, route-source preservation, apply-one-then-restage, and receiver
+  validation all work end to end, but the PASS/FAIL proof required stitching
+  together import, snapshot evidence, session, plan, and restage responses.
+  `import_handoff_bundle().recovery_summary` now gives unattended agents the
+  compact smoke-check fields first: snapshot completeness, matching sessions,
+  lane/queue counts, mutation frontier, preserved profile route keys, and the
+  first suggested next action.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1919,21 +1919,25 @@ def test_export_revision_snapshots_tool_reports_sensitive_literals(
 def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> None:
     source = DoxaBase.create(tmp_path / "source.sqlite")
     receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
-    staged = stage_graph_revision_tool(
+    dataset = "https://example.test/project#HandoffOrders"
+    source.record_map_dataset(dataset, label="Handoff orders", is_table=True)
+    route_source = {
+        "review_lane": "query_context_review",
+        "route_group_key": "query-context:HandoffOrders:missing-storage",
+        "route_step_key": "profile-route-step:handoff-storage-repair",
+        "blocking_issue_codes": ["missing_storage_access"],
+        "route_anchor_iris": [dataset],
+    }
+    staged = stage_query_storage_access_repair_tool(
         source,
-        summary="Stage handoff table",
+        dataset_iri=dataset,
+        storage_access_iri="https://example.test/project#HandoffOrdersStorage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/tmp/doxabase-handoff-orders",
+        location_kind="directory",
         rationale="Create a project/history RDF and snapshot handoff pair.",
-        additions=[
-            {
-                "graph": "map",
-                "content": """
-                    @prefix ex: <https://example.test/project#> .
-                    @prefix rc: <https://richcanopy.org/ns/rc#> .
-
-                    ex:HandoffOrders a rc:Dataset, rc:Table .
-                """,
-            }
-        ],
+        summary="Stage handoff storage repair",
+        profile_route_sources=[route_source],
     )
     trig_path = tmp_path / "project-handoff.trig"
     snapshot_path = tmp_path / "revision-snapshots.json"
@@ -2050,6 +2054,21 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert dry_run["recovery_plan"] is None
     assert dry_run["imported_recovery_session_iris"] == []
     assert dry_run["matching_recovery_session_iris"] == []
+    assert dry_run["recovery_summary"]["result_kind"] == (
+        "handoff_bundle_recovery_summary"
+    )
+    assert dry_run["recovery_summary"]["dry_run"] is True
+    assert dry_run["recovery_summary"]["snapshot_evidence_complete"] is False
+    assert dry_run["recovery_summary"]["snapshot_evidence_status_counts"] == {
+        "history_missing": 1,
+    }
+    assert dry_run["recovery_summary"]["recovery_plan_available"] is False
+    assert dry_run["recovery_summary"]["recommended_next_step"] == (
+        "run_import_handoff_bundle"
+    )
+    assert dry_run["recovery_summary"]["first_suggested_next_action"][
+        "tool_name"
+    ] == "import_handoff_bundle"
     assert {
         item["revision_iri"]: item["status"]
         for item in dry_run["pre_import_snapshot_evidence"]
@@ -2084,6 +2103,40 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         item["revision_iri"]: item["status"]
         for item in manifest_import["post_import_snapshot_evidence"]
     } == {staged["revision_iri"]: "history_plus_snapshot_rows"}
+    assert manifest_import["recovery_summary"]["dry_run"] is False
+    assert manifest_import["recovery_summary"]["revision_count"] == 1
+    assert (
+        manifest_import["recovery_summary"]["snapshot_evidence_complete"]
+        is True
+    )
+    assert manifest_import["recovery_summary"][
+        "snapshot_evidence_status_counts"
+    ] == {"history_plus_snapshot_rows": 1}
+    assert manifest_import["recovery_summary"]["imported_snapshot_count"] == 1
+    assert (
+        manifest_import["recovery_summary"]["matching_recovery_session_count"]
+        == 1
+    )
+    assert manifest_import["recovery_summary"]["recovery_lane_counts"] == {
+        "apply_after_review": 1,
+    }
+    assert manifest_import["recovery_summary"][
+        "recovery_next_action_queue_item_counts"
+    ] == {"apply_after_review": 1}
+    assert manifest_import["recovery_summary"]["mutation_frontier_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert manifest_import["recovery_summary"]["profile_route_revision_count"] == 1
+    assert manifest_import["recovery_summary"]["profile_route_group_count"] == 1
+    assert manifest_import["recovery_summary"]["profile_route_keys"] == [
+        route_source["route_group_key"]
+    ]
+    assert manifest_import["recovery_summary"]["recommended_next_step"] == (
+        "continue_imported_recovery_session"
+    )
+    assert manifest_import["recovery_summary"]["first_suggested_next_action"][
+        "tool_name"
+    ] == "describe_staged_revision_recovery_session"
     assert manifest_import["recovery_plan"]["lane_counts"] == {
         "apply_after_review": 1
     }
@@ -2200,6 +2253,15 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
 
     assert imported["imported_recovery_session_iris"] == []
     assert imported["matching_recovery_session_iris"] == []
+    assert imported["recovery_summary"]["recommended_next_step"] == (
+        "follow_recovery_plan_mutation_frontier"
+    )
+    assert imported["recovery_summary"]["mutation_frontier_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert imported["recovery_summary"]["first_suggested_next_action"][
+        "tool_name"
+    ] == "start_staged_revision_recovery_session"
     assert imported["recovery_plan"]["processed_revision_iris"] == [
         staged["revision_iri"]
     ]
@@ -2246,6 +2308,11 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
     assert imported["recovery_plan"]["lane_counts"] == {}
     assert imported["recovery_plan"]["mutation_allowed_after"] == (
         "no_mutation_frontier"
+    )
+    assert imported["recovery_summary"]["revision_count"] == 0
+    assert imported["recovery_summary"]["snapshot_evidence_complete"] is True
+    assert imported["recovery_summary"]["recommended_next_step"] == (
+        "resume_project_frontier"
     )
     assert imported["suggested_next_actions"][0]["tool_name"] == "project_brief"
     assert imported["suggested_next_actions"][0]["arguments"] == {}

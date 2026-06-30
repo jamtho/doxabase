@@ -5022,6 +5022,7 @@ handoff.post_import_snapshot_evidence
 handoff.recovery_plan
 handoff.imported_recovery_session_iris
 handoff.matching_recovery_session_iris
+handoff.recovery_summary
 handoff.suggested_next_actions
 handoff.suggested_next_calls
 handoff.warnings
@@ -5044,6 +5045,31 @@ lists sessions newly brought in by the TriG import, while
 source revisions overlap the manifest revisions. When a matching session exists,
 the first suggested action is `describe_staged_revision_recovery_session`; start
 a receiver-local session only when no matching imported session is available.
+Read `handoff.recovery_summary` first when doing unattended smoke checks:
+
+```python
+summary.result_kind
+summary.dry_run
+summary.revision_count
+summary.snapshot_evidence_complete
+summary.snapshot_evidence_status_counts
+summary.incomplete_snapshot_revision_iris
+summary.imported_recovery_session_count
+summary.matching_recovery_session_count
+summary.recovery_lane_counts
+summary.recovery_next_action_queue_item_counts
+summary.mutation_frontier_iris
+summary.profile_route_revision_count
+summary.profile_route_group_count
+summary.profile_route_keys
+summary.first_suggested_next_action
+summary.recommended_next_step
+```
+
+It is a compact report over the same imported manifest, snapshot evidence,
+matching recovery sessions, recovery plan, route-source bridge, and first
+structured follow-up action. Use it for PASS/FAIL continuity checks, then open
+the raw fields when a count is surprising or incomplete.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:

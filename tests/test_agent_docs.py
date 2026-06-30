@@ -80,6 +80,7 @@ def test_revision_docs_include_handoff_recovery_cookbook() -> None:
     assert "import_revision_snapshots" in content
     assert "describe_revision_snapshot_evidence" in content
     assert "check_staged_revision_apply" in content
+    assert "recovery_summary" in content
     assert "history_only_count_digest" in content
     assert "snapshot_rows_without_history" in content
     assert "history_plus_snapshot_rows" in content
