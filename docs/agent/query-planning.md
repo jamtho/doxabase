@@ -271,13 +271,17 @@ Start with `describe_query_context(dataset_iri)`:
    `remove_stale_physical_layout_link` for a stale `rc:hasPhysicalLayout`
    assertion when a verified matching physical layout remains linked. When
    storage is already linked but no physical layout is present,
-   `missing_physical_layout` exposes a reviewed
-   `record_map_physical_layout` template; for database storage, choose a
-   database table layout such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or
-   `rc:MySQLTable` after review. These are reviewed templates, not call-ready
-   `suggested_next_actions`: fill placeholders, add required fields such as
-   `rationale`, skip actions marked `already_satisfied` or `already_pending`,
-   and check each `condition` before calling the named tool.
+   `missing_physical_layout` exposes
+   `repair_action_type="record_or_stage_physical_layout"`. Prefer the
+   `stage_query_physical_layout_repair` option when the reviewed layout should
+   carry graph-revision rationale; use the `record_map_physical_layout` option
+   only when a direct current-best map write is intentional. For database
+   storage, choose a database table layout such as `rc:PostgreSQLTable`,
+   `rc:SQLiteTable`, or `rc:MySQLTable` after review. These are reviewed
+   templates, not call-ready `suggested_next_actions`: fill placeholders, add
+   required fields such as `rationale`, skip actions marked `already_satisfied`
+   or `already_pending`, and check each `condition` before calling the named
+   tool.
    In multiple-candidate missing-storage groups, the group-level
    `stage_existing_storage_access_link` action may still be pending because a
    different non-pending candidate could be chosen after review; use the

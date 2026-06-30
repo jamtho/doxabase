@@ -16592,8 +16592,8 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert missing_layout.details["storage_protocol_iris"] == [RC + "DatabaseStorage"]
     assert missing_layout.details["database_storage_present"] is True
     repair_hint = missing_layout.details["repair_hint"]
-    assert repair_hint["action_type"] == "record_physical_layout"
-    assert repair_hint["choice_mode"] == "review_all_applicable"
+    assert repair_hint["action_type"] == "record_or_stage_physical_layout"
+    assert repair_hint["choice_mode"] == "choose_one"
     assert "rc:PostgreSQLTable" in repair_hint["file_format_guidance"][
         "rc:DatabaseStorage"
     ]
@@ -16602,19 +16602,58 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
         for group in context.suggested_repair_action_groups
         if group.issue_code == "missing_physical_layout"
     )
-    assert repair_group.repair_action_type == "record_physical_layout"
+    assert repair_group.repair_action_type == "record_or_stage_physical_layout"
     assert repair_group.issue_resource is not None
     assert repair_group.issue_resource.iri == dataset
+    assert repair_group.choice_mode == "choose_one"
     assert repair_group.repair_context["database_storage_present"] is True
     assert repair_group.repair_context["storage_protocol_iris"] == [
         RC + "DatabaseStorage"
     ]
-    assert repair_group.pending_required_extra_arguments == ["iri", "file_format"]
-    assert len(repair_group.pending_action_options) == 1
-    layout_option = repair_group.pending_action_options[0]
+    assert repair_group.pending_required_extra_arguments == [
+        "layout_iri",
+        "file_format",
+        "rationale",
+        "iri",
+    ]
+    assert len(repair_group.pending_action_options) == 2
+    staged_option = repair_group.pending_action_options[0]
+    _assert_repair_action_option(
+        staged_option,
+        action_index=0,
+        action_type="stage_reviewed_physical_layout",
+        tool_name="stage_query_physical_layout_repair",
+        mcp_tool_name="doxabase.stage_query_physical_layout_repair",
+        action_label="Stage physical layout repair",
+        required_extra_arguments=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+        ],
+        placeholder_fields=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+        reviewed_value_fields=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+    )
+    assert "staged-revision rationale" in staged_option["reason"]
+    assert "rc:PostgreSQLTable" in staged_option["condition"]
+    assert "stage_query_physical_layout_repair records a reviewable" in (
+        staged_option["review_rationale_guidance"]
+    )
+    layout_option = repair_group.pending_action_options[1]
     _assert_repair_action_option(
         layout_option,
-        action_index=0,
+        action_index=1,
         action_type="record_reviewed_physical_layout",
         tool_name="record_map_physical_layout",
         mcp_tool_name="doxabase.record_map_physical_layout",
@@ -16637,19 +16676,34 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
         layout_option["review_rationale_guidance"]
     )
     action = repair_group.actions[0]
-    assert action["tool_name"] == "record_map_physical_layout"
-    assert action["arguments_template"]["datasets"] == [dataset]
+    assert action["tool_name"] == "stage_query_physical_layout_repair"
+    assert action["arguments_template"]["dataset_iri"] == dataset
+    assert action["arguments_template"]["layout_iri"] == (
+        "<reviewed physical layout IRI>"
+    )
     assert action["arguments_template"]["file_format"] == (
         "<reviewed rc:FileFormat IRI>"
     )
     assert "rc:PostgreSQLTable" in action["condition"]
-
-    layout = db.record_map_physical_layout(
-        "https://example.test/project#warehouse_orders_table_layout",
-        file_format="rc:PostgreSQLTable",
-        layout_verification_status="rc:VerifiedByQueryLayout",
-        datasets=[dataset],
+    direct_action = repair_group.actions[1]
+    assert direct_action["tool_name"] == "record_map_physical_layout"
+    assert direct_action["arguments_template"]["datasets"] == [dataset]
+    assert direct_action["arguments_template"]["file_format"] == (
+        "<reviewed rc:FileFormat IRI>"
     )
+
+    layout_iri = "https://example.test/project#warehouse_orders_table_layout"
+    staged = db.stage_query_physical_layout_repair(
+        dataset_iri=dataset,
+        layout_iri=layout_iri,
+        file_format="rc:PostgreSQLTable",
+        rationale="Reviewed the warehouse relation as a PostgreSQL table layout.",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="Reviewed from warehouse source metadata.",
+    )
+    assert staged.validation_conforms is True
+    assert db.check_staged_revision_apply(staged.revision_iri).status == "ready"
+    db.apply_staged_revision(staged.revision_iri)
 
     repaired_context = db.describe_query_context(dataset)
     assert "missing_physical_layout" not in {
@@ -16658,7 +16712,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "database_relation_handoff"
     assert plan.scan.physical_layout is not None
-    assert plan.scan.physical_layout.iri == layout.iri
+    assert plan.scan.physical_layout.iri == layout_iri
 
 
 def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(

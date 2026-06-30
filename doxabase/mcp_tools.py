@@ -681,6 +681,40 @@ def draft_query_evidence_storage_overlay_tool(
     return to_dict(result)
 
 
+def stage_query_physical_layout_repair_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    layout_iri: str,
+    file_format: str,
+    rationale: str,
+    label: str | None = None,
+    description: str | None = None,
+    compression_codec: str | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
+    summary: str | None = None,
+    review_note: str | None = None,
+    review_recommendation: str | None = None,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.stage_query_physical_layout_repair(
+        dataset_iri=dataset_iri,
+        layout_iri=layout_iri,
+        file_format=file_format,
+        rationale=rationale,
+        label=label,
+        description=description,
+        compression_codec=compression_codec,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
+        summary=summary,
+        review_note=review_note,
+        review_recommendation=review_recommendation,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def describe_context_slice_tool(
     db: DoxaBase,
     seed_iris: list[str],

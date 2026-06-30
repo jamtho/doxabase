@@ -2431,8 +2431,10 @@ few useful gaps:
 - A query/storage frontier trial found database-backed routes could have storage
   and relation metadata modeled correctly but no structured repair lane for
   `missing_physical_layout`. Once storage is linked, that issue now exposes a
-  reviewed `record_map_physical_layout` repair group with database table-layout
-  guidance such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`.
+  reviewed `record_or_stage_physical_layout` repair group with a staged
+  `stage_query_physical_layout_repair` option, a direct
+  `record_map_physical_layout` fallback, and database table-layout guidance such
+  as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`.
 - A staged-recovery frontier trial found `plan_staged_revision_recovery()`
   exposed `would_restage_revision_iris` correctly but top-level suggestions still
   nudged agents toward individual restage calls. Plans with restageable stale rows

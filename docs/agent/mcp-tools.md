@@ -914,8 +914,11 @@ removal of a stale `rc:partitionedBy` link that is blocking an otherwise clean
 query target.
 When storage is already linked but no physical layout is present,
 `missing_physical_layout` exposes
-`repair_action_type="record_physical_layout"` with a reviewed
-`record_map_physical_layout` template. Use `repair_context.storage_protocol_iris`,
+`repair_action_type="record_or_stage_physical_layout"`. Prefer the reviewed
+`stage_query_physical_layout_repair` option when the layout/link should carry
+graph-revision rationale before becoming map state; use
+`record_map_physical_layout` only when a direct current-best map write is
+intentional. Use `repair_context.storage_protocol_iris`,
 `repair_context.database_storage_present`, and `file_format_guidance` to choose
 the reviewed `file_format`; database relation handoffs should use table-layout
 formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
@@ -1110,6 +1113,16 @@ patches for those old dataset-level values alongside the reviewed overlay;
 those removals are part of making the staged preview validation-clean.
 This route preserves graph-revision rationale and keeps the draft step
 side-effect free.
+
+### doxabase.stage_query_physical_layout_repair
+
+Stages a reviewed physical layout resource and `rc:hasPhysicalLayout` dataset
+link for a `missing_physical_layout` query repair. Pass `dataset_iri`,
+`layout_iri`, `file_format`, and a reviewed `rationale`; optional label,
+description, compression, verification status, and verification note are written
+to the staged `rc:PhysicalLayout`. The helper returns a normal staged-revision
+record, so run `check_staged_revision_apply`, apply the ready row, then rerun
+`describe_query_context` before drafting a query plan.
 
 `doxabase.describe_context_slice`
 

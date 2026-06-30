@@ -2807,8 +2807,11 @@ pending, `repair_context.already_pending_candidate_count`,
 `stage_existing_storage_access_link` pending option repeats those fields when it
 remains pending because other candidate choices are still available.
 When `missing_physical_layout` appears after storage is linked, its repair group
-has `repair_action_type="record_physical_layout"` and a reviewed
-`record_map_physical_layout` template. Its `repair_context.storage_protocol_iris`,
+has `repair_action_type="record_or_stage_physical_layout"`. Prefer the
+`stage_query_physical_layout_repair` option when the reviewed layout/link should
+carry graph-revision rationale before becoming map state; use
+`record_map_physical_layout` only when a direct current-best map write is
+intentional. Its `repair_context.storage_protocol_iris`,
 `repair_context.database_storage_present`, and `repair_context.file_format_guidance`
 help pick a reviewed `file_format`; for database storage, use table-layout
 formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when

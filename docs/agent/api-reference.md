@@ -1109,6 +1109,13 @@ you provide. If the stale source already has `restaged_by` /
 `current_restaged_by`, inspect or target that current successor instead; the
 helper rejects parallel successors.
 
+`stage_query_physical_layout_repair()` is the narrow staged helper for a
+`missing_physical_layout` query repair after storage is already linked. Pass the
+dataset IRI, reviewed layout IRI, reviewed file format, and rationale; optional
+verification fields become physical-layout metadata. It stages the layout
+resource and dataset `rc:hasPhysicalLayout` link together, preserving review
+rationale before agents check/apply the row and rerun query planning.
+
 `draft_map_assertion_change()` previews the same reviewable add/remove/replace
 for one `map` assertion without writing a staged revision. Pass `subject`,
 `predicate`, optional `object`, a `rationale`, and `change_kind` (`"add"`,

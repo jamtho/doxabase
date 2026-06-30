@@ -79,6 +79,7 @@ from doxabase.mcp_tools import (
     search_staged_patch_payloads_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_query_physical_layout_repair_tool,
     stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
     stage_profile_map_updates_tool,
@@ -140,6 +141,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.stage_profile_map_updates" in tool_names
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
+    assert "doxabase.stage_query_physical_layout_repair" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.preflight_context_slice_export" in tool_names
     assert "doxabase.export_context_slice" in tool_names
@@ -6203,7 +6205,8 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         for group in result["suggested_repair_action_groups"]
         if group["issue_code"] == "missing_physical_layout"
     )
-    assert repair_group["repair_action_type"] == "record_physical_layout"
+    assert repair_group["repair_action_type"] == "record_or_stage_physical_layout"
+    assert repair_group["choice_mode"] == "choose_one"
     assert repair_group["repair_context"]["database_storage_present"] is True
     assert repair_group["repair_context"]["storage_protocol_iris"] == [
         RC + "DatabaseStorage"
@@ -6211,11 +6214,40 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     assert "rc:PostgreSQLTable" in repair_group["repair_context"][
         "file_format_guidance"
     ]["rc:DatabaseStorage"]
-    assert len(repair_group["pending_action_options"]) == 1
-    layout_option = repair_group["pending_action_options"][0]
+    assert len(repair_group["pending_action_options"]) == 2
+    staged_option = repair_group["pending_action_options"][0]
+    _assert_repair_action_option(
+        staged_option,
+        action_index=0,
+        action_type="stage_reviewed_physical_layout",
+        tool_name="stage_query_physical_layout_repair",
+        mcp_tool_name="doxabase.stage_query_physical_layout_repair",
+        action_label="Stage physical layout repair",
+        required_extra_arguments=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+        ],
+        placeholder_fields=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+        reviewed_value_fields=[
+            "layout_iri",
+            "file_format",
+            "rationale",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+    )
+    assert "staged-revision rationale" in staged_option["reason"]
+    layout_option = repair_group["pending_action_options"][1]
     _assert_repair_action_option(
         layout_option,
-        action_index=0,
+        action_index=1,
         action_type="record_reviewed_physical_layout",
         tool_name="record_map_physical_layout",
         mcp_tool_name="doxabase.record_map_physical_layout",
@@ -6238,10 +6270,29 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         layout_option["review_rationale_guidance"]
     )
     action = repair_group["actions"][0]
-    assert action["tool_name"] == "record_map_physical_layout"
-    assert action["arguments_template"]["datasets"] == [dataset]
+    assert action["tool_name"] == "stage_query_physical_layout_repair"
+    assert action["arguments_template"]["dataset_iri"] == dataset
+    assert action["arguments_template"]["layout_iri"] == (
+        "<reviewed physical layout IRI>"
+    )
     assert action["arguments_template"]["file_format"] == (
         "<reviewed rc:FileFormat IRI>"
+    )
+    direct_action = repair_group["actions"][1]
+    assert direct_action["tool_name"] == "record_map_physical_layout"
+    assert direct_action["arguments_template"]["datasets"] == [dataset]
+    staged = stage_query_physical_layout_repair_tool(
+        db,
+        dataset_iri=dataset,
+        layout_iri="https://example.test/project#warehouse_orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        rationale="Reviewed the warehouse relation as a PostgreSQL table layout.",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="Reviewed from warehouse source metadata.",
+    )
+    assert staged["validation_conforms"] is True
+    assert check_staged_revision_apply_tool(db, staged["revision_iri"])["status"] == (
+        "ready"
     )
 
 
