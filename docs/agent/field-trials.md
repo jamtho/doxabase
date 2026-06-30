@@ -3558,6 +3558,15 @@ few useful gaps:
   include ordinary non-staged `rc:GraphRevision` snapshot rows. Import now keeps
   those rows as informational recovery lanes instead of sending them through
   staged-patch restage/apply planning.
+- A confirmation wave after the non-staged handoff fix found no new repo change.
+  Active stale-seed handoff from the local capsule exported zero revision rows
+  and a fresh receiver moved past seed recovery to query/profile frontier work.
+  Mixed graph-version maintenance handoffs preserved ordinary revision
+  snapshots as informational while leaving one current staged patch actionable.
+  Storage/query/profile and awkward systematisation trials both round-tripped
+  cleanly, preserving reviewed source handles, profile evidence links,
+  semantic alternatives, and apply-one-then-recheck gates without inventing
+  secrets or collapsing ambiguous lore into one template.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
