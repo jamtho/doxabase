@@ -4924,12 +4924,12 @@ class DoxaBase:
         missing_seed_terms = self._missing_base_ontology_terms(required_terms)
         if not missing_seed_terms:
             return None
+        arguments = {
+            "export_kind": "handoff_bundle",
+            "graphs": ["project"],
+            "limit": 20,
+        }
         if current_staged_revision_count > 0:
-            arguments = {
-                "export_kind": "handoff_bundle",
-                "graphs": ["project"],
-                "limit": 20,
-            }
             action = SuggestedNextAction(
                 action_label="Preflight stale seed handoff export",
                 tool_name="export_preflight",
@@ -4945,23 +4945,21 @@ class DoxaBase:
             queue_types = ["staged_review"]
             staged_count: int | None = current_staged_revision_count
         else:
-            arguments = {
-                "doc_id": "api_reference",
-                "section": "Create or Open a Capsule",
-            }
             action = SuggestedNextAction(
-                action_label="Read stale seed recovery guidance",
-                tool_name="get_doc",
-                mcp_tool_name="doxabase.get_doc",
+                action_label="Preflight stale seed project handoff export",
+                tool_name="export_preflight",
+                mcp_tool_name="doxabase.export_preflight",
                 arguments=arguments,
                 reason=(
                     "The immutable base_ontology is missing current staging seed "
-                    "terms; read the recovery guidance before staging graph changes."
+                    "terms; preflight a project/history handoff before recovering "
+                    "into a fresh seeded capsule. The companion revision snapshot "
+                    "bundle may be empty."
                 ),
-                call=self._suggested_call_string("get_doc", arguments),
+                call=self._suggested_call_string("export_preflight", arguments),
             )
             queue_types = []
-            staged_count = None
+            staged_count = 0
         return ProjectBriefHealthTask(
             priority=5,
             task_type="seed_recovery_review",
@@ -44750,14 +44748,12 @@ class DoxaBase:
             f"vocabulary ({missing_text}), which usually means it was created "
             "with an older DoxaBase seed. Reopening the capsule or calling "
             "seed_base_graphs() only seeds empty immutable graphs and will not "
-            "update stale seed graphs. Export mutable project graphs and import "
-            "them into a fresh DoxaBase.create(...) capsule, or run an explicit "
-            "seed migration before staging. When history rows or exact staged "
-            "revision recovery matter, preserve revision snapshots with "
-            "export_handoff_bundle() or pair export_trig() with "
-            "export_revision_snapshots(), import both into the fresh capsule, "
-            "then run "
-            "plan_staged_revision_recovery(current_staged_work_only=True)."
+            "update stale seed graphs. Preflight a recovery-complete handoff, "
+            "export the project/history TriG plus companion revision snapshot "
+            "JSON, then import that manifest into a fresh DoxaBase.create(...) "
+            "capsule. The snapshot bundle may be empty when no revision rows "
+            "exist; otherwise import_handoff_bundle() returns the staged "
+            "recovery plan to follow before further mutation."
         )
 
     def _missing_base_ontology_terms(
@@ -48689,13 +48685,26 @@ class DoxaBase:
                 )
                 for revision_iri in revision_iris
             ]
-            recovery_plan = self.plan_staged_revision_recovery(
-                revision_iris,
-                current_staged_work_only=False,
-                include_drafts=include_drafts,
-                validation_scope=validation_scope,
-                drift_detail=drift_detail,
-            )
+            if revision_iris:
+                recovery_plan = self.plan_staged_revision_recovery(
+                    revision_iris,
+                    current_staged_work_only=False,
+                    include_drafts=include_drafts,
+                    validation_scope=validation_scope,
+                    drift_detail=drift_detail,
+                )
+            else:
+                recovery_plan = self._empty_staged_revision_recovery_plan(
+                    selection_mode="explicit_revision_iris",
+                    requested_revision_iris=[],
+                    current_staged_work_only=False,
+                    include_drafts=include_drafts,
+                    validation_scope=validation_scope,
+                    drift_detail=drift_detail,
+                    limit=50,
+                    offset=0,
+                    total_count=0,
+                )
             suggested_next_actions = recovery_plan.suggested_next_actions
 
         return HandoffBundleImportRecord(

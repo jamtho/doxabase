@@ -2068,6 +2068,49 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert after_snapshots["exact_snapshot_graph_roles"] == ["map"]
 
 
+def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    source.record_map_dataset(
+        "https://example.test/project#Customers",
+        label="Customers",
+        is_table=True,
+    )
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    manifest_path = tmp_path / "handoff-manifest.json"
+
+    export = export_handoff_bundle_tool(
+        source,
+        trig_path=str(trig_path),
+        revision_snapshot_path=str(snapshot_path),
+        manifest_path=str(manifest_path),
+    )
+
+    assert export["revision_iris"] == []
+    assert export["revision_snapshots"]["snapshot_count"] == 0
+
+    imported = import_handoff_bundle_tool(
+        receiver,
+        manifest_path=str(manifest_path),
+    )
+
+    assert imported["revision_iris"] == []
+    assert imported["revision_snapshots"]["imported_snapshot_count"] == 0
+    assert imported["recovery_plan"]["selection_mode"] == "explicit_revision_iris"
+    assert imported["recovery_plan"]["requested_revision_iris"] == []
+    assert imported["recovery_plan"]["lane_counts"] == {}
+    assert imported["recovery_plan"]["mutation_allowed_after"] == (
+        "no_mutation_frontier"
+    )
+    assert imported["suggested_next_actions"] == []
+    assert receiver.describe_dataset(
+        "https://example.test/project#Customers",
+    ).label == "Customers"
+
+
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_turtle(

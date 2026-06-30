@@ -1360,12 +1360,13 @@ def test_project_brief_surfaces_stale_seed_health_task(
         seed_task.reason
     )
     assert seed_task.suggested_next_action is not None
-    assert seed_task.suggested_next_action.tool_name == "get_doc"
+    assert seed_task.suggested_next_action.tool_name == "export_preflight"
     assert seed_task.suggested_next_action.arguments == {
-        "doc_id": "api_reference",
-        "section": "Create or Open a Capsule",
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
+        "limit": 20,
     }
-    assert seed_task.current_staged_revision_count is None
+    assert seed_task.current_staged_revision_count == 0
     assert brief.safety_first_action == seed_task.suggested_next_action
     assert brief.safety_first_call == seed_task.suggested_next_call
     assert brief.safety_first_source == "health_tasks:seed_recovery_review"
@@ -1415,8 +1416,8 @@ def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
     )
     assert seed_task.current_staged_revision_count == 1
     assert seed_task.queue_types == ["staged_review"]
-    assert "revision snapshots" in seed_task.reason
-    assert "plan_staged_revision_recovery" in seed_task.reason
+    assert "revision snapshot JSON" in seed_task.reason
+    assert "import_handoff_bundle()" in seed_task.reason
     assert seed_task.suggested_next_action is not None
     assert seed_task.suggested_next_action.tool_name == "export_preflight"
     assert seed_task.suggested_next_action.arguments == {

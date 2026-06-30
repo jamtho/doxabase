@@ -21,16 +21,16 @@ Use `DoxaBase(path)` to open an existing capsule. There is no `DoxaBase.open()`
 helper in the current API.
 `seed_base_graphs()` seeds only empty immutable seed graphs; it is not a seed
 refresh or migration helper for older non-empty capsules. If staging reports
-that immutable `base_ontology` is missing current staging vocabulary, export the
-mutable project graphs with the default `export_trig(...)`, create a fresh
-`DoxaBase.create(...)` capsule, then `import_trig(...)` there. Do not use a
-normal `all_with_seeds` import for this recovery path because immutable seed
-graphs are protected. When the stale capsule has staged revision rows or exact
-revision recovery matters, use `export_handoff_bundle(...)` or pair
-`export_trig(...)` with `export_revision_snapshots(...)`, import both artifacts
-into the fresh capsule, then run
-`plan_staged_revision_recovery(current_staged_work_only=True)` and follow the
-restage/apply route it returns.
+that immutable `base_ontology` is missing current staging vocabulary, follow
+`project_brief`'s stale-seed health action and preflight a handoff export before
+creating a fresh `DoxaBase.create(...)` capsule. `export_handoff_bundle(...)`
+is valid even when there are no staged revision rows; the snapshot JSON will be
+empty and `import_handoff_bundle(...)` will return an empty recovery plan. Do
+not use a normal `all_with_seeds` import for this recovery path because
+immutable seed graphs are protected. When the stale capsule has staged revision
+rows or exact revision recovery matters, preserve the project/history TriG plus
+companion revision snapshot JSON, import both artifacts into the fresh capsule,
+then follow the staged recovery plan returned by `import_handoff_bundle(...)`.
 
 Use `to_dict(result)` or `to_jsonable(results)` when a direct Python script
 needs serializable versions of returned dataclass-like API objects. MCP helpers

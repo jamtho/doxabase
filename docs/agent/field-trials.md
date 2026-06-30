@@ -3241,6 +3241,17 @@ few useful gaps:
   visible in `lanes` and `next_action_queue` but are excluded from
   `mutation_frontier_iris` / `mutation_frontier_items`, with
   `mutation_allowed_after="repair_inspection_required_before_mutation"`.
+- A broad unattended workflow wave retested stale-seed recovery,
+  profile-to-map promotion, storage-metadata query planning, and staged
+  revision handoff. Stale-seed recovery was the live blocker: no-staged-row
+  capsules previously routed agents to docs and `import_handoff_bundle()` failed
+  on empty revision lists. `project_brief` now points stale-seed health tasks to
+  handoff preflight even when `current_staged_revision_count=0`, and empty
+  snapshot bundles import with an empty recovery plan. The storage/query and
+  staged-recovery workflows passed; profile promotion passed but exposed a next
+  candidate fix: direct `stage_profile_map_updates` can still create duplicate
+  staged rows if called with stale args after the draft already warned about
+  pending same dataset/evidence work.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

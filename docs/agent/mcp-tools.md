@@ -2234,10 +2234,13 @@ when a receiver has the manifest as well as the paired project/history TriG and
 revision snapshot JSON artifacts. The helper resolves relative artifact paths
 from the manifest directory, reports pre-import snapshot evidence, imports the
 TriG first and snapshot JSON second, then returns post-import snapshot evidence
-plus `plan_staged_revision_recovery` for the manifest revisions. Pass
-`dry_run=true` to inspect the manifest paths and expected receiver action
-without mutating the capsule. Pass `replace=true` only when overwriting existing
-graph roles and stored snapshot pairs is intentional.
+plus `plan_staged_revision_recovery` for the manifest revisions. A stale-seed
+recovery handoff can legitimately have no revision rows; in that case the real
+import returns an empty recovery plan with `mutation_allowed_after` set to
+`no_mutation_frontier`, and the next step is to rerun `project_brief` in the
+fresh capsule. Pass `dry_run=true` to inspect the manifest paths and expected
+receiver action without mutating the capsule. Pass `replace=true` only when
+overwriting existing graph roles and stored snapshot pairs is intentional.
 
 `doxabase.export_graph`
 
@@ -2297,15 +2300,14 @@ first and raises before creating or overwriting the artifact when potential
 sensitive graph terms are found.
 If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
-non-empty seed graph. Export the mutable project graphs with the default project
-export, create a fresh seeded capsule, and import that project bundle there.
-When current staged rows exist, `project_brief` reports
-`current_staged_revision_count` on the `seed_recovery_review` health task and
-points first to `export_preflight(export_kind="handoff_bundle")`. Preserve the
-project/history TriG plus companion revision snapshot JSON, import both into the
-fresh capsule, then run
-`plan_staged_revision_recovery(current_staged_work_only=True)` and follow its
-restage/apply guidance.
+non-empty seed graph. `project_brief` reports `current_staged_revision_count`
+on the `seed_recovery_review` health task and points first to
+`export_preflight(export_kind="handoff_bundle")`. Preserve the project/history
+TriG plus companion revision snapshot JSON, create a fresh seeded capsule, and
+import the manifest there with `import_handoff_bundle`. When the stale capsule
+has no stored revision snapshots, the snapshot JSON is empty and the import
+returns an empty recovery plan; rerun `project_brief` in the fresh capsule. When
+staged rows exist, follow the staged recovery plan returned by the import.
 
 `doxabase.export_handoff_bundle`
 
@@ -2321,10 +2323,13 @@ JSON should be narrower than the default all-stored-snapshot export. Pass
 paths, records redacted privacy warnings, sets top-level
 `recommended_import_tool="doxabase.import_handoff_bundle"`, and still lists the
 lower-level `import_trig` then `import_revision_snapshots` sequence with
-expected snapshot evidence statuses. The result contains nested `trig` and
-`revision_snapshots` export records, the manifest payload, optional manifest
-write metadata, plus combined `sensitive_literal_count`, graph/snapshot
-sensitive counts, `decision`, `scanner_clean`,
+expected snapshot evidence statuses. A bundle with no stored revision snapshots
+is still recovery-complete for seed refresh or project-graph transfer; importing
+it should preserve mutable graphs and return an empty staged-recovery plan. The
+result contains nested `trig` and `revision_snapshots` export records, the
+manifest payload, optional manifest write metadata, plus combined
+`sensitive_literal_count`, graph/snapshot sensitive counts, `decision`,
+`scanner_clean`,
 `shareability_review_status`, `privacy_warnings`, and `warnings`.
 `scanner_clean=true` still means scanner-clean only; receivers should treat
 `shareability_review_status="required_not_completed"` as a live sharing gate.
