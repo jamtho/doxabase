@@ -1588,7 +1588,8 @@ counts when snapshot rows are available. Changed-triple arrays are omitted by
 default; pass `include_triples=True` to include them, capped by `max_triples`.
 The response includes `snapshot_evidence` for the applied event and
 `source_snapshot_evidence` for the staged source; when exact rows are missing,
-their structured suggested actions point at `import_revision_snapshots`.
+their structured suggested actions point at `import_revision_snapshots`, and
+those import actions are promoted into top-level `suggested_next_actions`.
 It is a narrow applied-event inspection helper, not general historical graph
 browsing. RDF `export_trig()`/`import_trig()` preserves the graph snapshot
 metadata in `history`, but exact snapshot rows require an
@@ -1598,7 +1599,8 @@ include_triples=False, max_triples=500)` returns one role-local revision
 snapshot. It is the route for full before/after snapshot contents once another
 helper has identified the staged source IRI or applied event IRI. When exact
 stored rows are missing, it falls back to RDF count/digest metadata and leaves
-triple arrays empty.
+triple arrays empty; the snapshot-evidence import action is also promoted into
+top-level `suggested_next_actions`.
 `list_graph_versions(graph_role, graph="history", exact_only=False,
 include_current=True, record_kind=None, limit=50, offset=0)` lists stored
 snapshot versions for one graph role, newest first. Each row carries the source
@@ -1615,6 +1617,8 @@ snapshot with either another stored snapshot or the current live graph. It
 returns before/after count and digest metadata plus exact added/removed triple
 counts when stored rows are available. Changed-triple arrays are omitted by
 default; pass `include_triples=True` to include them, capped by `max_triples`.
+When one side is incomplete after a handoff import, snapshot-evidence import
+actions are promoted into top-level `suggested_next_actions`.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
 or missing project/history RDF. Those actions mark placeholder paths with

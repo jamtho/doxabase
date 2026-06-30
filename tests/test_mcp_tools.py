@@ -4644,6 +4644,9 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert imported_diff_before_snapshots["snapshot_evidence"][
         "suggested_next_actions"
     ][0]["tool_name"] == "import_revision_snapshots"
+    assert imported_diff_before_snapshots["suggested_next_actions"][0][
+        "tool_name"
+    ] == "import_revision_snapshots"
     assert (
         imported_diff_before_snapshots["graph_diffs"][0][
             "exact_changed_triples_available"
@@ -4664,6 +4667,19 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert rdf_only_snapshot["exact_snapshot_available"] is False
     assert rdf_only_snapshot["triples_included"] is False
     assert rdf_only_snapshot["triples"] == []
+    assert rdf_only_snapshot["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    rdf_only_version_diff = describe_graph_version_diff_tool(
+        round_trip,
+        graph_role="map",
+        before_revision_iri=staged["revision_iri"],
+        after_revision_iri=result["applied_revision_iri"],
+    )
+    assert rdf_only_version_diff["exact_changed_triples_available"] is False
+    assert rdf_only_version_diff["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
     snapshot_import = import_revision_snapshots_tool(
         round_trip,
         path=str(snapshot_path),

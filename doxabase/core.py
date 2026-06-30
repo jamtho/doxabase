@@ -944,6 +944,8 @@ class AppliedRevisionDiffDescription:
     include_triples: bool
     max_triples: int
     graph_diffs: list[AppliedRevisionGraphSnapshotDiff]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1772,6 +1774,8 @@ class RevisionGraphSnapshotDescription:
     triples_truncated: bool
     max_triples: int
     triples: list[GraphTripleDescription]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
     note: str
 
 
@@ -6957,6 +6961,10 @@ class DoxaBase:
                 "found for this revision and graph role."
             )
 
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            [],
+            snapshot_evidence,
+        )
         return RevisionGraphSnapshotDescription(
             revision_iri=revision_iri,
             graph_role=graph_role,
@@ -6971,6 +6979,10 @@ class DoxaBase:
             triples_truncated=triples_truncated,
             max_triples=max_triples,
             triples=triples,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
             note=note,
         )
 
@@ -7254,18 +7266,25 @@ class DoxaBase:
         graph_roles = list(dict.fromkeys(applied.changed_graphs))
         if not graph_roles:
             graph_roles = sorted(set(before_snapshots) | set(after_snapshots))
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            applied.iri,
+            data_graphs,
+        )
+        source_snapshot_evidence = self._revision_snapshot_evidence_status(
+            staged_revision_iri,
+            data_graphs,
+        )
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            [],
+            snapshot_evidence,
+            source_snapshot_evidence,
+        )
 
         return AppliedRevisionDiffDescription(
             applied_revision_iri=applied.iri,
             staged_revision_iri=staged_revision_iri,
-            snapshot_evidence=self._revision_snapshot_evidence_status(
-                applied.iri,
-                data_graphs,
-            ),
-            source_snapshot_evidence=self._revision_snapshot_evidence_status(
-                staged_revision_iri,
-                data_graphs,
-            ),
+            snapshot_evidence=snapshot_evidence,
+            source_snapshot_evidence=source_snapshot_evidence,
             changed_graphs=graph_roles,
             include_triples=include_triples,
             max_triples=max_triples,
@@ -7280,6 +7299,10 @@ class DoxaBase:
                     max_triples=max_triples,
                 )
                 for graph_role in graph_roles
+            ],
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
             ],
         )
 
@@ -8072,16 +8095,22 @@ class DoxaBase:
             and before_snapshot.content_digest is not None
             else None
         )
-        suggested_next_actions = self._graph_version_diff_suggested_actions(
-            graph_role=graph_role,
-            before_revision_iri=before_snapshot.revision_iri,
-            after_revision_iri=(
-                after_snapshot.revision_iri if after_snapshot is not None else None
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            self._graph_version_diff_suggested_actions(
+                graph_role=graph_role,
+                before_revision_iri=before_snapshot.revision_iri,
+                after_revision_iri=(
+                    after_snapshot.revision_iri
+                    if after_snapshot is not None
+                    else None
+                ),
+                compare_to_current=effective_compare_to_current,
+                exact_available=exact_available,
+                include_triples=include_triples,
+                has_changes=bool(triples_added_count or triples_removed_count),
             ),
-            compare_to_current=effective_compare_to_current,
-            exact_available=exact_available,
-            include_triples=include_triples,
-            has_changes=bool(triples_added_count or triples_removed_count),
+            before_snapshot.snapshot_evidence,
+            after_snapshot.snapshot_evidence if after_snapshot is not None else None,
         )
         return GraphVersionDiffDescription(
             graph_role=graph_role,

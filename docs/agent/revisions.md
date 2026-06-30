@@ -706,7 +706,10 @@ applied-diff helpers.
 The response carries `snapshot_evidence` for the applied event and
 `source_snapshot_evidence` for the staged source. If either says
 `history_only_count_digest`, import the companion revision snapshot JSON before
-assuming the graph-diff note is the full recovery context.
+assuming the graph-diff note is the full recovery context. Direct snapshot and
+diff helpers promote those evidence import actions into top-level
+`suggested_next_actions`, so follow those before trying to inspect exact triples
+after an incomplete handoff import.
 
 For a graph-role timeline over stored snapshots, use
 `list_graph_versions(graph_role="map")`. The applied event gives counts and

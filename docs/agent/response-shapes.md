@@ -3936,7 +3936,10 @@ two stored graph versions instead. `after_target_kind` is
 only for stored-version comparisons, and `current_graph` is populated only for
 snapshot-to-current comparisons. When `exact_changed_triples_available=True`,
 the helper can report exact added/removed triples; pass `include_triples=True`
-only when those triples are safe and useful to inspect.
+only when those triples are safe and useful to inspect. Snapshot-evidence
+import actions from the before/after snapshots are promoted into
+`diff.suggested_next_actions`, so RDF-only or snapshot-only handoff imports can
+self-route to `import_revision_snapshots` or `import_trig`.
 
 First-read triage fields:
 
@@ -4527,6 +4530,8 @@ diff.changed_graphs
 diff.include_triples
 diff.max_triples
 diff.graph_diffs
+diff.suggested_next_actions
+diff.suggested_next_calls
 ```
 
 Each `diff.graph_diffs[]` row is an
@@ -4562,11 +4567,12 @@ staged source's stored before-snapshot rows with the applied event's stored
 after-snapshot rows for changed graphs. `snapshot_evidence` describes the
 applied event's after-snapshot recovery state; `source_snapshot_evidence`
 describes the staged source's before-snapshot recovery state. Read their
-`suggested_next_actions` before parsing graph-diff notes when exact rows are
-missing. Import-recovery actions for this helper live under
-`snapshot_evidence.suggested_next_actions` and
-`source_snapshot_evidence.suggested_next_actions`; they are not promoted to a
-top-level `diff.suggested_next_actions` field. The default response keeps exact
+`suggested_next_actions`, or the promoted top-level
+`diff.suggested_next_actions`, before parsing graph-diff notes when exact rows
+are missing. Import-recovery actions such as `import_revision_snapshots` and
+`import_trig` are deduped and promoted to the top level so unattended receivers
+can recover even when they called this helper before
+`describe_revision_snapshot_evidence()`. The default response keeps exact
 added/removed counts but omits changed-triple arrays. Pass
 `include_triples=True` when an agent needs raw triples; `max_triples` caps each
 added/removed array and truncation flags say whether arrays were shortened.
@@ -4591,6 +4597,8 @@ snapshot.triples_included
 snapshot.triples_truncated
 snapshot.max_triples
 snapshot.triples
+snapshot.suggested_next_actions
+snapshot.suggested_next_calls
 snapshot.note
 ```
 
@@ -4600,6 +4608,9 @@ IRI or applied event after IRI discovered from
 `stored_snapshot_rows`, `rdf_history_graph_snapshot`, or `unavailable`. When
 only RDF history metadata exists, exact triples are not included even if
 `include_triples=True`; import the companion snapshot JSON bundle first.
+Import-recovery actions from `snapshot.snapshot_evidence` are promoted to
+`snapshot.suggested_next_actions` so direct snapshot inspection can self-route
+after incomplete handoff imports.
 
 `db.describe_revision_snapshot_evidence(revision_iri)` returns
 `RevisionSnapshotEvidenceStatus`:

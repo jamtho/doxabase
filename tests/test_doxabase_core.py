@@ -4982,6 +4982,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
             imported_diff_before_snapshots.snapshot_evidence.suggested_next_actions
         )
     ] == ["import_revision_snapshots"]
+    assert [
+        action.tool_name
+        for action in imported_diff_before_snapshots.suggested_next_actions
+    ] == ["import_revision_snapshots"]
     assert (
         imported_diff_before_snapshots.graph_diffs[0].exact_changed_triples_available
         is False
@@ -5001,9 +5005,21 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert rdf_only_snapshot.exact_snapshot_available is False
     assert rdf_only_snapshot.triples_included is False
     assert rdf_only_snapshot.triples == []
+    assert [
+        action.tool_name for action in rdf_only_snapshot.suggested_next_actions
+    ] == ["import_revision_snapshots"]
     assert "Import a companion revision snapshot JSON bundle" in (
         rdf_only_snapshot.note
     )
+    rdf_only_version_diff = round_trip.describe_graph_version_diff(
+        "map",
+        staged.revision_iri,
+        after_revision_iri=result.applied_revision_iri,
+    )
+    assert rdf_only_version_diff.exact_changed_triples_available is False
+    assert [
+        action.tool_name for action in rdf_only_version_diff.suggested_next_actions
+    ][:1] == ["import_revision_snapshots"]
 
     snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
     assert snapshot_import.imported_snapshot_count == 2

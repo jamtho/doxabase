@@ -3185,6 +3185,13 @@ few useful gaps:
   cross-route selections remain inspectable but are blocked with
   `physical_layout_storage_protocol_mismatch` and stay
   `metadata_review_required`.
+- Staged-version and handoff/import trials confirmed `describe_graph_version_diff`
+  works for staged-before to applied-after, stored-version to current graph, and
+  RDF+snapshot imports. The weak unattended path was calling direct snapshot or
+  diff helpers too early after RDF-only or snapshot-only imports. Direct
+  snapshot, applied-diff, and graph-version-diff helpers now promote
+  snapshot-evidence import actions such as `import_revision_snapshots` or
+  `import_trig` into top-level `suggested_next_actions`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
