@@ -17333,44 +17333,99 @@ class DoxaBase:
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
     ) -> list[QueryPlanningIssue]:
+        selected_candidate: QueryTargetCandidate | None = None
         if (
-            decision.status != "context_blocked"
-            or decision.candidate_index is None
-            or decision.selected_candidate_direct_clean is not True
-            or decision.candidate_index >= len(candidates)
+            decision.candidate_index is not None
+            and 0 <= decision.candidate_index < len(candidates)
         ):
-            return issues
-        selected_candidate = candidates[decision.candidate_index]
-        blocker_iris = self._query_context_blocker_resource_iris(
-            selected_candidate
+            selected_candidate = candidates[decision.candidate_index]
+
+        dataset_layout_repair_ready = (
+            selected_candidate is not None
+            and self._query_dataset_layout_status_repair_ready(
+                dataset,
+                selected_candidate,
+                issues=issues,
+            )
         )
-        if not blocker_iris:
-            return issues
+        repair_partitions: list[PartitionDescription] = []
+        repair_layouts: list[PhysicalLayoutDescription] = []
+        if (
+            selected_candidate is None
+            or decision.status != "context_blocked"
+            or decision.selected_candidate_direct_clean is not True
+        ):
+            if not dataset_layout_repair_ready:
+                return issues
+        else:
+            blocker_iris = self._query_context_blocker_resource_iris(
+                selected_candidate
+            )
+            partitions_by_iri = {
+                partition.iri: partition for partition in dataset.partition_schemes
+            }
+            layouts_by_iri = {
+                layout.iri: layout for layout in dataset.physical_layouts
+            }
+            repair_partitions = [
+                partitions_by_iri[iri]
+                for iri in blocker_iris
+                if iri in partitions_by_iri
+            ]
+            candidate_repair_layouts = [
+                layouts_by_iri[iri] for iri in blocker_iris if iri in layouts_by_iri
+            ]
+            repair_layouts = [
+                layout
+                for layout in candidate_repair_layouts
+                if self._physical_layout_has_verified_matching_sibling(
+                    layout,
+                    dataset.physical_layouts,
+                )
+            ]
+            if (
+                not repair_partitions
+                and not repair_layouts
+                and not dataset_layout_repair_ready
+            ):
+                return issues
+
         partitions_by_iri = {
             partition.iri: partition for partition in dataset.partition_schemes
         }
         layouts_by_iri = {layout.iri: layout for layout in dataset.physical_layouts}
-        repair_partitions = [
-            partitions_by_iri[iri] for iri in blocker_iris if iri in partitions_by_iri
-        ]
-        repair_layouts = [
-            layouts_by_iri[iri] for iri in blocker_iris if iri in layouts_by_iri
-        ]
-        if not repair_partitions and not repair_layouts:
+        if selected_candidate is None:
             return issues
 
         repair_partition_iris = {partition.iri for partition in repair_partitions}
-        repair_layout_iris = {
-            layout.iri
-            for layout in repair_layouts
-            if self._physical_layout_has_verified_matching_sibling(
-                layout,
-                dataset.physical_layouts,
-            )
-        }
+        repair_layout_iris = {layout.iri for layout in repair_layouts}
         updated: list[QueryPlanningIssue] = []
         for issue in issues:
             resource_iri = issue.resource.iri if issue.resource is not None else None
+            if (
+                issue.code == "layout_needs_verification"
+                and dataset_layout_repair_ready
+                and resource_iri == dataset.iri
+            ):
+                details = copy.deepcopy(issue.details) if issue.details else {}
+                details["repair_hint"] = (
+                    self._query_dataset_layout_status_repair_hint(
+                        dataset,
+                        decision=decision,
+                        selected_candidate=selected_candidate,
+                    )
+                )
+                updated.append(
+                    QueryPlanningIssue(
+                        code=issue.code,
+                        severity=issue.severity,
+                        message=issue.message,
+                        domain=issue.domain,
+                        resource=issue.resource,
+                        details=details,
+                    )
+                )
+                continue
             if (
                 issue.code == "layout_needs_verification"
                 and resource_iri in repair_partition_iris
@@ -17419,6 +17474,57 @@ class DoxaBase:
                 continue
             updated.append(issue)
         return updated
+
+    def _query_dataset_layout_status_repair_ready(
+        self,
+        dataset: DatasetDescription,
+        selected_candidate: QueryTargetCandidate,
+        *,
+        issues: list[QueryPlanningIssue],
+    ) -> bool:
+        if selected_candidate.source_resource.iri != dataset.iri:
+            return False
+        if self._layout_status_is_verified(dataset.layout_verification_status):
+            return False
+        if selected_candidate.storage_access is None:
+            return False
+        if not dataset.path_templates:
+            return False
+        storage_access = next(
+            (
+                access
+                for access in dataset.storage_accesses
+                if access.iri == selected_candidate.storage_access.iri
+            ),
+            None,
+        )
+        if storage_access is None or not self._layout_status_is_verified(
+            storage_access.layout_verification_status
+        ):
+            return False
+        if not any(
+            self._layout_status_is_verified(layout.layout_verification_status)
+            for layout in dataset.physical_layouts
+        ):
+            return False
+        prerequisite_issue_codes = {
+            "missing_storage_access",
+            "missing_storage_protocol",
+            "missing_storage_location",
+            "missing_physical_layout",
+            "missing_file_format",
+            "ambiguous_physical_layout",
+            "database_relation_template_source_mismatch",
+        }
+        for issue in issues:
+            if issue.code in prerequisite_issue_codes:
+                return False
+            if issue.code != "layout_needs_verification":
+                continue
+            resource_iri = issue.resource.iri if issue.resource is not None else None
+            if resource_iri not in {None, dataset.iri}:
+                return False
+        return True
 
     def _physical_layout_has_verified_matching_sibling(
         self,
@@ -17537,6 +17643,111 @@ class DoxaBase:
                     ),
                 }
             ],
+        }
+
+    def _query_dataset_layout_status_repair_hint(
+        self,
+        dataset: DatasetDescription,
+        *,
+        decision: QueryTargetDecision,
+        selected_candidate: QueryTargetCandidate,
+    ) -> dict[str, Any]:
+        current_status_iri = (
+            dataset.layout_verification_status.iri
+            if dataset.layout_verification_status is not None
+            else None
+        )
+        storage_access_iri = (
+            selected_candidate.storage_access.iri
+            if selected_candidate.storage_access is not None
+            else None
+        )
+        verified_storage_access_iris = [
+            access.iri
+            for access in dataset.storage_accesses
+            if self._layout_status_is_verified(access.layout_verification_status)
+        ]
+        verified_physical_layout_iris = [
+            layout.iri
+            for layout in dataset.physical_layouts
+            if self._layout_status_is_verified(layout.layout_verification_status)
+        ]
+        actions: list[dict[str, Any]] = []
+        for status_curie, action_label, evidence_label in (
+            (
+                "rc:VerifiedByListingLayout",
+                "Stage dataset layout verified by listing",
+                "a storage listing or equivalent metadata review",
+            ),
+            (
+                "rc:VerifiedByQueryLayout",
+                "Stage dataset layout verified by query",
+                "a successful read/query against the selected route",
+            ),
+        ):
+            status_iri = self.expand_iri(status_curie)
+            actions.append(
+                {
+                    "action_type": "replace_dataset_layout_verification_status",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "action_label": action_label,
+                    "reason": (
+                        "Use after review confirms the dataset-owned path "
+                        f"template has been verified by {evidence_label}."
+                    ),
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed dataset layout verification for "
+                        f"{dataset.iri}; selected query target "
+                        f"{selected_candidate.candidate_path!r} is supported "
+                        f"by {evidence_label}."
+                    ),
+                    "arguments": {
+                        "subject": dataset.iri,
+                        "predicate": "rc:layoutVerificationStatus",
+                        "object": status_curie,
+                        "object_kind": "iri",
+                        "change_kind": "replace",
+                        "graph": "map",
+                        "review_note": (
+                            "Generated from a dataset-level "
+                            "layout_needs_verification query-planning repair "
+                            "group after storage access and physical layout "
+                            "were already verified."
+                        ),
+                        "review_recommendation": (
+                            "Apply only after confirming the selected "
+                            "dataset-owned path template matches the reviewed "
+                            f"{status_iri} evidence."
+                        ),
+                        "validation_scope": "all",
+                    },
+                    "condition": (
+                        "Choose this status only after reviewing the evidence "
+                        "type. If the path was merely copied from a manifest or "
+                        "inferred before storage/layout review, keep the "
+                        "candidate status until listing or query evidence exists."
+                    ),
+                }
+            )
+        return {
+            "action_type": "replace_dataset_layout_verification_status",
+            "choice_mode": "choose_one",
+            "requires_review": True,
+            "target_dataset_iri": dataset.iri,
+            "current_layout_verification_status_iri": current_status_iri,
+            "selected_candidate": {
+                "candidate_index": decision.candidate_index,
+                "candidate_path": selected_candidate.candidate_path,
+                "candidate_path_status": selected_candidate.candidate_path_status,
+                "template_source": selected_candidate.template_source,
+                "source_resource_iri": selected_candidate.source_resource.iri,
+                "storage_access_iri": storage_access_iri,
+            },
+            "verified_storage_access_iris": verified_storage_access_iris,
+            "verified_physical_layout_iris": verified_physical_layout_iris,
+            "actions": actions,
         }
 
     def _query_physical_layout_context_blocker_repair_hint(

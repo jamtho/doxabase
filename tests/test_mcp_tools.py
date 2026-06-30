@@ -6357,6 +6357,96 @@ def test_describe_query_context_tool_suggests_stale_physical_layout_link_repair(
     }
 
 
+def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    dataset = "https://example.test/project#Orders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_local_storage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=["orders/current.csv"],
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note=(
+            "Dataset-level status was copied from a manifest candidate before "
+            "storage and physical layout were reviewed."
+        ),
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["suggested_repair_action_group_count"] == 1
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "layout_needs_verification"
+    assert repair_group["issue_resource"]["iri"] == dataset
+    assert repair_group["repair_action_type"] == (
+        "replace_dataset_layout_verification_status"
+    )
+    assert repair_group["choice_mode"] == "choose_one"
+    assert repair_group["pending_required_extra_arguments"] == ["rationale"]
+    assert repair_group["repair_context"][
+        "current_layout_verification_status_iri"
+    ] == (RC + "CandidateLayout")
+    assert repair_group["repair_context"]["verified_storage_access_iris"] == [
+        storage["iri"]
+    ]
+    assert repair_group["repair_context"]["verified_physical_layout_iris"] == [
+        layout["iri"]
+    ]
+    assert len(repair_group["pending_action_options"]) == 2
+    listing_option = repair_group["pending_action_options"][0]
+    _assert_repair_action_option(
+        listing_option,
+        action_index=0,
+        action_type="replace_dataset_layout_verification_status",
+        tool_name="stage_map_assertion_change",
+        mcp_tool_name="doxabase.stage_map_assertion_change",
+        action_label="Stage dataset layout verified by listing",
+        required_extra_arguments=["rationale"],
+        placeholder_fields=[],
+        reviewed_value_fields=[],
+    )
+    action = repair_group["actions"][0]
+    assert action["arguments"]["subject"] == dataset
+    assert action["arguments"]["predicate"] == "rc:layoutVerificationStatus"
+    assert action["arguments"]["object"] == "rc:VerifiedByListingLayout"
+    assert action["arguments"]["object_kind"] == "iri"
+    assert action["arguments"]["change_kind"] == "replace"
+    assert action["arguments"]["validation_scope"] == "all"
+
+    arguments = dict(action["arguments"])
+    arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
+    staged = stage_map_assertion_change_tool(db, **arguments)
+    assert staged["staged_revision"]["validation_conforms"] is True
+    applied = apply_staged_revision_tool(db, staged["revision_iri"])
+    assert applied["patches_applied"] == 2
+    repaired = describe_query_context_tool(db, iri=dataset)
+    assert repaired["readiness"] == "ready_for_query_planning"
+    assert repaired["suggested_repair_action_groups"] == []
+
+
 def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     tmp_path: Path,
 ) -> None:

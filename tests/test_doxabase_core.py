@@ -16189,6 +16189,107 @@ def test_draft_query_plan_carries_dataset_template_verification(
     ]
 
 
+def test_describe_query_context_suggests_dataset_layout_status_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    dataset = "https://example.test/project#Orders"
+    storage = "https://example.test/project#orders_storage"
+    layout = "https://example.test/project#orders_csv_layout"
+    template = "orders/current.csv"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[template],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note=(
+            "Dataset-level status was copied from a manifest candidate before "
+            "storage and physical layout were reviewed."
+        ),
+    )
+
+    storage_repair = db.stage_query_storage_access_repair(
+        dataset,
+        storage,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        rationale="Reviewed the local warehouse storage route for Orders.",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Directory listing confirmed the Orders route.",
+    )
+    assert db.check_staged_revision_apply(storage_repair.revision_iri).status == (
+        "ready"
+    )
+    db.apply_staged_revision(storage_repair.revision_iri)
+    physical_repair = db.stage_query_physical_layout_repair(
+        dataset,
+        layout,
+        file_format="rc:CSV",
+        rationale="Reviewed Orders as CSV files.",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="A read-only query confirmed the CSV layout.",
+    )
+    assert db.check_staged_revision_apply(physical_repair.revision_iri).status == (
+        "ready"
+    )
+    db.apply_staged_revision(physical_repair.revision_iri)
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.reason_codes == [
+        "layout_needs_verification"
+    ]
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_code == "layout_needs_verification"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == dataset
+    assert repair_group.repair_action_type == (
+        "replace_dataset_layout_verification_status"
+    )
+    assert repair_group.choice_mode == "choose_one"
+    assert repair_group.pending_required_extra_arguments == ["rationale"]
+    assert repair_group.repair_context["current_layout_verification_status_iri"] == (
+        RC + "CandidateLayout"
+    )
+    assert repair_group.repair_context["verified_storage_access_iris"] == [storage]
+    assert repair_group.repair_context["verified_physical_layout_iris"] == [layout]
+    assert [action["arguments"]["object"] for action in repair_group.actions] == [
+        "rc:VerifiedByListingLayout",
+        "rc:VerifiedByQueryLayout",
+    ]
+    listing_action = repair_group.actions[0]
+    assert listing_action["tool_name"] == "stage_map_assertion_change"
+    assert listing_action["arguments"]["subject"] == dataset
+    assert listing_action["arguments"]["predicate"] == (
+        "rc:layoutVerificationStatus"
+    )
+    assert listing_action["arguments"]["change_kind"] == "replace"
+
+    arguments = dict(listing_action["arguments"])
+    arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
+    status_repair = db.stage_map_assertion_change(**arguments)
+    assert db.check_staged_revision_apply(status_repair.revision_iri).status == (
+        "ready"
+    )
+    db.apply_staged_revision(status_repair.revision_iri)
+
+    repaired_context = db.describe_query_context(dataset)
+
+    assert repaired_context.readiness == "ready_for_query_planning"
+    assert repaired_context.suggested_repair_action_groups == []
+    assert repaired_context.layout_verification_status is not None
+    assert repaired_context.layout_verification_status.iri == (
+        RC + "VerifiedByListingLayout"
+    )
+
+
 def test_draft_query_plan_hints_unmatched_partition_placeholders(
     tmp_path: Path,
 ) -> None:

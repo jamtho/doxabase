@@ -101,6 +101,14 @@ of these reviewed map moves:
    candidate CSV, are intentionally treated as ambiguity rather than automatic
    stale-link cleanup. Review the layout-selection actions, then verify or remove
    the non-selected layout through an explicit reviewed graph change.
+   If the selected candidate uses a dataset-owned path template and storage plus
+   physical layout metadata are already verified, a remaining dataset-scoped
+   `layout_needs_verification` issue exposes
+   `repair_action_type="replace_dataset_layout_verification_status"`. Choose the
+   `rc:VerifiedByListingLayout` or `rc:VerifiedByQueryLayout` action only after
+   reviewing the evidence type; the action stages a
+   `stage_map_assertion_change` replacement for the dataset's
+   `rc:layoutVerificationStatus`.
 
 After those moves, the wildcard index candidate should draft as
 `handoff_kind="runtime_resolution_required"` with
@@ -284,6 +292,12 @@ Start with `describe_query_context(dataset_iri)`:
    required fields such as `rationale`, skip actions marked `already_satisfied`
    or `already_pending`, and check each `condition` before calling the named
    tool.
+   After applying staged storage and physical-layout repairs, rerun
+   `describe_query_context` before drafting a plan. A dataset-owned template can
+   still be blocked by the dataset's stale `rc:CandidateLayout`; when the
+   prerequisites are satisfied, follow the
+   `replace_dataset_layout_verification_status` repair group rather than
+   hand-authoring a generic graph revision.
    In multiple-candidate missing-storage groups, the group-level
    `stage_existing_storage_access_link` action may still be pending because a
    different non-pending candidate could be chosen after review; use the

@@ -159,6 +159,15 @@ Treat those expedition reports as product signal even when they do not produce
 an immediate code patch. The goal is to stop the loop from polishing only the
 paths it already knows how to walk.
 
+A local query-planning repair trial found a three-step repair sequence worth
+preserving: after staging and applying reviewed storage-access and physical
+layout repairs, rerun `describe_query_context` before drafting. If the selected
+candidate uses a dataset-owned path template, the dataset itself may still carry
+a stale `rc:CandidateLayout` copied from an earlier manifest or candidate
+review. Once storage and physical layout metadata are verified, follow the
+generated `replace_dataset_layout_verification_status` repair group rather than
+hand-authoring a generic graph revision.
+
 A non-tabular relationship trial found that asset-level derivations and
 aggregations could be squeezed through column relationship fields by passing
 dataset IRIs as if they were columns. That is now guarded against, and simple
