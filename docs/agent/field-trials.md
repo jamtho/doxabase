@@ -2950,10 +2950,10 @@ few useful gaps:
   Shared-context systematisation recovery is possible from patch roles without
   Turtle surgery, but export-only recovery still requires a documented rerun
   recipe and semantic target-framing choice. Mixed object/database query
-  planning can produce a clean object-storage `draft_query_plan` action while
-  sibling database-template repair remains noisy; a future code fix should make
-  route applicability avoid pairing file/object templates with database storage
-  when a clean non-database candidate already exists.
+  planning now avoids pairing dataset or partition file templates with database
+  storage when the same template already forms a clean non-database candidate;
+  if a database relation mismatch remains, treat it as a true database-route
+  review signal rather than object-route noise.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

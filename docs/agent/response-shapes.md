@@ -2747,9 +2747,11 @@ from physical query-planning issues that apply to the candidate. For
 database-backed storage, `candidate_path` is the relation-like planning target
 rather than a joined connection path; read `relation_identifier` and
 `connection_reference` for the explicit database handoff. Only
-storage-access-owned templates become database relation identifiers; dataset
-or partition templates paired with database storage remain review-only
-inventory and carry `database_relation_template_source_mismatch` instead of a
+storage-access-owned templates become database relation identifiers. Dataset
+or partition templates paired with database storage are ignored for the database
+route when they already form a clean non-database candidate; otherwise they
+remain review-only inventory and carry
+`database_relation_template_source_mismatch` instead of a
 `relation_identifier`. The mismatch issue's `details.repair_hint` names the
 source template, storage-access target, candidate relation value for review,
 and ordered `stage_map_assertion_change` templates for adding the reviewed

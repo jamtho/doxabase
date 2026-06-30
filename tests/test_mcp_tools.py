@@ -6028,6 +6028,92 @@ def test_describe_query_context_tool_warns_on_complete_s3_template_without_resol
     )
 
 
+def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_route(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#MixedEvents"
+    object_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#mixed_events_s3_storage",
+        label="Mixed events S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="ops-data-lake",
+        key_prefix="curated",
+        endpoint_profile="ops-s3",
+        credential_reference="profile:ops-s3-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    database_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#mixed_events_database_storage",
+        label="Mixed events warehouse relation",
+        storage_protocol="rc:DatabaseStorage",
+        storage_root="warehouse-prod",
+        path_templates=["mart.events"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#mixed_events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Mixed events",
+        is_table=True,
+        path_templates=["events/date={date}/*.parquet"],
+        storage_accesses=[object_storage["iri"], database_storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert "database_relation_template_source_mismatch" not in {
+        issue["code"] for issue in result["issues"]
+    }
+    assert all(
+        group["issue_code"] != "database_relation_template_source_mismatch"
+        for group in result["suggested_repair_action_groups"]
+    )
+    object_candidate = next(
+        candidate
+        for candidate in result["query_target_candidates"]
+        if candidate["storage_access"]["iri"] == object_storage["iri"]
+        and candidate["template_source"] == "dataset"
+    )
+    assert object_candidate["candidate_path"] == (
+        "s3://ops-data-lake/curated/events/date={date}/*.parquet"
+    )
+    assert object_candidate["direct_review_required"] is False
+    database_candidates = [
+        candidate
+        for candidate in result["query_target_candidates"]
+        if candidate["storage_access"]["iri"] == database_storage["iri"]
+    ]
+    assert [candidate["template_source"] for candidate in database_candidates] == [
+        "storage_access"
+    ]
+    assert database_candidates[0]["relation_identifier"] == "mart.events"
+    assert set(result["ready_candidate_indexes"]) == {
+        result["query_target_candidates"].index(object_candidate),
+        result["query_target_candidates"].index(database_candidates[0]),
+    }
+    peer_actions = [
+        action
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+        and action["arguments"].get("candidate_index")
+        == result["query_target_candidates"].index(object_candidate)
+    ]
+    assert peer_actions
+
+
 def test_describe_query_context_tool_lifts_repair_action_groups(
     tmp_path: Path,
 ) -> None:

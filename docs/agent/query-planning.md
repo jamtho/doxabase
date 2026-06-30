@@ -329,14 +329,12 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    access, remove the misplaced dataset or partition template, then treat
    `handoff_kind="database_relation_handoff"` plus `scan.relation_identifier`
    as the non-executed handoff success signal.
-   Current mixed object/database metadata can over-report database relation
-   repair when dataset or partition file templates are also linked: those
-   templates may be paired with database storage even if they already form a
-   clean object-storage candidate. In that case, prefer the structured
-   `draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`
-   action for the clean object candidate before staging database-template
-   cleanup, and treat the repair issue as sibling metadata review unless the
-   intended route is the database storage candidate.
+   Mixed object/database metadata does not treat dataset or partition file
+   templates as database-relation repair work when those templates already form
+   a clean non-database candidate. If
+   `database_relation_template_source_mismatch` still appears, either no clean
+   file/object route was available for that template or the intended database
+   route still needs a reviewed storage-access-owned relation identifier.
 6. `scan.function` is only a hint when the physical layout is unambiguous. If a
    dataset links multiple distinct file formats or compression codecs,
    `ambiguous_physical_layout` blocks execution-readiness and leaves the scan

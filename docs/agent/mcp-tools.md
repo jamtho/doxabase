@@ -801,11 +801,12 @@ ambiguous, suggested `draft_query_plan` actions include explicit
 peer candidates whose only direct blocker is layout ambiguity. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
-partition path templates paired with database storage are review-only
-`database_relation_template_source_mismatch` candidates with no relation
-identifier; record the schema/table/relation on the storage access before using
-that route as a database handoff. If the storage access already has one or more
-relation templates, the repair action list puts
+partition path templates paired with database storage are ignored for the
+database route when they already form a clean non-database candidate. Otherwise
+they are review-only `database_relation_template_source_mismatch` candidates
+with no relation identifier; record the schema/table/relation on the storage
+access before using that route as a database handoff. If the storage access
+already has one or more relation templates, the repair action list puts
 `remove_misplaced_source_template` first and marks the add action
 `already_satisfied` with `skip_when_already_satisfied=true` so automation can
 skip the duplicate add.

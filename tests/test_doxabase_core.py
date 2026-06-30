@@ -18970,40 +18970,11 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
 
     context = db.describe_query_context(dataset)
 
-    assert context.readiness == "needs_review"
+    assert context.readiness == "ready_for_query_planning"
     assert context.query_target_decision.status == "ready"
-    assert {
-        issue.code for issue in context.issues
-    } == {"database_relation_template_source_mismatch"}
-    assert context.suggested_repair_action_group_count == len(context.issues)
-    assert [
-        group.issue_code for group in context.suggested_repair_action_groups
-    ] == ["database_relation_template_source_mismatch"] * len(context.issues)
-    assert [
-        group.repair_action_type for group in context.suggested_repair_action_groups
-    ] == ["move_database_relation_template_to_storage_access"] * len(
-        context.issues
-    )
-    assert all(
-        group.repair_hint_path == f"issues[{group.issue_index}].details.repair_hint"
-        for group in context.suggested_repair_action_groups
-    )
-    assert all(
-        [action["action_type"] for action in group.actions]
-        == [
-            "remove_misplaced_source_template",
-            "add_reviewed_relation_template",
-        ]
-        for group in context.suggested_repair_action_groups
-    )
-    assert all(
-        group.action_status_counts
-        == {
-            "pending_review": 1,
-            "already_satisfied": 1,
-        }
-        for group in context.suggested_repair_action_groups
-    )
+    assert context.issues == []
+    assert context.suggested_repair_action_group_count == 0
+    assert context.suggested_repair_action_groups == []
     local_partition_index, local_partition = next(
         (index, target)
         for index, target in enumerate(context.query_target_candidates)
@@ -19022,77 +18993,80 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert local_partition.candidate_path_status == "ready"
     assert local_partition.direct_review_required is False
     assert local_partition.review_reasons == []
+    assert context.ready_candidate_indexes == [
+        context.query_target_decision.candidate_index,
+        local_partition_index,
+        database_relation_index,
+    ]
     assert context.unselected_ready_candidate_indexes == [
         local_partition_index,
         database_relation_index,
     ]
+    assert context.direct_clean_candidate_indexes == context.ready_candidate_indexes
+    assert context.unselected_direct_clean_candidate_indexes == (
+        context.unselected_ready_candidate_indexes
+    )
     assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
     assert context.suggested_next_actions[0].arguments == {
         "iri": dataset,
         "candidate_index": context.query_target_decision.candidate_index,
-        "allow_context_blocked_candidate": True,
     }
     assert {
         action.tool_name for action in context.suggested_next_actions
     } == {"draft_query_plan"}
     peer_actions = context.suggested_next_actions[1:]
     assert [action.action_label for action in peer_actions] == [
-        "Draft peer direct-clean candidate with context allowance",
-        "Draft peer direct-clean candidate with context allowance",
+        "Draft peer metadata-ready query plan",
+        "Draft peer metadata-ready query plan",
     ]
     assert [action.arguments for action in peer_actions] == [
         {
             "iri": dataset,
             "candidate_index": local_partition_index,
-            "allow_context_blocked_candidate": True,
         },
         {
             "iri": dataset,
             "candidate_index": database_relation_index,
-            "allow_context_blocked_candidate": True,
         },
     ]
     assert all(
-        "allow_context_blocked_candidate=True" in action.reason
+        "also direct-ready" in action.reason
         for action in peer_actions
     )
 
-    blocked_plan = db.draft_query_plan(
+    partition_plan = db.draft_query_plan(
         dataset,
         candidate_index=local_partition_index,
     )
 
-    assert blocked_plan.handoff_kind == "context_review_required"
-    assert blocked_plan.review_gate.context_blocked_candidate_used is False
-    assert blocked_plan.review_gate.context_blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
-    assert blocked_plan.review_gate.blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
+    assert partition_plan.handoff_kind == "binding_values_required"
+    assert partition_plan.review_gate.context_blocked_candidate_used is False
+    assert partition_plan.review_gate.context_blocking_reason_codes == []
+    assert partition_plan.review_gate.blocking_reason_codes == []
+    assert partition_plan.review_gate.executable_without_review is True
+    assert partition_plan.review_gate.binding_values_required is True
 
     peer_action_plan = db.draft_query_plan(**peer_actions[0].arguments)
 
-    assert peer_action_plan.review_gate.context_blocked_candidate_used is True
+    assert peer_action_plan.review_gate.context_blocked_candidate_used is False
     assert peer_action_plan.review_gate.blocking_reason_codes == []
     assert peer_action_plan.handoff_kind == "binding_values_required"
 
     automatic_plan = db.draft_query_plan(dataset)
 
-    assert automatic_plan.handoff_kind == "context_review_required"
+    assert automatic_plan.handoff_kind == "execution_attempt_ready"
     assert automatic_plan.source_context.selection_mode == "automatic"
     assert automatic_plan.source_context.allow_context_blocked_candidate is False
     assert automatic_plan.review_gate.context_blocked_candidate_used is False
-    assert automatic_plan.review_gate.blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
+    assert automatic_plan.review_gate.blocking_reason_codes == []
+    assert automatic_plan.review_gate.ready_for_execution_attempt is True
 
     automatic_allowed_plan = db.draft_query_plan(
         dataset,
         allow_context_blocked_candidate=True,
     )
 
-    assert automatic_allowed_plan.handoff_kind == "context_review_required"
+    assert automatic_allowed_plan.handoff_kind == "execution_attempt_ready"
     assert automatic_allowed_plan.source_context.selection_mode == "automatic"
     assert automatic_allowed_plan.source_context.selected_candidate_index == (
         context.query_target_decision.candidate_index
@@ -19100,12 +19074,8 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert automatic_allowed_plan.review_gate.context_blocked_candidate_allowed is True
     assert automatic_allowed_plan.review_gate.context_blocked_candidate_used is False
     assert automatic_allowed_plan.review_gate.direct_blocking_reason_codes == []
-    assert automatic_allowed_plan.review_gate.context_blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
-    assert automatic_allowed_plan.review_gate.blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
+    assert automatic_allowed_plan.review_gate.context_blocking_reason_codes == []
+    assert automatic_allowed_plan.review_gate.blocking_reason_codes == []
 
     allowed_plan = db.draft_query_plan(
         dataset,
@@ -19123,14 +19093,10 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert allowed_plan.source_context.selection_mode == "candidate_index"
     assert allowed_plan.source_context.allow_context_blocked_candidate is True
     assert allowed_plan.review_gate.context_blocked_candidate_allowed is True
-    assert allowed_plan.review_gate.context_blocked_candidate_used is True
+    assert allowed_plan.review_gate.context_blocked_candidate_used is False
     assert allowed_plan.review_gate.direct_blocking_reason_codes == []
-    assert allowed_plan.review_gate.context_blocking_reason_codes == [
-        "query_context_has_other_blockers"
-    ]
-    assert allowed_plan.review_gate.all_issue_codes == [
-        "database_relation_template_source_mismatch"
-    ]
+    assert allowed_plan.review_gate.context_blocking_reason_codes == []
+    assert allowed_plan.review_gate.all_issue_codes == []
     assert allowed_plan.review_gate.blocking_reason_codes == []
     assert allowed_plan.review_gate.executable_without_review is True
     assert allowed_plan.review_gate.binding_values_required is True

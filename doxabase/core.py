@@ -19487,6 +19487,19 @@ class DoxaBase:
                 storage_access is not None
                 and self._is_database_storage(storage_access.storage_protocol)
             )
+            template_has_applicable_non_database_candidate = (
+                database_storage
+                and template_source
+                not in {"storage_access", "storage_access_location"}
+                and self._query_template_has_applicable_non_database_candidate(
+                    dataset,
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                )
+            )
+            if template_has_applicable_non_database_candidate:
+                return
             database_relation_template_source_mismatch = (
                 database_storage
                 and template_source not in {"storage_access", "storage_access_location"}
@@ -19563,14 +19576,21 @@ class DoxaBase:
                     for reason in review_reasons
                 ):
                     review_reasons.append(object_location_issue)
-                relation_source_issue = (
-                    self._query_database_relation_template_source_issue(
-                        template=template,
-                        template_source=template_source,
-                        source_resource=source_resource,
-                        storage_access=storage_access,
+                relation_source_issue = None
+                if not self._query_template_has_applicable_non_database_candidate(
+                    dataset,
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                ):
+                    relation_source_issue = (
+                        self._query_database_relation_template_source_issue(
+                            template=template,
+                            template_source=template_source,
+                            source_resource=source_resource,
+                            storage_access=storage_access,
+                        )
                     )
-                )
                 if relation_source_issue is not None and not any(
                     reason.code == relation_source_issue.code
                     and (
@@ -19986,6 +20006,58 @@ class DoxaBase:
             for reason in self._query_target_blocking_reasons(review_reasons)
             if reason.code == "query_context_has_other_blockers"
         ]
+
+    def _query_template_has_applicable_non_database_candidate(
+        self,
+        dataset: DatasetDescription,
+        *,
+        template: str,
+        template_source: str,
+        source_resource: ResourceSummary,
+    ) -> bool:
+        if template_source in {"storage_access", "storage_access_location"}:
+            return False
+        for storage_access in dataset.storage_accesses:
+            if self._is_database_storage(storage_access.storage_protocol):
+                continue
+            candidate_path, _composition = self._query_candidate_path(
+                template,
+                storage_access,
+            )
+            if candidate_path is None:
+                continue
+            if (
+                self._query_storage_object_location_template_issue(
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                    storage_access=storage_access,
+                )
+                is not None
+            ):
+                continue
+            if (
+                self._query_candidate_metadata_issue(
+                    template=template,
+                    source_resource=source_resource,
+                    storage_access=storage_access,
+                )
+                is not None
+            ):
+                continue
+            if (
+                self._query_candidate_path_extension_physical_layout_issue(
+                    candidate_path=candidate_path,
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                    physical_layouts=dataset.physical_layouts,
+                )
+                is not None
+            ):
+                continue
+            return True
+        return False
 
     def _query_database_relation_template_source_issue(
         self,
@@ -20655,14 +20727,21 @@ class DoxaBase:
                 )
                 if object_location_issue is not None:
                     issues.append(object_location_issue)
-                relation_source_issue = (
-                    self._query_database_relation_template_source_issue(
-                        template=template,
-                        template_source=template_source,
-                        source_resource=source_resource,
-                        storage_access=storage_access,
+                relation_source_issue = None
+                if not self._query_template_has_applicable_non_database_candidate(
+                    dataset,
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                ):
+                    relation_source_issue = (
+                        self._query_database_relation_template_source_issue(
+                            template=template,
+                            template_source=template_source,
+                            source_resource=source_resource,
+                            storage_access=storage_access,
+                        )
                     )
-                )
                 if relation_source_issue is not None:
                     issues.append(relation_source_issue)
                 issue = self._query_candidate_metadata_issue(
