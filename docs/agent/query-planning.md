@@ -167,6 +167,35 @@ Start with `describe_query_context(dataset_iri)`:
    `storage_access_location` candidate; candidates that append dataset or
    partition templates to that object root are review-only with
    `storage_object_location_has_path_template`.
+   In mixed storage cases, do not assume `storage_access_iri` uniquely selects
+   one plan. One storage access can produce both a partition-template candidate
+   and a storage-access wildcard candidate. The safe unattended selector route
+   is:
+
+   ```python
+   context = db.describe_query_context(dataset_iri)
+
+   # Inspect context.query_target_candidates and the suggested draft actions.
+   object_plan = db.draft_query_plan(
+       dataset_iri,
+       candidate_index=reviewed_object_candidate_index,
+       physical_layout_iri=reviewed_object_layout_iri,
+       allow_context_blocked_candidate=True,
+   )
+
+   database_plan = db.draft_query_plan(
+       dataset_iri,
+       candidate_index=reviewed_database_candidate_index,
+       physical_layout_iri=reviewed_database_layout_iri,
+       allow_context_blocked_candidate=True,
+   )
+   ```
+
+   Use `draft_query_plan.handoff_summary` for the reportable result, then read
+   `scan`, `review_gate`, `issues`, and `storage_environment` before execution.
+   If similar storage is linked to another dataset, treat it as a
+   `missing_storage_access` repair candidate only; review
+   `linked_dataset_iris` and `match_reasons` before staging a link.
 5. Always compare `readiness` and `issues` with the selected candidate. Broader
    context blockers, including sibling storage facts, can make the whole
    context review-required even when `query_target_decision.status == "ready"`

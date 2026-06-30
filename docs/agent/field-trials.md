@@ -2994,6 +2994,13 @@ few useful gaps:
   insight review bundles now expose semantic move closure rollups so agents can
   see, for example, `define_value_type` closed while `assert_map_type` remains
   open.
+- A storage-metadata query-planning trial confirmed mixed object-store and
+  database storage routes can both be drafted correctly when selected
+  explicitly, and that similarly named storage linked to another dataset stays a
+  review candidate rather than an automatic target. The remaining friction was
+  selector ergonomics: `storage_access_iri` can still match several candidate
+  paths, so the query-planning doc now gives the maintained
+  `candidate_index` + `physical_layout_iri` selector route for mixed storage.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
