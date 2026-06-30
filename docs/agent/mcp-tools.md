@@ -56,10 +56,11 @@ If a returned context field such as `subject` or `predicate` itself contains a
 sensitive-looking value, that context field is also replaced with a redacted
 marker.
 Privacy-adjacent orientation payloads also redact scanner-matching display text
-in `ResourceSummary` cards, including `project_brief` resource descriptions and
-context-slice export `seeds[]` labels/descriptions. This protects response
-summaries; RDF exports remain faithful and should still use `fail_on_sensitive`
-when shareable output must block.
+in `ResourceSummary` cards, profile/evidence summaries, evidence source lists,
+profile value previews, and context-slice export `seeds[]` labels/descriptions.
+This protects response summaries from common copy-paste leaks; RDF and Markdown
+exports remain faithful and should still use `fail_on_sensitive` when shareable
+output must block.
 `describe_context_slice` now includes redacted scanner metadata for the returned
 raw triples, but its inspection payload remains faithful: raw `triples`, `trig`,
 labels, summaries, and revision/evidence context can still contain project
@@ -113,9 +114,9 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
-Dataset/task resource summary display text is redacted when it matches the
-sensitive-term scanner, but the brief remains an orientation payload, not a
-shareability proof.
+Dataset/task resource summary display text and profile/evidence orientation
+summaries are redacted when they match the sensitive-term scanner, but the brief
+remains an orientation payload, not a shareability proof.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
 In unattended loops, run `full_frontier_expansion` when it is non-null before

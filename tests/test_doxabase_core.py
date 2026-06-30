@@ -2212,6 +2212,79 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     assert fake_secret not in json.dumps(to_dict(preflight))
 
 
+def test_profile_privacy_orientation_payloads_redact_sensitive_evidence_summaries(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PROFILE_ORIENTATION"
+    redacted = "[REDACTED:fake_secret_marker]"
+    dataset = "https://example.test/project#OrdersProfilePrivacy"
+    evidence = "https://example.test/project#OrdersProfilePrivacyEvidence"
+
+    db.record_dataset_profile(
+        dataset,
+        summary=f"Orders profile summary carried {fake_secret}.",
+        evidence_summary=f"Orders profile evidence carried {fake_secret}.",
+        evidence_sources=[f"test://profile/{fake_secret}/orders.json"],
+        evidence_iri=evidence,
+        sample_size=10,
+        sample_scope=f"All rows in the profile fixture with {fake_secret}.",
+        sample_method=f"Synthetic profiler run with {fake_secret}.",
+        row_count=10,
+        value_frequencies=[
+            {"value": fake_secret, "frequency": 1},
+            {"value": "ordinary", "frequency": 9},
+        ],
+        profile_metrics=[
+            {
+                "metric": "rc:MaximumValue",
+                "value": f"metric value {fake_secret}",
+            }
+        ],
+        map_label="Orders profile privacy",
+        map_description=f"Dataset description carried {fake_secret}.",
+        is_table=True,
+    )
+
+    profile_run = db.describe_profile_run(dataset, evidence)
+
+    assert profile_run.dataset.description == redacted
+    assert profile_run.evidence.summary == redacted
+    assert profile_run.evidence.sources == [redacted]
+    profile = profile_run.dataset_profile_observations[0]
+    assert profile.summary == redacted
+    assert profile.sample_scope == redacted
+    assert profile.sample_method == redacted
+    assert [item.value for item in profile.value_frequencies] == [
+        "ordinary",
+        redacted,
+    ]
+    assert profile.profile_metrics[0].value == redacted
+    profile_run_payload = json.dumps(to_jsonable(profile_run), sort_keys=True)
+    assert fake_secret not in profile_run_payload
+    assert redacted in profile_run_payload
+
+    query_context = db.describe_query_context(dataset)
+    query_payload = json.dumps(
+        to_jsonable(query_context.suggested_next_actions),
+        sort_keys=True,
+    )
+    assert fake_secret not in query_payload
+    assert redacted in query_payload
+
+    review_bundle = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-review.md",
+    )
+    review_payload = json.dumps(to_jsonable(review_bundle), sort_keys=True)
+    assert fake_secret not in review_payload
+    assert redacted in review_payload
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=5)
+    assert fake_secret not in json.dumps(to_jsonable(brief), sort_keys=True)
+
+
 def test_export_preflight_returns_scanner_clean_export_action(
     tmp_path: Path,
 ) -> None:

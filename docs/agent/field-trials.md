@@ -3200,6 +3200,15 @@ few useful gaps:
   `blocking_preflight_actions` / `blocking_preflight_calls`; unattended agents
   should complete those imports and rerun the planner before using
   `mutation_frontier_items`.
+- A privacy/export workflow trial found that `fail_on_sensitive=True` correctly
+  blocked shareable exports, but profile orientation payloads could still carry
+  scanner-matching dataset descriptions, profile summaries, evidence summaries,
+  or evidence source strings into unattended reports. Profile/evidence
+  orientation responses now redact scanner-matching display text in
+  `describe_profile_run`, query-context `source_profile_evidence`,
+  `project_brief`, and `export_profile_insight_review_bundle` return payloads.
+  This is response hygiene only; RDF and Markdown artifacts remain faithful and
+  should still use `fail_on_sensitive=True` when they need to block.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

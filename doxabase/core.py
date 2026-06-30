@@ -14257,7 +14257,9 @@ class DoxaBase:
             ).add(self._profile_observation_basis(profile))
 
         return ProfileRunDescription(
-            dataset=self._resource_summary(lookup_graphs, dataset_value),
+            dataset=self._privacy_redacted_resource_summary(
+                self._resource_summary(lookup_graphs, dataset_value)
+            ),
             evidence=self._describe_evidence(
                 evidence_value,
                 evidence_graphs,
@@ -26493,56 +26495,77 @@ class DoxaBase:
             observation_iri,
             "rc:observedValueType",
         )
+        redacted_observed_column_name = self._redact_sensitive_optional_text(
+            observed_column_name
+        )
         return ProfileObservationSummary(
             iri=observation_iri,
-            summary=self._first_object(observation_graphs, observation_iri, "rc:summary"),
-            observed_at=self._first_object(
-                observation_graphs,
-                observation_iri,
-                "rc:observedAt",
+            summary=self._redact_sensitive_optional_text(
+                self._first_object(observation_graphs, observation_iri, "rc:summary")
             ),
-            observed_by=self._first_object(
-                observation_graphs,
-                observation_iri,
-                "rc:observedBy",
+            observed_at=self._redact_sensitive_optional_text(
+                self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:observedAt",
+                )
+            ),
+            observed_by=self._redact_sensitive_optional_text(
+                self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:observedBy",
+                )
             ),
             observed_asset=(
-                self._resource_summary(lookup_graphs, observed_asset)
+                self._privacy_redacted_resource_summary(
+                    self._resource_summary(lookup_graphs, observed_asset)
+                )
                 if observed_asset is not None
                 else None
             ),
             observed_column=(
-                self._profile_observed_column_summary(
-                    lookup_graphs,
-                    observed_column,
-                    observed_column_name=observed_column_name,
+                self._privacy_redacted_resource_summary(
+                    self._profile_observed_column_summary(
+                        lookup_graphs,
+                        observed_column,
+                        observed_column_name=redacted_observed_column_name,
+                    )
                 )
                 if observed_column is not None
                 else None
             ),
-            observed_column_name=observed_column_name,
-            observed_physical_type=self._optional_resource_summary(
-                lookup_graphs,
-                observed_physical_type,
+            observed_column_name=redacted_observed_column_name,
+            observed_physical_type=self._privacy_redacted_optional_resource_summary(
+                self._optional_resource_summary(
+                    lookup_graphs,
+                    observed_physical_type,
+                )
             ),
-            observed_value_type=self._optional_resource_summary(
-                lookup_graphs,
-                observed_value_type,
+            observed_value_type=self._privacy_redacted_optional_resource_summary(
+                self._optional_resource_summary(
+                    lookup_graphs,
+                    observed_value_type,
+                )
             ),
             sample_size=self._int_object(
                 observation_graphs,
                 observation_iri,
                 "rc:sampleSize",
             ),
-            sample_scope=self._first_object(
-                observation_graphs,
-                observation_iri,
-                "rc:sampleScope",
+            sample_scope=self._redact_sensitive_optional_text(
+                self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:sampleScope",
+                )
             ),
-            sample_method=self._first_object(
-                observation_graphs,
-                observation_iri,
-                "rc:sampleMethod",
+            sample_method=self._redact_sensitive_optional_text(
+                self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:sampleMethod",
+                )
             ),
             row_count=self._int_object(
                 observation_graphs,
@@ -26620,7 +26643,7 @@ class DoxaBase:
             summaries.append(
                 ObservedValueFrequencySummary(
                     iri=value_frequency_iri,
-                    value=value,
+                    value=self._redact_sensitive_context_value(value),
                     frequency=frequency,
                 )
             )
@@ -26661,9 +26684,13 @@ class DoxaBase:
             summaries.append(
                 ObservedProfileMetricSummary(
                     iri=metric_iri,
-                    metric=self._resource_summary(lookup_graphs, metric_kind),
-                    target=self._optional_resource_summary(lookup_graphs, target_iri),
-                    value=value_row["object"],
+                    metric=self._privacy_redacted_resource_summary(
+                        self._resource_summary(lookup_graphs, metric_kind)
+                    ),
+                    target=self._privacy_redacted_optional_resource_summary(
+                        self._optional_resource_summary(lookup_graphs, target_iri)
+                    ),
+                    value=self._redact_sensitive_context_value(value_row["object"]),
                     value_datatype=value_row["datatype"],
                     value_lang=value_row["lang"],
                 )
@@ -48948,6 +48975,53 @@ class DoxaBase:
             ),
         )
 
+    def _privacy_redacted_optional_resource_summary(
+        self,
+        summary: ResourceSummary | None,
+    ) -> ResourceSummary | None:
+        if summary is None:
+            return None
+        return self._privacy_redacted_resource_summary(summary)
+
+    def _privacy_redacted_source_span_description(
+        self,
+        span: SourceSpanDescription,
+    ) -> SourceSpanDescription:
+        return SourceSpanDescription(
+            iri=span.iri,
+            source_path=self._redact_sensitive_optional_text(span.source_path),
+            source_section=self._redact_sensitive_optional_text(span.source_section),
+            start_line=span.start_line,
+            end_line=span.end_line,
+            source_kind=span.source_kind,
+            source_kind_label=self._redact_sensitive_optional_text(
+                span.source_kind_label
+            ),
+        )
+
+    def _privacy_redacted_evidence_description(
+        self,
+        evidence: EvidenceDescription,
+    ) -> EvidenceDescription:
+        return EvidenceDescription(
+            iri=evidence.iri,
+            label=self._redact_sensitive_optional_text(evidence.label),
+            summary=self._redact_sensitive_optional_text(evidence.summary),
+            sources=[
+                self._redact_sensitive_context_value(source)
+                for source in evidence.sources
+            ],
+            source_spans=[
+                self._privacy_redacted_source_span_description(span)
+                for span in evidence.source_spans
+            ],
+            query_execution_status=self._redact_sensitive_optional_text(
+                evidence.query_execution_status
+            ),
+            query_engine=self._redact_sensitive_optional_text(evidence.query_engine),
+            query_hash=self._redact_sensitive_optional_text(evidence.query_hash),
+        )
+
     def _redact_sensitive_optional_text(
         self,
         value: str | None,
@@ -52760,7 +52834,7 @@ class DoxaBase:
         graphs: list[str],
         lookup_graphs: list[str],
     ) -> EvidenceDescription:
-        return EvidenceDescription(
+        description = EvidenceDescription(
             iri=evidence_iri,
             label=self._display_label_from_graphs(lookup_graphs, evidence_iri),
             summary=self._first_object(graphs, evidence_iri, "rc:summary"),
@@ -52783,6 +52857,7 @@ class DoxaBase:
             query_engine=self._first_object(graphs, evidence_iri, "rc:queryEngine"),
             query_hash=self._first_object(graphs, evidence_iri, "rc:queryHash"),
         )
+        return self._privacy_redacted_evidence_description(description)
 
     def _describe_source_span(
         self,
