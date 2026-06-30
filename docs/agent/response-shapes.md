@@ -1267,8 +1267,12 @@ or cancelled attempts stay ordinary observations and reject profile count
 fields. For filtered or grouped aggregate result payloads, prefer
 `result_sources` plus clear `summary`/`sample_scope`/`sample_method` text unless
 the count-like value is intentionally profile evidence.
-Use `scanned_source_paths` for the non-secret table/file/object paths that the
-external runtime actually scanned. These paths are stored as
+Use `scanned_source_paths` for the non-secret table/file/object paths, object
+keys, or database relation handles that the external runtime actually scanned.
+For a database handoff, a compact handle such as
+`warehouse-prod:mart.orders` is acceptable when it is the reviewed
+`connection_reference` plus `relation_identifier`; the field name is historical
+and does not require a filesystem path. These values are stored as
 `rc:DataSampleSource` spans and surface later in query-context handoffs.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later

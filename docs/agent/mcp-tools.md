@@ -1281,9 +1281,12 @@ are supplied, an `rc:ProfileObservation`, linked evidence, and an optional
 Use it after `draft_query_plan` and an external runtime attempt. Supply
 `result_sources` for result files, logs, or output artifacts, and
 `query_source_path` when the query text has a durable non-secret location.
-Supply `scanned_source_paths` for non-secret source files, objects, or path-like
-inputs the external runtime actually scanned; later query-context and storage
-overlay handoffs expose them separately from query text and result artifacts.
+Supply `scanned_source_paths` for non-secret source files, objects, relation
+handles, or path-like inputs the external runtime actually scanned. For database
+handoffs, a reviewed handle such as `warehouse-prod:mart.orders` can preserve
+`connection_reference` plus `relation_identifier`; do not coerce it into a fake
+filesystem path. Later query-context and storage overlay handoffs expose scanned
+source handles separately from query text and result artifacts.
 Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
 When `observed_asset` is supplied, the returned payload includes

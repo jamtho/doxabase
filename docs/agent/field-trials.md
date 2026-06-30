@@ -3421,9 +3421,27 @@ few useful gaps:
   `handoff_kind="database_relation_handoff"` with a relation identifier and
   connection reference but no executable scan function, and
   `record_query_result` preserved an external relation handle as evidence.
-  Evidence-seeded `resource_brief` slices preserve the source spans, though
-  generic route labels and the `scanned_source_paths` name still deserve a doc
-  example for database handles.
+  Evidence-seeded `resource_brief` slices preserve the source spans. Docs and a
+  regression now make explicit that `scanned_source_paths` can carry a reviewed
+  database relation handle such as `warehouse-prod:mart.orders`, not only a
+  filesystem path.
+- A project-brief frontier-selection trial confirmed the local unattended route
+  is explicit enough when agents follow the structured fields. With low limits,
+  hidden query/profile/non-tabular queues and omitted profile candidates surface
+  through `frontier_status`, `health_tasks`, and expansion calls. Privacy and
+  stale-seed safety gates keep `first_unattended_action` on
+  `export_preflight(...)` and block mutation; a clean expanded frontier routes
+  next to `plan_staged_revision_recovery(current_staged_work_only=True)`.
+  `project_strategy` remains the separate guide for choosing the broader repo
+  workflow axis after local safety/frontier work is clear.
+- A mixed staged cold-receiver handoff trial found no runtime gap for a queue
+  containing a stale/conflicted source, restaged successor, already-effective
+  row, and ready alternative candidate. The receiver imported exact snapshot
+  rows, recovered the source session, routed stale work through the current
+  successor, kept the already-effective row informational, applied the ready
+  successor, wrote applied-event snapshot rows, and updated original lineage to
+  the applied event. A future regression can lock this combined scenario down,
+  but current routing fields exposed the row-vs-target distinction clearly.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

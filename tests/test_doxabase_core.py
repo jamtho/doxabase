@@ -25781,6 +25781,80 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.observation_iri in {match.iri for match in matches.matches}
 
 
+def test_record_query_result_preserves_database_relation_source_handle(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_database_storage",
+        label="Warehouse orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#warehouse_orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.handoff_kind == "database_relation_handoff"
+    assert plan.scan.relation_identifier == "mart.orders"
+    assert plan.scan.connection_reference == "warehouse-prod"
+    assert plan.scan.uri_template is None
+
+    relation_handle = (
+        f"{plan.scan.connection_reference}:{plan.scan.relation_identifier}"
+    )
+    result = db.record_query_result(
+        summary=(
+            "Warehouse Orders status aggregate ran through an external "
+            "database client after the database relation handoff."
+        ),
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="external-postgres-client",
+        query_source_path=str(tmp_path / "orders_status_summary.sql"),
+        result_sources=[str(tmp_path / "orders_status_summary.result.json")],
+        scanned_source_paths=[relation_handle],
+    )
+
+    assert result.observation_type == "observation"
+    assert result.scanned_source_paths == [relation_handle]
+    scanned_span = db.describe_resource(
+        result.scanned_source_span_iris[0],
+        graph="evidence",
+    )
+    scanned_span_outgoing = {
+        (triple.predicate, triple.object) for triple in scanned_span.outgoing
+    }
+    assert (RC + "sourcePath", relation_handle) in scanned_span_outgoing
+    assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
+    evidence_slice = db.describe_context_slice(
+        result.evidence_iri,
+        profile="resource_brief",
+        max_triples=80,
+    )
+    assert result.scanned_source_span_iris[0] in {
+        resource.iri for resource in evidence_slice.resources
+    }
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_query_result_rejects_conflicting_source_span_reuse_without_mutation(
     tmp_path: Path,
 ) -> None:

@@ -332,7 +332,9 @@ result = db.record_query_result(
 
 Use `result_sources` for arbitrary result-table or aggregate payloads such as
 grouped counts, sums, or JSON output, and `scanned_source_paths` for the
-non-secret inputs the runtime actually scanned. The structured `sample_size`,
+non-secret inputs the runtime actually scanned. For a database relation handoff,
+record a reviewed relation handle such as `warehouse-prod:mart.orders` rather
+than forcing the value into a fake file path. The structured `sample_size`,
 `row_count`, `null_count`, `distinct_count`, value-frequency, and metric fields
 are profile-shaped observation fields; only fill them when their meaning is
 clear in `summary`, `sample_scope`, and `sample_method`. For filtered or grouped
