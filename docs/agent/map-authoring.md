@@ -118,7 +118,10 @@ require an explicit override call. Same-evidence scalar conflicts stay visible
 too, but the default map-staging action omits them; choose at most one observed
 row-count or nullable value from the `profile_scalar_conflict_review` lane or
 `scalar_conflict_groups[].options[]` after reading the supporting profile
-observations.
+observations. After one scalar-conflict value has been applied, sibling values
+from the same evidence should still route through scalar-conflict review; do not
+stage them as ordinary map updates just because the mechanical apply check would
+be ready.
 Profile type findings are not accepted `stage_profile_map_updates`
 recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`

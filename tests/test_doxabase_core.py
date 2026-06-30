@@ -2825,6 +2825,120 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert round_trip.search("Sensitive payroll", graph="map").matches == []
 
 
+def test_query_failure_evidence_slice_exports_when_broad_handoff_blocks_sensitive_unrelated_graph_content(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/query-failure-privacy#"
+    dataset = f"{base}CleanOrders"
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_QUERY_FAILURE_PRIVACY"
+
+    storage = db.record_map_storage_access(
+        f"{base}clean_orders_storage",
+        label="Clean orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.clean_orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}clean_orders_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Clean orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.import_turtle(
+        f"""
+        @prefix ex: <{base}> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:UnrelatedSensitiveNote
+            rdfs:comment "Synthetic unrelated marker {fake_secret}." .
+        """,
+        graph="map",
+    )
+
+    result = db.record_query_result(
+        summary=(
+            "Clean Orders status query was blocked by the external runtime "
+            "before execution."
+        ),
+        observed_asset=dataset,
+        execution_status="blocked",
+        engine="external-postgres-client",
+        query_source_path=str(tmp_path / "clean_orders_status.sql"),
+        result_sources=[str(tmp_path / "blocked-query.log")],
+        scanned_source_paths=["warehouse-prod:mart.clean_orders"],
+        failure_summary="External runtime refused credentials before scanning.",
+    )
+
+    broad_preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        graphs=["project"],
+        limit=20,
+    )
+    assert broad_preflight.decision == "block"
+    assert broad_preflight.would_block_sensitive_export is True
+    assert broad_preflight.sensitive_literal_count > 0
+    assert fake_secret not in json.dumps(to_dict(broad_preflight))
+
+    slice_preflight = db.preflight_context_slice_export(
+        [result.evidence_iri],
+        profile="resource_brief",
+        max_triples=200,
+        limit=20,
+    )
+    assert slice_preflight.decision == "clean_by_scanner_only"
+    assert slice_preflight.scanner_clean is True
+    assert slice_preflight.sensitive_literal_count == 0
+    assert slice_preflight.would_block_sensitive_export is False
+    assert slice_preflight.suggested_next_actions[0].tool_name == (
+        "export_context_slice"
+    )
+
+    slice_path = tmp_path / "query-failure-evidence-slice.trig"
+    export = db.export_context_slice(
+        slice_path,
+        [result.evidence_iri],
+        profile="resource_brief",
+        max_triples=200,
+        fail_on_sensitive=True,
+    )
+    export_text = slice_path.read_text(encoding="utf-8")
+
+    assert export.decision == "clean_by_scanner_only"
+    assert export.sensitive_literal_count == 0
+    assert result.evidence_iri in export_text
+    assert "queryExecutionStatus" in export_text
+    assert "blocked" in export_text
+    assert fake_secret not in export_text
+
+    blocked_trig_path = tmp_path / "blocked-project.trig"
+    blocked_snapshot_path = tmp_path / "blocked-revision-snapshots.json"
+    blocked_manifest_path = tmp_path / "blocked-handoff-manifest.json"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.export_handoff_bundle(
+            blocked_trig_path,
+            blocked_snapshot_path,
+            manifest_path=blocked_manifest_path,
+            graphs=["project"],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(excinfo.value)
+    assert fake_secret not in str(excinfo.value)
+    assert not blocked_trig_path.exists()
+    assert not blocked_snapshot_path.exists()
+    assert not blocked_manifest_path.exists()
+
+
 def test_context_slice_export_preserves_relationship_endpoint_bodies(
     tmp_path: Path,
 ) -> None:
@@ -31669,6 +31783,165 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
     assert db.check_staged_revision_apply(
         chosen_stage.staged_revision.revision_iri
     ).status == "ready"
+    db.apply_staged_revision(chosen_stage.staged_revision.revision_iri)
+
+    post_apply_draft = db.draft_profile_map_updates(dataset, evidence)
+    post_apply_scalar_recommendations = [
+        recommendation
+        for recommendation in post_apply_draft.recommendations
+        if recommendation.kind
+        in {"dataset_row_count_snapshot", "column_nullable"}
+    ]
+    sibling_row_count_values = {
+        recommendation.observed_value
+        for recommendation in row_count_recommendations
+        if recommendation.observed_value != chosen_row_count.observed_value
+    }
+    assert {
+        recommendation.observed_value
+        for recommendation in post_apply_scalar_recommendations
+    } == {*sibling_row_count_values, False}
+    assert all(
+        recommendation.default_stageable is False
+        for recommendation in post_apply_scalar_recommendations
+    )
+    assert all(
+        "One value already matches the current map"
+        in (recommendation.default_skip_reason or "")
+        for recommendation in post_apply_scalar_recommendations
+    )
+    assert post_apply_draft.scalar_conflict_group_count == 2
+    post_apply_conflict_actions = post_apply_draft.suggested_next_action_groups[
+        "profile_scalar_conflict_review"
+    ]
+    assert all(
+        action.tool_name == "describe_profile_run"
+        for action in post_apply_conflict_actions
+    )
+    assert {
+        action.source_scalar_conflict["selection_rule"]
+        for action in post_apply_conflict_actions
+    } == {"current_value_already_chosen_review_before_replacing"}
+
+    post_apply_blocked_stage = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[
+            recommendation.recommendation_index
+            for recommendation in post_apply_scalar_recommendations
+        ],
+    )
+    assert post_apply_blocked_stage.staged_revision is None
+    assert post_apply_blocked_stage.status_counts == {
+        "staged": 0,
+        "skipped": 2,
+        "not_selected": 1,
+    }
+    assert all(
+        "One value already matches the current map" in (item.reason or "")
+        for item in post_apply_blocked_stage.items
+        if item.status == "skipped"
+    )
+
+    row_count_flip = next(
+        recommendation
+        for recommendation in post_apply_scalar_recommendations
+        if recommendation.kind == "dataset_row_count_snapshot"
+    )
+    nullable_flip = next(
+        recommendation
+        for recommendation in post_apply_scalar_recommendations
+        if recommendation.kind == "column_nullable"
+    )
+    legacy_flip = db.stage_graph_revision(
+        summary="Legacy post-apply scalar flip",
+        rationale=(
+            "Simulate a staged profile map update created before current-equal "
+            "scalar conflict siblings were guarded."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:rowCountSnapshot {row_count_flip.observed_value} .
+                    <{status_column}> rc:nullable false .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:rowCountSnapshot {chosen_row_count.observed_value} .
+                    <{status_column}> rc:nullable true .
+                """,
+            }
+        ],
+        evidence=[evidence],
+        supporting_observations=[
+            row_count_flip.profile_observation_iri,
+            nullable_flip.profile_observation_iri,
+        ],
+        revision_anchors=[dataset, status_column],
+        review_note=(
+            "Generated by stage_profile_map_updates. Legacy fixture for a "
+            "post-apply scalar conflict flip."
+        ),
+    )
+    route_group_key = db._profile_route_group_key(
+        "profile_map_updates",
+        ["legacy-post-apply-scalar-flip", dataset, status_column],
+    )
+    db._record_profile_insight_route_sources(
+        legacy_flip.revision_iri,
+        [
+            {
+                "review_lane": "profile_map_updates",
+                "direct_review_lane": "profile_map_updates",
+                "route_group_key": route_group_key,
+                "route_step_key": "profile-route-step:legacy-post-apply-flip",
+                "evidence_iri": evidence,
+                "profile_evidence_iri": evidence,
+                "recommendation_indexes": [
+                    row_count_flip.recommendation_index,
+                    nullable_flip.recommendation_index,
+                ],
+                "duplicate_profile_observation_iris": [
+                    row_count_flip.profile_observation_iri,
+                    nullable_flip.profile_observation_iri,
+                ],
+                "route_anchor_iris": [dataset, status_column],
+                "route_pattern_iris": [],
+                "action_status": "available",
+            }
+        ],
+    )
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "post-apply-scalar-flip-review.md",
+        revision_iris=[legacy_flip.revision_iri],
+    )
+
+    assert review.bulk_apply_allowed is False
+    assert review.safe_single_apply_candidate_revision_iris == []
+    assert review.semantic_apply_gate_blocking_reasons == [
+        "semantic_or_support_candidate_present",
+        "open_profile_review_lanes_present",
+    ]
+    candidate = review.candidates[0]
+    assert candidate.semantic_apply_role == (
+        "profile_map_update_with_semantic_context"
+    )
+    assert candidate.safe_single_apply_candidate is False
+    assert "profile_scalar_conflict_review" in {
+        group["review_lane"] for group in candidate.profile_route_groups
+    }
 
 
 def test_profile_map_update_query_blocker_routes_before_default_stage_action(

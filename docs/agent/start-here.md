@@ -228,6 +228,11 @@ caching parsed seed RDF graphs, `uv run pytest -q -n 8` took about 46 seconds
 and `uv run pytest -q -n auto` took about 37 seconds. Prefer `-n auto` for the
 full gate, and use serial pytest only for focused debugging where direct output
 matters more than full-suite throughput.
+On June 30, 2026, a timing check in the YOLO development container showed no
+visible cgroup CPU or memory cap (`cpu.max=max`, 24 visible CPUs,
+`memory.max=max`): serial `uv run pytest -q --durations=40` took 278 seconds,
+while `uv run pytest -q -n auto --durations=20` took 35 seconds. If pytest feels
+slow, first confirm you are not running the serial full suite.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

@@ -3442,6 +3442,23 @@ few useful gaps:
   successor, wrote applied-event snapshot rows, and updated original lineage to
   the applied event. A future regression can lock this combined scenario down,
   but current routing fields exposed the row-vs-target distinction clearly.
+- An AIS fixture query-overlay trial found no new runtime gap: the reduced AIS
+  fixture can be overlaid with reviewed storage/layout metadata, stale
+  partition-link friction is surfaced and repairable, and the resulting DuckDB
+  plan remains a reviewed external handoff rather than hidden DoxaBase query
+  execution.
+- A query-failure privacy/export trial showed broad project handoff preflight
+  can block on unrelated dirty map content while an evidence-seeded
+  `resource_brief` context slice for the recorded query failure is scanner-clean
+  and importable. Seed scoped query-result exports from
+  `record_query_result.evidence_iri`; keep treating scanner-clean slices as
+  requiring shareability review.
+- A repeated profile scalar-conflict trial found that, after applying one
+  same-evidence row-count/nullable option, the sibling value could reappear as a
+  default profile-map update and even look safe-single in a profile insight
+  bundle. Drafting now remembers current-equal scalar conflict siblings, skips
+  unattended sibling replacement staging, and treats
+  `profile_scalar_conflict_review` as semantic apply-gate context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

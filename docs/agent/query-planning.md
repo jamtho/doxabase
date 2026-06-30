@@ -507,6 +507,12 @@ When `observed_asset` is supplied, follow the returned
 `suggested_next_actions`: profile-shaped results start with
 `describe_profile_run(dataset_iri=observed_asset, evidence_iri=...)`, and all
 observed-asset results include `describe_query_context(iri=observed_asset)`.
+For blocked or failed external query attempts, still record the failure with
+`record_query_result(execution_status="blocked"|"failed", ...)`. If a broad
+handoff preflight later blocks on unrelated dirty graph content, seed
+`preflight_context_slice_export` from the returned `evidence_iri` with
+`profile="resource_brief"` so the query status and source-span evidence can
+travel without unrelated map siblings.
 
 For a cold profile-like query-result handoff where the map has no executable
 storage metadata yet, use this sequence:

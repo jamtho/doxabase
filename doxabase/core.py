@@ -14635,6 +14635,10 @@ class DoxaBase:
         )
 
         recommendations: list[ProfileMapUpdateRecommendation] = []
+        current_equal_scalar_values: dict[
+            tuple[str, str, str, str],
+            list[Any],
+        ] = {}
         for profile in profile_run.dataset_profile_observations:
             if profile.row_count is None:
                 continue
@@ -14649,6 +14653,14 @@ class DoxaBase:
                 else None
             )
             if current_row_count == profile.row_count:
+                self._profile_update_add_scalar_observed_value(
+                    current_equal_scalar_values,
+                    evidence_iri=evidence_value,
+                    resource_iri=profile_run.dataset.iri,
+                    predicate="rc:rowCountSnapshot",
+                    kind="dataset_row_count_snapshot",
+                    observed_value=profile.row_count,
+                )
                 continue
             basis = self._profile_observation_basis(profile)
             action = (
@@ -14698,10 +14710,18 @@ class DoxaBase:
             if column is None:
                 continue
             observed_nullable = profile.null_count > 0
-            if column.nullable == observed_nullable:
-                continue
             basis = self._profile_observation_basis(profile)
             if not observed_nullable and basis != "full_scan":
+                continue
+            if column.nullable == observed_nullable:
+                self._profile_update_add_scalar_observed_value(
+                    current_equal_scalar_values,
+                    evidence_iri=evidence_value,
+                    resource_iri=profile.observed_column.iri,
+                    predicate="rc:nullable",
+                    kind="column_nullable",
+                    observed_value=observed_nullable,
+                )
                 continue
             column_name = self._profile_map_column_name(column, profile)
             action = (
@@ -14812,7 +14832,8 @@ class DoxaBase:
             )
         )
         recommendations = self._with_profile_update_default_staging_metadata(
-            recommendations
+            recommendations,
+            current_equal_scalar_values=current_equal_scalar_values,
         )
         recommendations = self._with_profile_update_duplicate_metadata(
             recommendations
@@ -14841,6 +14862,7 @@ class DoxaBase:
             recommendations,
             dataset_iri=dataset_value,
             evidence_iri=evidence_value,
+            current_equal_scalar_values=current_equal_scalar_values,
         )
         profile_supporting_pattern_iris = (
             self._profile_map_update_supporting_pattern_iris(
@@ -15635,6 +15657,11 @@ class DoxaBase:
             )
             for option_index, option in enumerate(group.options):
                 action = option.suggested_next_action
+                selection_rule = (
+                    "current_value_already_chosen_review_before_replacing"
+                    if action.tool_name != "stage_profile_map_updates"
+                    else "choose_at_most_one_option_per_conflict_group"
+                )
                 actions.append(
                     ProfileScalarConflictSuggestedNextAction(
                         action_label=action.action_label,
@@ -15650,10 +15677,7 @@ class DoxaBase:
                                         "profile_scalar_conflict_review"
                                     ),
                                     "route_group_key": route_group_key,
-                                    "selection_rule": (
-                                        "choose_at_most_one_option_per_"
-                                        "conflict_group"
-                                    ),
+                                    "selection_rule": selection_rule,
                                     "conflict_group_index": (
                                         group.conflict_group_index
                                     ),
@@ -15774,6 +15798,13 @@ class DoxaBase:
             )
             if index in accepted_index_set:
                 reason = selected_conflict_skip_reasons.get(index)
+                if (
+                    reason is None
+                    and self._profile_update_current_equal_conflict_skip_reason(
+                        recommendation.default_skip_reason
+                    )
+                ):
+                    reason = recommendation.default_skip_reason
                 if reason is None:
                     reason = self._profile_update_skip_reason(
                         recommendation,
@@ -16484,15 +16515,114 @@ class DoxaBase:
         return str(value)
 
     @staticmethod
+    def _profile_update_add_scalar_observed_value(
+        value_groups: dict[tuple[str, str, str, str], list[Any]],
+        *,
+        evidence_iri: str,
+        resource_iri: str,
+        predicate: str,
+        kind: str,
+        observed_value: Any,
+    ) -> None:
+        group_key = (evidence_iri, resource_iri, predicate, kind)
+        value_groups.setdefault(group_key, []).append(observed_value)
+
+    @staticmethod
+    def _profile_update_current_equal_conflict_skip_reason(reason: str | None) -> bool:
+        return bool(
+            reason
+            and reason.startswith(
+                "Same-evidence profile observations include conflicting values"
+            )
+        )
+
+    @staticmethod
     def _profile_update_scalar_conflict_skip_reasons(
         recommendations: list[ProfileMapUpdateRecommendation],
         *,
         selected_indexes: set[int] | None = None,
-    ) -> dict[int, str]:
-        groups: dict[
+        current_equal_scalar_values: Mapping[
             tuple[str, str, str, str],
-            dict[str, list[ProfileMapUpdateRecommendation]],
-        ] = {}
+            Iterable[Any],
+        ]
+        | None = None,
+    ) -> dict[int, str]:
+        groups = DoxaBase._profile_update_scalar_conflict_value_groups(
+            recommendations,
+            selected_indexes=selected_indexes,
+            current_equal_scalar_values=current_equal_scalar_values,
+        )
+
+        skip_reasons: dict[int, str] = {}
+        for (_evidence_iri, resource_iri, predicate, _kind), value_groups in (
+            groups.items()
+        ):
+            if len(value_groups) <= 1:
+                continue
+            value_labels = sorted(
+                str(group["label"]) for group in value_groups.values()
+            )
+            has_current_equal_value = any(
+                bool(group["current_equal_count"])
+                for group in value_groups.values()
+            )
+            if has_current_equal_value:
+                reason = (
+                    "Same-evidence profile observations include conflicting "
+                    f"values for scalar map assertion {predicate} on "
+                    f"{resource_iri}: {', '.join(value_labels)}. One value "
+                    "already matches the current map; review the profile "
+                    "observations before staging another replacement."
+                )
+            else:
+                reason = (
+                    "Same-evidence profile recommendations propose conflicting "
+                    f"values for scalar map assertion {predicate} on "
+                    f"{resource_iri}: {', '.join(value_labels)}. Review the "
+                    "profile observations and choose one observed value "
+                    "explicitly before staging."
+                )
+            for group in value_groups.values():
+                for recommendation in group["recommendations"]:
+                    skip_reasons[recommendation.recommendation_index] = reason
+        return skip_reasons
+
+    @staticmethod
+    def _profile_update_scalar_conflict_value_groups(
+        recommendations: list[ProfileMapUpdateRecommendation],
+        *,
+        selected_indexes: set[int] | None = None,
+        current_equal_scalar_values: Mapping[
+            tuple[str, str, str, str],
+            Iterable[Any],
+        ]
+        | None = None,
+    ) -> dict[tuple[str, str, str, str], dict[str, dict[str, Any]]]:
+        groups: dict[tuple[str, str, str, str], dict[str, dict[str, Any]]] = {}
+
+        def add_value(
+            group_key: tuple[str, str, str, str],
+            observed_value: Any,
+            *,
+            recommendation: ProfileMapUpdateRecommendation | None = None,
+            current_equal: bool = False,
+        ) -> None:
+            value_key = DoxaBase._profile_update_scalar_value_key(observed_value)
+            value_group = groups.setdefault(group_key, {}).setdefault(
+                value_key,
+                {
+                    "label": DoxaBase._profile_update_scalar_value_label(
+                        observed_value
+                    ),
+                    "recommendations": [],
+                    "current_equal_count": 0,
+                },
+            )
+            if recommendation is not None:
+                value_group["recommendations"].append(recommendation)
+            if current_equal:
+                value_group["current_equal_count"] += 1
+
         for recommendation in recommendations:
             if (
                 selected_indexes is not None
@@ -16507,36 +16637,19 @@ class DoxaBase:
                 recommendation.predicate,
                 recommendation.kind,
             )
-            value_key = DoxaBase._profile_update_scalar_value_key(
-                recommendation.observed_value
-            )
-            groups.setdefault(group_key, {}).setdefault(value_key, []).append(
-                recommendation
+            add_value(
+                group_key,
+                recommendation.observed_value,
+                recommendation=recommendation,
             )
 
-        skip_reasons: dict[int, str] = {}
-        for (_evidence_iri, resource_iri, predicate, _kind), value_groups in (
-            groups.items()
-        ):
-            if len(value_groups) <= 1:
-                continue
-            value_labels = sorted(
-                DoxaBase._profile_update_scalar_value_label(
-                    group[0].observed_value
-                )
-                for group in value_groups.values()
-            )
-            reason = (
-                "Same-evidence profile recommendations propose conflicting "
-                f"values for scalar map assertion {predicate} on "
-                f"{resource_iri}: {', '.join(value_labels)}. Review the "
-                "profile observations and choose one observed value explicitly "
-                "before staging."
-            )
-            for group in value_groups.values():
-                for recommendation in group:
-                    skip_reasons[recommendation.recommendation_index] = reason
-        return skip_reasons
+        for group_key, observed_values in (
+            current_equal_scalar_values or {}
+        ).items():
+            for observed_value in observed_values:
+                add_value(group_key, observed_value, current_equal=True)
+
+        return groups
 
     def _profile_update_scalar_conflict_groups(
         self,
@@ -16544,26 +16657,16 @@ class DoxaBase:
         *,
         dataset_iri: str,
         evidence_iri: str,
-    ) -> list[ProfileScalarConflictGroup]:
-        groups: dict[
+        current_equal_scalar_values: Mapping[
             tuple[str, str, str, str],
-            dict[str, list[ProfileMapUpdateRecommendation]],
-        ] = {}
-        for recommendation in recommendations:
-            if recommendation.kind not in PROFILE_SCALAR_MAP_UPDATE_KINDS:
-                continue
-            group_key = (
-                recommendation.evidence_iri,
-                recommendation.resource.iri,
-                recommendation.predicate,
-                recommendation.kind,
-            )
-            value_key = self._profile_update_scalar_value_key(
-                recommendation.observed_value
-            )
-            groups.setdefault(group_key, {}).setdefault(value_key, []).append(
-                recommendation
-            )
+            Iterable[Any],
+        ]
+        | None = None,
+    ) -> list[ProfileScalarConflictGroup]:
+        groups = self._profile_update_scalar_conflict_value_groups(
+            recommendations,
+            current_equal_scalar_values=current_equal_scalar_values,
+        )
 
         conflict_groups: list[ProfileScalarConflictGroup] = []
         for (_group_evidence_iri, _resource_iri, predicate, kind), value_groups in (
@@ -16571,24 +16674,36 @@ class DoxaBase:
         ):
             if len(value_groups) <= 1:
                 continue
-            first_recommendation = next(iter(value_groups.values()))[0]
+            visible_value_groups = [
+                group
+                for group in value_groups.values()
+                if group["recommendations"]
+            ]
+            if not visible_value_groups:
+                continue
+            first_recommendation = visible_value_groups[0]["recommendations"][0]
+            has_current_equal_value = any(
+                bool(group["current_equal_count"])
+                for group in value_groups.values()
+            )
             options: list[ProfileScalarConflictOption] = []
             for value_group in sorted(
-                value_groups.values(),
+                visible_value_groups,
                 key=lambda group: min(
                     recommendation.recommendation_index
-                    for recommendation in group
+                    for recommendation in group["recommendations"]
                 ),
             ):
-                representative = value_group[0]
+                recommendations_for_value = value_group["recommendations"]
+                representative = recommendations_for_value[0]
                 recommendation_indexes = [
                     recommendation.recommendation_index
-                    for recommendation in value_group
+                    for recommendation in recommendations_for_value
                 ]
                 duplicate_recommendation_indexes = list(
                     dict.fromkeys(
                         index
-                        for recommendation in value_group
+                        for recommendation in recommendations_for_value
                         for index in (
                             recommendation.duplicate_recommendation_indexes
                             or [recommendation.recommendation_index]
@@ -16598,37 +16713,59 @@ class DoxaBase:
                 duplicate_profile_observation_iris = list(
                     dict.fromkeys(
                         observation_iri
-                        for recommendation in value_group
+                        for recommendation in recommendations_for_value
                         for observation_iri in (
                             recommendation.duplicate_profile_observation_iris
                             or [recommendation.profile_observation_iri]
                         )
                     )
                 )
-                arguments = {
-                    "dataset_iri": dataset_iri,
-                    "evidence_iri": evidence_iri,
-                    "accepted_recommendation_indexes": [
-                        representative.recommendation_index
-                    ],
-                }
-                action = SuggestedNextAction(
-                    action_label="Review and stage chosen profile scalar value",
-                    tool_name="stage_profile_map_updates",
-                    mcp_tool_name="doxabase.stage_profile_map_updates",
-                    arguments=arguments,
-                    reason=(
-                        "This same-evidence scalar conflict is not "
-                        "default-stageable. Use this action only after "
-                        "reviewing the conflicting profile observations and "
-                        "choosing this observed value for the current map "
-                        "assertion."
-                    ),
-                    call=self._suggested_call_string(
-                        "stage_profile_map_updates",
-                        arguments,
-                    ),
-                )
+                if has_current_equal_value:
+                    arguments = {
+                        "dataset_iri": dataset_iri,
+                        "evidence_iri": evidence_iri,
+                    }
+                    action = SuggestedNextAction(
+                        action_label="Review applied profile scalar conflict",
+                        tool_name="describe_profile_run",
+                        mcp_tool_name="doxabase.describe_profile_run",
+                        arguments=arguments,
+                        reason=(
+                            "A same-evidence scalar conflict has an option "
+                            "that already matches the current map. Review the "
+                            "profile run and route history before staging "
+                            "another replacement."
+                        ),
+                        call=self._suggested_call_string(
+                            "describe_profile_run",
+                            arguments,
+                        ),
+                    )
+                else:
+                    arguments = {
+                        "dataset_iri": dataset_iri,
+                        "evidence_iri": evidence_iri,
+                        "accepted_recommendation_indexes": [
+                            representative.recommendation_index
+                        ],
+                    }
+                    action = SuggestedNextAction(
+                        action_label="Review and stage chosen profile scalar value",
+                        tool_name="stage_profile_map_updates",
+                        mcp_tool_name="doxabase.stage_profile_map_updates",
+                        arguments=arguments,
+                        reason=(
+                            "This same-evidence scalar conflict is not "
+                            "default-stageable. Use this action only after "
+                            "reviewing the conflicting profile observations and "
+                            "choosing this observed value for the current map "
+                            "assertion."
+                        ),
+                        call=self._suggested_call_string(
+                            "stage_profile_map_updates",
+                            arguments,
+                        ),
+                    )
                 options.append(
                     ProfileScalarConflictOption(
                         observed_value=representative.observed_value,
@@ -16657,11 +16794,23 @@ class DoxaBase:
                     option_count=len(options),
                     options=options,
                     review_note=(
-                        "Same-evidence profile recommendations propose "
-                        "multiple values for this scalar map assertion. These "
-                        "options stay out of default profile_map_updates; "
-                        "choose at most one option after reviewing the "
-                        "supporting profile observations."
+                        (
+                            "Same-evidence profile observations include "
+                            "multiple values for this scalar map assertion, "
+                            "and one value already matches the current map. "
+                            "Do not stage another replacement until route "
+                            "history and supporting observations have been "
+                            "reviewed."
+                        )
+                        if has_current_equal_value
+                        else (
+                            "Same-evidence profile recommendations propose "
+                            "multiple values for this scalar map assertion. "
+                            "These options stay out of default "
+                            "profile_map_updates; choose at most one option "
+                            "after reviewing the supporting profile "
+                            "observations."
+                        )
                     ),
                 )
             )
@@ -16670,9 +16819,16 @@ class DoxaBase:
     def _with_profile_update_default_staging_metadata(
         self,
         recommendations: list[ProfileMapUpdateRecommendation],
+        *,
+        current_equal_scalar_values: Mapping[
+            tuple[str, str, str, str],
+            Iterable[Any],
+        ]
+        | None = None,
     ) -> list[ProfileMapUpdateRecommendation]:
         conflict_skip_reasons = self._profile_update_scalar_conflict_skip_reasons(
-            recommendations
+            recommendations,
+            current_equal_scalar_values=current_equal_scalar_values,
         )
         annotated: list[ProfileMapUpdateRecommendation] = []
         for recommendation in recommendations:
@@ -40898,6 +41054,7 @@ class DoxaBase:
         )
         semantic_review_lanes = {
             "metric_vocabulary_review",
+            "profile_scalar_conflict_review",
             "profile_type_review",
             "query_context_review",
         }

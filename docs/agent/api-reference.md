@@ -721,8 +721,10 @@ observations propose multiple values for one row-count or nullable assertion.
 For explicit non-table assets, profile row counts remain observation evidence
 and are not drafted as `dataset_row_count_snapshot` map recommendations.
 Those conflicts are also summarized in `scalar_conflict_groups[]`, where each
-option carries one explicit `stage_profile_map_updates` action for a chosen
-observed value. Option actions are exposed in the grouped
+initial option carries one explicit `stage_profile_map_updates` action for a
+chosen observed value. If one same-evidence scalar value is already current
+after apply, sibling options route to inspection instead of a new stage call.
+Option actions are exposed in the grouped
 `profile_scalar_conflict_review` lane with `source_scalar_conflict` metadata,
 including route group/step keys, but are not copied into the default flat
 `suggested_next_actions`. It does not mutate or stage graph changes, and it

@@ -1832,11 +1832,14 @@ option.suggested_next_call
 ```
 
 Each option's suggested action is a `stage_profile_map_updates` call for one
-representative recommendation index for that observed value. These option
+representative recommendation index for that observed value when no conflict
+option is already current. After one same-evidence scalar option has been
+applied, sibling values remain in `profile_scalar_conflict_review`, but their
+suggested action is inspection rather than a new stage call. These option
 actions also appear in the grouped `profile_scalar_conflict_review` lane with
 `source_scalar_conflict` metadata, but are intentionally not copied into the
 draft's flat `suggested_next_actions`; review the group and choose at most one
-option before calling one explicitly.
+option before calling a mutating action explicitly.
 
 `metric_advisories[]` rows name project-specific profile metric IRIs observed
 in the run and recommend vocabulary review before reusable comparison or map

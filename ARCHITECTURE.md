@@ -241,7 +241,7 @@ layout, caveats, and provenance.
 Run all tests:
 
 ```bash
-uv run pytest
+uv run pytest -q -n auto
 ```
 
 Run RDF asset validation:

@@ -246,6 +246,12 @@ history rows, or stored revision snapshots that a full handoff would scan. For
 staged/privacy review, run `export_preflight(export_kind="handoff_bundle")` or
 the grouped staged/profile export with `fail_on_sensitive=True` rather than
 treating a clean slice as whole-capsule privacy clearance.
+When a broad handoff blocks on unrelated graph content but the intended artifact
+is a recorded query result or query failure, seed
+`preflight_context_slice_export` / `export_context_slice` with the
+`evidence_iri` returned by `record_query_result` and use
+`profile="resource_brief"`. That slice carries query status and source-span
+evidence without importing unrelated dirty map siblings.
 If `describe_context_slice` itself reports scanner matches, follow its
 `Preflight context-slice privacy` action. That action keeps match rows redacted
 and, for truncated slices, raises `max_triples` to the full candidate triple cap

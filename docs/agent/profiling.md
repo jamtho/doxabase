@@ -234,6 +234,13 @@ accounting; they are not permission to bulk apply metric/type/query/fallback
 semantic choices. A bundle with semantic candidates should be treated as
 choose-one-and-recheck unless the apply gate explicitly says bulk apply is
 allowed.
+Scalar-conflict review is semantic context too. After one same-evidence scalar
+choice is applied, a sibling row-count or nullable observation should stay out
+of default `profile_map_updates`; the draft routes it through
+`profile_scalar_conflict_review` inspection because one conflict value is
+already current. A profile-map staged row that overlaps such scalar conflict
+memory must not be treated as a `safe_single_apply_candidate` merely because
+`check_staged_revision_apply` is mechanically ready.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

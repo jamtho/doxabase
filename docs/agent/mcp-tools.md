@@ -93,6 +93,11 @@ needs clean context around known resources, the blocked response suggests
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`. Use that
 route for importable resource-scoped review context; do not treat it as a
 recovery-complete revision handoff.
+For a query result or query failure recorded with `record_query_result`, use the
+returned `evidence_iri` as that seed and `profile="resource_brief"` when the
+broad handoff is blocked by unrelated graph content. This preserves query
+status, source-span, and scanned-source evidence without pulling unrelated dirty
+map resources into the export; scanner-clean still requires shareability review.
 In lazy tool-discovery environments, search for the exact dotted name
 `doxabase.export_preflight` if a bare `export_preflight` or `preflight` lookup
 does not expose the tool.
@@ -698,7 +703,12 @@ those option actions are exposed through the
 `profile_scalar_conflict_review` lane rather than the default
 `profile_map_updates` lane or flat `suggested_next_actions`. Each lane action
 has `source_scalar_conflict` metadata with route group/step keys and is mutually
-exclusive with sibling options from the same conflict group. If
+exclusive with sibling options from the same conflict group. After one scalar
+conflict option has been applied, sibling observations from the same evidence
+remain non-default-stageable when the applied value already matches the current
+map; the scalar-conflict review lane then routes to inspection rather than a
+new stage call. Treat that as conflict memory, not as permission to flip the map
+back unattended. If
 `recommendation_count == 0` and either metric or type advisories are present,
 handle the result as advisory-only: follow advisory grouped suggested actions and
 do not call `doxabase.stage_profile_map_updates`. When recommendations and
