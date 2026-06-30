@@ -6,6 +6,7 @@ dependencies = [
     "mcp[cli]>=1.27.2",
     "pyshacl>=0.31.0",
     "pytest>=9.0.3",
+    "pytest-xdist>=3.8.0",
     "rdflib>=7.6.0",
 ]
 

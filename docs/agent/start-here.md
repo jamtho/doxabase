@@ -211,9 +211,14 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 For normal repository development, use:
 
 ```bash
-uv run pytest
+uv run pytest -q -n 8
 uv run python tools/validate_rdf.py
 ```
+
+The full pytest suite is integration-heavy. On the June 2026 development
+container, serial `uv run pytest -q` took about 309 seconds; the 8-worker xdist
+run took about 47 seconds and passed. Prefer serial pytest only for focused
+debugging where direct output matters more than full-suite throughput.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

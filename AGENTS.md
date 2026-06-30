@@ -40,7 +40,7 @@ autonomously in a trial/improvement loop:
    is preferred, but make a larger move when that is the practical way out of a
    pathological state.
 4. Update tests and agent docs with the behavior or lesson the trial revealed.
-5. Run focused checks first, then full `uv run pytest`,
+5. Run focused checks first, then full `uv run pytest -q -n 8`,
    `uv run python tools/validate_rdf.py`, and `git diff --check`.
 6. Commit coherent verified changes on a `codex/...` branch when the work is
    ready, with a rationale-focused commit message.
@@ -82,11 +82,12 @@ uv run python tools/validate_rdf.py
 Run tests:
 
 ```bash
-uv run pytest
+uv run pytest -q -n 8
 ```
 
 For focused work, run the relevant pytest file first, then the full suite before
-finishing.
+finishing. Use serial pytest for one-off debugging when worker startup would
+obscure local output.
 
 ## Working In The Codebase
 

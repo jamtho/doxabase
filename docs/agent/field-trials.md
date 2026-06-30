@@ -34,6 +34,18 @@ Run commands from the repository root:
 pwd
 ```
 
+For repository verification after implementing a trial-driven fix, prefer the
+parallel full-suite gate:
+
+```bash
+uv run pytest -q -n 8
+uv run python tools/validate_rdf.py
+```
+
+Serial pytest remains useful for a single focused test or debugging output, but
+the full DoxaBase suite is integration-heavy enough that serial runs materially
+slow the autonomous loop.
+
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
 user's uv cache. If import paths are unclear, set:

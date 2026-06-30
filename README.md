@@ -195,8 +195,11 @@ uv run python tools/validate_rdf.py
 Run tests:
 
 ```bash
-uv run pytest
+uv run pytest -q -n 8
 ```
+
+For focused debugging, run the relevant test file or node serially first, then
+use the parallel full-suite command before finishing.
 
 Run the smallest end-to-end example:
 
