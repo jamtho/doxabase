@@ -171,6 +171,13 @@ before query/profile mutation helpers that would fail on the stale seed.
 Then read `health_tasks`, which is not limited by `recommended_next_tasks` and
 can also route agents to widen the brief, increase `profile_candidate_limit`, run
 redacted privacy/export review, or handle stale immutable seed graphs.
+Recommended task rows can also carry `task_advisories` and `task_group` when a
+health issue directly affects that row. For example, fixture staleness remains an
+advisory rather than a safety gate, but affected `query_repair_review` rows carry
+`task_advisories[].code="query_fixture_staleness_review"` and a group with
+`suppression_policy="review_group_before_member_mutation"` so scripts that
+consume `recommended_next_tasks[]` do not need to separately correlate
+`health_tasks[]`.
 `profile_queue_counts["profile_candidate_omitted"]` and the
 `expand_profile_candidate_limit` health task mean some profile evidence was not
 drafted at all under the current candidate bound; rerun `project_brief` with the
@@ -1952,6 +1959,10 @@ always action targets. Use `next_action_queue_item.resolved_target_iri` and
 `next_action.arguments["iri"]` when present; handled stale rows can route to a
 refreshed successor or applied event, while repair actions can create a new
 successor and therefore have no existing resolved target.
+Use `effective_recovery_action` or `lane` as the route for unattended recovery.
+`batch_action` is dry-run batch-restage classifier provenance and can say
+`skipped_not_restageable` for ready apply lanes whose effective route is still
+`apply_after_review`.
 When explicit `revision_iris` include stale sources and current successors,
 `lanes[]` intentionally preserves one row per requested source. Use
 `resolved_target_groups[]` for the collapsed target-family worklist:

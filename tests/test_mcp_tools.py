@@ -579,6 +579,24 @@ def test_project_brief_tool_serializes_fixture_storage_health_task(
     assert fixture_task["suggested_next_action"]["arguments"] == {
         "iri": dataset
     }
+    repair_task = next(
+        task
+        for task in result["recommended_next_tasks"]
+        if task["task_type"] == "query_repair_review"
+    )
+    assert repair_task["task_advisories"][0]["code"] == (
+        "query_fixture_staleness_review"
+    )
+    assert repair_task["task_advisories"][0]["storage_access_count"] == 0
+    assert repair_task["task_advisories"][0]["suggested_next_action"][
+        "tool_name"
+    ] == "describe_query_context"
+    assert repair_task["task_group"]["group_type"] == (
+        "query_fixture_staleness_review"
+    )
+    assert repair_task["task_group"]["suppression_policy"] == (
+        "review_group_before_member_mutation"
+    )
 
 
 def test_project_brief_tool_routes_query_repair_tasks_to_context(
@@ -2620,6 +2638,9 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["source_revision_iri"] == staged["revision_iri"]
     assert lane["row_iri"] == staged["revision_iri"]
     assert lane["lane"] == "apply_after_review"
+    assert lane["effective_recovery_action"] == "apply_after_review"
+    assert lane["batch_action"] == "skipped_not_restageable"
+    assert lane["not_restageable_reason"] == "ready"
     assert lane["exact_drift_summary"] == []
     assert lane["next_action"]["tool_name"] == "apply_staged_revision"
     assert lane["next_action_queue_item"]["resolved_target_iri"] == (
@@ -2910,6 +2931,9 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
     assert session["current_plan"]["repair_draft_limit"] == 1
     assert session["current_plan"]["lane_counts"] == {"restage_after_review": 1}
     assert session["source_states"][0]["workflow_state"] == "active"
+    assert session["source_states"][0]["effective_recovery_action"] == (
+        "restage_after_review"
+    )
     assert session["source_states"][0]["next_action_tool_name"] == (
         "restage_staged_revision"
     )
@@ -2928,6 +2952,9 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
     assert described["current_plan"]["lane_counts"] == {"apply_after_review": 1}
     assert described["source_states"][0]["current_revision_iri"] == (
         restaged["revision_iri"]
+    )
+    assert described["source_states"][0]["effective_recovery_action"] == (
+        "apply_after_review"
     )
     assert described["source_states"][0]["next_action_tool_name"] == (
         "apply_staged_revision"

@@ -3576,6 +3576,15 @@ few useful gaps:
   profile/systematisation, and staged handoff/privacy flows broadly passing;
   remaining profile apply-gate and mixed-plan display frictions are semantic
   workflow candidates for later trials rather than this narrow import fix.
+- A follow-up wave turned three of those frictions into additive routing
+  metadata. Staged recovery lanes now expose `effective_recovery_action` so
+  agents can prefer the route over batch-restage classifier provenance such as
+  `skipped_not_restageable`. Query repair tasks affected by known fixture
+  staleness now carry `task_advisories` and `task_group` metadata instead of
+  relying only on `health_tasks[]`. Profile insight bundles can mark one ready
+  full-scan map update as a safe single even when metric/type/fallback lanes
+  remain open, while scalar conflicts, query blockers, and already-applied rows
+  remain blocked.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

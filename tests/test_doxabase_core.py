@@ -1461,6 +1461,26 @@ def test_project_brief_surfaces_fixture_storage_health_task(
     assert fixture_task.suggested_next_action.arguments == {"iri": dataset}
     assert "zero rc:StorageAccess" in fixture_task.reason
     assert brief.safety_first_action is not fixture_task.suggested_next_action
+    repair_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    )
+    assert repair_task.task_advisories
+    assert repair_task.task_advisories[0]["code"] == (
+        "query_fixture_staleness_review"
+    )
+    assert repair_task.task_advisories[0]["recommended_handling"] == (
+        "review_health_task_before_staging"
+    )
+    assert repair_task.task_advisories[0]["storage_access_count"] == 0
+    assert repair_task.task_group is not None
+    assert repair_task.task_group["group_type"] == (
+        "query_fixture_staleness_review"
+    )
+    assert repair_task.task_group["suppression_policy"] == (
+        "review_group_before_member_mutation"
+    )
 
     db.record_map_storage_access(
         "https://example.test/project#ais_storage",
@@ -1472,6 +1492,52 @@ def test_project_brief_surfaces_fixture_storage_health_task(
     assert "query_fixture_staleness_review" not in {
         task.task_type for task in repaired_brief.health_tasks
     }
+    assert all(
+        not task.task_advisories
+        for task in repaired_brief.recommended_next_tasks
+    )
+
+
+def test_project_brief_groups_fixture_storage_query_task_advisories(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    datasets = [
+        "https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+        "https://richcanopy.org/example/manifest/ais#DailyIndex",
+        "https://richcanopy.org/example/manifest/polymarket#Trades",
+    ]
+    for dataset in datasets:
+        db.record_map_dataset(
+            dataset,
+            label=dataset.rsplit("#", 1)[-1],
+            is_table=True,
+        )
+
+    brief = db.project_brief(limit=3)
+
+    repair_tasks = [
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    ]
+    assert len(repair_tasks) == 3
+    assert brief.first_unattended_source == (
+        "recommended_next_tasks:query_repair_review"
+    )
+    for task in repair_tasks:
+        assert task.task_advisories[0]["code"] == (
+            "query_fixture_staleness_review"
+        )
+        assert task.task_advisories[0]["fixture_names"] == ["AIS", "Polymarket"]
+        assert task.task_group is not None
+        assert task.task_group["group_key"] == (
+            "query_fixture_staleness_review:"
+            "known_fixture_tables_without_storage_accesses"
+        )
+        assert task.task_group["group_member_count"] == 3
+        assert task.task_group["returned_group_member_count"] == 3
+        assert task.task_group["representative_resource_iri"] == datasets[0]
 
 
 def test_project_brief_surfaces_stale_seed_health_task(
@@ -8411,6 +8477,9 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert session.current_plan.lane_counts == {"restage_after_review": 1}
     assert session.source_states[0].workflow_state == "active"
     assert session.source_states[0].lane == "restage_after_review"
+    assert session.source_states[0].effective_recovery_action == (
+        "restage_after_review"
+    )
     assert session.source_states[0].next_action_tool_name == (
         "restage_staged_revision"
     )
@@ -8439,6 +8508,9 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert after_restage.current_plan.lane_counts == {"apply_after_review": 1}
     assert after_restage.source_states[0].current_revision_iri == (
         restaged.revision_iri
+    )
+    assert after_restage.source_states[0].effective_recovery_action == (
+        "apply_after_review"
     )
     assert after_restage.source_states[0].next_action_tool_name == (
         "apply_staged_revision"
@@ -8599,8 +8671,20 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     ]
     lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
     assert lanes_by_source[ready.revision_iri].lane == "apply_after_review"
+    assert (
+        lanes_by_source[ready.revision_iri].effective_recovery_action
+        == "apply_after_review"
+    )
+    assert lanes_by_source[ready.revision_iri].batch_action == (
+        "skipped_not_restageable"
+    )
+    assert lanes_by_source[ready.revision_iri].not_restageable_reason == "ready"
     assert lanes_by_source[ready.revision_iri].status_after == "ready"
     assert lanes_by_source[stale.revision_iri].lane == "restage_after_review"
+    assert (
+        lanes_by_source[stale.revision_iri].effective_recovery_action
+        == "restage_after_review"
+    )
     assert lanes_by_source[stale.revision_iri].batch_action == "would_restage"
     handled_lane = lanes_by_source[handled_source.revision_iri]
     assert handled_lane.current_revision_iri == handled_successor.revision_iri
@@ -30037,6 +30121,8 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     assert route_groups_by_lane["profile_map_updates"]["match_strength"] == (
         "direct_action"
     )
+    assert applied_candidate.safe_single_apply_candidate is False
+    assert applied_source_iri not in result.safe_single_apply_candidate_revision_iris
     assert result.export is not None
     assert result.export.revision_iris == result.candidate_revision_iris
     assert result.export.bundle_summary.recommended_applied_inspection_iris == [
@@ -31463,6 +31549,30 @@ def test_stage_profile_map_updates_keeps_mixed_advisory_vocabulary_out_of_map_pa
     assert status_value_type not in {
         anchor.iri for anchor in description.revision_anchors
     }
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-mixed-support-map-review.md",
+    )
+    assert review.bulk_apply_allowed is False
+    assert review.safe_single_apply_candidate_revision_iris == [
+        staged.staged_revision.revision_iri
+    ]
+    assert review.semantic_apply_gate_counts["safe_single_apply_candidates"] == 1
+    assert review.executor_decision_summary["decision"] == (
+        "apply_one_safe_single_after_review"
+    )
+    assert review.executor_decision_summary["mutation_policy"] == (
+        "apply_at_most_one_then_recheck"
+    )
+    assert review.executor_decision_summary["open_review_lane_count"] > 0
+    candidate = review.candidates[0]
+    assert candidate.semantic_apply_role == (
+        "profile_map_update_with_semantic_context"
+    )
+    assert candidate.apply_cardinality == "single_after_review_then_recheck"
+    assert candidate.safe_single_apply_candidate is True
 
 
 def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(

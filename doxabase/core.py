@@ -447,6 +447,8 @@ class ProjectBriefRecommendedTask:
     pending_staged_repair_iris: list[str] = field(default_factory=list)
     pending_staged_profile_update_iris: list[str] = field(default_factory=list)
     query_plan_handoff_summary: DraftQueryPlanHandoffSummary | None = None
+    task_advisories: list[dict[str, Any]] = field(default_factory=list)
+    task_group: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -1599,6 +1601,7 @@ class StagedRevisionRecoveryLane:
     resolved_target_record_kind: str | None
     row_is_target: bool
     lane: str
+    effective_recovery_action: str
     action_type: str | None
     action_label: str | None
     batch_action: str
@@ -1743,6 +1746,7 @@ class StagedRevisionRecoveryPlan:
 class StagedRevisionRecoverySessionSourceState:
     source_revision_iri: str
     lane: str | None
+    effective_recovery_action: str | None
     batch_action: str | None
     current_revision_iri: str | None
     resolved_target_iri: str | None
@@ -4350,6 +4354,11 @@ class DoxaBase:
             queue_counts=queue_counts,
             storage_access_count=overview.key_counts.get("storage_accesses", 0),
         )
+        selected_tasks = self._project_brief_attach_fixture_staleness_advisories(
+            selected_tasks,
+            all_tasks=recommended_tasks,
+            health_tasks=health_tasks,
+        )
         next_best_expansion = self._project_brief_next_best_expansion(
             health_tasks
         )
@@ -5104,6 +5113,82 @@ class DoxaBase:
             known_fixture_table_iris=known_fixture_table_iris,
             storage_access_count=storage_access_count,
         )
+
+    def _project_brief_attach_fixture_staleness_advisories(
+        self,
+        selected_tasks: list[ProjectBriefRecommendedTask],
+        *,
+        all_tasks: list[ProjectBriefRecommendedTask],
+        health_tasks: list[ProjectBriefHealthTask],
+    ) -> list[ProjectBriefRecommendedTask]:
+        fixture_task = next(
+            (
+                task
+                for task in health_tasks
+                if task.task_type == "query_fixture_staleness_review"
+            ),
+            None,
+        )
+        if fixture_task is None or fixture_task.suggested_next_action is None:
+            return selected_tasks
+        known_fixture_iris = set(fixture_task.known_fixture_table_iris)
+        if not known_fixture_iris:
+            return selected_tasks
+
+        def is_affected_query_task(task: ProjectBriefRecommendedTask) -> bool:
+            return (
+                task.task_type == "query_repair_review"
+                and task.resource is not None
+                and task.resource.iri in known_fixture_iris
+            )
+
+        group_member_count = sum(1 for task in all_tasks if is_affected_query_task(task))
+        returned_group_member_count = sum(
+            1 for task in selected_tasks if is_affected_query_task(task)
+        )
+        if group_member_count <= 0:
+            return selected_tasks
+
+        suggested_next_action = to_jsonable(fixture_task.suggested_next_action)
+        advisory = {
+            "code": "query_fixture_staleness_review",
+            "severity": "warning",
+            "source": fixture_task.source,
+            "related_health_task_type": fixture_task.task_type,
+            "recommended_handling": "review_health_task_before_staging",
+            "reason": fixture_task.reason,
+            "suggested_next_action": suggested_next_action,
+            "suggested_next_call": fixture_task.suggested_next_call,
+            "fixture_names": list(fixture_task.fixture_names),
+            "known_fixture_table_iris": list(fixture_task.known_fixture_table_iris),
+            "storage_access_count": fixture_task.storage_access_count,
+        }
+        group = {
+            "group_key": (
+                "query_fixture_staleness_review:"
+                "known_fixture_tables_without_storage_accesses"
+            ),
+            "group_type": "query_fixture_staleness_review",
+            "group_member_count": group_member_count,
+            "returned_group_member_count": returned_group_member_count,
+            "suppression_policy": "review_group_before_member_mutation",
+            "representative_resource_iri": (
+                fixture_task.known_fixture_table_iris[0]
+                if fixture_task.known_fixture_table_iris
+                else None
+            ),
+        }
+
+        return [
+            replace(
+                task,
+                task_advisories=[*task.task_advisories, copy.deepcopy(advisory)],
+                task_group=copy.deepcopy(group),
+            )
+            if is_affected_query_task(task)
+            else task
+            for task in selected_tasks
+        ]
 
     def _project_brief_privacy_health_task(
         self,
@@ -34998,6 +35083,11 @@ class DoxaBase:
                 StagedRevisionRecoverySessionSourceState(
                     source_revision_iri=source_revision_iri,
                     lane=lane.lane if lane is not None else None,
+                    effective_recovery_action=(
+                        lane.effective_recovery_action
+                        if lane is not None
+                        else None
+                    ),
                     batch_action=lane.batch_action if lane is not None else None,
                     current_revision_iri=(
                         lane.current_revision_iri
@@ -36112,6 +36202,7 @@ class DoxaBase:
                     queue_item.row_is_target if queue_item is not None else True
                 ),
                 lane=lane,
+                effective_recovery_action=lane,
                 action_type=next_action.action_type if next_action is not None else None,
                 action_label=next_action.action_label if next_action is not None else None,
                 batch_action=item.action,
@@ -40689,19 +40780,20 @@ class DoxaBase:
         candidates: list[ProfileInsightReviewCandidate] = []
         seen_revision_iris: set[str] = set()
 
-        for revision_iri in self._string_values("revision_iris", revision_iris):
-            description = self.describe_staged_revision(revision_iri)
-            candidate = self._profile_insight_review_candidate(
-                description,
-                evidence_iri=evidence_value,
-                profile_observation_iris=profile_observation_set,
-                related_pattern_iris=related_pattern_set,
-                anchor_seed_iris=anchor_seed_iris,
-                profile_route_sources=profile_route_sources,
-                explicit=True,
-            )
-            candidates.append(candidate)
-            seen_revision_iris.add(candidate.revision_iri)
+        with self._scoped_staged_apply_check_cache(apply_check_cache):
+            for revision_iri in self._string_values("revision_iris", revision_iris):
+                description = self.describe_staged_revision(revision_iri)
+                candidate = self._profile_insight_review_candidate(
+                    description,
+                    evidence_iri=evidence_value,
+                    profile_observation_iris=profile_observation_set,
+                    related_pattern_iris=related_pattern_set,
+                    anchor_seed_iris=anchor_seed_iris,
+                    profile_route_sources=profile_route_sources,
+                    explicit=True,
+                )
+                candidates.append(candidate)
+                seen_revision_iris.add(candidate.revision_iri)
 
         warnings: list[str] = []
         if include_current_staged_work:
@@ -40718,23 +40810,24 @@ class DoxaBase:
                     "current_staged_work_limit if profile-related revisions may "
                     "have been omitted."
                 )
-            for item in listing.revisions:
-                if item.iri in seen_revision_iris or not item.has_patch_payload:
-                    continue
-                description = self.describe_staged_revision(item.iri)
-                candidate = self._profile_insight_review_candidate(
-                    description,
-                    evidence_iri=evidence_value,
-                    profile_observation_iris=profile_observation_set,
-                    related_pattern_iris=related_pattern_set,
-                    anchor_seed_iris=anchor_seed_iris,
-                    profile_route_sources=profile_route_sources,
-                    explicit=False,
-                )
-                if not candidate.relation_reasons:
-                    continue
-                candidates.append(candidate)
-                seen_revision_iris.add(candidate.revision_iri)
+            with self._scoped_staged_apply_check_cache(apply_check_cache):
+                for item in listing.revisions:
+                    if item.iri in seen_revision_iris or not item.has_patch_payload:
+                        continue
+                    description = self.describe_staged_revision(item.iri)
+                    candidate = self._profile_insight_review_candidate(
+                        description,
+                        evidence_iri=evidence_value,
+                        profile_observation_iris=profile_observation_set,
+                        related_pattern_iris=related_pattern_set,
+                        anchor_seed_iris=anchor_seed_iris,
+                        profile_route_sources=profile_route_sources,
+                        explicit=False,
+                    )
+                    if not candidate.relation_reasons:
+                        continue
+                    candidates.append(candidate)
+                    seen_revision_iris.add(candidate.revision_iri)
 
         if include_applied_staged_sources:
             applied_source_iris = self._profile_insight_applied_source_candidate_iris(
@@ -40751,30 +40844,35 @@ class DoxaBase:
                     "higher applied_staged_source_limit if older profile-related "
                     "applied sources may have been omitted."
                 )
-            for applied_source_iri in applied_source_iris[
-                :applied_staged_source_limit
-            ]:
-                if applied_source_iri in seen_revision_iris:
-                    continue
-                description = self.describe_staged_revision(applied_source_iri)
-                candidate = self._profile_insight_review_candidate(
-                    description,
-                    evidence_iri=evidence_value,
-                    profile_observation_iris=profile_observation_set,
-                    related_pattern_iris=related_pattern_set,
-                    anchor_seed_iris=anchor_seed_iris,
-                    profile_route_sources=profile_route_sources,
-                    explicit=False,
-                )
-                if not candidate.relation_reasons:
-                    continue
-                candidates.append(candidate)
-                seen_revision_iris.add(candidate.revision_iri)
+            with self._scoped_staged_apply_check_cache(apply_check_cache):
+                for applied_source_iri in applied_source_iris[
+                    :applied_staged_source_limit
+                ]:
+                    if applied_source_iri in seen_revision_iris:
+                        continue
+                    description = self.describe_staged_revision(applied_source_iri)
+                    candidate = self._profile_insight_review_candidate(
+                        description,
+                        evidence_iri=evidence_value,
+                        profile_observation_iris=profile_observation_set,
+                        related_pattern_iris=related_pattern_set,
+                        anchor_seed_iris=anchor_seed_iris,
+                        profile_route_sources=profile_route_sources,
+                        explicit=False,
+                    )
+                    if not candidate.relation_reasons:
+                        continue
+                    candidates.append(candidate)
+                    seen_revision_iris.add(candidate.revision_iri)
 
         candidate_revision_iris = [candidate.revision_iri for candidate in candidates]
         open_profile_review_lanes = self._profile_insight_open_review_lanes(
             profile_route_sources,
             candidates,
+        )
+        candidates = self._profile_insight_demote_safe_candidates_for_open_lanes(
+            candidates,
+            open_profile_review_lanes,
         )
         (
             closed_semantic_moves,
@@ -41264,7 +41362,10 @@ class DoxaBase:
             direct_review_lane=direct_review_lane,
         )
         apply_gate = self._profile_insight_candidate_apply_gate(
-            profile_route_groups
+            profile_route_groups,
+            application_status=(
+                self._profile_insight_candidate_application_status(description)
+            ),
         )
         return ProfileInsightReviewCandidate(
             revision_iri=description.iri,
@@ -41283,9 +41384,20 @@ class DoxaBase:
             **apply_gate,
         )
 
+    def _profile_insight_candidate_application_status(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> str | None:
+        if description.application_status is not None:
+            return description.application_status
+        check = self.check_staged_revision_apply(description.iri)
+        return check.status
+
     @staticmethod
     def _profile_insight_candidate_apply_gate(
         profile_route_groups: Iterable[MappingABC[str, Any]],
+        *,
+        application_status: str | None,
     ) -> dict[str, Any]:
         groups = [dict(group) for group in profile_route_groups]
         direct_groups = [
@@ -41379,22 +41491,45 @@ class DoxaBase:
             elif direct_lanes == ["profile_map_updates"]:
                 if support_semantic_groups:
                     role = "profile_map_update_with_semantic_context"
-                    apply_cardinality = "single_after_semantic_review"
-                    reason = (
-                        "Direct profile map update also shares metric, type, "
-                        "query, or fallback review context; review those "
-                        "semantic lanes before applying."
-                    )
+                    if (
+                        application_status == "ready"
+                        and not direct_semantic_moves
+                        and DoxaBase._profile_insight_support_allows_map_safe_single(
+                            support_semantic_groups
+                        )
+                    ):
+                        apply_cardinality = "single_after_review_then_recheck"
+                        safe_single_apply_candidate = True
+                        reason = (
+                            "Direct profile map update shares only supporting "
+                            "metric, type, or fallback review context; it may be "
+                            "applied as one reviewed mutation, then profile "
+                            "review must be rerun before any further apply."
+                        )
+                    else:
+                        apply_cardinality = "single_after_semantic_review"
+                        reason = (
+                            "Direct profile map update also shares metric, type, "
+                            "query, fallback, or scalar-conflict review context; "
+                            "review blocking semantic lanes before applying."
+                        )
                 else:
                     role = "ordinary_profile_map_update"
                     apply_cardinality = "single_after_review"
-                    safe_single_apply_candidate = True
-                    bulk_apply_allowed = True
-                    reason = (
-                        "Direct profile map update without metric, type, query, "
-                        "or fallback review context; apply only after review and "
-                        "recheck the staged frontier."
-                    )
+                    if application_status == "ready":
+                        safe_single_apply_candidate = True
+                        bulk_apply_allowed = True
+                        reason = (
+                            "Direct profile map update without metric, type, query, "
+                            "or fallback review context; apply only after review and "
+                            "recheck the staged frontier."
+                        )
+                    else:
+                        reason = (
+                            "Direct profile map update without metric, type, query, "
+                            "or fallback review context, but it is not currently "
+                            "ready to apply; inspect staged revision status first."
+                        )
             else:
                 role = "profile_review_candidate"
 
@@ -41406,6 +41541,63 @@ class DoxaBase:
             "safe_single_apply_candidate": safe_single_apply_candidate,
             "semantic_apply_gate_reason": reason,
         }
+
+    @staticmethod
+    def _profile_insight_support_allows_map_safe_single(
+        support_semantic_groups: Iterable[MappingABC[str, Any]],
+    ) -> bool:
+        blocking_lanes = {
+            "profile_scalar_conflict_review",
+            "query_context_review",
+        }
+        allowed_lanes = {
+            "metric_vocabulary_review",
+            "profile_type_review",
+        }
+        for group in support_semantic_groups:
+            review_lane = str(group.get("review_lane") or "")
+            if review_lane in blocking_lanes:
+                return False
+            if review_lane and review_lane not in allowed_lanes:
+                return False
+            if group.get("match_strength") == "direct_action":
+                return False
+        return True
+
+    @staticmethod
+    def _profile_insight_demote_safe_candidates_for_open_lanes(
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> list[ProfileInsightReviewCandidate]:
+        blocking_lanes = {
+            "profile_scalar_conflict_review",
+            "query_context_review",
+        }
+        present_blocking_lanes = sorted(
+            {
+                lane.review_lane
+                for lane in open_profile_review_lanes
+                if lane.review_lane in blocking_lanes
+            }
+        )
+        if not present_blocking_lanes:
+            return candidates
+        reason = (
+            "Open profile review lanes still include "
+            f"{', '.join(present_blocking_lanes)}; inspect or stage those lanes "
+            "before treating a profile map update as a safe-single apply."
+        )
+        return [
+            replace(
+                candidate,
+                bulk_apply_allowed=False,
+                safe_single_apply_candidate=False,
+                semantic_apply_gate_reason=reason,
+            )
+            if candidate.safe_single_apply_candidate
+            else candidate
+            for candidate in candidates
+        ]
 
     @staticmethod
     def _profile_insight_candidate_route_source(

@@ -429,6 +429,10 @@ For `query_fixture_staleness_review`, read `fixture_names`,
 `known_fixture_table_iris`, `storage_access_count`, and the suggested
 `describe_query_context` action before staging repeated missing-storage repairs;
 the task is advisory and does not replace privacy or stale-seed safety gates.
+Affected `recommended_next_tasks[]` query repair rows can repeat that warning in
+`task_advisories[]` and `task_group`. Use `task_group.suppression_policy` as an
+automation cue to review the grouped fixture issue before mutating individual
+missing-storage repair rows.
 `frontier_first_action` is the canonical first hop for unattended frontier
 loops after blocking health review. Check `safety_first_action` first; when the
 default handoff-bundle preflight finds potential sensitive terms, it points to
@@ -2475,6 +2479,12 @@ signals, not permission to bulk apply semantic metric/type/query/fallback
 candidates. When `result.bulk_apply_allowed` is false, read
 `semantic_apply_gate_summary` and apply at most one reviewed semantic choice
 before rerunning the staged/profile review.
+A ready full-scan profile map update can still be a safe-single candidate when
+its only open context is supporting metric/type/fallback review. It remains a
+one-row apply-and-recheck path, not permission to bulk apply or to ignore open
+semantic lanes. Scalar conflicts, query-context blockers, not-ready rows, and
+already-applied source rows must remain out of
+`safe_single_apply_candidate_revision_iris`.
 `executor_decision_summary` is the compact scripting view over the same gate:
 it includes `decision`, `mutation_policy`, `recommended_next_step`,
 `must_recheck_after_mutation`, `safe_single_apply_candidate_revision_iris`,
@@ -5648,6 +5658,7 @@ Each `session.source_states[]` row is a
 ```python
 state.source_revision_iri
 state.lane
+state.effective_recovery_action
 state.batch_action
 state.current_revision_iri
 state.resolved_target_iri
@@ -5680,6 +5691,7 @@ lane.resolved_target_iri
 lane.resolved_target_record_kind
 lane.row_is_target
 lane.lane
+lane.effective_recovery_action
 lane.action_type
 lane.action_label
 lane.batch_action
@@ -5727,7 +5739,8 @@ lane.note
 
 `lane.lane` is the effective queue, usually `apply_after_review`,
 `restage_after_review`, `repair_or_replace`, `inspect_already_applied`, or
-`informational`. `batch_action` comes from the dry-run batch classifier, for
+`informational`. Use `effective_recovery_action` or `lane` as the unattended
+route. `batch_action` comes from the dry-run batch classifier, for
 example `would_restage`, `skipped_already_handled`, or
 `skipped_not_restageable`. A dry-run `would_restage` lane has no successor yet:
 `current_revision_iri` is still the stale source. A handled stale lane can have

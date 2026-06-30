@@ -250,6 +250,13 @@ row, and rerun `draft_profile_map_updates` / the profile insight export before
 any further mutation. If a handoff needs post-apply review context, keep
 `include_applied_staged_sources=true`; current-only exports should drop the
 applied map-update candidate once the live draft is closed.
+When a full-scan profile map update shares only supporting metric/type/fallback
+context, the bundle may still expose that map row as a
+`safe_single_apply_candidate` with
+`decision="apply_one_safe_single_after_review"`. This is not bulk permission:
+apply at most one ready map update, then rerun while metric/type/systematisation
+lanes stay open. Query-context blockers and scalar-conflict lanes still block
+safe-single status.
 Scalar-conflict review is semantic context too. After one same-evidence scalar
 choice is applied, a sibling row-count or nullable observation should stay out
 of default `profile_map_updates`; the draft routes it through
