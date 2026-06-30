@@ -377,6 +377,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
+        profile_route_sources: list[dict[str, Any]] | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
         """Stage reviewed physical layout metadata for a query repair."""
@@ -396,6 +397,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             summary=summary,
             review_note=review_note,
             review_recommendation=review_recommendation,
+            profile_route_sources=profile_route_sources,
             validation_scope=validation_scope,
         )
 
@@ -423,6 +425,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
+        profile_route_sources: list[dict[str, Any]] | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
         """Stage reviewed storage access metadata for a query repair."""
@@ -451,6 +454,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             summary=summary,
             review_note=review_note,
             review_recommendation=review_recommendation,
+            profile_route_sources=profile_route_sources,
             validation_scope=validation_scope,
         )
 

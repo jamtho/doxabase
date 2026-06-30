@@ -3491,6 +3491,21 @@ few useful gaps:
   snapshot-only fake-sensitive staged content while a clean context slice stayed
   importable; grouped systematisation exports preserved shared-context warnings
   and choose-one semantics.
+- A profile/query interlock trial confirmed `draft_profile_map_updates` puts
+  `query_context_review` ahead of profile map updates when storage is missing,
+  and `executor_decision_summary` blocks bulk apply while that lane is open. The
+  concrete friction was that dedicated storage/layout query repair helpers could
+  not persist the profile route source, so a staged repair was only supporting
+  context until applied and rerun. `stage_query_storage_access_repair` and
+  `stage_query_physical_layout_repair` now accept `profile_route_sources`; pass
+  `profile_route_sources=[query_action.source_query_context]` from the draft
+  action so profile insight bundles can mark the repair as a direct
+  `query_context_review` action.
+- A stale-seed recovery handoff trial confirmed the safety-first route works:
+  stale source `project_brief` routes to scanner-clean handoff preflight/export,
+  a fresh receiver imports the manifest plus snapshot rows, and receiver-local
+  `project_brief` / `plan_staged_revision_recovery(current_staged_work_only=True)`
+  expose the staged frontier without source-local state.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

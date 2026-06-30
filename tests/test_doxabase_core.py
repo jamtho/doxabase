@@ -32125,6 +32125,93 @@ def test_profile_map_update_query_blocker_routes_before_default_stage_action(
     assert "query_context_review" in draft.review_note
 
 
+def test_query_storage_repair_profile_route_sources_close_query_lane(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-query-repair#"
+    dataset = f"{base}SupportEvents"
+    evidence = f"{base}SupportEventsProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Support Events",
+        is_table=True,
+        row_count_snapshot=3,
+        path_templates=["support_events/current.csv"],
+    )
+    db.record_map_physical_layout(
+        f"{base}SupportEventsCsvLayout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Support events full profile pass.",
+        evidence_summary="Support events profile evidence.",
+        evidence_sources=["test://support-events/full"],
+        shared_evidence_iri=evidence,
+        sample_size=4,
+        sample_scope="All rows in the local support events table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=4,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    query_action = draft.suggested_next_action_groups["query_context_review"][0]
+    assert query_action.source_query_context["blocking_issue_codes"] == [
+        "missing_storage_access"
+    ]
+
+    repair = db.stage_query_storage_access_repair(
+        dataset,
+        f"{base}SupportEventsStorage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        location_kind="directory",
+        rationale="Reviewed local storage root for the profile/query interlock.",
+        profile_route_sources=[query_action.source_query_context],
+    )
+    described = db.describe_staged_revision(repair.revision_iri)
+    assert len(described.profile_route_sources) == 1
+    stored_source = described.profile_route_sources[0]
+    assert stored_source["review_lane"] == "query_context_review"
+    assert stored_source["direct_review_lane"] == "query_context_review"
+    assert stored_source["route_group_key"] == (
+        query_action.source_query_context["route_group_key"]
+    )
+    assert stored_source["route_step_key"] == (
+        query_action.source_query_context["route_step_key"]
+    )
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-query-repair-review.md",
+        revision_iris=[repair.revision_iri],
+    )
+
+    assert review.candidate_revision_iris == [repair.revision_iri]
+    candidate = review.candidates[0]
+    assert candidate.semantic_apply_role == "query_context_repair_candidate"
+    route_groups = {
+        group["review_lane"]: group for group in candidate.profile_route_groups
+    }
+    assert route_groups["query_context_review"]["match_strength"] == (
+        "direct_action"
+    )
+    assert all(
+        lane.review_lane != "query_context_review"
+        for lane in review.open_profile_review_lanes
+    )
+    assert review.executor_decision_summary["candidate_roles"] == {
+        "query_context_repair_candidate": 1
+    }
+
+
 def test_profile_map_update_logical_only_dataset_omits_query_context_lane(
     tmp_path: Path,
 ) -> None:

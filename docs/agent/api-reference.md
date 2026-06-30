@@ -447,7 +447,11 @@ mutation. The direct record-new-storage template remains available for
 intentional current-best writes. In both routes, optional `path_templates` should
 be omitted when the dataset or partition already owns the reviewed file/object
 path template; duplicating it can produce equivalent ready query candidates. Use
-storage-access-owned templates for database relation identifiers. Existing
+storage-access-owned templates for database relation identifiers. If this repair
+comes from a profile draft's `query_context_review` lane, pass
+`profile_route_sources=[query_action.source_query_context]` so profile insight
+review can mark the staged storage repair as the direct query-context action.
+Existing
 storage candidates can carry
 `pending_staged_repair_iris` and `candidate_status="already_pending"` when that
 exact dataset/storage link is already staged.
@@ -1138,7 +1142,8 @@ helper rejects parallel successors.
 dataset IRI, reviewed layout IRI, reviewed file format, and rationale; optional
 verification fields become physical-layout metadata. It stages the layout
 resource and dataset `rc:hasPhysicalLayout` link together, preserving review
-rationale before agents check/apply the row and rerun query planning.
+rationale before agents check/apply the row and rerun query planning. It also
+accepts `profile_route_sources` for profile `query_context_review` lanes.
 
 `draft_map_assertion_change()` previews the same reviewable add/remove/replace
 for one `map` assertion without writing a staged revision. Pass `subject`,

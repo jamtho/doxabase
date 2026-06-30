@@ -19683,6 +19683,7 @@ class DoxaBase:
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
+        profile_route_sources: Iterable[Mapping[str, Any]] | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -19725,6 +19726,14 @@ class DoxaBase:
             if layout_verification_status is not None
             else None
         )
+        profile_route_source_values = self._explicit_profile_route_sources(
+            profile_route_sources or []
+        )
+        if profile_route_sources is not None and not profile_route_source_values:
+            raise DoxaBaseError(
+                "profile_route_sources was provided, but no usable profile "
+                "route source entries were found"
+            )
 
         graph_payload = self._query_physical_layout_repair_graph(
             dataset_iri=dataset_value,
@@ -19768,7 +19777,7 @@ class DoxaBase:
                 "planning."
             )
         )
-        return self.stage_graph_revision(
+        staged = self.stage_graph_revision(
             summary=summary_value,
             rationale=rationale_value,
             additions=additions,
@@ -19778,6 +19787,11 @@ class DoxaBase:
             review_recommendation=review_recommendation_value,
             validation_scope=validation_scope,
         )
+        self._record_profile_insight_route_sources(
+            staged.revision_iri,
+            profile_route_source_values,
+        )
+        return staged
 
     def stage_query_storage_access_repair(
         self,
@@ -19804,6 +19818,7 @@ class DoxaBase:
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
+        profile_route_sources: Iterable[Mapping[str, Any]] | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -19854,6 +19869,14 @@ class DoxaBase:
             if layout_verification_status is not None
             else None
         )
+        profile_route_source_values = self._explicit_profile_route_sources(
+            profile_route_sources or []
+        )
+        if profile_route_sources is not None and not profile_route_source_values:
+            raise DoxaBaseError(
+                "profile_route_sources was provided, but no usable profile "
+                "route source entries were found"
+            )
 
         graph_payload = self._query_storage_access_repair_graph(
             dataset_iri=dataset_value,
@@ -19906,7 +19929,7 @@ class DoxaBase:
                 "source data for query planning."
             )
         )
-        return self.stage_graph_revision(
+        staged = self.stage_graph_revision(
             summary=summary_value,
             rationale=rationale_value,
             additions=additions,
@@ -19916,6 +19939,11 @@ class DoxaBase:
             review_recommendation=review_recommendation_value,
             validation_scope=validation_scope,
         )
+        self._record_profile_insight_route_sources(
+            staged.revision_iri,
+            profile_route_source_values,
+        )
+        return staged
 
     def _query_storage_access_repair_graph(
         self,

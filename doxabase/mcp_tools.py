@@ -709,6 +709,7 @@ def stage_query_physical_layout_repair_tool(
     summary: str | None = None,
     review_note: str | None = None,
     review_recommendation: str | None = None,
+    profile_route_sources: list[dict[str, Any]] | None = None,
     validation_scope: str = "all",
 ) -> dict[str, Any]:
     result = db.stage_query_physical_layout_repair(
@@ -725,6 +726,7 @@ def stage_query_physical_layout_repair_tool(
         summary=summary,
         review_note=review_note,
         review_recommendation=review_recommendation,
+        profile_route_sources=profile_route_sources,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return to_dict(result)
@@ -754,6 +756,7 @@ def stage_query_storage_access_repair_tool(
     summary: str | None = None,
     review_note: str | None = None,
     review_recommendation: str | None = None,
+    profile_route_sources: list[dict[str, Any]] | None = None,
     validation_scope: str = "all",
 ) -> dict[str, Any]:
     result = db.stage_query_storage_access_repair(
@@ -779,6 +782,7 @@ def stage_query_storage_access_repair_tool(
         summary=summary,
         review_note=review_note,
         review_recommendation=review_recommendation,
+        profile_route_sources=profile_route_sources,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return to_dict(result)

@@ -1173,7 +1173,10 @@ run `check_staged_revision_apply`, apply the ready row, then rerun
 `describe_query_context` before drafting a query plan. By default it rejects
 datasets that already have storage access resources; pass
 `allow_existing_storage_accesses=true` only after reviewing that an additional
-route will not create duplicate query target candidates.
+route will not create duplicate query target candidates. When the repair comes
+from a profile draft's `query_context_review` lane, pass
+`profile_route_sources=[query_action.source_query_context]` so profile insight
+review bundles can mark the staged repair as a direct query-context action.
 
 ### doxabase.stage_query_physical_layout_repair
 
@@ -1186,7 +1189,9 @@ record, so run `check_staged_revision_apply`, apply the ready row, then rerun
 `describe_query_context` before drafting a query plan. By default it rejects
 datasets that already have physical layouts; pass
 `allow_existing_physical_layouts=true` only after reviewing that an additional
-layout will not create ambiguous query target candidates.
+layout will not create ambiguous query target candidates. It also accepts
+`profile_route_sources` for profile `query_context_review` lanes, matching
+`stage_query_storage_access_repair`.
 
 `doxabase.describe_context_slice`
 

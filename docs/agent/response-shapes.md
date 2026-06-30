@@ -2885,6 +2885,12 @@ intentional. Its `repair_context.storage_protocol_iris`,
 help pick a reviewed `file_format`; for database storage, use table-layout
 formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
 the selected route is a database relation handoff.
+`stage_query_storage_access_repair` and `stage_query_physical_layout_repair`
+also accept `profile_route_sources`. When called from a profile draft's
+`query_context_review` lane, pass
+`profile_route_sources=[query_action.source_query_context]`; the staged revision
+stores those sources and profile insight review bundles can close the
+query-context lane as a direct action.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
