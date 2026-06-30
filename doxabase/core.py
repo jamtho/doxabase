@@ -401,6 +401,8 @@ class ProjectBriefRecommendedTask:
     reason: str
     suggested_next_action: SuggestedNextAction | None
     suggested_next_call: str | None
+    inspection_next_action: SuggestedNextAction | None = None
+    inspection_next_call: str | None = None
     profile_evidence_iri: str | None = None
     pending_staged_repair_iris: list[str] = field(default_factory=list)
     pending_staged_profile_update_iris: list[str] = field(default_factory=list)
@@ -4646,6 +4648,10 @@ class DoxaBase:
 
         for draft in dataset.profile.drafts:
             if self._project_brief_profile_draft_requires_review(draft):
+                inspection_action = self._project_brief_draft_profile_action(
+                    dataset.dataset.iri,
+                    draft.evidence_iri,
+                )
                 pending_staged_profile_update_iris = (
                     self._project_brief_pending_staged_profile_update_iris(
                         dataset.dataset.iri,
@@ -4659,18 +4665,12 @@ class DoxaBase:
                     + draft.type_advisory_count
                 )
                 if pending_staged_profile_update_iris:
-                    action = self._project_brief_draft_profile_action(
-                        dataset.dataset.iri,
-                        draft.evidence_iri,
-                    )
+                    action = inspection_action
                 else:
                     action = (
                         draft.suggested_next_actions[0]
                         if draft.suggested_next_actions
-                        else self._project_brief_draft_profile_action(
-                            dataset.dataset.iri,
-                            draft.evidence_iri,
-                        )
+                        else inspection_action
                     )
                 if pending_staged_profile_update_iris and open_profile_advisory_count:
                     pending_note = (
@@ -4704,6 +4704,8 @@ class DoxaBase:
                         ),
                         suggested_next_action=action,
                         suggested_next_call=action.call,
+                        inspection_next_action=inspection_action,
+                        inspection_next_call=inspection_action.call,
                         profile_evidence_iri=draft.evidence_iri,
                         pending_staged_profile_update_iris=(
                             pending_staged_profile_update_iris

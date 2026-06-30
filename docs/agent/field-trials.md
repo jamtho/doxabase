@@ -2974,10 +2974,12 @@ few useful gaps:
   `rc:valueType` assertion open in the live draft; profile route groups now
   track direct semantic moves so `define_value_type` does not close
   `assert_map_type`. Project-brief onboarding trials showed low-limit briefs
-  expand correctly but the lane recipes deserve a compact `project_brief` doc
-  or read-only profile review action. Grouped review-bundle trials showed
-  awkward modelling choices need stronger top-level decision summaries,
-  structured framing roles, and common support rollups.
+  expand correctly but profile-review tasks needed a read-only hop when their
+  primary suggestion is mutating; `profile_review` tasks now expose
+  `inspection_next_action` for `draft_profile_map_updates`. Grouped
+  review-bundle trials showed awkward modelling choices need stronger
+  top-level decision summaries, structured framing roles, and common support
+  rollups.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

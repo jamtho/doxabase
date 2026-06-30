@@ -347,6 +347,13 @@ For `profile_review` tasks, `profile_evidence_iri` names the profile evidence
 that scoped the task. Use it even when `suggested_next_action` is a shared
 blocker action such as `describe_query_context`, because multiple profile
 drafts for the same dataset can point at the same blocker first.
+`inspection_next_action` and `inspection_next_call` are optional read-only
+orientation hops. For `profile_review`, they point at
+`draft_profile_map_updates(dataset_iri=..., evidence_iri=...)` even when
+`suggested_next_action` is a mutating `stage_profile_map_updates` action or a
+shared blocker. Use the inspection action when auditing or reviewing before
+choosing a lane; use `suggested_next_action` when ready to follow the task's
+chosen primary route.
 `profile_candidate_limit` is applied before profile drafts become
 `profile_review` tasks. Each dataset profile summary reports
 `draft_candidate_count`, `profile_candidate_omitted_count`, and

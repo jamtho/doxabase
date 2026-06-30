@@ -454,6 +454,8 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
         assert "suggested_profile_candidate_limit" in task
         assert "profile_candidate_omitted_count" in task
     for task in result["recommended_next_tasks"]:
+        assert "inspection_next_action" in task
+        assert "inspection_next_call" in task
         assert "query_plan_handoff_summary" in task
     assert isinstance(result["recommended_next_tasks"], list)
 

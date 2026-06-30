@@ -251,9 +251,22 @@ def test_project_brief_surfaces_singleton_profile_draft(
     assert brief.profile_queue_counts["profile_drafts"] == 1
     assert brief.profile_queue_counts["profile_draft_recommendations"] == 1
     assert "profile_review" in brief.queue_counts
-    assert any(
-        task.task_type == "profile_review"
+    profile_task = next(
+        task
         for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+    assert profile_task.suggested_next_action is not None
+    assert profile_task.suggested_next_action.tool_name == "stage_profile_map_updates"
+    assert profile_task.inspection_next_action is not None
+    assert profile_task.inspection_next_action.tool_name == "draft_profile_map_updates"
+    assert profile_task.inspection_next_action.arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+    }
+    assert profile_task.inspection_next_call == (
+        f"draft_profile_map_updates(dataset_iri='{dataset}', "
+        f"evidence_iri='{evidence}')"
     )
 
 
@@ -451,6 +464,20 @@ def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
         and task.suggested_next_action.tool_name == "describe_query_context"
         for task in profile_tasks
     )
+    assert all(
+        task.inspection_next_action is not None
+        and task.inspection_next_action.tool_name == "draft_profile_map_updates"
+        for task in profile_tasks
+    )
+    assert {
+        task.inspection_next_call for task in profile_tasks
+    } == {
+        (
+            f"draft_profile_map_updates(dataset_iri='{dataset}', "
+            f"evidence_iri='{evidence_iri}')"
+        )
+        for evidence_iri in evidence_iris
+    }
     query_context_route_keys = []
     for evidence_iri in evidence_iris:
         draft = db.draft_profile_map_updates(dataset, evidence_iri)

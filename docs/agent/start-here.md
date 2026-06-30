@@ -43,7 +43,9 @@ When arriving cold, use this route before reading every reference doc.
    before staging more profile or query repair work.
    If it includes `profile_review`, keep the task's `profile_evidence_iri`
    with your notes; multiple profile drafts on one dataset may first route to
-   the same dataset-level blocker action.
+   the same dataset-level blocker action. For read-only review, follow
+   `inspection_next_action` when present; `suggested_next_action` may be the
+   mutating lane to take after inspection.
    If it reports incomplete revision handoff import, read
    `doxabase.get_doc(doc_id="revisions", section="Staged Handoff Recovery Cookbook")`
    and complete the `import_trig` / `import_revision_snapshots` sequence before
