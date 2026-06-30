@@ -281,7 +281,9 @@ Start with `describe_query_context(dataset_iri)`:
    full repair group before staging a metadata change. Read
    `pending_action_count`, `skippable_action_count`, `action_status_counts`, and
    `pending_action_options` before routing a group. The compact options carry
-   branch labels plus available `reason`, `condition`, and
+   actions whose `action_status` is `pending_review`, the normal actionable
+   state for review-gated repair templates. They also carry branch labels plus
+   available `reason`, `condition`, and
    `review_rationale_guidance`; database relation template mismatch options also
    carry `misplaced_template_subject_iri`, `misplaced_template_source`, and
    `misplaced_template` so scripts can distinguish dataset and partition sources

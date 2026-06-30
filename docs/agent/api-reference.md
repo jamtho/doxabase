@@ -412,6 +412,9 @@ ordered action templates. Each group also reports `action_status_counts`,
 `pending_action_count`, `skippable_action_count`, and
 `pending_action_options` so scripts can triage mixed pending and
 already-satisfied repair groups before reviewing the templates. If
+`action_status="pending_review"`, the option is an actionable review-gated
+repair template; fill its required fields rather than treating the status as
+blocked. If
 `choice_mode="choose_one"`, select one action and follow that action's own
 `required_extra_arguments`; the legacy `pending_required_extra_arguments` field
 is the group-level union, not one call signature. These repair rows are reviewed

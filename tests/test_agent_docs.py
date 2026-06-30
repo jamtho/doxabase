@@ -239,6 +239,7 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     assert "duplicating it can create equivalent ready query candidates" in (
         query_context_content
     )
+    assert "action_status=\"pending_review\"" in query_context_content
 
 
 def test_profiling_doc_names_core_workflow_tools() -> None:

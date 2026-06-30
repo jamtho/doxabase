@@ -2901,6 +2901,10 @@ review history should be preserved. In choose-one groups, do not treat
 `pending_action_options[]` or the selected action's own
 `required_extra_arguments`.
 Use `pending_action_count` and `skippable_action_count` for first-pass routing:
+`action_status="pending_review"` is the expected actionable state for a
+review-gated repair template, not an error or a sign that another pending
+staged revision already exists. Compact `pending_action_options[]` lists these
+pending-review, non-skippable actions.
 an action with `action_status="already_satisfied"` and
 `skip_when_already_satisfied=true` is counted as skippable, while pending
 actions contribute their unique `required_extra_arguments` values to

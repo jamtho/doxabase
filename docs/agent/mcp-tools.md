@@ -976,7 +976,9 @@ repair hint type, copied context, ordered action templates, action count,
 status counts, pending/skippable counts, per-action pending options, and the
 legacy union of pending required extra arguments. Use it for repair discovery
 and scripting, but keep the review gate: these rows are templates, not flat
-call-ready `suggested_next_actions`. If `choice_mode="choose_one"`, select one
+call-ready `suggested_next_actions`. `action_status="pending_review"` is the
+normal actionable status for one of these review-gated templates. If
+`choice_mode="choose_one"`, select one
 action and follow that action's own `required_extra_arguments`; do not treat the
 group-level `pending_required_extra_arguments` union as one call signature. Fill
 placeholders, add required extra arguments such as `rationale`, skip actions
