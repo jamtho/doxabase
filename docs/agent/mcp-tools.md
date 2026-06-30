@@ -1040,6 +1040,10 @@ execution-attempt blocker remains. It may add
 handoff-only blockers such as `query_context_has_other_blockers` for clean
 selected candidates with bad siblings, or `scan_function_not_inferred` when
 DuckDB has no file-scan function for the selected storage/layout shape.
+`physical_layout_storage_protocol_mismatch` means an explicit layout selection
+crossed storage route kinds, such as database storage plus `rc:CSV` or local
+file storage plus `rc:PostgreSQLTable`; keep it review-gated and choose a
+layout compatible with the selected candidate route.
 `source_context` reports selection mode/request/status/note, and `review_gate`
 reports selection override, context-block allowance/use, direct blocking codes,
 and context blocking codes.

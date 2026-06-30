@@ -373,10 +373,15 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
    source context records the requested layout and `scan.physical_layout`
    records the selected layout. `describe_query_context.suggested_next_actions`
-   includes one `draft_query_plan` action per distinct linked layout signature
+   includes one `draft_query_plan` action per compatible linked layout signature
    for the selected candidate, plus peer candidates whose only direct blocker
    is layout ambiguity, so scripts can choose a reviewed layout without parsing
-   issue details by hand.
+   issue details by hand. File/object routes are paired with file layouts such
+   as `rc:CSV` or `rc:Parquet`; database routes are paired with table layouts
+   such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`.
+   If a caller explicitly selects a cross-route pair, for example a database
+   relation with `rc:CSV`, `physical_layout_storage_protocol_mismatch` keeps
+   the plan review-gated.
    When a single linked physical layout is unambiguous but a clear candidate
    path extension conflicts with it, for example `.csv` with `rc:Parquet`,
    `physical_layout_path_extension_mismatch` keeps the candidate review-gated

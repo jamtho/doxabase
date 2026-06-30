@@ -595,14 +595,18 @@ siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
 for the selected storage/layout shape.
 `physical_layout_path_extension_mismatch` is also a review blocker: it means a
 clear candidate path extension, such as `.csv`, conflicts with the single linked
-physical layout file format, such as `rc:Parquet`. Database-backed storage still
-uses this generic review-draft shape today, so expect `scan.function=None` and
-review gating rather than executable SQL; `scan.uri_template` is intentionally
-absent there, and `scan.relation_identifier` plus `scan.connection_reference`
-carry the recorded database handoff for review. These scan fields mirror the
-selected candidate's database-specific fields; if the selected database
-candidate came from a dataset or partition path, `scan.relation_identifier` is
-absent and the plan stays metadata-review-required. Root-only database storage
+physical layout file format, such as `rc:Parquet`.
+`physical_layout_storage_protocol_mismatch` is also a review blocker: it means
+the caller explicitly paired a selected storage route with a layout format from
+the wrong route kind, such as database storage plus `rc:CSV` or local file
+storage plus `rc:PostgreSQLTable`. Database-backed storage still uses this
+generic review-draft shape today, so expect `scan.function=None` and review
+gating rather than executable SQL; `scan.uri_template` is intentionally absent
+there, and `scan.relation_identifier` plus `scan.connection_reference` carry the
+recorded database handoff for review. These scan fields mirror the selected
+candidate's database-specific fields; if the selected database candidate came
+from a dataset or partition path, `scan.relation_identifier` is absent and the
+plan stays metadata-review-required. Root-only database storage
 without a storage-access relation template is also metadata-review-required with
 `database_relation_template_missing`; the issue's `details.repair_hint` gives
 the reviewed add-template action for the storage access. The `scan` card carries

@@ -3176,6 +3176,15 @@ few useful gaps:
   closes only the direct semantic move, keeps `define_value_type` open when its
   vocabulary promotion is not staged, and suppresses only the fallback
   alternative after a direct map assertion.
+- A mixed storage/query-planning trial with local CSV and database relation
+  routes showed `ambiguous_physical_layout` actions were forming a Cartesian
+  product between every candidate and every layout. The planner now filters
+  layout-selection actions by route kind: file/object routes use file layouts
+  such as `rc:CSV` or `rc:Parquet`, database routes use table layouts such as
+  `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`. Explicit
+  cross-route selections remain inspectable but are blocked with
+  `physical_layout_storage_protocol_mismatch` and stay
+  `metadata_review_required`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

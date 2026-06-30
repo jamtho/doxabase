@@ -19162,7 +19162,7 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         storage_protocol="rc:LocalFilesystemStorage",
         location_kind="directory",
         storage_root=str(tmp_path / "lake"),
-        path_templates=["events/current/*.parquet"],
+        path_templates=["events/current/*.csv"],
         layout_verification_status="rc:VerifiedByListingLayout",
     )
     database_storage = db.record_map_storage_access(
@@ -19181,9 +19181,9 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         file_format="rc:CSV",
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
-    parquet_layout = db.record_map_physical_layout(
-        "https://example.test/project#events_parquet_layout",
-        file_format="rc:Parquet",
+    table_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
     db.record_map_dataset(
@@ -19191,7 +19191,7 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         label="Events",
         is_table=True,
         storage_accesses=[local_storage.iri, database_storage.iri],
-        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        physical_layouts=[csv_layout.iri, table_layout.iri],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
@@ -19209,8 +19209,6 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         and target.storage_access.iri == database_storage.iri
     )
 
-    selected_index = context.query_target_decision.candidate_index
-    peer_index = local_index if selected_index == database_index else database_index
     assert local_candidate.candidate_path_status == "orientation_only"
     assert database_candidate.candidate_path_status == "orientation_only"
     assert [reason.code for reason in database_candidate.direct_review_reasons] == [
@@ -19223,35 +19221,36 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         if action.action_label == "Select physical layout for draft"
     ]
 
-    assert [action.arguments for action in selection_actions] == [
-        {
-            "iri": dataset,
-            "candidate_index": selected_index,
-            "physical_layout_iri": csv_layout.iri,
-        },
-        {
-            "iri": dataset,
-            "candidate_index": selected_index,
-            "physical_layout_iri": parquet_layout.iri,
-        },
-        {
-            "iri": dataset,
-            "candidate_index": peer_index,
-            "physical_layout_iri": csv_layout.iri,
-        },
-        {
-            "iri": dataset,
-            "candidate_index": peer_index,
-            "physical_layout_iri": parquet_layout.iri,
-        },
-    ]
-    assert f"Candidate {peer_index} is blocked" in selection_actions[2].reason
+    assert {
+        (
+            action.arguments["candidate_index"],
+            action.arguments["physical_layout_iri"],
+        )
+        for action in selection_actions
+    } == {
+        (local_index, csv_layout.iri),
+        (database_index, table_layout.iri),
+    }
+    assert all(
+        not (
+            action.arguments["candidate_index"] == local_index
+            and action.arguments["physical_layout_iri"] == table_layout.iri
+        )
+        for action in selection_actions
+    )
+    assert all(
+        not (
+            action.arguments["candidate_index"] == database_index
+            and action.arguments["physical_layout_iri"] == csv_layout.iri
+        )
+        for action in selection_actions
+    )
 
     database_action = next(
         action
         for action in selection_actions
         if action.arguments["candidate_index"] == database_index
-        and action.arguments["physical_layout_iri"] == parquet_layout.iri
+        and action.arguments["physical_layout_iri"] == table_layout.iri
     )
     database_plan = db.draft_query_plan(**database_action.arguments)
 
@@ -19262,11 +19261,48 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     assert database_plan.scan.relation_identifier == "mart.events"
     assert database_plan.scan.connection_reference == "analytics-prod"
     assert database_plan.scan.physical_layout is not None
-    assert database_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert database_plan.scan.physical_layout.iri == table_layout.iri
     assert "ambiguous_physical_layout" not in (
         database_plan.review_gate.all_issue_codes
     )
+    assert "physical_layout_storage_protocol_mismatch" not in (
+        database_plan.review_gate.all_issue_codes
+    )
     assert database_plan.handoff_kind == "database_relation_handoff"
+
+    database_csv_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=database_index,
+        physical_layout_iri=csv_layout.iri,
+    )
+
+    assert database_csv_plan.selected_candidate is not None
+    assert database_csv_plan.selected_candidate.direct_review_required is True
+    assert database_csv_plan.scan.physical_layout is not None
+    assert database_csv_plan.scan.physical_layout.iri == csv_layout.iri
+    assert database_csv_plan.scan.file_format == "CSV"
+    assert database_csv_plan.review_gate.blocking_reason_codes == [
+        "physical_layout_storage_protocol_mismatch"
+    ]
+    assert database_csv_plan.review_gate.direct_blocking_reason_codes == [
+        "physical_layout_storage_protocol_mismatch"
+    ]
+    assert database_csv_plan.handoff_kind == "metadata_review_required"
+
+    local_table_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=local_index,
+        physical_layout_iri=table_layout.iri,
+    )
+
+    assert local_table_plan.selected_candidate is not None
+    assert local_table_plan.selected_candidate.direct_review_required is True
+    assert local_table_plan.scan.physical_layout is not None
+    assert local_table_plan.scan.physical_layout.iri == table_layout.iri
+    assert local_table_plan.review_gate.blocking_reason_codes == [
+        "physical_layout_storage_protocol_mismatch"
+    ]
+    assert local_table_plan.handoff_kind == "metadata_review_required"
 
 
 def test_draft_query_plan_layout_selection_preserves_runtime_resolution_gate(

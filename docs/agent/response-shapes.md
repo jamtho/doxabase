@@ -2834,15 +2834,18 @@ instead of parsing peer indexes from prose or from
 `allow_context_blocked_candidate=True` when sibling candidate metadata is the
 only broader blocker.
 When `ambiguous_physical_layout` blocks the selected candidate,
-`suggested_next_actions` also includes one `draft_query_plan` action per linked
-layout signature with `candidate_index` and `physical_layout_iri`; it also emits
-the same action shape for peer candidates whose only direct blocker is layout
-ambiguity. Follow the candidate/layout pair you have reviewed before relying on
-`scan.function`. When resolving that layout would leave a direct-clean selected
-route and the remaining blockers are candidate metadata on sibling routes, the
-layout-selection action also includes `allow_context_blocked_candidate=True` so
-scripts can reach the next execution gate without an extra retry while
-preserving context audit fields.
+`suggested_next_actions` also includes one `draft_query_plan` action per
+compatible linked layout signature with `candidate_index` and
+`physical_layout_iri`; it also emits the same action shape for peer candidates
+whose only direct blocker is layout ambiguity. File/object candidates are paired
+with file layouts such as `rc:CSV` or `rc:Parquet`; database candidates are
+paired with table layouts such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or
+`rc:MySQLTable`. Follow the candidate/layout pair you have reviewed before
+relying on `scan.function`. When resolving that layout would leave a
+direct-clean selected route and the remaining blockers are candidate metadata on
+sibling routes, the layout-selection action also includes
+`allow_context_blocked_candidate=True` so scripts can reach the next execution
+gate without an extra retry while preserving context audit fields.
 `ready_candidate_indexes` lists direct-ready candidates at the context stage;
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready
@@ -3129,10 +3132,14 @@ is present, `draft_query_plan` leaves `scan.function` unset instead of guessing
 from the first layout. After reviewing those layouts, pass
 `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
 source context records the requested layout and the scan card reports the
-selected layout. `physical_layout_path_extension_mismatch` means there is only
-one linked layout, but a clear candidate path extension such as `.csv` conflicts
-with that layout's file format such as `rc:Parquet`; keep the plan review-gated
-until the path/template or physical layout is corrected.
+selected layout. `physical_layout_storage_protocol_mismatch` means an explicit
+layout selection crossed route kinds, for example a database storage candidate
+with `rc:CSV` or a local file candidate with `rc:PostgreSQLTable`; choose a
+layout whose file/table format belongs to the selected storage route.
+`physical_layout_path_extension_mismatch` means there is only one linked layout,
+but a clear candidate path extension such as `.csv` conflicts with that layout's
+file format such as `rc:Parquet`; keep the plan review-gated until the
+path/template or physical layout is corrected.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and

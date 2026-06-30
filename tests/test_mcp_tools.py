@@ -6359,6 +6359,103 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["handoff_kind"] == "database_relation_handoff"
 
 
+def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    local_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#events_local_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "lake"),
+        path_templates=["events/current/*.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    database_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#events_database_storage",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        path_templates=["mart.events"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    csv_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    table_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[local_storage["iri"], database_storage["iri"]],
+        physical_layouts=[csv_layout["iri"], table_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+    local_index = next(
+        index
+        for index, target in enumerate(context["query_target_candidates"])
+        if target["storage_access"]["iri"] == local_storage["iri"]
+    )
+    database_index = next(
+        index
+        for index, target in enumerate(context["query_target_candidates"])
+        if target["storage_access"]["iri"] == database_storage["iri"]
+    )
+    selection_actions = [
+        action
+        for action in context["suggested_next_actions"]
+        if action["action_label"] == "Select physical layout for draft"
+    ]
+
+    assert {
+        (
+            action["arguments"]["candidate_index"],
+            action["arguments"]["physical_layout_iri"],
+        )
+        for action in selection_actions
+    } == {
+        (local_index, csv_layout["iri"]),
+        (database_index, table_layout["iri"]),
+    }
+
+    database_csv_plan = draft_query_plan_tool(
+        db,
+        iri=dataset,
+        candidate_index=database_index,
+        physical_layout_iri=csv_layout["iri"],
+    )
+
+    assert database_csv_plan["handoff_kind"] == "metadata_review_required"
+    assert database_csv_plan["review_gate"]["blocking_reason_codes"] == [
+        "physical_layout_storage_protocol_mismatch"
+    ]
+    assert database_csv_plan["issues"][-1]["code"] == (
+        "physical_layout_storage_protocol_mismatch"
+    )
+    assert database_csv_plan["issues"][-1]["details"][
+        "candidate_storage_route_kind"
+    ] == "database"
+    assert database_csv_plan["issues"][-1]["details"][
+        "physical_layout_route_kind"
+    ] == "file"
+
+
 def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relation(
     tmp_path: Path,
 ) -> None:

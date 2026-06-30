@@ -18290,6 +18290,11 @@ class DoxaBase:
                     or compression_codec_iri
                 )
                 signature_note_parts.append(f"compression {compression_label}")
+            if not self._query_layout_signature_compatible_with_candidate(
+                candidate,
+                file_format_iri if isinstance(file_format_iri, str) else None,
+            ):
+                continue
             signature_note = (
                 " with " + " and ".join(signature_note_parts)
                 if signature_note_parts
@@ -18394,6 +18399,21 @@ class DoxaBase:
             selected_candidate,
             physical_layout_selected=physical_layout_selected,
         )
+        layout_mismatch_issue = (
+            self._query_physical_layout_storage_protocol_mismatch_issue(
+                selected_candidate,
+                selected_physical_layout,
+            )
+        )
+        if layout_mismatch_issue is not None:
+            effective_issues = self._with_unique_query_issue(
+                effective_issues,
+                layout_mismatch_issue,
+            )
+            selected_candidate = self._query_candidate_with_added_issue(
+                selected_candidate,
+                layout_mismatch_issue,
+            )
         original_selected_candidate = selected_candidate
         (
             selected_candidate,
@@ -19542,6 +19562,8 @@ class DoxaBase:
             return "no_query_target"
 
         blocking_reason_codes = set(review_gate.blocking_reason_codes)
+        if "physical_layout_storage_protocol_mismatch" in blocking_reason_codes:
+            return "metadata_review_required"
         if (
             "scan_function_not_inferred" in blocking_reason_codes
             and scan.relation_identifier is not None
@@ -19804,6 +19826,110 @@ class DoxaBase:
                 review_required=review_required,
                 review_reasons=review_reasons,
             ),
+        )
+
+    def _query_candidate_with_added_issue(
+        self,
+        candidate: QueryTargetCandidate | None,
+        issue: QueryPlanningIssue,
+    ) -> QueryTargetCandidate | None:
+        if candidate is None:
+            return None
+        review_reasons = self._with_unique_query_issue(
+            candidate.review_reasons,
+            issue,
+        )
+        direct_review_reasons = self._with_unique_query_issue(
+            candidate.direct_review_reasons,
+            issue,
+        )
+        review_required = any(
+            reason.severity in {"error", "warning"} for reason in review_reasons
+        )
+        direct_review_required = any(
+            reason.severity in {"error", "warning"}
+            for reason in direct_review_reasons
+        )
+        return replace(
+            candidate,
+            review_required=review_required,
+            review_reasons=review_reasons,
+            direct_review_required=direct_review_required,
+            direct_review_reasons=direct_review_reasons,
+            candidate_path_status=self._query_candidate_path_status(
+                candidate.candidate_path,
+                review_required=review_required,
+                review_reasons=review_reasons,
+            ),
+        )
+
+    @staticmethod
+    def _with_unique_query_issue(
+        issues: list[QueryPlanningIssue],
+        issue: QueryPlanningIssue,
+    ) -> list[QueryPlanningIssue]:
+        issue_resource_iri = issue.resource.iri if issue.resource is not None else None
+        for existing in issues:
+            existing_resource_iri = (
+                existing.resource.iri if existing.resource is not None else None
+            )
+            if (
+                existing.code == issue.code
+                and existing_resource_iri == issue_resource_iri
+            ):
+                return issues
+        return [*issues, issue]
+
+    def _query_physical_layout_storage_protocol_mismatch_issue(
+        self,
+        candidate: QueryTargetCandidate | None,
+        layout: PhysicalLayoutDescription | None,
+    ) -> QueryPlanningIssue | None:
+        if candidate is None or layout is None or layout.file_format is None:
+            return None
+        expected_route_kind = self._query_candidate_layout_route_kind(candidate)
+        layout_route_kind = self._query_file_format_layout_route_kind(
+            layout.file_format.iri
+        )
+        if layout_route_kind is None or layout_route_kind == expected_route_kind:
+            return None
+        expected_formats = (
+            ["rc:PostgreSQLTable", "rc:SQLiteTable", "rc:MySQLTable"]
+            if expected_route_kind == "database"
+            else ["rc:CSV", "rc:Parquet"]
+        )
+        storage_access_iri = (
+            candidate.storage_access.iri
+            if candidate.storage_access is not None
+            else None
+        )
+        storage_protocol_iri = (
+            candidate.storage_protocol.iri
+            if candidate.storage_protocol is not None
+            else None
+        )
+        return QueryPlanningIssue(
+            code="physical_layout_storage_protocol_mismatch",
+            severity="warning",
+            message=(
+                "Selected physical layout file format does not match the "
+                "selected query target storage route. Choose a physical layout "
+                "whose file/table format belongs to the selected storage access."
+            ),
+            resource=self._summary_from_description(layout),
+            details={
+                "candidate_storage_route_kind": expected_route_kind,
+                "physical_layout_route_kind": layout_route_kind,
+                "candidate_template": candidate.template,
+                "candidate_template_source": candidate.template_source,
+                "candidate_path": candidate.candidate_path,
+                "relation_identifier": candidate.relation_identifier,
+                "storage_access_iri": storage_access_iri,
+                "storage_protocol_iri": storage_protocol_iri,
+                "physical_layout_iri": layout.iri,
+                "physical_layout_file_format_iri": layout.file_format.iri,
+                "expected_file_format_examples": expected_formats,
+            },
         )
 
     def _draft_query_plan_effective_issues(
@@ -23326,6 +23452,46 @@ class DoxaBase:
                 "layout_signatures": signature_details,
             },
         )
+
+    def _query_layout_signature_compatible_with_candidate(
+        self,
+        candidate: QueryTargetCandidate,
+        file_format_iri: str | None,
+    ) -> bool:
+        layout_route_kind = self._query_file_format_layout_route_kind(file_format_iri)
+        if layout_route_kind is None:
+            return True
+        return layout_route_kind == self._query_candidate_layout_route_kind(candidate)
+
+    def _query_candidate_layout_route_kind(
+        self,
+        candidate: QueryTargetCandidate,
+    ) -> TypingLiteral["database", "file"]:
+        if self._is_database_storage(candidate.storage_protocol):
+            return "database"
+        return "file"
+
+    def _query_file_format_layout_route_kind(
+        self,
+        file_format_iri: str | None,
+    ) -> TypingLiteral["database", "file"] | None:
+        if file_format_iri is None:
+            return None
+        file_format = self.expand_iri(file_format_iri)
+        database_formats = {
+            self.expand_iri("rc:PostgreSQLTable"),
+            self.expand_iri("rc:SQLiteTable"),
+            self.expand_iri("rc:MySQLTable"),
+        }
+        if file_format in database_formats:
+            return "database"
+        file_formats = {
+            self.expand_iri("rc:CSV"),
+            self.expand_iri("rc:Parquet"),
+        }
+        if file_format in file_formats:
+            return "file"
+        return None
 
     @staticmethod
     def _physical_layout_signatures(
