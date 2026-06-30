@@ -7,11 +7,12 @@ import re
 import sqlite3
 import warnings
 from collections.abc import Mapping as MappingABC
+from contextlib import contextmanager
 from dataclasses import dataclass, field, fields, is_dataclass, replace
 from difflib import SequenceMatcher
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Literal as TypingLiteral, Mapping
+from typing import Any, Iterable, Iterator, Literal as TypingLiteral, Mapping
 from uuid import uuid4
 
 from pyshacl import validate
@@ -32,6 +33,7 @@ GraphName = TypingLiteral[
 ]
 
 GraphStorageRow = tuple[str, str, str, str, str, str | None, str | None]
+StagedApplyCheckCacheKey = tuple[str, str | None]
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_ONTOLOGY_PATH = ROOT / "ontology" / "rc_core.ttl"
@@ -4026,11 +4028,32 @@ class DoxaBase:
             self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._search_index_error: str | None = None
+        self._staged_apply_check_cache: (
+            dict[StagedApplyCheckCacheKey, StagedRevisionApplyCheck] | None
+        ) = None
         if initialize:
             self._ensure_schema()
             self._ensure_default_graphs()
             if seed:
                 self.seed_base_graphs()
+
+    @contextmanager
+    def _scoped_staged_apply_check_cache(
+        self,
+        cache: dict[StagedApplyCheckCacheKey, StagedRevisionApplyCheck] | None = None,
+    ) -> Iterator[dict[StagedApplyCheckCacheKey, StagedRevisionApplyCheck]]:
+        if self._staged_apply_check_cache is not None:
+            yield self._staged_apply_check_cache
+            return
+        previous_cache = self._staged_apply_check_cache
+        active_cache: dict[StagedApplyCheckCacheKey, StagedRevisionApplyCheck] = (
+            cache if cache is not None else {}
+        )
+        self._staged_apply_check_cache = active_cache
+        try:
+            yield active_cache
+        finally:
+            self._staged_apply_check_cache = previous_cache
 
     @classmethod
     def create(
@@ -36988,10 +37011,18 @@ class DoxaBase:
         ]
         | None = None,
     ) -> StagedRevisionApplyCheck:
-        return self._preview_staged_revision_application(
+        cache = self._staged_apply_check_cache
+        revision_iri = self.expand_iri(iri)
+        cache_key = (revision_iri, validation_scope)
+        if cache is not None and cache_key in cache:
+            return cache[cache_key]
+        check = self._preview_staged_revision_application(
             iri,
             validation_scope=validation_scope,
         ).check
+        if cache is not None:
+            cache[cache_key] = check
+        return check
 
     def apply_staged_revision(
         self,
@@ -40218,15 +40249,20 @@ class DoxaBase:
             raise DoxaBaseError("current_staged_work_limit must be at least 1")
         if applied_staged_source_limit < 1:
             raise DoxaBaseError("applied_staged_source_limit must be at least 1")
+        apply_check_cache: dict[
+            StagedApplyCheckCacheKey,
+            StagedRevisionApplyCheck,
+        ] = {}
         profile = self.describe_profile_run(
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
             limit=None,
         )
-        draft = self.draft_profile_map_updates(
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-        )
+        with self._scoped_staged_apply_check_cache(apply_check_cache):
+            draft = self.draft_profile_map_updates(
+                dataset_iri=dataset_iri,
+                evidence_iri=evidence_iri,
+            )
         evidence_value = self.expand_iri(evidence_iri)
         profile_observation_iris = list(dict.fromkeys(profile.profile_observation_iris))
         profile_observation_set = set(profile_observation_iris)
@@ -40258,10 +40294,11 @@ class DoxaBase:
 
         warnings: list[str] = []
         if include_current_staged_work:
-            listing = self.list_graph_revisions(
-                current_staged_work_only=True,
-                limit=current_staged_work_limit,
-            )
+            with self._scoped_staged_apply_check_cache(apply_check_cache):
+                listing = self.list_graph_revisions(
+                    current_staged_work_only=True,
+                    limit=current_staged_work_limit,
+                )
             if listing.total_count > listing.returned_count:
                 warnings.append(
                     "Only the first "
@@ -40338,27 +40375,28 @@ class DoxaBase:
         )
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
-            export = self.export_staged_revisions(
-                candidate_revision_iris,
-                path,
-                title=title
-                or self._profile_insight_review_title(profile.dataset),
-                executive_summary=self._profile_insight_review_executive_summary(
-                    profile.dataset,
-                    evidence_value,
-                    candidates,
-                    open_profile_review_lanes=open_profile_review_lanes,
-                    closed_semantic_moves=closed_semantic_moves,
-                    remaining_semantic_moves=remaining_semantic_moves,
-                    semantic_move_closure_summary=(
-                        semantic_move_closure_summary
+            with self._scoped_staged_apply_check_cache(apply_check_cache):
+                export = self.export_staged_revisions(
+                    candidate_revision_iris,
+                    path,
+                    title=title
+                    or self._profile_insight_review_title(profile.dataset),
+                    executive_summary=self._profile_insight_review_executive_summary(
+                        profile.dataset,
+                        evidence_value,
+                        candidates,
+                        open_profile_review_lanes=open_profile_review_lanes,
+                        closed_semantic_moves=closed_semantic_moves,
+                        remaining_semantic_moves=remaining_semantic_moves,
+                        semantic_move_closure_summary=(
+                            semantic_move_closure_summary
+                        ),
+                        executive_summary=executive_summary,
                     ),
-                    executive_summary=executive_summary,
-                ),
-                format=format,
-                overwrite=overwrite,
-                fail_on_sensitive=fail_on_sensitive,
-            )
+                    format=format,
+                    overwrite=overwrite,
+                    fail_on_sensitive=fail_on_sensitive,
+                )
         else:
             warnings.append(
                 "No staged revisions linked to this profile run were found; "
@@ -41530,10 +41568,11 @@ class DoxaBase:
             self.describe_staged_revision(revision_iri)
             for revision_iri in revision_values
         ]
-        apply_checks = [
-            self._staged_revision_apply_check_for_export(description)
-            for description in descriptions
-        ]
+        with self._scoped_staged_apply_check_cache():
+            apply_checks = [
+                self._staged_revision_apply_check_for_export(description)
+                for description in descriptions
+            ]
         revision_summaries = self._staged_revisions_export_summaries(
             descriptions,
             apply_checks=apply_checks,

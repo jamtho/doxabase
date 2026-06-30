@@ -29180,6 +29180,69 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert not blocked_profile_path.exists()
 
 
+def test_profile_insight_review_bundle_reuses_apply_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-cache#Orders"
+    evidence = "https://example.test/profile-cache#OrdersProfileEvidence"
+    staged_note = "https://example.test/profile-cache#OrdersReviewNote"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders profile pass.",
+        evidence_summary="Synthetic profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=10,
+        update_map_snapshot=False,
+    )
+    staged = db.stage_graph_revision(
+        summary="Add Orders profile review note",
+        rationale="Keep a profile-derived review note near the evidence.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{staged_note}> rdfs:comment "Profile-derived review note." .
+                """,
+            }
+        ],
+        evidence=[evidence],
+    )
+
+    validate_preview_call_count = 0
+    original_validate_graph_preview = db._validate_graph_preview
+
+    def counted_validate_graph_preview(*args: object, **kwargs: object) -> object:
+        nonlocal validate_preview_call_count
+        validate_preview_call_count += 1
+        return original_validate_graph_preview(*args, **kwargs)
+
+    monkeypatch.setattr(db, "_validate_graph_preview", counted_validate_graph_preview)
+
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-insight-review.md",
+    )
+
+    assert result.candidate_revision_iris == [staged.revision_iri]
+    assert validate_preview_call_count == 1
+
+
 def test_profile_insight_route_bridge_groups_repeated_lane_labels(
     tmp_path: Path,
 ) -> None:

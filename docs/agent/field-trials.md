@@ -3393,6 +3393,12 @@ few useful gaps:
   seeded `deep_lore` context slices carry the result evidence while dataset
   slices stay focused on executable-catalog map facts. Scanner-clean preflights
   still require shareability review because local paths are preserved.
+- A pytest timing pass showed the profile insight review export test was slow
+  because current-work discovery, profile draft duplicate checks, and markdown
+  rendering could all preview the same staged revisions. Those previews run
+  SHACL, so repeated read-only checks are expensive. Profile insight review
+  export now shares a scoped apply-check cache across those read-only phases;
+  keep mutating apply paths on fresh previews.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
