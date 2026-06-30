@@ -438,6 +438,7 @@ def plan_staged_revision_recovery_tool(
     revision_iris: list[str] | None = None,
     current_staged_work_only: bool = True,
     include_drafts: bool = True,
+    repair_draft_limit: int | None = 1,
     validation_scope: str | None = None,
     drift_detail: str = "summary",
     limit: int = 50,
@@ -448,6 +449,7 @@ def plan_staged_revision_recovery_tool(
             revision_iris=revision_iris,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,  # type: ignore[arg-type]
             drift_detail=drift_detail,  # type: ignore[arg-type]
             limit=limit,
@@ -464,6 +466,7 @@ def start_staged_revision_recovery_session_tool(
     handoff_manifest_path: str | None = None,
     current_staged_work_only: bool = True,
     include_drafts: bool = True,
+    repair_draft_limit: int | None = 1,
     validation_scope: str | None = None,
     drift_detail: str = "summary",
     limit: int = 50,
@@ -484,6 +487,7 @@ def start_staged_revision_recovery_session_tool(
             handoff_manifest_path=resolved_handoff_manifest_path,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,  # type: ignore[arg-type]
             drift_detail=drift_detail,  # type: ignore[arg-type]
             limit=limit,
@@ -498,6 +502,7 @@ def describe_staged_revision_recovery_session_tool(
     db: DoxaBase,
     session_iri: str,
     include_drafts: bool | None = None,
+    repair_draft_limit: int | None = None,
     validation_scope: str | None = None,
     drift_detail: str | None = None,
 ) -> dict[str, Any]:
@@ -505,6 +510,7 @@ def describe_staged_revision_recovery_session_tool(
         db.describe_staged_revision_recovery_session(
             session_iri=session_iri,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,  # type: ignore[arg-type]
             drift_detail=drift_detail,  # type: ignore[arg-type]
         )

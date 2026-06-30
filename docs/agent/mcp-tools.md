@@ -1870,9 +1870,13 @@ the applied event's staged source IRI.
 The helper wraps `restage_staged_revisions(..., dry_run=True, path=None)` for
 classification, grouped queue summaries, old-to-current mappings, and
 sequential-apply warnings. When `include_drafts=True`, repair lanes may include
-a read-only `repair_draft` from `draft_staged_revision_rebase`; failed draft
-attempts are reported as lane errors and warnings while the dry-run route still
-returns.
+a read-only `repair_draft` from `draft_staged_revision_rebase`. The default is
+bounded: `repair_draft_limit=1` embeds one repair draft and defers later repair
+lanes with `repair_draft_deferred_reason="repair_draft_limit_reached"`. Use
+`repair_draft_limit=0` or `include_drafts=False` for no embedded drafts, and
+`repair_draft_limit=None` only when an exhaustive embedded-draft pass is worth
+the runtime. Failed draft attempts are reported as lane errors and warnings
+while the dry-run route still returns.
 If the embedded draft finds no safe automatic repair and has already filtered
 out the self-call to `draft_staged_revision_rebase`, the lane and top-level plan
 suggestions follow the draft's inspect/export route instead of recommending the
@@ -1906,7 +1910,10 @@ same-slot replacement routes that may not appear in `repair_first_revision_iris`
 For repair lanes whose concrete mutation is a helper call rather than an
 existing revision target, `helper_mutation_frontier_actions` and
 `helper_mutation_frontier_calls` expose the deduped preferred repair helper
-mutations when `include_drafts=True`.
+mutations for included repair drafts. Deferred lanes remain in
+`repair_or_replace_source_revision_iris`; call `draft_staged_revision_rebase`
+for a deferred row or rerun the planner with a larger `repair_draft_limit` when
+needed.
 Use `mutation_frontier_items` as the complete unattended mutation worklist. It
 combines existing apply/restage/repair targets with same-slot helper actions
 that create a successor and therefore cannot appear in `mutation_frontier_iris`.

@@ -1707,6 +1707,11 @@ For read-only planning over mixed source/current handoffs, prefer
 `plan_staged_revision_recovery()`: its `lanes[]` preserve per-source provenance,
 while `resolved_target_groups[]` collapses stale sources, refreshed successors,
 and applied-event aliases into a deduped target-family worklist.
+`include_drafts=True` now embeds a bounded repair-draft sample by default:
+`repair_draft_limit=1`. Deferred repair lanes stay visible with
+`repair_draft_deferred_reason="repair_draft_limit_reached"`; call
+`draft_staged_revision_rebase()` for a deferred row or rerun with a larger
+limit. Use `repair_draft_limit=None` only for exhaustive embedded drafts.
 For scripts that intend to mutate, use `mutation_frontier_items` as the complete
 worklist. It includes existing apply/restage targets, repair targets only when
 the selected repair action is mutating, and same-slot repair helper actions that

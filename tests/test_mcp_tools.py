@@ -2837,6 +2837,8 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
     assert session["session_status"] == "active"
     assert session["source_revision_iris"] == [staged["revision_iri"]]
     assert session["handoff_manifest_path"] == str(manifest_path)
+    assert session["repair_draft_limit"] == 1
+    assert session["current_plan"]["repair_draft_limit"] == 1
     assert session["current_plan"]["lane_counts"] == {"restage_after_review": 1}
     assert session["source_states"][0]["workflow_state"] == "active"
     assert session["source_states"][0]["next_action_tool_name"] == (
@@ -2852,6 +2854,8 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
 
     assert described["helper"] == "describe_staged_revision_recovery_session"
     assert described["mode"] == "read_only_description"
+    assert described["repair_draft_limit"] == 1
+    assert described["current_plan"]["repair_draft_limit"] == 1
     assert described["current_plan"]["lane_counts"] == {"apply_after_review": 1}
     assert described["source_states"][0]["current_revision_iri"] == (
         restaged["revision_iri"]
@@ -3025,8 +3029,13 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert result["repair_or_replace_source_revision_iris"] == [
         staged["revision_iri"]
     ]
+    assert result["repair_draft_limit"] == 1
+    assert result["repair_draft_attempted_count"] == 1
+    assert result["repair_drafts_included_count"] == 1
+    assert result["repair_drafts_deferred_count"] == 0
     lane = result["lanes"][0]
     assert lane["repair_draft"]["draft_kind"] == "validation_repair_needed"
+    assert lane["repair_draft_deferred_reason"] is None
     assert lane["next_action"]["tool_name"] != "draft_staged_revision_rebase"
     assert all(
         action["tool_name"] != "draft_staged_revision_rebase"
@@ -3035,6 +3044,26 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert all(
         action["tool_name"] != "draft_staged_revision_rebase"
         for action in result["suggested_next_actions"]
+    )
+
+    zero_draft_result = plan_staged_revision_recovery_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+        repair_draft_limit=0,
+    )
+    assert zero_draft_result["repair_draft_limit"] == 0
+    assert zero_draft_result["repair_draft_attempted_count"] == 0
+    assert zero_draft_result["repair_drafts_included_count"] == 0
+    assert zero_draft_result["repair_drafts_deferred_count"] == 1
+    zero_lane = zero_draft_result["lanes"][0]
+    assert zero_lane["repair_draft"] is None
+    assert zero_lane["repair_draft_deferred_reason"] == (
+        "repair_draft_limit_reached"
+    )
+    assert zero_lane["next_action"]["tool_name"] == "draft_staged_revision_rebase"
+    assert any(
+        "repair_draft_limit=0" in warning
+        for warning in zero_draft_result["warnings"]
     )
 
 

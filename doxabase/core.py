@@ -1591,6 +1591,7 @@ class StagedRevisionRecoveryLane:
     next_action_queue_item: RevisionNextActionQueueItem | None
     repair_draft: StagedRevisionRebaseDraft | None
     repair_draft_error: str | None
+    repair_draft_deferred_reason: str | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     batch_item: StagedGraphRevisionBatchRestageItem
@@ -1645,6 +1646,10 @@ class StagedRevisionRecoveryPlan:
     processed_revision_iris: list[str]
     current_staged_work_only: bool
     include_drafts: bool
+    repair_draft_limit: int | None
+    repair_draft_attempted_count: int
+    repair_drafts_included_count: int
+    repair_drafts_deferred_count: int
     validation_scope: str | None
     drift_detail: str
     limit: int
@@ -1722,6 +1727,7 @@ class StagedRevisionRecoverySessionDescription:
     session_status: str
     current_staged_work_only: bool
     include_drafts: bool
+    repair_draft_limit: int | None
     validation_scope: str | None
     drift_detail: str
     initial_selection_mode: str | None
@@ -33397,6 +33403,7 @@ class DoxaBase:
         *,
         current_staged_work_only: bool = True,
         include_drafts: bool = True,
+        repair_draft_limit: int | None = 1,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -33413,6 +33420,9 @@ class DoxaBase:
             raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
         self._ensure_non_negative("limit", limit)
         self._ensure_non_negative("offset", offset)
+        if repair_draft_limit is not None:
+            self._ensure_non_negative("repair_draft_limit", repair_draft_limit)
+        effective_repair_draft_limit = repair_draft_limit if include_drafts else 0
         selection_mode: str
         requested_revision_iris: list[str] | None
         total_count: int
@@ -33463,6 +33473,7 @@ class DoxaBase:
                 requested_revision_iris=requested_revision_iris,
                 current_staged_work_only=current_staged_work_only,
                 include_drafts=include_drafts,
+                repair_draft_limit=effective_repair_draft_limit,
                 validation_scope=validation_scope,
                 drift_detail=drift_detail,
                 limit=limit,
@@ -33496,14 +33507,34 @@ class DoxaBase:
         }
         warnings = list(batch.bundle_summary.warnings)
         lanes: list[StagedRevisionRecoveryLane] = []
+        repair_draft_attempted_count = 0
+        repair_drafts_included_count = 0
+        repair_drafts_deferred_count = 0
         for item in batch.items:
-            lane, warning = self._staged_recovery_lane_from_batch_item(
+            remaining_repair_drafts = (
+                None
+                if effective_repair_draft_limit is None
+                else max(effective_repair_draft_limit - repair_draft_attempted_count, 0)
+            )
+            (
+                lane,
+                warning,
+                repair_draft_attempted,
+                repair_draft_deferred,
+            ) = self._staged_recovery_lane_from_batch_item(
                 item,
                 summary_by_iri=summary_by_iri,
                 include_drafts=include_drafts,
+                repair_drafts_remaining=remaining_repair_drafts,
                 validation_scope=validation_scope,
             )
             lanes.append(lane)
+            if repair_draft_attempted:
+                repair_draft_attempted_count += 1
+            if lane.repair_draft is not None:
+                repair_drafts_included_count += 1
+            if repair_draft_deferred:
+                repair_drafts_deferred_count += 1
             if warning is not None:
                 warnings.append(warning)
 
@@ -33529,10 +33560,11 @@ class DoxaBase:
             for revision_iri in applied_event_iris
         ]
         for item in patchless_batch_items:
-            lane, warning = self._staged_recovery_lane_from_batch_item(
+            lane, warning, _, _ = self._staged_recovery_lane_from_batch_item(
                 item,
                 summary_by_iri=summary_by_iri,
                 include_drafts=False,
+                repair_drafts_remaining=0,
                 validation_scope=validation_scope,
             )
             lanes.append(lane)
@@ -33546,10 +33578,11 @@ class DoxaBase:
                 "in the same request were still planned."
             )
         for item in snapshot_only_batch_items:
-            lane, warning = self._staged_recovery_lane_from_batch_item(
+            lane, warning, _, _ = self._staged_recovery_lane_from_batch_item(
                 item,
                 summary_by_iri=summary_by_iri,
                 include_drafts=False,
+                repair_drafts_remaining=0,
                 validation_scope=validation_scope,
             )
             lanes.append(lane)
@@ -33562,10 +33595,11 @@ class DoxaBase:
                 "repairing this revision."
             )
         for item in applied_event_batch_items:
-            lane, warning = self._staged_recovery_lane_from_batch_item(
+            lane, warning, _, _ = self._staged_recovery_lane_from_batch_item(
                 item,
                 summary_by_iri=summary_by_iri,
                 include_drafts=False,
+                repair_drafts_remaining=0,
                 validation_scope=validation_scope,
             )
             lanes.append(lane)
@@ -33635,6 +33669,16 @@ class DoxaBase:
         repair_inspection_required = (
             self._staged_recovery_repair_inspection_required(lanes)
         )
+        if repair_drafts_deferred_count:
+            warnings.append(
+                "Plan deferred "
+                f"{repair_drafts_deferred_count} embedded repair draft(s) "
+                f"because repair_draft_limit={effective_repair_draft_limit}. "
+                "All repair lanes remain visible; call "
+                "draft_staged_revision_rebase for a deferred lane or rerun the "
+                "planner with a larger repair_draft_limit when deeper embedded "
+                "drafts are needed."
+            )
         if repair_inspection_required:
             warnings.append(
                 "Plan includes repair_or_replace lanes whose selected action is "
@@ -33725,6 +33769,10 @@ class DoxaBase:
             processed_revision_iris=processed_revision_iris,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=effective_repair_draft_limit,
+            repair_draft_attempted_count=repair_draft_attempted_count,
+            repair_drafts_included_count=repair_drafts_included_count,
+            repair_drafts_deferred_count=repair_drafts_deferred_count,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             limit=limit,
@@ -33828,6 +33876,7 @@ class DoxaBase:
         handoff_manifest_path: str | None = None,
         current_staged_work_only: bool = True,
         include_drafts: bool = True,
+        repair_draft_limit: int | None = 1,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -33846,6 +33895,7 @@ class DoxaBase:
             revision_iris,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             limit=limit,
@@ -33953,6 +34003,17 @@ class DoxaBase:
         graph.add(
             (
                 subject,
+                URIRef(self.expand_iri("rc:recoverySessionRepairDraftLimit")),
+                (
+                    Literal("unbounded")
+                    if repair_draft_limit is None
+                    else Literal(repair_draft_limit, datatype=XSD.integer)
+                ),
+            )
+        )
+        graph.add(
+            (
+                subject,
                 URIRef(self.expand_iri("rc:recoverySessionDriftDetail")),
                 Literal(drift_detail),
             )
@@ -33976,6 +34037,7 @@ class DoxaBase:
         description = self.describe_staged_revision_recovery_session(
             session_subject,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             created_triples=created_triples,
@@ -33990,6 +34052,7 @@ class DoxaBase:
         session_iri: str,
         *,
         include_drafts: bool | None = None,
+        repair_draft_limit: int | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -34029,6 +34092,19 @@ class DoxaBase:
         effective_include_drafts = (
             stored_include_drafts if include_drafts is None else include_drafts
         )
+        stored_repair_draft_limit = self._optional_repair_draft_limit_object(
+            self._first_object(
+                history_graphs,
+                session_subject,
+                "rc:recoverySessionRepairDraftLimit",
+            ),
+            default=1,
+        )
+        effective_repair_draft_limit = (
+            stored_repair_draft_limit
+            if repair_draft_limit is None
+            else repair_draft_limit
+        )
         stored_validation_scope = self._first_object(
             history_graphs,
             session_subject,
@@ -34061,6 +34137,7 @@ class DoxaBase:
             source_revision_iris,
             current_staged_work_only=stored_current_only,
             include_drafts=effective_include_drafts,
+            repair_draft_limit=effective_repair_draft_limit,
             validation_scope=effective_validation_scope,  # type: ignore[arg-type]
             drift_detail=effective_drift_detail,  # type: ignore[arg-type]
         )
@@ -34136,6 +34213,7 @@ class DoxaBase:
             session_status=session_status,
             current_staged_work_only=stored_current_only,
             include_drafts=effective_include_drafts,
+            repair_draft_limit=current_plan.repair_draft_limit,
             validation_scope=effective_validation_scope,
             drift_detail=effective_drift_detail,
             initial_selection_mode=self._first_object(
@@ -34338,6 +34416,23 @@ class DoxaBase:
         if normalized in {"false", "0"}:
             return False
         return default
+
+    @staticmethod
+    def _optional_repair_draft_limit_object(
+        value: str | None,
+        *,
+        default: int | None,
+    ) -> int | None:
+        if value is None:
+            return default
+        normalized = value.strip().lower()
+        if normalized in {"none", "null", "unbounded"}:
+            return None
+        try:
+            parsed = int(normalized)
+        except ValueError:
+            return default
+        return parsed if parsed >= 0 else default
 
     @staticmethod
     def _json_object_literal(value: str | None) -> dict[str, Any]:
@@ -34735,6 +34830,7 @@ class DoxaBase:
         requested_revision_iris: list[str] | None,
         current_staged_work_only: bool,
         include_drafts: bool,
+        repair_draft_limit: int | None,
         validation_scope: str | None,
         drift_detail: str,
         limit: int,
@@ -34750,6 +34846,10 @@ class DoxaBase:
             processed_revision_iris=[],
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
+            repair_draft_attempted_count=0,
+            repair_drafts_included_count=0,
+            repair_drafts_deferred_count=0,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             limit=limit,
@@ -35064,6 +35164,7 @@ class DoxaBase:
         *,
         summary_by_iri: dict[str, StagedGraphRevisionExportSummary],
         include_drafts: bool,
+        repair_drafts_remaining: int | None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -35072,7 +35173,7 @@ class DoxaBase:
             "all",
         ]
         | None,
-    ) -> tuple[StagedRevisionRecoveryLane, str | None]:
+    ) -> tuple[StagedRevisionRecoveryLane, str | None, bool, bool]:
         queue_item = item.next_action_queue_item_after
         next_action = item.next_action_after
         lane = (
@@ -35105,11 +35206,17 @@ class DoxaBase:
         )
         repair_draft: StagedRevisionRebaseDraft | None = None
         repair_draft_error: str | None = None
+        repair_draft_deferred_reason: str | None = None
         warning: str | None = None
-        if include_drafts and self._staged_recovery_should_draft_repair(
+        repair_draft_attempted = False
+        repair_draft_should_run = include_drafts and self._staged_recovery_should_draft_repair(
             item,
             lane=lane,
-        ):
+        )
+        if repair_draft_should_run and repair_drafts_remaining == 0:
+            repair_draft_deferred_reason = "repair_draft_limit_reached"
+        elif repair_draft_should_run:
+            repair_draft_attempted = True
             try:
                 repair_draft = self.draft_staged_revision_rebase(
                     item.current_revision_iri,
@@ -35253,6 +35360,7 @@ class DoxaBase:
                 next_action_queue_item=queue_item,
                 repair_draft=repair_draft,
                 repair_draft_error=repair_draft_error,
+                repair_draft_deferred_reason=repair_draft_deferred_reason,
                 suggested_next_actions=suggested_next_actions,
                 suggested_next_calls=[
                     action.call
@@ -35263,6 +35371,8 @@ class DoxaBase:
                 note=item.note,
             ),
             warning,
+            repair_draft_attempted,
+            repair_draft_deferred_reason is not None,
         )
 
     @staticmethod
@@ -49176,6 +49286,7 @@ class DoxaBase:
                     requested_revision_iris=[],
                     current_staged_work_only=False,
                     include_drafts=include_drafts,
+                    repair_draft_limit=1 if include_drafts else 0,
                     validation_scope=validation_scope,
                     drift_detail=drift_detail,
                     limit=50,

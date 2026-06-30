@@ -859,6 +859,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         revision_iris: list[str] | None = None,
         current_staged_work_only: bool = True,
         include_drafts: bool = True,
+        repair_draft_limit: int | None = 1,
         validation_scope: str | None = None,
         drift_detail: str = "summary",
         limit: int = 50,
@@ -871,6 +872,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             revision_iris=revision_iris,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             limit=limit,
@@ -885,6 +887,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         handoff_manifest_path: str | None = None,
         current_staged_work_only: bool = True,
         include_drafts: bool = True,
+        repair_draft_limit: int | None = 1,
         validation_scope: str | None = None,
         drift_detail: str = "summary",
         limit: int = 50,
@@ -902,6 +905,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             handoff_manifest_path=handoff_manifest_path,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
             limit=limit,
@@ -914,6 +918,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def describe_staged_revision_recovery_session(
         session_iri: str,
         include_drafts: bool | None = None,
+        repair_draft_limit: int | None = None,
         validation_scope: str | None = None,
         drift_detail: str | None = None,
     ) -> dict[str, Any]:
@@ -923,6 +928,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             session_iri=session_iri,
             include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
             validation_scope=validation_scope,
             drift_detail=drift_detail,
         )

@@ -270,14 +270,19 @@ For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty because the concrete mutation is a helper call rather than an
 existing revision target. In current responses this appears as a
 `mutation_frontier_items[]` entry with `item_kind="helper_action"`. When
-`include_drafts=True`, use
-`helper_mutation_frontier_actions` / `helper_mutation_frontier_calls` as the
-top-level deduped list of preferred repair helper mutations. If that list is
-empty, fall back to `lane.next_action.arguments` or
-`lane.repair_draft.preferred_action.arguments` for that reviewed repair. When a
-repair lane only has diagnostic inspection or a read-only repair draft, it is
-not part of `mutation_frontier_items`; follow the lane's inspection/export/draft
-actions first.
+`include_drafts=True`, the planner embeds only the first repair draft by default
+(`repair_draft_limit=1`). Use `helper_mutation_frontier_actions` /
+`helper_mutation_frontier_calls` as the top-level deduped list of preferred
+repair helper mutations for included drafts. If a lane has
+`repair_draft_deferred_reason="repair_draft_limit_reached"`, the lane is still
+part of the repair worklist; call `draft_staged_revision_rebase()` for that row
+or rerun the planner with a larger limit when its embedded draft is needed. Use
+`repair_draft_limit=None` only when an exhaustive embedded-draft pass is worth
+the runtime. If the helper-action list is empty, fall back to
+`lane.next_action.arguments` or `lane.repair_draft.preferred_action.arguments`
+for that reviewed repair. When a repair lane only has diagnostic inspection or a
+read-only repair draft, it is not part of `mutation_frontier_items`; follow the
+lane's inspection/export/draft actions first.
 When helper mutation actions are present, the planner also warns that they are
 not represented by `mutation_frontier_iris`; treat that warning as an unattended
 loop guard, not as a blocker.
@@ -387,11 +392,10 @@ Use `repair_or_replace_source_revision_iris` as the broad top-level repair
 worklist. It includes every lane currently routing to `repair_or_replace`,
 including same-slot replacement cases that may not be listed in
 `repair_first_revision_iris`.
-When `include_drafts=True`, a repair lane whose embedded draft finds no safe
-automatic repair uses the draft's inspection/export route instead of asking the
-agent to call `draft_staged_revision_rebase()` again for the same row. If the
-embedded draft does provide a concrete `preferred_action`, follow that reviewed
-repair action.
+When an included embedded draft finds no safe automatic repair, the repair lane
+uses the draft's inspection/export route instead of asking the agent to call
+`draft_staged_revision_rebase()` again for the same row. If the embedded draft
+does provide a concrete `preferred_action`, follow that reviewed repair action.
 
 Use `doxabase.restage_staged_revisions(...)` when you are ready for the lower
 level batch operation. It restages conflicted rows that do not already have a

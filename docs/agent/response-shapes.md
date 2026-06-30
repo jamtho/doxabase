@@ -5443,6 +5443,10 @@ plan.requested_revision_iris
 plan.processed_revision_iris
 plan.current_staged_work_only
 plan.include_drafts
+plan.repair_draft_limit
+plan.repair_draft_attempted_count
+plan.repair_drafts_included_count
+plan.repair_drafts_deferred_count
 plan.validation_scope
 plan.drift_detail
 plan.limit
@@ -5520,6 +5524,7 @@ session.source_count
 session.session_status
 session.current_staged_work_only
 session.include_drafts
+session.repair_draft_limit
 session.validation_scope
 session.drift_detail
 session.initial_selection_mode
@@ -5622,6 +5627,7 @@ lane.next_action
 lane.next_action_queue_item
 lane.repair_draft
 lane.repair_draft_error
+lane.repair_draft_deferred_reason
 lane.suggested_next_actions
 lane.suggested_next_calls
 lane.batch_item
@@ -5714,11 +5720,21 @@ current route is diagnostic inspection or a read-only repair draft rather than
 an executable mutation. When it is `no_mutation_frontier`, the plan has no
 mutation worklist.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
-can be empty even when the lane is actionable. When `include_drafts=True`,
+can be empty even when the lane is actionable. When `include_drafts=True`, the
+planner embeds at most `repair_draft_limit` repair drafts by default; the
+default limit is `1` to keep large recovery queues responsive. Use
+`repair_draft_limit=0` or `include_drafts=False` for no embedded drafts, and
+`repair_draft_limit=None` for exhaustive old behavior. Top-level
+`repair_draft_attempted_count`, `repair_drafts_included_count`, and
+`repair_drafts_deferred_count` explain how much draft work ran. A lane with
+`repair_draft_deferred_reason="repair_draft_limit_reached"` is still an
+actionable repair lane; call `draft_staged_revision_rebase` for that row or
+rerun the planner with a larger limit when its embedded draft is needed.
 `helper_mutation_frontier_actions` gives the deduped preferred helper mutation
-actions for those repair lanes, and `helper_mutation_frontier_calls` gives their
-display calls. If that list is empty, drive the repair from
-`repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+actions for included repair drafts, and `helper_mutation_frontier_calls` gives
+their display calls. If that list is empty, drive the repair from
+`repair_draft.preferred_action.arguments` when present or from
+`lane.next_action.arguments`.
 When helper mutation actions are present, `plan.warnings` explicitly says they
 are required and are not represented by `mutation_frontier_iris`; do not treat
 the IRI list as a complete mutation queue.

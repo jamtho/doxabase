@@ -122,7 +122,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1242
+    assert graphs["base_ontology"].triple_count == 1246
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1230
     assert graphs["base_shapes"].mutable is False
@@ -7813,6 +7813,8 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert session.source_revision_iris == [staged.revision_iri]
     assert session.initial_lane_counts == {"restage_after_review": 1}
     assert session.session_status == "active"
+    assert session.repair_draft_limit == 1
+    assert session.current_plan.repair_draft_limit == 1
     assert session.current_plan.lane_counts == {"restage_after_review": 1}
     assert session.source_states[0].workflow_state == "active"
     assert session.source_states[0].lane == "restage_after_review"
@@ -7825,6 +7827,11 @@ def test_staged_revision_recovery_session_replans_live_state(
         and triple.object == RC + "StagedRevisionRecoverySession"
         for triple in session_resource.outgoing
     )
+    assert any(
+        triple.predicate == RC + "recoverySessionRepairDraftLimit"
+        and triple.object == "1"
+        for triple in session_resource.outgoing
+    )
 
     restaged = db.restage_staged_revision(staged.revision_iri)
     after_restage = db.describe_staged_revision_recovery_session(
@@ -7835,6 +7842,7 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert after_restage.helper == "describe_staged_revision_recovery_session"
     assert after_restage.mode == "read_only_description"
     assert after_restage.session_status == "active"
+    assert after_restage.repair_draft_limit == 1
     assert after_restage.current_plan.lane_counts == {"apply_after_review": 1}
     assert after_restage.source_states[0].current_revision_iri == (
         restaged.revision_iri
@@ -8511,6 +8519,100 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     )
     assert plan.helper_mutation_frontier_actions == []
     assert plan.helper_mutation_frontier_calls == []
+
+
+def test_plan_staged_revision_recovery_bounds_embedded_repair_drafts(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    def stage_invalid_row_semantics(local_name: str) -> str:
+        dataset = f"https://example.test/project#{local_name}"
+        db.record_map_dataset(dataset, label=local_name, is_table=True)
+        staged = db.stage_graph_revision(
+            summary=f"Model {local_name} with invalid row semantics",
+            rationale="The invalid object should require manual repair review.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                        @prefix ex: <https://example.test/project#> .
+                        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                        ex:{local_name} rc:rowSemantics "snapshot" .
+                    """,
+                }
+            ],
+            revision_anchors=[dataset],
+        )
+        db.record_map_dataset(dataset, row_semantics="rc:EventRow")
+        return staged.revision_iri
+
+    revision_iris = [
+        stage_invalid_row_semantics("Orders"),
+        stage_invalid_row_semantics("Invoices"),
+        stage_invalid_row_semantics("Shipments"),
+    ]
+
+    default_plan = db.plan_staged_revision_recovery(revision_iris)
+
+    assert default_plan.repair_draft_limit == 1
+    assert default_plan.repair_draft_attempted_count == 1
+    assert default_plan.repair_drafts_included_count == 1
+    assert default_plan.repair_drafts_deferred_count == 2
+    assert default_plan.repair_or_replace_source_revision_iris == revision_iris
+    assert default_plan.lane_counts == {"repair_or_replace": 3}
+    assert default_plan.lanes[0].repair_draft is not None
+    assert default_plan.lanes[0].repair_draft_deferred_reason is None
+    assert [
+        lane.repair_draft_deferred_reason for lane in default_plan.lanes[1:]
+    ] == ["repair_draft_limit_reached", "repair_draft_limit_reached"]
+    assert all(lane.repair_draft is None for lane in default_plan.lanes[1:])
+    assert any("repair_draft_limit=1" in warning for warning in default_plan.warnings)
+
+    zero_plan = db.plan_staged_revision_recovery(
+        revision_iris,
+        repair_draft_limit=0,
+    )
+
+    assert zero_plan.repair_draft_limit == 0
+    assert zero_plan.repair_draft_attempted_count == 0
+    assert zero_plan.repair_drafts_included_count == 0
+    assert zero_plan.repair_drafts_deferred_count == 3
+    assert zero_plan.repair_or_replace_source_revision_iris == revision_iris
+    assert all(lane.repair_draft is None for lane in zero_plan.lanes)
+    assert all(
+        lane.repair_draft_deferred_reason == "repair_draft_limit_reached"
+        for lane in zero_plan.lanes
+    )
+
+    exhaustive_plan = db.plan_staged_revision_recovery(
+        revision_iris,
+        repair_draft_limit=None,
+    )
+
+    assert exhaustive_plan.repair_draft_limit is None
+    assert exhaustive_plan.repair_draft_attempted_count == 3
+    assert exhaustive_plan.repair_drafts_included_count == 3
+    assert exhaustive_plan.repair_drafts_deferred_count == 0
+    assert all(lane.repair_draft is not None for lane in exhaustive_plan.lanes)
+    assert all(
+        lane.repair_draft_deferred_reason is None for lane in exhaustive_plan.lanes
+    )
+
+    no_drafts_plan = db.plan_staged_revision_recovery(
+        revision_iris,
+        include_drafts=False,
+    )
+
+    assert no_drafts_plan.repair_draft_limit == 0
+    assert no_drafts_plan.repair_draft_attempted_count == 0
+    assert no_drafts_plan.repair_drafts_included_count == 0
+    assert no_drafts_plan.repair_drafts_deferred_count == 0
+    assert all(lane.repair_draft is None for lane in no_drafts_plan.lanes)
+    assert all(
+        lane.repair_draft_deferred_reason is None for lane in no_drafts_plan.lanes
+    )
 
 
 def test_same_slot_replacement_preserves_applied_alternative_gate(

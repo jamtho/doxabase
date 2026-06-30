@@ -1285,6 +1285,11 @@ rc:recoverySessionIncludeDrafts a rdf:Property ;
     rdfs:range xsd:boolean ;
     rdfs:comment "Whether recovery-session replans should include read-only repair drafts by default." .
 
+rc:recoverySessionRepairDraftLimit a rdf:Property ;
+    rdfs:domain rc:StagedRevisionRecoverySession ;
+    rdfs:range rdfs:Literal ;
+    rdfs:comment "Bounded number of embedded read-only repair drafts to include in recovery-session replans, or the literal 'unbounded' for exhaustive embedded drafts." .
+
 rc:recoverySessionValidationScope a rdf:Property ;
     rdfs:domain rc:StagedRevisionRecoverySession ;
     rdfs:range xsd:string ;
