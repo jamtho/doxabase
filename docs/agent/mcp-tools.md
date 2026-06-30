@@ -1131,7 +1131,10 @@ endpoint fields, and verification note are written to the staged
 relation identifiers, but omit them when the dataset or partition already owns
 the file/object template. The helper returns a normal staged-revision record, so
 run `check_staged_revision_apply`, apply the ready row, then rerun
-`describe_query_context` before drafting a query plan.
+`describe_query_context` before drafting a query plan. By default it rejects
+datasets that already have storage access resources; pass
+`allow_existing_storage_accesses=true` only after reviewing that an additional
+route will not create duplicate query target candidates.
 
 ### doxabase.stage_query_physical_layout_repair
 
@@ -1141,7 +1144,10 @@ link for a `missing_physical_layout` query repair. Pass `dataset_iri`,
 description, compression, verification status, and verification note are written
 to the staged `rc:PhysicalLayout`. The helper returns a normal staged-revision
 record, so run `check_staged_revision_apply`, apply the ready row, then rerun
-`describe_query_context` before drafting a query plan.
+`describe_query_context` before drafting a query plan. By default it rejects
+datasets that already have physical layouts; pass
+`allow_existing_physical_layouts=true` only after reviewing that an additional
+layout will not create ambiguous query target candidates.
 
 `doxabase.describe_context_slice`
 

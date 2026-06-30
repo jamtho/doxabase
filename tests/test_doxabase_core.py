@@ -16780,6 +16780,42 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert plan.scan.physical_layout.iri == layout_iri
 
 
+def test_stage_query_physical_layout_repair_rejects_existing_layout_by_default(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    existing_layout = db.record_map_physical_layout(
+        "https://example.test/project#warehouse_orders_existing_layout",
+        file_format="rc:PostgreSQLTable",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        physical_layouts=[existing_layout.iri],
+    )
+
+    with pytest.raises(DoxaBaseError, match="missing_physical_layout"):
+        db.stage_query_physical_layout_repair(
+            dataset_iri=dataset,
+            layout_iri="https://example.test/project#warehouse_orders_new_layout",
+            file_format="rc:PostgreSQLTable",
+            rationale="Reviewed an alternate warehouse relation layout.",
+        )
+
+    staged = db.stage_query_physical_layout_repair(
+        dataset_iri=dataset,
+        layout_iri="https://example.test/project#warehouse_orders_new_layout",
+        file_format="rc:PostgreSQLTable",
+        rationale="Reviewed an alternate warehouse relation layout.",
+        allow_existing_physical_layouts=True,
+    )
+
+    assert staged.validation_conforms is True
+
+
 def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     tmp_path: Path,
 ) -> None:
@@ -16997,6 +17033,45 @@ def test_stage_query_storage_access_repair_unblocks_missing_storage(
     assert "missing_storage_access" not in {issue.code for issue in repaired.issues}
     assert repaired.storage_accesses[0].iri == storage_access
     assert repaired.storage_accesses[0].storage_root == str(tmp_path / "warehouse")
+
+
+def test_stage_query_storage_access_repair_rejects_existing_storage_by_default(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    existing_storage = db.record_map_storage_access(
+        "https://example.test/project#messages_existing_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Messages",
+        is_table=True,
+        storage_accesses=[existing_storage.iri],
+    )
+
+    with pytest.raises(DoxaBaseError, match="missing_storage_access"):
+        db.stage_query_storage_access_repair(
+            dataset_iri=dataset,
+            storage_access_iri="https://example.test/project#messages_new_storage",
+            storage_protocol="rc:LocalFilesystemStorage",
+            storage_root=str(tmp_path / "warehouse-v2"),
+            rationale="Reviewed an alternate storage route.",
+        )
+
+    staged = db.stage_query_storage_access_repair(
+        dataset_iri=dataset,
+        storage_access_iri="https://example.test/project#messages_new_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse-v2"),
+        rationale="Reviewed an alternate storage route.",
+        allow_existing_storage_accesses=True,
+    )
+
+    assert staged.validation_conforms is True
 
 
 def test_missing_storage_access_ranks_dataset_specific_candidates_first(

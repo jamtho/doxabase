@@ -18917,6 +18917,7 @@ class DoxaBase:
         compression_codec: str | None = None,
         layout_verification_status: str | None = None,
         layout_verification_note: str | None = None,
+        allow_existing_physical_layouts: bool = False,
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
@@ -18930,6 +18931,20 @@ class DoxaBase:
     ) -> StagedGraphRevisionRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
         layout_value = self._required_iri("layout_iri", layout_iri)
+        if not allow_existing_physical_layouts:
+            dataset = self.describe_dataset(dataset_value)
+            if dataset.physical_layouts:
+                existing = ", ".join(
+                    layout.iri for layout in dataset.physical_layouts[:3]
+                )
+                raise DoxaBaseError(
+                    "stage_query_physical_layout_repair is intended for "
+                    "missing_physical_layout repair groups; dataset already "
+                    f"has physical layout(s): {existing}. Pass "
+                    "allow_existing_physical_layouts=True only after reviewing "
+                    "that an additional layout will not create ambiguous query "
+                    "targets."
+                )
         rationale_value = rationale.strip()
         if not rationale_value:
             raise DoxaBaseError("rationale must not be empty")
@@ -19023,6 +19038,7 @@ class DoxaBase:
         path_templates: Iterable[str] | str | None = None,
         layout_verification_status: str | None = None,
         layout_verification_note: str | None = None,
+        allow_existing_storage_accesses: bool = False,
         summary: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
@@ -19036,6 +19052,20 @@ class DoxaBase:
     ) -> StagedGraphRevisionRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
         access_value = self._required_iri("storage_access_iri", storage_access_iri)
+        if not allow_existing_storage_accesses:
+            dataset = self.describe_dataset(dataset_value)
+            if dataset.storage_accesses:
+                existing = ", ".join(
+                    access.iri for access in dataset.storage_accesses[:3]
+                )
+                raise DoxaBaseError(
+                    "stage_query_storage_access_repair is intended for "
+                    "missing_storage_access repair groups; dataset already "
+                    f"has storage access resource(s): {existing}. Pass "
+                    "allow_existing_storage_accesses=True only after reviewing "
+                    "that an additional storage route will not create duplicate "
+                    "query target candidates."
+                )
         storage_root_value = storage_root.strip()
         if not storage_root_value:
             raise DoxaBaseError("storage_root must not be empty")
