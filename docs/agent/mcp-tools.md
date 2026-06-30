@@ -50,8 +50,8 @@ secret-free. Export helpers report
 `sensitive_literal_count` and `privacy_warnings` when this scan finds matches,
 but exports remain faithful RDF and do not redact automatically. The scan result
 itself uses `match_count`, `returned_match_count`, and `omitted_match_count`;
-do not look for export-only `sensitive_literal_count` on
-`scan_sensitive_literals`.
+`sensitive_literal_count` is also present as an alias of `match_count` for
+scripts that compare scan and export-preflight payloads.
 If a returned context field such as `subject` or `predicate` itself contains a
 sensitive-looking value, that context field is also replaced with a redacted
 marker.

@@ -1808,6 +1808,7 @@ def test_sensitive_literal_scan_and_export_warnings(tmp_path: Path) -> None:
     scan = db.scan_sensitive_literals(graphs="map", limit=1)
 
     assert scan.match_count >= 2
+    assert scan.sensitive_literal_count == scan.match_count
     assert scan.returned_match_count == 1
     assert scan.omitted_match_count >= 1
     assert scan.matches[0].graph == "map"

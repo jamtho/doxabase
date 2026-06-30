@@ -1658,6 +1658,7 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
 
     assert result["graphs"] == ["map"]
     assert result["match_count"] >= 2
+    assert result["sensitive_literal_count"] == result["match_count"]
     assert result["returned_match_count"] >= 2
     assert result["warnings"]
     assert fake_secret not in str(result["matches"])

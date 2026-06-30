@@ -508,6 +508,7 @@ class SensitiveLiteralMatch:
 class SensitiveLiteralScan:
     graphs: list[str]
     match_count: int
+    sensitive_literal_count: int
     returned_match_count: int
     omitted_match_count: int
     limit: int
@@ -49544,6 +49545,7 @@ class DoxaBase:
         return SensitiveLiteralScan(
             graphs=graph_names,
             match_count=len(matches) + omitted,
+            sensitive_literal_count=len(matches) + omitted,
             returned_match_count=len(matches),
             omitted_match_count=omitted,
             limit=limit,

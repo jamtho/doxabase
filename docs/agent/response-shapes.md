@@ -424,8 +424,8 @@ loops after blocking health review. Check `safety_first_action` first; when the
 default handoff-bundle preflight finds potential sensitive terms, it points to
 `export_preflight` before expansion, export, or mutation-oriented work. When
 immutable seed graphs are missing current staging vocabulary, it points to stale
-seed recovery guidance or handoff preflight before mutation helpers that would
-fail on the stale seed.
+seed handoff preflight before mutation helpers that would fail on the stale
+seed.
 `frontier_first_action` then prefers `full_frontier_expansion`, then
 `next_best_expansion`, then the first returned `recommended_next_tasks[]`
 action. `frontier_first_call` is the display call for that action, and
@@ -437,6 +437,7 @@ object for unattended loops. `frontier_status.is_complete` only means no hidden
 frontier work remains under the current queue/profile limits; it does not mean
 mutation is safe when `safety_first_action`, `first_unattended_action`, or
 `mutation_allowed_after` still routes to privacy/export or seed recovery.
+Complete does not mean safe to mutate; always read `mutation_allowed_after`.
 Use `frontier_status.mutation_allowed_after` as a coarse gate:
 `safety_review_required_before_frontier_or_mutation` means do not expand,
 export, or mutate before the safety or seed-recovery call;
@@ -4747,8 +4748,9 @@ RDF export when the selected graph roles scan dirty. Call
 `scan_sensitive_literals(graphs=...)`
 for redacted match rows with `term_position` and `term_kind`; sensitive-looking
 context fields in those rows are redacted too. The scan response counts are
-`match_count`, `returned_match_count`, and `omitted_match_count`; export
-responses translate the same privacy preflight into `sensitive_literal_count`.
+`match_count`, `sensitive_literal_count`, `returned_match_count`, and
+`omitted_match_count`; `sensitive_literal_count` is an alias of `match_count` on
+scan responses and the canonical field on export/preflight responses.
 These fields are not a
 path/shareability hygiene signal: non-secret local paths, object-store URIs,
 endpoint URLs, and relative paths remain in faithful exports unless the caller
