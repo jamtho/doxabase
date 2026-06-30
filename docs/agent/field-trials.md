@@ -3459,6 +3459,24 @@ few useful gaps:
   bundle. Drafting now remembers current-equal scalar conflict siblings, skips
   unattended sibling replacement staging, and treats
   `profile_scalar_conflict_review` as semantic apply-gate context.
+- A profile joint-writes trial confirmed that full-scan profile map drift,
+  project metric vocabulary, type-review advisories, caveat alternatives, and
+  sampled profile evidence can be kept separate through staged review. The main
+  friction was executor ergonomics: agents had to combine several apply-gate
+  fields to decide what to do next. Profile insight bundles now include
+  `executor_decision_summary` as the compact first-pass routing object.
+- A staged version/handoff trial confirmed recovery-complete import, exact graph
+  version browsing, resource timelines, lineage inspection, stale/no-op routing,
+  and semantic alternative gating work across capsules. The post-import manifest
+  recovery plan is intentionally broad, so cold receivers should rerun
+  `plan_staged_revision_recovery(current_staged_work_only=True)` before
+  choosing a live mutation.
+- A storage-aware query handoff trial confirmed the database path from missing
+  metadata through staged `rc:DatabaseStorage` and `rc:SQLiteTable` repairs to a
+  non-executed `database_relation_handoff`, external SQLite result recording,
+  evidence source spans, scanned relation handles, and scanner-clean context
+  exports. The safe loop is two-stage when storage and layout are both missing:
+  apply reviewed storage, rerun context, apply reviewed layout, then draft.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

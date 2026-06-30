@@ -364,6 +364,12 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `database_relation_handoff` means the selected route is a relation/connection
    handoff, while `review_gate.ready_for_execution_attempt` is the strict gate
    for any execution attempt.
+   For database-backed repairs, expect a reviewed two-step loop when both
+   storage access and physical layout are missing: stage/apply the
+   `rc:DatabaseStorage` access with a reviewed relation identifier and
+   connection reference, rerun `describe_query_context`, then stage/apply a
+   table layout such as `rc:SQLiteTable`, `rc:PostgreSQLTable`, or
+   `rc:MySQLTable` before drafting the final relation handoff.
 2. Read `source_context.unselected_ready_candidate_indexes`. It mirrors the
    context-level peer-ready route after applying any explicit selection.
    Also read `source_context.unselected_direct_clean_candidate_indexes` when the

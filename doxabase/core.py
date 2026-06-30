@@ -1499,6 +1499,7 @@ class ProfileInsightReviewBundleRecord:
     )
     semantic_apply_gate_counts: dict[str, int] = field(default_factory=dict)
     semantic_apply_gate_blocking_reasons: list[str] = field(default_factory=list)
+    executor_decision_summary: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -40554,6 +40555,21 @@ class DoxaBase:
             candidates,
             open_profile_review_lanes,
         )
+        executor_decision_summary = (
+            self._profile_insight_executor_decision_summary(
+                candidates=candidates,
+                open_profile_review_lanes=open_profile_review_lanes,
+                semantic_apply_gate_summary=semantic_apply_gate_summary,
+                bulk_apply_allowed=bulk_apply_allowed,
+                safe_single_apply_candidate_revision_iris=(
+                    safe_single_apply_candidate_revision_iris
+                ),
+                semantic_apply_gate_counts=semantic_apply_gate_counts,
+                semantic_apply_gate_blocking_reasons=(
+                    semantic_apply_gate_blocking_reasons
+                ),
+            )
+        )
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
             with self._scoped_staged_apply_check_cache(apply_check_cache):
@@ -40622,6 +40638,7 @@ class DoxaBase:
             semantic_apply_gate_blocking_reasons=(
                 semantic_apply_gate_blocking_reasons
             ),
+            executor_decision_summary=executor_decision_summary,
         )
 
     def _profile_insight_applied_source_candidate_iris(
@@ -41687,6 +41704,103 @@ class DoxaBase:
             counts,
             blocking_reasons,
         )
+
+    @staticmethod
+    def _profile_insight_executor_decision_summary(
+        *,
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+        semantic_apply_gate_summary: str,
+        bulk_apply_allowed: bool,
+        safe_single_apply_candidate_revision_iris: list[str],
+        semantic_apply_gate_counts: dict[str, int],
+        semantic_apply_gate_blocking_reasons: list[str],
+    ) -> dict[str, Any]:
+        blocked_candidate_revision_iris = [
+            candidate.revision_iri
+            for candidate in candidates
+            if not candidate.safe_single_apply_candidate
+        ]
+        candidate_roles: dict[str, int] = {}
+        for candidate in candidates:
+            candidate_roles[candidate.semantic_apply_role] = (
+                candidate_roles.get(candidate.semantic_apply_role, 0) + 1
+            )
+        open_lanes = [
+            {
+                "review_lane": lane.review_lane,
+                "route_group_count": lane.route_group_count,
+                "route_group_keys": list(lane.route_group_keys),
+                "remaining_semantic_moves": list(lane.remaining_semantic_moves),
+                "action_count": lane.action_count,
+                "matched_candidate_revision_iris": list(
+                    lane.matched_candidate_revision_iris
+                ),
+                "matched_candidate_count": lane.matched_candidate_count,
+            }
+            for lane in open_profile_review_lanes
+        ]
+        if not candidates:
+            decision = "nothing_to_apply"
+            recommended_next_step = (
+                "Stage or import profile-linked map updates, metric/type "
+                "review, query-context repair, or semantic alternatives before "
+                "exporting an apply bundle."
+            )
+            mutation_policy = "do_not_mutate_from_this_bundle"
+        elif bulk_apply_allowed:
+            decision = "bulk_apply_after_review"
+            recommended_next_step = (
+                "After human or agent semantic review, apply the exported "
+                "ordinary profile map updates, then rerun profile/staged "
+                "review before further mutation."
+            )
+            mutation_policy = "bulk_apply_allowed_after_review"
+        elif safe_single_apply_candidate_revision_iris:
+            decision = "apply_one_safe_single_after_review"
+            recommended_next_step = (
+                "Review the safe-single candidate list and apply at most one "
+                "selected revision, then rerun profile/staged review before "
+                "any further mutation."
+            )
+            mutation_policy = "apply_at_most_one_then_recheck"
+        elif open_profile_review_lanes:
+            decision = "review_or_stage_open_lanes"
+            recommended_next_step = (
+                "Inspect or stage the open profile review lanes before applying "
+                "profile-linked candidates, or deliberately choose one semantic "
+                "candidate and rerun review after mutation."
+            )
+            mutation_policy = "do_not_bulk_apply"
+        else:
+            decision = "choose_one_semantic_candidate_after_review"
+            recommended_next_step = (
+                "Choose at most one semantic/support candidate after review and "
+                "rerun profile/staged review before any further mutation."
+            )
+            mutation_policy = "apply_at_most_one_then_recheck"
+
+        return {
+            "decision": decision,
+            "mutation_policy": mutation_policy,
+            "recommended_next_step": recommended_next_step,
+            "must_recheck_after_mutation": bool(candidates),
+            "bulk_apply_allowed": bulk_apply_allowed,
+            "safe_single_apply_candidate_revision_iris": list(
+                safe_single_apply_candidate_revision_iris
+            ),
+            "safe_single_apply_candidate_count": len(
+                safe_single_apply_candidate_revision_iris
+            ),
+            "blocked_candidate_revision_iris": blocked_candidate_revision_iris,
+            "blocked_candidate_count": len(blocked_candidate_revision_iris),
+            "open_review_lanes": open_lanes,
+            "open_review_lane_count": len(open_lanes),
+            "candidate_roles": candidate_roles,
+            "semantic_apply_gate_counts": dict(semantic_apply_gate_counts),
+            "blocking_reasons": list(semantic_apply_gate_blocking_reasons),
+            "semantic_apply_gate_summary": semantic_apply_gate_summary,
+        }
 
     def _profile_insight_review_executive_summary(
         self,

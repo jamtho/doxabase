@@ -796,6 +796,12 @@ handoff signal. It also includes
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a
 metric or type lane while that lane remains open. The grouped
+payload also includes `executor_decision_summary`, a compact routing object over
+the semantic apply gate. Read its `decision`, `mutation_policy`,
+`safe_single_apply_candidate_revision_iris`, `blocked_candidate_revision_iris`,
+and `open_review_lanes` before choosing any mutation, then inspect the detailed
+candidate rows. It is derived from the same gate fields and does not replace
+semantic review.
 Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. The bridge's `Row` column uses the same `Revision N`
 row number as the later grouped bundle sections, and `Candidate` repeats the

@@ -2347,6 +2347,7 @@ result.bulk_apply_allowed
 result.safe_single_apply_candidate_revision_iris
 result.semantic_apply_gate_counts
 result.semantic_apply_gate_blocking_reasons
+result.executor_decision_summary
 ```
 
 `result_kind` is `profile_insight_review_bundle`. `export` is the nested
@@ -2464,6 +2465,13 @@ signals, not permission to bulk apply semantic metric/type/query/fallback
 candidates. When `result.bulk_apply_allowed` is false, read
 `semantic_apply_gate_summary` and apply at most one reviewed semantic choice
 before rerunning the staged/profile review.
+`executor_decision_summary` is the compact scripting view over the same gate:
+it includes `decision`, `mutation_policy`, `recommended_next_step`,
+`must_recheck_after_mutation`, `safe_single_apply_candidate_revision_iris`,
+`blocked_candidate_revision_iris`, `open_review_lanes`, `candidate_roles`, and
+the underlying semantic gate counts/blocking reasons. Use it for first-pass
+executor routing, then inspect the detailed `candidates[]` and
+`open_profile_review_lanes[]` rows before mutating.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports
 only `project_metric_defined`, those inspection-only metric routes are not
 reported as open review lanes. Use the metric context actions for handoff

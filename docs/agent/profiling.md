@@ -226,14 +226,19 @@ scripts, and the Markdown review summary renders a `Semantic Move Closure`
 section before the open-lane table.
 Use the profile bundle's semantic apply-gate fields for executor decisions:
 `bulk_apply_allowed`, `safe_single_apply_candidate_revision_iris`,
-`semantic_apply_gate_summary`, `semantic_apply_gate_counts`, and each
-candidate's `semantic_apply_role`, `apply_cardinality`, and
+`semantic_apply_gate_summary`, `semantic_apply_gate_counts`,
+`executor_decision_summary`, and each candidate's `semantic_apply_role`,
+`apply_cardinality`, and
 `safe_single_apply_candidate`. Closed semantic moves, an empty open-lane list,
 or staged rows in `apply_after_review` mean mechanical readiness and lane
 accounting; they are not permission to bulk apply metric/type/query/fallback
 semantic choices. A bundle with semantic candidates should be treated as
 choose-one-and-recheck unless the apply gate explicitly says bulk apply is
 allowed.
+Use `executor_decision_summary` as the compact unattended routing object: it
+names the decision, mutation policy, safe-single candidates, blocked candidates,
+open lanes, and whether a rerun is required after mutation. Then inspect the
+detailed candidate/lane rows before applying anything.
 Scalar-conflict review is semantic context too. After one same-evidence scalar
 choice is applied, a sibling row-count or nullable observation should stay out
 of default `profile_map_updates`; the draft routes it through

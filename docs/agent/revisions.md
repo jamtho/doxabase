@@ -149,6 +149,11 @@ On the receiving capsule:
    non-empty, follow the first
    `describe_staged_revision_recovery_session(session_iri=...)` suggested action
    before starting any receiver-local session.
+   The manifest-scoped recovery plan can include applied events and historical
+   snapshot rows that are useful context but noisy for choosing the next live
+   mutation. After import, rerun
+   `plan_staged_revision_recovery(current_staged_work_only=True)` before
+   selecting any mutation from the receiver queue.
 3. If no manifest arrived, import the project/history RDF with
    `import_trig(trig_path)`, then import the companion snapshot JSON with
    `import_revision_snapshots(revision_snapshot_path)`. If snapshot JSON arrived

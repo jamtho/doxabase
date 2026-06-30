@@ -10033,6 +10033,13 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     ] == "direct_action"
     assert result["open_profile_review_lanes"] == []
     assert result["open_profile_review_lane_count"] == 0
+    assert result["executor_decision_summary"]["decision"] == (
+        "bulk_apply_after_review"
+    )
+    assert result["executor_decision_summary"][
+        "safe_single_apply_candidate_revision_iris"
+    ] == result["candidate_revision_iris"]
+    assert result["executor_decision_summary"]["open_review_lanes"] == []
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["candidates"][0]["relation_reasons"]
@@ -10211,6 +10218,21 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         "matched_candidate_revision_iris"
     ] == [staged_iri]
     assert all(lane["route_step_keys"] for lane in open_lanes.values())
+    assert result["executor_decision_summary"]["decision"] == (
+        "review_or_stage_open_lanes"
+    )
+    assert result["executor_decision_summary"]["open_review_lane_count"] == 3
+    assert {
+        lane["review_lane"]
+        for lane in result["executor_decision_summary"]["open_review_lanes"]
+    } == {
+        "profile_scalar_conflict_review",
+        "metric_vocabulary_review",
+        "profile_type_review",
+    }
+    assert result["executor_decision_summary"]["mutation_policy"] == (
+        "do_not_bulk_apply"
+    )
 
     candidate_groups = {
         group["review_lane"]: group

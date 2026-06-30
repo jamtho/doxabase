@@ -29499,6 +29499,19 @@ def test_profile_insight_review_bundle_marks_plain_map_update_safe_single(
     ]
     assert result.semantic_apply_gate_counts["safe_single_apply_candidates"] == 1
     assert result.semantic_apply_gate_blocking_reasons == []
+    assert result.executor_decision_summary["decision"] == (
+        "bulk_apply_after_review"
+    )
+    assert result.executor_decision_summary["mutation_policy"] == (
+        "bulk_apply_allowed_after_review"
+    )
+    assert result.executor_decision_summary[
+        "safe_single_apply_candidate_revision_iris"
+    ] == [staged.staged_revision.revision_iri]
+    assert result.executor_decision_summary["open_review_lanes"] == []
+    assert result.executor_decision_summary["candidate_roles"] == {
+        "ordinary_profile_map_update": 1
+    }
     candidate = result.candidates[0]
     assert candidate.semantic_apply_role == "ordinary_profile_map_update"
     assert candidate.apply_cardinality == "single_after_review"
@@ -30517,6 +30530,22 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert review.semantic_move_closure_summary.startswith(
         "Closed semantic moves: define_value_type."
     )
+    assert review.executor_decision_summary["decision"] == (
+        "review_or_stage_open_lanes"
+    )
+    assert review.executor_decision_summary["mutation_policy"] == (
+        "do_not_bulk_apply"
+    )
+    assert review.executor_decision_summary["open_review_lane_count"] == 1
+    assert review.executor_decision_summary["open_review_lanes"][0][
+        "review_lane"
+    ] == "profile_type_review"
+    assert "assert_map_type" in review.executor_decision_summary[
+        "open_review_lanes"
+    ][0]["remaining_semantic_moves"]
+    assert review.executor_decision_summary["candidate_roles"] == {
+        "profile_type_candidate": 1
+    }
     exported = (tmp_path / "orders-profile-type-review.md").read_text(
         encoding="utf-8"
     )
