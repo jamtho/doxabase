@@ -877,7 +877,10 @@ handoff signal. It also includes
 `open_profile_review_lanes`: live draft route groups that still lack a
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a
-metric or type lane while that lane remains open. The grouped
+metric or type lane while that lane remains open. Each lane includes
+`next_step`; for `query_context_review`, run `describe_query_context` and stage
+or record the query/storage repair before applying profile-derived map updates.
+The grouped
 payload also includes `executor_decision_summary`, a compact routing object over
 the semantic apply gate. Read its `decision`, `mutation_policy`,
 `safe_single_apply_candidate_revision_iris`,

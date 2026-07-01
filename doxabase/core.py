@@ -1587,6 +1587,7 @@ class ProfileInsightOpenReviewLane:
     action_count: int
     matched_candidate_revision_iris: list[str]
     matched_candidate_count: int
+    next_step: str
 
 
 @dataclass(frozen=True)
@@ -46488,6 +46489,36 @@ class DoxaBase:
         return current
 
     @staticmethod
+    def _profile_insight_open_review_lane_next_step(review_lane: str) -> str:
+        if review_lane == "query_context_review":
+            return (
+                "Run describe_query_context for the profiled dataset, then "
+                "stage or record the query/storage repair before applying "
+                "profile-derived map updates."
+            )
+        if review_lane == "profile_type_review":
+            return (
+                "Resolve type advisories, define missing project value types "
+                "or apply required column shells, then rerun the profile-map "
+                "draft before applying type assertions."
+            )
+        if review_lane == "metric_vocabulary_review":
+            return (
+                "Review or stage metric vocabulary before treating "
+                "metric-derived profile recommendations as resolved."
+            )
+        if review_lane == "profile_scalar_conflict_review":
+            return (
+                "Review the competing scalar profile recommendations and "
+                "stage the intended map value before applying related profile "
+                "updates."
+            )
+        return (
+            "Inspect the draft profile map updates action group for this "
+            "review lane before applying related candidates."
+        )
+
+    @staticmethod
     def _profile_insight_open_review_lanes(
         profile_route_sources: Iterable[MappingABC[str, Any]],
         candidates: list[ProfileInsightReviewCandidate],
@@ -46633,6 +46664,9 @@ class DoxaBase:
                         matched_candidate_revision_iris
                     ),
                     matched_candidate_count=len(matched_candidate_revision_iris),
+                    next_step=DoxaBase._profile_insight_open_review_lane_next_step(
+                        review_lane
+                    ),
                 )
             )
         return open_lanes
@@ -46815,6 +46849,7 @@ class DoxaBase:
                     lane.matched_candidate_revision_iris
                 ),
                 "matched_candidate_count": lane.matched_candidate_count,
+                "next_step": lane.next_step,
             }
             for lane in open_profile_review_lanes
         ]
@@ -47065,9 +47100,10 @@ class DoxaBase:
             "",
             (
                 "| Review lane | Route groups | Actions | "
-                "Closed moves | Remaining moves | Matched exported revisions |"
+                "Closed moves | Remaining moves | Matched exported revisions | "
+                "Next step |"
             ),
-            "|---|---:|---:|---|---|---|",
+            "|---|---:|---:|---|---|---|---|",
         ]
         for lane in open_profile_review_lanes:
             matched_revisions = ", ".join(
@@ -47090,6 +47126,7 @@ class DoxaBase:
                         self._markdown_table_cell(
                             matched_revisions or "none"
                         ),
+                        self._markdown_table_cell(lane.next_step),
                     ]
                 )
                 + " |"

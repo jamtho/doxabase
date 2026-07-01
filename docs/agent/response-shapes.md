@@ -2593,13 +2593,17 @@ lane.remaining_semantic_moves
 lane.action_count
 lane.matched_candidate_revision_iris
 lane.matched_candidate_count
+lane.next_step
 ```
 
 Use this field to keep scalar conflicts, metric vocabulary review, profile type
 review, and query-context repair lanes visible after one related staged row has
 been exported. `matched_candidate_revision_iris` can name support-only staged
 rows that should travel with the lane, but it does not mean the lane is
-satisfied unless the lane is absent from `open_profile_review_lanes`.
+satisfied unless the lane is absent from `open_profile_review_lanes`. Read
+`next_step` as the lane-specific handoff cue; for `query_context_review`, it
+points agents back through `describe_query_context` and a query/storage repair
+before applying profile-derived map updates.
 `closed_semantic_moves`, `remaining_semantic_moves`, and
 `semantic_move_closure_summary` are bundle-level rollups over direct candidate
 route groups and open lanes. Read them before treating a vocabulary-definition

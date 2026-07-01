@@ -35102,6 +35102,36 @@ def test_profile_map_update_query_blocker_routes_before_default_stage_action(
     }
     assert "query_context_review" in draft.review_note
 
+    staged_map = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[4],
+    )
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "tickets-query-review.md",
+        revision_iris=[staged_map.staged_revision.revision_iri],
+    )
+    open_lanes = {
+        lane.review_lane: lane for lane in review.open_profile_review_lanes
+    }
+    assert "query_context_review" in open_lanes
+    query_lane = open_lanes["query_context_review"]
+    assert "describe_query_context" in query_lane.next_step
+    assert "query/storage repair" in query_lane.next_step
+    summary_query_lane = next(
+        lane
+        for lane in review.executor_decision_summary["open_review_lanes"]
+        if lane["review_lane"] == "query_context_review"
+    )
+    assert summary_query_lane["next_step"] == query_lane.next_step
+    exported = (tmp_path / "tickets-query-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Next step" in exported
+    assert "describe_query_context" in exported
+
 
 def test_query_storage_repair_profile_route_sources_close_query_lane(
     tmp_path: Path,
