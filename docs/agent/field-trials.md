@@ -4323,6 +4323,14 @@ few useful gaps:
   source recovery session, keep the semantic alternative review-first, and keep
   the mechanical row restageable. This mixed handoff now has focused regression
   coverage so future recovery changes do not flatten those lanes together.
+- A storage-aware query-planning trial confirmed a fresh capsule can move from
+  fixture import plus a synthetic table with only path metadata through
+  `project_brief` `query_repair_review`, staged storage-access repair, staged
+  physical-layout repair, direct-clean `execution_attempt_ready`, Polymarket
+  `binding_values_required`, and query-result evidence capture with query hash
+  and source spans preserved. The route is now covered as one cold workflow so
+  future query-planning changes cannot pass by only satisfying the individual
+  helper tests.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

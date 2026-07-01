@@ -22092,6 +22092,232 @@ def test_local_csv_query_handoff_can_record_result_artifact(
     assert result.observation_iri in {match.iri for match in matches.matches}
 
 
+def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    events_dir = warehouse / "events"
+    events_dir.mkdir(parents=True)
+    csv_path = events_dir / "current.csv"
+    csv_path.write_text(
+        "event_id,status,amount_cents\n"
+        "1,paid,1200\n"
+        "2,pending,800\n"
+        "3,paid,3100\n"
+        "4,refunded,700\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "event_status_aggregate.sql"
+    query_path.write_text(
+        "-- storage metadata trial query\n"
+        "select status, count(*) as row_count\n"
+        "from read_csv_auto($events_path)\n"
+        "group by status;\n",
+        encoding="utf-8",
+    )
+    result_path = tmp_path / "event_status_aggregate.result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "row_count": 4,
+                "status_counts": {
+                    "paid": 2,
+                    "pending": 1,
+                    "refunded": 1,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    db.import_trig(POLYMARKET_FIXTURE)
+    base = "https://example.test/project#"
+    dataset = f"{base}EventStatus"
+    columns = [
+        db.record_map_column(
+            f"{base}event_status__{name}",
+            table_iri=dataset,
+            column_name=name,
+        )
+        for name in ("event_id", "status", "amount_cents")
+    ]
+    db.record_map_dataset(
+        dataset,
+        label="Event status",
+        is_table=True,
+        columns=[column.iri for column in columns],
+        path_templates=["events/current.csv"],
+    )
+
+    initial_context = db.describe_query_context(dataset)
+    assert initial_context.readiness == "insufficient_metadata"
+    assert {issue.code for issue in initial_context.issues} >= {
+        "missing_storage_access",
+        "missing_physical_layout",
+    }
+    assert [
+        (group.group_name, group.issue_code)
+        for group in initial_context.suggested_repair_action_groups
+    ] == [("query_repair_review", "missing_storage_access")]
+
+    brief = db.project_brief(limit=20)
+    repair_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+        and task.suggested_next_action is not None
+        and task.suggested_next_action.arguments == {"iri": dataset}
+    )
+    assert repair_task.source == "describe_query_context"
+    assert repair_task.suggested_next_action is not None
+    assert repair_task.suggested_next_action.tool_name == "describe_query_context"
+
+    storage = db.stage_query_storage_access_repair(
+        dataset_iri=dataset,
+        storage_access_iri=f"{base}event_status_local_storage",
+        label="Event status local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="directory",
+        storage_root=str(warehouse),
+        path_templates=["events/current.csv"],
+        rationale="Reviewed the local warehouse route for Event status.",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Directory listing confirmed the CSV path.",
+    )
+    assert db.check_staged_revision_apply(storage.revision_iri).status == "ready"
+    db.apply_staged_revision(storage.revision_iri)
+
+    storage_context = db.describe_query_context(dataset)
+    assert "missing_storage_access" not in {
+        issue.code for issue in storage_context.issues
+    }
+    assert [
+        (group.group_name, group.issue_code)
+        for group in storage_context.suggested_repair_action_groups
+    ] == [("query_repair_review", "missing_physical_layout")]
+
+    layout = db.stage_query_physical_layout_repair(
+        dataset_iri=dataset,
+        layout_iri=f"{base}event_status_csv_layout",
+        label="Event status CSV layout",
+        file_format="rc:CSV",
+        rationale="Reviewed the Event status file as CSV.",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="A read-only aggregate confirmed the CSV layout.",
+    )
+    assert db.check_staged_revision_apply(layout.revision_iri).status == "ready"
+    db.apply_staged_revision(layout.revision_iri)
+
+    repaired_context = db.describe_query_context(dataset)
+    assert repaired_context.readiness == "ready_for_query_planning"
+    assert repaired_context.suggested_repair_action_groups == []
+    assert repaired_context.query_target_decision.status == "ready"
+    assert (
+        repaired_context.query_target_decision.selected_candidate_direct_clean
+        is True
+    )
+    assert {
+        issue.code for issue in repaired_context.issues
+    } == {"verification_status_not_recorded"}
+
+    plan = db.draft_query_plan(dataset)
+    assert plan.handoff_kind == "execution_attempt_ready"
+    assert plan.scan.function == "read_csv_auto"
+    assert plan.scan.uri_template == str(csv_path)
+    assert plan.scan.execution_attempt_ready is True
+    assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == []
+
+    trades_plan = db.draft_query_plan(
+        "https://richcanopy.org/example/manifest/polymarket#Trades"
+    )
+    assert trades_plan.handoff_kind == "binding_values_required"
+    assert trades_plan.scan.function == "read_parquet"
+    assert trades_plan.required_bindings == ["date", "hour"]
+    assert trades_plan.review_gate.binding_values_required is True
+    assert trades_plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "binding_values_required"
+    ]
+    assert trades_plan.review_gate.all_issue_codes == [
+        "verification_status_not_recorded"
+    ]
+
+    result = db.record_query_result(
+        summary=(
+            "Event status aggregate ran with a Python CSV fallback after the "
+            "storage metadata repair route reached a draft query handoff."
+        ),
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        query_source_section="status aggregate",
+        start_line=2,
+        end_line=4,
+        query_hash="sha256:event-status-storage-route",
+        result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
+        sample_size=4,
+        sample_scope="All rows in the reviewed local Event status CSV.",
+        sample_method="External read-only aggregate after draft_query_plan.",
+        row_count=4,
+    )
+
+    assert result.observation_type == "profile"
+    assert result.query_hash == "sha256:event-status-storage-route"
+    assert result.source_span_iri is not None
+    assert len(result.scanned_source_span_iris) == 1
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_profile_run",
+        "describe_context_slice",
+        "describe_query_context",
+    ]
+
+    evidence = db.describe_resource(result.evidence_iri, graph="evidence")
+    evidence_outgoing = {
+        (triple.predicate, triple.object) for triple in evidence.outgoing
+    }
+    assert (RC + "queryHash", "sha256:event-status-storage-route") in evidence_outgoing
+    assert (RC + "sourceSpan", result.source_span_iri) in evidence_outgoing
+    assert (
+        RC + "sourceSpan",
+        result.scanned_source_span_iris[0],
+    ) in evidence_outgoing
+
+    query_span = db.describe_resource(result.source_span_iri, graph="evidence")
+    query_span_outgoing = {
+        (triple.predicate, triple.object) for triple in query_span.outgoing
+    }
+    assert (RC + "sourcePath", str(query_path)) in query_span_outgoing
+    assert (RC + "sourceSection", "status aggregate") in query_span_outgoing
+    assert (RC + "startLine", "2") in query_span_outgoing
+    assert (RC + "endLine", "4") in query_span_outgoing
+    assert (RC + "sourceKind", RC + "QuerySource") in query_span_outgoing
+
+    scanned_span = db.describe_resource(
+        result.scanned_source_span_iris[0],
+        graph="evidence",
+    )
+    scanned_span_outgoing = {
+        (triple.predicate, triple.object) for triple in scanned_span.outgoing
+    }
+    assert (RC + "sourcePath", str(csv_path)) in scanned_span_outgoing
+    assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
+
+    evidence_slice = db.describe_context_slice(
+        **result.suggested_next_actions[1].arguments,
+        max_triples=120,
+    )
+    assert result.evidence_iri in {
+        resource.iri for resource in evidence_slice.resources
+    }
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_local_csv_directory_wildcard_handoff_records_generic_result(
     tmp_path: Path,
 ) -> None:
