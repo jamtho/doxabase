@@ -354,9 +354,13 @@ structured `filter_column` / `filter_value` field on aggregate mappings yet.
 
 Derivation relationships can name `source_columns`, `derived_columns`,
 `derivation_function`, and `derivation_properties`. Treat those as relationship
-level context, not per-output formulas. When a derived column's exact expression
-or source-to-target mapping matters, record a claim/pattern or stage a richer
-project RDF framing instead of implying the helper captured the formula.
+level context, not per-output formulas. `derivation_properties` is restricted to
+the current shared RC values `rc:Deterministic`, `rc:Invertible`, and `rc:Lossy`;
+stage project-specific transform properties through ontology/systematisation
+instead of passing them to the map helper. When a derived column's exact
+expression or source-to-target mapping matters, record a claim/pattern or stage
+a richer project RDF framing instead of implying the helper captured the
+formula.
 
 ## Grain And Row Units
 

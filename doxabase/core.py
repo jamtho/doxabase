@@ -164,6 +164,12 @@ CAVEAT_SEVERITY_LEVELS = (
     "rc:Severe",
 )
 
+DERIVATION_PROPERTIES = (
+    "rc:Deterministic",
+    "rc:Invertible",
+    "rc:Lossy",
+)
+
 CONFIDENCE_LEVELS = (
     "rc:LowConfidence",
     "rc:MediumConfidence",
@@ -32809,6 +32815,14 @@ class DoxaBase:
             "derivation_properties",
             derivation_properties,
         )
+        derivation_property_refs = [
+            self._controlled_resource_ref(
+                "derivation_properties",
+                value,
+                DERIVATION_PROPERTIES,
+            )
+            for value in derivation_property_values
+        ]
         type_map = {
             "foreign_key": "rc:ForeignKey",
             "shared_identifier": "rc:SharedIdentifier",
@@ -33005,15 +33019,12 @@ class DoxaBase:
                         ),
                     )
                 )
-            for derivation_property in derivation_property_values:
+            for derivation_property_ref in derivation_property_refs:
                 graph.add(
                     (
                         subject,
                         URIRef(self.expand_iri("rc:hasDerivationProperty")),
-                        self._resource_ref(
-                            "derivation_properties",
-                            derivation_property,
-                        ),
+                        derivation_property_ref,
                     )
                 )
 

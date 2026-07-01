@@ -23735,6 +23735,33 @@ def test_record_map_relationship_supports_asset_level_endpoints(
     )
 
 
+def test_record_map_relationship_rejects_project_specific_derivation_properties(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/asset-frontier#"
+    source = f"{base}raw_sonar_bag_files"
+    target = f"{base}survey_mosaic_geotiff"
+
+    db.record_map_dataset(source, label="Raw side-scan sonar bag files")
+    db.record_map_dataset(target, label="Survey mosaic GeoTIFF")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="derivation_properties must be one of",
+    ):
+        db.record_map_relationship(
+            f"{base}mosaic_from_bags",
+            relationship_type="derivation",
+            source_datasets=[source],
+            target_datasets=[target],
+            derivation_properties=[f"{base}RadiometricGainCorrected"],
+        )
+
+    assert db.search("RadiometricGainCorrected", graph="map").matches == []
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_non_tabular_file_formats_have_core_labels(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     base = "https://example.test/non-tabular-formats#"

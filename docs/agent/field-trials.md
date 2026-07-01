@@ -3643,6 +3643,16 @@ few useful gaps:
   results now return bounded recovery actions for shorter scoped searches, map
   entity browsing, and current staged-payload search instead of leaving agents
   at an empty dead end.
+- A rich transform/grain trial over non-tabular sonar/image assets confirmed
+  `record_map_dataset(is_table=False)` and ordered relationship endpoints can
+  model asset lineage without fake columns, and dataset/deep-lore slices recover
+  supporting observations, patterns, and staged anchors. It also found helper
+  validation lag: project-specific `derivation_properties` could be written even
+  though SHACL only accepts `rc:Deterministic`, `rc:Invertible`, and `rc:Lossy`;
+  the map helper now rejects those upfront. The larger product gap remains:
+  transform filters, per-output formulas, and tuple grain still collapse into
+  prose or staged custom RDF, so a future asset-level transform/grain primitive
+  should be tested before more helper-specific polish.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
