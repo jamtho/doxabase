@@ -9438,17 +9438,62 @@ def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     check = db.check_staged_revision_apply(source.revision_iri)
 
     assert check.status == "conflict"
+    assert check.routing_decision == "repair_or_replace"
     assert check.next_action is not None
-    assert check.next_action.queue == "restage_after_review"
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.action_label == "Review ambiguous same-slot conflict"
+    assert check.next_action.tool_name == "describe_assertion_support"
+    assert check.next_action.arguments["subject"] == orders
+    assert check.next_action.arguments["predicate"] == RC + "rowSemantics"
+    assert check.next_action.arguments["object"] == RC + "SnapshotRow"
+    assert check.next_action.arguments["object_kind"] == "iri"
+    assert check.recommended_resolution is not None
+    assert "multiple values" in check.recommended_resolution
     assert not any(
         action.tool_name == "stage_map_assertion_change"
         for action in check.suggested_next_actions
     )
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in check.suggested_next_actions
+    )
     draft = db.draft_staged_revision_rebase(source.revision_iri)
     assert draft.draft_status == "not_drafted"
-    assert draft.draft_kind == "mechanical_restage_available"
+    assert draft.draft_kind == "ambiguous_same_slot"
+    assert draft.reason_codes[0] == "ambiguous_same_slot"
+    assert "target_count_drift" in draft.reason_codes
+    assert draft.next_action is not None
+    assert draft.next_action.action_label == "Review ambiguous same-slot conflict"
     assert draft.repair_actions == []
     assert draft.repair_candidates == []
+
+    dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
+    assert dry_run.would_restage_revision_iris == []
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "ambiguous_same_slot": [source.revision_iri],
+    }
+    dry_item = dry_run.items[0]
+    assert dry_item.action == "skipped_not_restageable"
+    assert dry_item.not_restageable_reason == "ambiguous_same_slot"
+    assert dry_item.next_action_after is not None
+    assert dry_item.next_action_after.tool_name == "describe_assertion_support"
+
+    plan = db.plan_staged_revision_recovery([source.revision_iri])
+    assert plan.lane_counts == {"repair_or_replace": 1}
+    assert plan.not_restageable_revision_iris_by_reason == {
+        "ambiguous_same_slot": [source.revision_iri],
+    }
+    assert plan.mutation_frontier_items == []
+    assert plan.mutation_allowed_after == "repair_inspection_required_before_mutation"
+    lane = plan.lanes[0]
+    assert lane.not_restageable_reason == "ambiguous_same_slot"
+    assert lane.next_action is not None
+    assert lane.next_action.tool_name == "describe_assertion_support"
+    assert lane.repair_draft is not None
+    assert lane.repair_draft.draft_kind == "ambiguous_same_slot"
+
+    with pytest.raises(DoxaBaseError, match="ambiguous same-slot conflict"):
+        db.restage_staged_revision(source.revision_iri)
 
 
 @pytest.mark.parametrize("staged_object", ['"snapshot"', "[]"])

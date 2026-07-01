@@ -2289,6 +2289,12 @@ Guarded same-slot conflicts that already carry a
 mechanical restage. A direct `restage_staged_revision()` call rejects the same
 route; stage the replacement with `restages_revision` so the repaired proposal
 supersedes the stale source while preserving any source alternative link.
+When exact snapshot drift points at a guarded same-slot field but the current
+graph has multiple same-subject/predicate values, the row is
+`skipped_not_restageable` with
+`not_restageable_reason="ambiguous_same_slot"`. Follow the
+`describe_assertion_support` review action and author an explicit repair or
+replacement; do not use batch restage to add another value.
 Stale conflicts whose patch payload already has no effective delta are likewise
 `skipped_not_restageable`, with
 `not_restageable_reason="already_effective"`; inspect/export the stale source

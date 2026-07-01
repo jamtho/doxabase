@@ -91,7 +91,9 @@ compaction, read `start_here` first.
     reviewed for application.
 28. Use `doxabase.restage_staged_revision` when the apply check reports
     `target_count_drift` or `target_digest_drift` and the same patch intent
-    should be replayed against current graph state.
+    should be replayed against current graph state. If the next route is
+    `same_slot_replacement` or `ambiguous_same_slot`, inspect/stage the repair
+    route instead of mechanically restaging.
 29. Use `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks.
 30. Use `doxabase.describe_graph_revision` when reviewing a history record, and

@@ -36889,6 +36889,19 @@ class DoxaBase:
                     "candidate. The helper did not stage or apply it."
                 ),
             )
+        if self._staged_apply_check_has_ambiguous_same_slot_review(check):
+            return (
+                "not_drafted",
+                "ambiguous_same_slot",
+                list(dict.fromkeys(["ambiguous_same_slot", *check.blocking_reasons])),
+                (
+                    "Exact snapshot drift points at a single-valued map slot, "
+                    "but the current graph has multiple values. Inspect the "
+                    "current assertions and stage an explicit repair or "
+                    "replacement; this helper will not draft a mechanical "
+                    "same-slot replacement."
+                ),
+            )
         if source_staged_validation_status == "failed":
             reason_codes = list(
                 dict.fromkeys(["staged_validation_failed", *check.blocking_reasons])
@@ -37436,6 +37449,12 @@ class DoxaBase:
                 "stage_map_assertion_change replacement with restages_revision "
                 "so the refreshed proposal replaces the current value."
             )
+        if self._staged_apply_check_has_ambiguous_same_slot_review(check):
+            raise DoxaBaseError(
+                "restage_staged_revision will not create a mechanical restage "
+                "for an ambiguous same-slot conflict. Inspect current assertion "
+                "support and stage an explicit repair or replacement instead."
+            )
         if (
             check.next_action is not None
             and check.next_action.action_type == "inspect_no_effective_change"
@@ -37716,6 +37735,9 @@ class DoxaBase:
                 )
                 else None
             )
+            ambiguous_same_slot_route = (
+                self._staged_apply_check_has_ambiguous_same_slot_review(check)
+            )
             already_effective_route = (
                 check.next_action is not None
                 and check.next_action.action_type == "inspect_no_effective_change"
@@ -37724,6 +37746,7 @@ class DoxaBase:
                 is_restageable_conflict
                 and restaged_by is None
                 and repair_route is None
+                and not ambiguous_same_slot_route
                 and not already_effective_route
             ):
                 if dry_run:
@@ -37753,7 +37776,11 @@ class DoxaBase:
             elif (
                 is_restageable_conflict
                 and restaged_by is None
-                and (repair_route is not None or already_effective_route)
+                and (
+                    repair_route is not None
+                    or ambiguous_same_slot_route
+                    or already_effective_route
+                )
             ):
                 skipped_revision_iris.append(source.iri)
                 not_restageable_revision_iris.append(source.iri)
@@ -37768,7 +37795,11 @@ class DoxaBase:
                 route_label = (
                     "inspection"
                     if already_effective_route
-                    else "repair or replacement"
+                    else (
+                        "ambiguous same-slot review"
+                        if ambiguous_same_slot_route
+                        else "repair or replacement"
+                    )
                 )
                 note = (
                     "Skipped because the current apply check recommends "
@@ -40506,6 +40537,7 @@ class DoxaBase:
             or item.not_restageable_reason
             in {
                 "same_slot_replacement",
+                "ambiguous_same_slot",
                 "validation_failed",
                 "patch_conflict",
                 "inspect_restaged_source_validation_failure",
@@ -40677,6 +40709,8 @@ class DoxaBase:
             and check.next_action.tool_name == "stage_map_assertion_change"
         ):
             return "same_slot_replacement"
+        if self._staged_apply_check_has_ambiguous_same_slot_review(check):
+            return "ambiguous_same_slot"
         if (
             check.next_action is not None
             and check.next_action.action_type == "inspect_no_effective_change"
@@ -40689,6 +40723,20 @@ class DoxaBase:
         if check.status == "conflict":
             return "conflict"
         return check.status
+
+    @staticmethod
+    def _staged_apply_check_has_ambiguous_same_slot_review(
+        check: StagedRevisionApplyCheck,
+    ) -> bool:
+        if (
+            check.next_action is not None
+            and check.next_action.action_label == "Review ambiguous same-slot conflict"
+        ):
+            return True
+        return any(
+            action.action_label == "Review ambiguous same-slot conflict"
+            for action in check.suggested_next_actions
+        )
 
     def _restage_rationale(
         self,
@@ -43635,6 +43683,17 @@ class DoxaBase:
                 "instead of mechanically restaging the stale source patch."
             )
         if status == "conflict" and any(
+            action.action_label == "Review ambiguous same-slot conflict"
+            for action in suggested_next_actions or []
+        ):
+            return (
+                "Exact snapshot drift shows same-slot map assertion drift, but "
+                "the current graph has multiple values for the single-valued "
+                "slot. Inspect the current values and stage an explicit repair "
+                "or replacement instead of mechanically restaging the stale "
+                "source patch."
+            )
+        if status == "conflict" and any(
             action.action_label == "Inspect already-effective stale source"
             for action in suggested_next_actions or []
         ):
@@ -44099,6 +44158,17 @@ class DoxaBase:
             )
             if same_slot_replacement_action is not None:
                 actions.append(same_slot_replacement_action)
+            ambiguous_same_slot_review_action = None
+            if same_slot_replacement_action is None:
+                ambiguous_same_slot_review_action = (
+                    self._staged_ambiguous_same_slot_review_action(
+                        staged,
+                        patch_checks=patch_checks or [],
+                        snapshot_drifts=snapshot_drifts or [],
+                    )
+                )
+            if ambiguous_same_slot_review_action is not None:
+                actions.append(ambiguous_same_slot_review_action)
             if (
                 restaged_by is None
                 and is_restageable_conflict
@@ -44121,6 +44191,7 @@ class DoxaBase:
                 and is_restageable_conflict
                 and not already_effective_stale
                 and same_slot_replacement_action is None
+                and ambiguous_same_slot_review_action is None
             ):
                 add_action(
                     "restage_staged_revision",
@@ -44390,6 +44461,155 @@ class DoxaBase:
             reason=reason,
             call=self._suggested_call_string(
                 "stage_map_assertion_change",
+                arguments,
+            ),
+        )
+
+    def _staged_ambiguous_same_slot_review_action(
+        self,
+        staged: StagedGraphRevisionDescription | None,
+        *,
+        patch_checks: list[StagedPatchApplyCheck],
+        snapshot_drifts: list[StagedGraphSnapshotDrift],
+    ) -> SuggestedNextAction | None:
+        if staged is None:
+            return None
+        if (
+            staged.applied_by is not None
+            or staged.restaged_by is not None
+            or staged.current_restaged_by is not None
+        ):
+            return None
+
+        candidate = self._single_map_assertion_candidate(staged)
+        if candidate is None:
+            return None
+        (
+            subject,
+            predicate,
+            object_value,
+            object_kind,
+            object_datatype,
+            object_lang,
+            change_kind,
+        ) = candidate
+        if change_kind not in {"add", "replace"} or object_value is None:
+            return None
+        replacement_label = self._staged_same_slot_replacement_label(
+            subject,
+            predicate,
+        )
+        if replacement_label is None:
+            return None
+        if not self._staged_same_slot_replacement_object_allowed(
+            predicate,
+            object_kind,
+            object_datatype,
+        ):
+            return None
+
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        if len(staged.patches) != len(patch_checks):
+            return None
+        patch_operations = [patch.operation for patch in staged.patches]
+        if patch_operations.count(addition_operation) != 1:
+            return None
+        if change_kind == "add" and len(staged.patches) != 1:
+            return None
+        if (
+            change_kind == "replace"
+            and (
+                len(staged.patches) != 2
+                or patch_operations.count(removal_operation) != 1
+            )
+        ):
+            return None
+        addition_check: StagedPatchApplyCheck | None = None
+        for patch, patch_check in zip(staged.patches, patch_checks, strict=True):
+            if (
+                patch.target_graph != "map"
+                or patch.triple_count != 1
+                or patch.operation not in {addition_operation, removal_operation}
+                or patch_check.target_graph != "map"
+                or patch_check.operation != patch.operation
+                or patch_check.triple_count != 1
+            ):
+                return None
+            if patch.operation == addition_operation:
+                addition_check = patch_check
+        if (
+            addition_check is None
+            or addition_check.already_present_triples != 0
+            or addition_check.already_absent_triples != 1
+        ):
+            return None
+
+        drift = next(
+            (
+                item
+                for item in snapshot_drifts
+                if item.graph_role == "map"
+                and item.exact_changed_triples_available
+                and item.exact_changed_triples_included
+            ),
+            None,
+        )
+        if drift is None:
+            return None
+
+        same_slot_added = [
+            triple
+            for triple in drift.triples_added_since_snapshot
+            if triple.subject == subject
+            and triple.predicate == predicate
+            and not self._graph_triple_object_matches_assertion_candidate(
+                triple,
+                object_value=object_value,
+                object_kind=object_kind,
+                object_datatype=object_datatype,
+                object_lang=object_lang,
+            )
+        ]
+        if not same_slot_added:
+            return None
+        current_same_slot_triples = self._assertion_triples(
+            ["map"],
+            subject=subject,
+            predicate=predicate,
+            object_filter=None,
+            limit=10,
+        )
+        if len(current_same_slot_triples) <= 1:
+            return None
+
+        arguments: dict[str, Any] = {
+            "subject": subject,
+            "predicate": predicate,
+            "object": object_value,
+            "graph": "map",
+            "object_kind": object_kind,
+            "limit": 20,
+        }
+        if object_datatype is not None:
+            arguments["object_datatype"] = object_datatype
+        if object_lang is not None:
+            arguments["object_lang"] = object_lang
+        reason = (
+            "Exact snapshot rows show same-slot drift for this stale source, "
+            f"but the current map has {len(current_same_slot_triples)} "
+            f"{replacement_label} values. Inspect the assertion support and "
+            "stage an explicit repair or replacement instead of mechanically "
+            "restaging the stale patch."
+        )
+        return SuggestedNextAction(
+            action_label="Review ambiguous same-slot conflict",
+            tool_name="describe_assertion_support",
+            mcp_tool_name="doxabase.describe_assertion_support",
+            arguments=arguments,
+            reason=reason,
+            call=self._suggested_call_string(
+                "describe_assertion_support",
                 arguments,
             ),
         )
@@ -44722,6 +44942,23 @@ class DoxaBase:
                 "reviewed as a replacement of a current same-slot value."
             )
             selected_action = find_exact_action(tool_name="stage_map_assertion_change")
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
+        ) and find_exact_action(
+            action_label="Review ambiguous same-slot conflict"
+        ) is not None:
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Review ambiguous same-slot conflict"
+            reason = (
+                "Exact snapshot drift points at a single-valued map slot, but "
+                "the current graph has multiple values. Inspect current "
+                "assertion support before staging an explicit repair."
+            )
+            selected_action = find_exact_action(
+                action_label="Review ambiguous same-slot conflict"
+            )
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"

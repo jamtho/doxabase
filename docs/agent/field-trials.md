@@ -3972,6 +3972,12 @@ few useful gaps:
   as `type_finding_current_map_undefined_value_type`, and the followthrough
   plan avoids an `assert_map_type` move unless a real map assertion action is
   present.
+- A staged/version scout found exact same-slot drift with multiple current
+  values was falling back to mechanical restage because the safe one-current
+  replacement helper correctly declined to draft. Ambiguous singleton-slot
+  drift now routes to `ambiguous_same_slot` with a
+  `describe_assertion_support` review action, and batch/direct restage reject
+  that path until an explicit repair or replacement is authored.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
