@@ -4101,6 +4101,12 @@ few useful gaps:
   `safe_inspection_action_indexes` and `first_safe_inspection_action_index` so
   unattended scripts can inspect evidence first without changing draft-plan
   recommendation semantics.
+- The same storage-metadata trial found
+  `draft_query_evidence_storage_overlay` could still raise from stale immutable
+  seed vocabulary after the agent reviewed storage values. It now returns a
+  `query_evidence_storage_overlay_blocker` with the missing seed terms and a
+  stale-seed handoff `export_preflight` action, preserving the workflow instead
+  of exposing a raw patch-role error.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

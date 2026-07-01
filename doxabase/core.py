@@ -3693,6 +3693,25 @@ class QueryEvidenceStorageOverlayDraft:
 
 
 @dataclass(frozen=True)
+class QueryEvidenceStorageOverlayBlocker:
+    result_kind: str
+    helper: str
+    mode: str
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    source_query_context_readiness: str
+    source_query_context_issue_codes: list[str]
+    source_profile_evidence: dict[str, Any]
+    source_query_evidence: dict[str, Any]
+    missing_seed_terms: list[str]
+    mutation_allowed_after: str
+    note: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ClaimObservationRecord:
     observation_iri: str
     claim_iri: str
@@ -22029,7 +22048,7 @@ class DoxaBase:
             "shapes",
             "all",
         ] = "all",
-    ) -> QueryEvidenceStorageOverlayDraft:
+    ) -> QueryEvidenceStorageOverlayDraft | QueryEvidenceStorageOverlayBlocker:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
         evidence_value = self._required_iri("evidence_iri", evidence_iri)
         storage_root_value = storage_root.strip()
@@ -22155,6 +22174,18 @@ class DoxaBase:
             layout_verification_status=layout_verification_status_ref,
             layout_verification_note=layout_verification_note,
         )
+        stale_seed_blocker = (
+            self._query_evidence_storage_overlay_stale_seed_blocker(
+                dataset=profile_run.dataset,
+                evidence=profile_run.evidence,
+                evidence_iri=evidence_value,
+                source_query_context=source_query_context,
+                source_profile_evidence=source_profile_evidence,
+                source_query_evidence=source_query_evidence,
+            )
+        )
+        if stale_seed_blocker is not None:
+            return stale_seed_blocker
         removals = self._query_evidence_storage_overlay_removals(
             dataset_iri=dataset_value,
             storage_access_iri=storage_access_value,
@@ -22325,6 +22356,59 @@ class DoxaBase:
             stage_arguments=stage_arguments,
             suggested_next_actions=[stage_action],
             suggested_next_calls=[stage_action.call],
+        )
+
+    def _query_evidence_storage_overlay_stale_seed_blocker(
+        self,
+        *,
+        dataset: ResourceSummary,
+        evidence: EvidenceDescription,
+        evidence_iri: str,
+        source_query_context: QueryPlanningContext,
+        source_profile_evidence: dict[str, Any],
+        source_query_evidence: dict[str, Any],
+    ) -> QueryEvidenceStorageOverlayBlocker | None:
+        missing_seed_terms = self._missing_base_ontology_terms(
+            REQUIRED_STAGING_ONTOLOGY_TERMS,
+        )
+        if not missing_seed_terms:
+            return None
+        arguments = {
+            "export_kind": "handoff_bundle",
+            "graphs": ["project"],
+            "limit": 20,
+        }
+        action = SuggestedNextAction(
+            action_label="Preflight stale seed project handoff export",
+            tool_name="export_preflight",
+            mcp_tool_name="doxabase.export_preflight",
+            arguments=arguments,
+            reason=(
+                "The immutable base_ontology is missing current staging seed "
+                "terms, so this overlay cannot safely produce stage arguments "
+                "in the current capsule. Preflight a project/history handoff "
+                "before recovering into a fresh seeded capsule."
+            ),
+            call=self._suggested_call_string("export_preflight", arguments),
+        )
+        return QueryEvidenceStorageOverlayBlocker(
+            result_kind="query_evidence_storage_overlay_blocker",
+            helper="draft_query_evidence_storage_overlay",
+            mode="blocked_stale_seed_recovery_required",
+            dataset=dataset,
+            evidence=evidence,
+            evidence_iri=evidence_iri,
+            source_query_context_readiness=source_query_context.readiness,
+            source_query_context_issue_codes=self._query_issue_codes(
+                source_query_context.issues
+            ),
+            source_profile_evidence=source_profile_evidence,
+            source_query_evidence=source_query_evidence,
+            missing_seed_terms=missing_seed_terms,
+            mutation_allowed_after="stale_seed_recovery_required_before_staging",
+            note=self._stale_seed_recovery_message(missing_seed_terms),
+            suggested_next_actions=[action],
+            suggested_next_calls=[action.call],
         )
 
     def stage_query_physical_layout_repair(

@@ -645,6 +645,9 @@ metadata yet, use this sequence:
    non-secret storage/layout values from the actual source.
 4. Call `draft_query_evidence_storage_overlay`, then stage its
    `stage_arguments` with `stage_graph_revision`.
+   If it returns `query_evidence_storage_overlay_blocker`, follow the returned
+   stale-seed handoff preflight and repeat the overlay in a fresh seeded capsule
+   before staging.
 5. Run `check_staged_revision_apply`, apply the ready row, rerun
    `describe_query_context`, and only then call `draft_query_plan`.
 

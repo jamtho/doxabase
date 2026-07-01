@@ -1293,6 +1293,13 @@ validation for the Turtle addition, and returns `stage_arguments` plus a
 choosing those values, not as an automatically accepted storage root.
 `source_profile_evidence` is retained as a compatibility alias for the same
 payload.
+If the capsule's immutable `base_ontology` is missing current staging
+vocabulary, the helper returns
+`result_kind="query_evidence_storage_overlay_blocker"` with
+`mode="blocked_stale_seed_recovery_required"` rather than raising from patch
+preview. Follow its `export_preflight(export_kind="handoff_bundle")` suggested
+action and recover into a fresh seeded capsule before staging the reviewed
+overlay.
 Call that staged-revision helper, check/apply the staged row, then rerun
 `describe_query_context` before drafting a query plan. When the dataset already
 has a different

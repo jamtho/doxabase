@@ -95,6 +95,20 @@ from doxabase.mcp_tools import (
 RC = "https://richcanopy.org/ns/rc#"
 
 
+def _delete_base_ontology_seed_terms(db: DoxaBase, terms: list[str]) -> None:
+    for term in terms:
+        iri = db.expand_iri(term)
+        db._conn.execute(
+            """
+            DELETE FROM quads
+            WHERE graph = 'base_ontology'
+              AND (subject = ? OR object = ?)
+            """,
+            (iri, iri),
+        )
+    db._conn.commit()
+
+
 def _line_number_containing(text: str, needle: str) -> int:
     for line_number, line in enumerate(text.splitlines(), start=1):
         if needle in line:
@@ -1605,6 +1619,71 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     plan = draft_query_plan_tool(db, iri=dataset)
     assert plan["handoff_kind"] == "execution_attempt_ready"
     assert plan["scan"]["uri_template"] == str(csv_path)
+
+
+def test_draft_query_evidence_storage_overlay_tool_returns_stale_seed_blocker(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n", encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    record_map_dataset_tool(db, iri=dataset, label="Orders", is_table=True)
+    result = record_query_result_tool(
+        db,
+        summary="Orders query scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(tmp_path / "orders_status.sql"),
+        query_hash="sha256:mcp-stale-seed-overlay",
+        scanned_source_paths=[str(csv_path)],
+        row_count=1,
+    )
+    _delete_base_ontology_seed_terms(
+        db,
+        ["rc:GraphPatchRole", "rc:FramingPatch", "rc:SharedContextPatch"],
+    )
+
+    result_payload = draft_query_evidence_storage_overlay_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=result["evidence_iri"],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+    )
+
+    assert result_payload["result_kind"] == (
+        "query_evidence_storage_overlay_blocker"
+    )
+    assert result_payload["helper"] == "draft_query_evidence_storage_overlay"
+    assert result_payload["mode"] == "blocked_stale_seed_recovery_required"
+    assert result_payload["missing_seed_terms"] == [
+        "rc:GraphPatchRole",
+        "rc:FramingPatch",
+        "rc:SharedContextPatch",
+    ]
+    assert result_payload["mutation_allowed_after"] == (
+        "stale_seed_recovery_required_before_staging"
+    )
+    assert "stage_arguments" not in result_payload
+    assert result_payload["suggested_next_actions"][0]["tool_name"] == (
+        "export_preflight"
+    )
+    assert result_payload["suggested_next_actions"][0]["arguments"] == {
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
+        "limit": 20,
+    }
+    assert result_payload["suggested_next_calls"] == [
+        result_payload["suggested_next_actions"][0]["call"]
+    ]
 
 
 def test_query_context_keeps_query_overlay_with_profile_run_candidates(

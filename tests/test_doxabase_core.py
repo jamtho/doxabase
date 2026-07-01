@@ -21935,6 +21935,68 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_query_evidence_storage_overlay_returns_stale_seed_blocker(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n", encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    result = db.record_query_result(
+        summary="Orders query scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(tmp_path / "orders_status.sql"),
+        query_hash="sha256:stale-seed-overlay",
+        scanned_source_paths=[str(csv_path)],
+        row_count=1,
+    )
+    _delete_base_ontology_seed_terms(
+        db,
+        ["rc:GraphPatchRole", "rc:FramingPatch", "rc:SharedContextPatch"],
+    )
+
+    blocker = db.draft_query_evidence_storage_overlay(
+        dataset,
+        result.evidence_iri,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+    )
+
+    assert blocker.result_kind == "query_evidence_storage_overlay_blocker"
+    assert blocker.mode == "blocked_stale_seed_recovery_required"
+    assert blocker.missing_seed_terms == [
+        "rc:GraphPatchRole",
+        "rc:FramingPatch",
+        "rc:SharedContextPatch",
+    ]
+    assert blocker.mutation_allowed_after == (
+        "stale_seed_recovery_required_before_staging"
+    )
+    assert blocker.source_query_context_readiness == "insufficient_metadata"
+    assert "missing_storage_access" in blocker.source_query_context_issue_codes
+    assert "immutable base_ontology is missing current staging vocabulary" in (
+        blocker.note
+    )
+    assert blocker.suggested_next_actions[0].tool_name == "export_preflight"
+    assert blocker.suggested_next_actions[0].arguments == {
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
+        "limit": 20,
+    }
+    assert blocker.suggested_next_calls == [
+        blocker.suggested_next_actions[0].call
+    ]
+
+
 def test_query_context_suggests_overlay_for_ordinary_query_evidence(
     tmp_path: Path,
 ) -> None:

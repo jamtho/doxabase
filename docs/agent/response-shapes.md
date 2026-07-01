@@ -1331,7 +1331,7 @@ results also include a leading `describe_profile_run` action using the returned
 evidence IRI, so a plan-to-result loop can continue without reconstructing the
 follow-up call by hand.
 
-`db.draft_query_evidence_storage_overlay(...)` returns a
+`db.draft_query_evidence_storage_overlay(...)` normally returns a
 `QueryEvidenceStorageOverlayDraft`:
 
 ```python
@@ -1375,6 +1375,13 @@ compatibility alias for the same payload. Use `reviewed_overlay` to audit the
 supplied storage metadata, and `stage_arguments` only after confirming the
 overlay describes the queried source data rather than query text, logs, or
 result output.
+If the capsule's immutable seed ontology is stale and missing current staging
+terms, the helper returns `result_kind="query_evidence_storage_overlay_blocker"`
+instead of `stage_arguments`. The blocker preserves `dataset`, `evidence`,
+`source_query_context_*`, `source_query_evidence`, `missing_seed_terms`, and a
+stale-seed `export_preflight(export_kind="handoff_bundle")` suggested action;
+follow that recovery handoff before staging the overlay in a fresh seeded
+capsule.
 When the overlay replaces existing dataset, storage-access, or physical-layout
 verification status/note values, `reviewed_overlay` lists the replaced values
 and `stage_arguments.removals` carries the removal graph needed to avoid
