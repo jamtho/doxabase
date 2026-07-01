@@ -73,6 +73,29 @@ def test_profile_frontier_workflow_example_runs(tmp_path: Path) -> None:
     assert "Validation conforms: True" in output
 
 
+def test_profile_to_capsule_cookbook_example_runs(tmp_path: Path) -> None:
+    result = _run_example("profile-to-capsule-cookbook.py", tmp_path)
+    output = result.stdout
+
+    assert "# DoxaBase Profile-To-Capsule Cookbook" in output
+    assert "Table bundle columns: 5" in output
+    assert "Profile observations: 6" in output
+    assert "Profile draft recommendations: 4" in output
+    assert "Analysis view readiness: logical_analysis_view" in output
+    assert "Table query readiness: ready_for_query_planning" in output
+    assert "Source validation conforms: True" in output
+    assert "Export preflight decision: clean_by_scanner_only" in output
+    assert "Handoff scanner clean: True" in output
+    assert "Handoff shareability status: required_not_completed" in output
+    assert "Revision snapshots exported: 7" in output
+    assert "Readonly source counts match: True" in output
+    assert "Imported snapshot evidence complete: True" in output
+    assert "Receiver validation conforms: True" in output
+    assert "Receiver counts match source: True" in output
+    assert "Receiver table readiness: ready_for_query_planning" in output
+    assert "Receiver analysis view readiness: logical_analysis_view" in output
+
+
 def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
     result = _run_example("staged-semantic-repair-smoke.py", tmp_path)
     output = result.stdout

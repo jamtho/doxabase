@@ -4417,6 +4417,13 @@ few useful gaps:
   profile bundles, analysis views, and handoff verification; and a
   domain-network profiling helper that preserves extraction denominators and
   aggregate domain-pair counts without recording individual addresses.
+- A follow-up profile-to-capsule cookbook example now covers the first of those
+  candidates without adding a file reader or CLI dependency: reviewed schema,
+  profile, and logical-view facts flow through `record_map_table_bundle`,
+  `record_profile_bundle`, `record_map_analysis_view`, validation,
+  `export_handoff_bundle`, and fresh `import_handoff_bundle` verification.
+  The remaining domain-network helper should likewise preserve reviewed
+  aggregates and denominators, not infer addresses or network semantics.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

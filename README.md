@@ -171,6 +171,9 @@ Not implemented yet:
 - `examples/ais-query-overlay-smoke.py` - scratch AIS DailyIndex overlay and
   stale-link repair workflow for the documented query-planning pressure test.
 - `examples/profile-frontier-workflow.py` - scratch workflow for profile-derived map updates and staged-frontier review.
+- `examples/profile-to-capsule-cookbook.py` - maintained cookbook that composes
+  table map bundles, profile bundles, logical analysis views, and
+  recovery-complete handoff verification from reviewed aggregate facts.
 - `examples/staged-semantic-repair-smoke.py` - scratch semantic same-slot
   staged-revision repair workflow after applying one competing alternative.
 - `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.

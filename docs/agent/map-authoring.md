@@ -100,6 +100,8 @@ reviewed `columns`, `file_format`, `compression_codec`, storage facts, and
 layout verification metadata yourself. It orchestrates the ordinary map helpers
 and returns the records plus `describe_dataset` / `describe_query_context`
 follow-up actions.
+For a full route from reviewed table/profile facts to a verified handoff, run
+`examples/profile-to-capsule-cookbook.py`.
 
 ## When To Use Map Helpers
 

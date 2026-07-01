@@ -10,6 +10,12 @@ profile advisory needs a fresh, binding-aware next step, such as carrying a
 returned `record_pattern().pattern_iri` into a staged map type assertion or
 rechecking sibling staged rows after an apply.
 
+For an end-to-end maintained cookbook, run
+`examples/profile-to-capsule-cookbook.py`. It starts from reviewed schema,
+profile, and logical-view facts; records a table map bundle, profile bundle,
+and analysis view; validates; exports a recovery-complete handoff bundle; and
+imports that handoff into a fresh receiver capsule.
+
 ## Record A Profile Run
 
 Use `record_dataset_profile`, `record_column_profile`, or
