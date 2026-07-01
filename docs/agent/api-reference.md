@@ -1724,6 +1724,10 @@ following a compact action: `apply_staged_revision` is
 `project_graph_and_history`, staged/restage helpers are `history`,
 `import_revision_snapshots` is `snapshot_storage`, exports are `file_export`,
 and inspection/draft helpers are `none`.
+When `alternative_gate.semantic_review_required=true`, `next_action` can still
+carry the post-review apply or repair call, but `first_safe_next_action` points
+to semantic inspection with `queue="semantic_review_required"` and
+`mutation_scope="none"`.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
 `draft_staged_revision_rebase()` is a read-only repair/rebase planner for one
@@ -1885,9 +1889,12 @@ For a single executable-or-review next hop, read
 `first_safe_review_or_mutation_call`. Handoff preflight keeps
 `first_mutation_action` empty and points the safe first action at the blocking
 import/preflight step. Once preflight is clear, `first_mutation_action` points
-at the first mutation-frontier action, while the safe first action prefers any
-earlier read-only or `mutation_scope="none"` review suggestion before falling
-back to that mutation.
+at the first mutation-frontier action whose
+`requires_semantic_review_before_mutation` is false. If every frontier item is
+still semantic-review-gated, `first_mutation_action` stays empty while
+`mutation_frontier_items[]` preserves the post-review action and reason. The
+safe first action prefers any earlier read-only or `mutation_scope="none"`
+review suggestion before falling back to an ungated mutation.
 For multi-step or imported recovery work without a matching imported source
 session, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,

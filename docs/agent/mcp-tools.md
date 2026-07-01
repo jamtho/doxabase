@@ -2130,6 +2130,10 @@ Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before
 `doxabase.apply_staged_revision` when an agent or human wants an explicit
 read-only check.
+When `alternative_gate.semantic_review_required=true`, the compact
+`next_action` may still carry the post-review apply or repair call, but
+`first_safe_next_action` points to semantic inspection with
+`queue="semantic_review_required"` and `mutation_scope="none"`.
 
 ### doxabase.draft_staged_revision_rebase
 
@@ -2193,7 +2197,10 @@ when an unattended caller needs one canonical first hop: while handoff preflight
 is blocking, these fields point at the first blocking import/preflight action
 and `first_mutation_action` is empty; after the preflight clears, they point at
 an earlier read-only or `mutation_scope="none"` review suggestion when present,
-otherwise at the first mutation-frontier action.
+otherwise at the first mutation-frontier action. If every frontier item is still
+gated by `requires_semantic_review_before_mutation`, `first_mutation_action`
+stays empty while `mutation_frontier_items[]` preserves the post-review action
+and reason.
 Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
 `suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
 `writes_history`, `writes_files`, and `writes_storage`; use those fields before

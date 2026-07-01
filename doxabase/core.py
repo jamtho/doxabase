@@ -8241,6 +8241,26 @@ class DoxaBase:
             )
         return None
 
+    @staticmethod
+    def _revision_next_action_from_suggested_action(
+        action: SuggestedNextAction,
+        *,
+        action_type: str,
+        queue: str,
+        source: str,
+    ) -> RevisionNextAction:
+        return RevisionNextAction(
+            action_type=action_type,
+            queue=queue,
+            action_label=action.action_label,
+            tool_name=action.tool_name,
+            mcp_tool_name=action.mcp_tool_name,
+            arguments=action.arguments,
+            reason=action.reason,
+            call=action.call,
+            source=source,
+        )
+
     def _missing_revision_snapshot_storage_hint(self, revision_iri: str) -> str:
         stored_graph_roles = self._graph_snapshot_storage_graph_roles(revision_iri)
         if not stored_graph_roles:
@@ -42035,8 +42055,16 @@ class DoxaBase:
         if review_action is not None:
             first_safe_action = review_action
             first_safe_source = "suggested_review_action"
-        if mutation_frontier_items:
-            first_mutation_action = mutation_frontier_items[0].action
+        first_ungated_mutation_item = next(
+            (
+                item
+                for item in mutation_frontier_items
+                if not item.requires_semantic_review_before_mutation
+            ),
+            None,
+        )
+        if first_ungated_mutation_item is not None:
+            first_mutation_action = first_ungated_mutation_item.action
             if first_safe_action is None:
                 first_safe_action = first_mutation_action
                 first_safe_source = "mutation_frontier"
@@ -43140,14 +43168,52 @@ class DoxaBase:
         self,
         next_action: RevisionNextAction | None,
         *,
+        staged_revision_iri: str,
+        suggested_next_actions: list[SuggestedNextAction],
         blocking_preflight_actions: list[SuggestedNextAction],
+        alternative_gate: StagedRevisionAlternativeGate,
     ) -> RevisionNextAction | None:
         snapshot_next_action = self._snapshot_evidence_completion_next_action(
             blocking_preflight_actions
         )
         if snapshot_next_action is not None:
             return snapshot_next_action
+        if alternative_gate.semantic_review_required:
+            review_action = self._staged_apply_check_semantic_review_action(
+                staged_revision_iri,
+                suggested_next_actions,
+            )
+            return self._revision_next_action_from_suggested_action(
+                review_action,
+                action_type="semantic_review_required",
+                queue="semantic_review_required",
+                source="check_staged_revision_apply",
+            )
         return next_action
+
+    def _staged_apply_check_semantic_review_action(
+        self,
+        staged_revision_iri: str,
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> SuggestedNextAction:
+        for tool_name in (
+            "describe_staged_revision",
+            "describe_revision_lineage",
+            "export_staged_revision",
+        ):
+            for action in suggested_next_actions:
+                if action.tool_name == tool_name:
+                    return action
+        return self._effect_annotated_suggested_next_action(
+            action_label="Review semantic alternative",
+            tool_name="describe_staged_revision",
+            arguments={"iri": staged_revision_iri},
+            reason=(
+                "Semantic review is required before mutating this staged "
+                "revision because it belongs to an unresolved or already-applied "
+                "alternative set."
+            ),
+        )
 
     def _staged_apply_check_ordered_suggested_next_actions(
         self,
@@ -43848,7 +43914,10 @@ class DoxaBase:
             first_safe_next_action = (
                 self._staged_apply_check_first_safe_next_action(
                     next_action,
+                    staged_revision_iri=staged.iri,
+                    suggested_next_actions=suggested_next_actions,
                     blocking_preflight_actions=blocking_preflight_actions,
+                    alternative_gate=staged.alternative_gate,
                 )
             )
             suggested_next_actions = (
@@ -44230,7 +44299,10 @@ class DoxaBase:
         )
         first_safe_next_action = self._staged_apply_check_first_safe_next_action(
             next_action,
+            staged_revision_iri=staged.iri,
+            suggested_next_actions=suggested_next_actions,
             blocking_preflight_actions=blocking_preflight_actions,
+            alternative_gate=staged.alternative_gate,
         )
         suggested_next_actions = (
             self._staged_apply_check_ordered_suggested_next_actions(

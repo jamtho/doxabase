@@ -5942,6 +5942,10 @@ follow the mechanical `next_action` directly. Follow
 In this state, `suggested_next_actions` is ordered with those blocking
 preflight actions first; the mechanical apply/restage/repair action may still
 appear later as the post-import route to recheck.
+When `alternative_gate.semantic_review_required=true`, `next_action` may still
+carry the post-review apply or repair call, but `first_safe_next_action` points
+to staged-revision inspection with `queue="semantic_review_required"` and
+`mutation_scope="none"`.
 `status` and `can_apply` still describe patch replay and validation readiness;
 they are not a handoff snapshot-completeness approval.
 Use `check.status` on the direct apply-check object. Revision list rows, grouped
@@ -6535,7 +6539,10 @@ For scripts that need one canonical next hop, use
 When handoff preflight blocks mutation, this points at the first blocking import
 or preflight action and `first_mutation_action` stays empty. Once preflight is
 clear, `first_mutation_action` points at the first `mutation_frontier_items[]`
-action when one exists. The first safe action points at an earlier read-only or
+action whose `requires_semantic_review_before_mutation` is false. If every
+frontier item is still semantic-review-gated, `first_mutation_action` stays
+empty even though `mutation_frontier_items[]` preserves the post-review action.
+The first safe action points at an earlier read-only or
 `mutation_scope="none"` review suggestion when the plan offers one; otherwise it
 mirrors the first mutation-frontier action with
 `first_safe_review_or_mutation_source="mutation_frontier"`.

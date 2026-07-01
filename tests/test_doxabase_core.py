@@ -10346,6 +10346,11 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert helper_item.requires_semantic_review_before_mutation is True
     assert "semantic review is required before mutation" in helper_item.reason
     assert "do not mutate unattended" in helper_item.reason
+    assert stale_plan.first_mutation_action is not None
+    assert stale_plan.first_mutation_action.tool_name == "restage_staged_revision"
+    assert stale_plan.first_mutation_action.arguments["iri"] == (
+        independent.revision_iri
+    )
     lanes_by_source = {
         lane.source_revision_iri: lane for lane in stale_plan.lanes
     }
@@ -10419,6 +10424,11 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert repair_check.next_action.action_label == (
         "Apply only after semantic review"
     )
+    assert repair_check.first_safe_next_action is not None
+    assert repair_check.first_safe_next_action.tool_name == "describe_staged_revision"
+    assert repair_check.first_safe_next_action.queue == "semantic_review_required"
+    assert repair_check.first_safe_next_action.mutation_scope == "none"
+    assert repair_check.first_safe_next_action.mutates_project_graph is False
 
     final_plan = db.plan_staged_revision_recovery(current_staged_work_only=True)
     assert final_plan.mutation_frontier_iris == [
@@ -10454,6 +10464,13 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert frontier_item.requires_semantic_review_before_mutation is True
     assert "semantic review is required before mutation" in frontier_item.reason
     assert "do not mutate unattended" in frontier_item.reason
+    assert final_plan.first_mutation_action is None
+    assert final_plan.first_mutation_call is None
+    assert final_plan.first_safe_review_or_mutation_action is not None
+    assert (
+        final_plan.first_safe_review_or_mutation_action.tool_name
+        == "describe_staged_revision"
+    )
 
 
 def test_stale_column_same_slot_drift_keeps_restage_route(

@@ -3052,6 +3052,15 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
     assert result["lineage"]["alternative_gate_status"] == (
         "alternative_to_applied_source"
     )
+    assert result["apply_check"]["first_safe_next_action"]["tool_name"] == (
+        "describe_staged_revision"
+    )
+    assert result["apply_check"]["first_safe_next_action"]["queue"] == (
+        "semantic_review_required"
+    )
+    assert result["apply_check"]["first_safe_next_action"]["mutation_scope"] == (
+        "none"
+    )
     assert result["repair_actions"][0]["tool_name"] == (
         "stage_map_assertion_change"
     )

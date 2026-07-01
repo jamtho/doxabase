@@ -327,9 +327,12 @@ preflight before apply/restage actions. The same imports appear in
 plan no longer reports blocking preflight actions.
 `first_safe_review_or_mutation_action` repeats the first blocking preflight
 action in this state, while `first_mutation_action` stays empty; after the gate
-clears, `first_mutation_action` points at the first actionable mutation frontier
-item and the safe first action points at any earlier read-only or
-`mutation_scope="none"` review suggestion before falling back to that mutation.
+clears, `first_mutation_action` points at the first mutation frontier item whose
+`requires_semantic_review_before_mutation` is false. If every frontier item is
+still semantic-review-gated, `first_mutation_action` stays empty while
+`mutation_frontier_items[]` preserves the post-review action and reason. The
+safe first action points at any earlier read-only or `mutation_scope="none"`
+review suggestion before falling back to an ungated mutation.
 Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
 `suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
 `writes_history`, `writes_files`, and `writes_storage`; use those fields before
@@ -1260,7 +1263,10 @@ their compact `next_action`, review/export suggestions, and apply suggestion
 name the semantic gate; the apply suggestion uses `Apply only after semantic
 review` and names the already-applied source. Queue items expose the same gate
 as `alternative_semantic_review_required`, `alternative_applied_source_iri`,
-and `alternative_applied_revision_iri`.
+and `alternative_applied_revision_iri`. On direct apply checks, `next_action`
+can still carry that post-review apply or repair route, but
+`first_safe_next_action` points to semantic inspection with
+`queue="semantic_review_required"` and `mutation_scope="none"`.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then rerun `plan_staged_revision_recovery(current_staged_work_only=True)` or
