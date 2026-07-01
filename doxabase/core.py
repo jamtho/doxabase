@@ -20578,6 +20578,7 @@ class DoxaBase:
         actions: list[SuggestedNextAction] = []
         dataset_iri = dataset.iri
         profile_summary = dataset.profile_summary
+        ordinary_query_evidence_exclusions: set[str] = set()
         if profile_summary.profile_run_candidates:
             profile_candidates = profile_summary.profile_run_candidates
             for candidate_index, candidate_run in enumerate(
@@ -20625,18 +20626,24 @@ class DoxaBase:
                     )
                 )
         elif profile_summary.evidence_iris:
-            actions.extend(
-                self._query_context_singleton_profile_evidence_actions(
-                    dataset,
-                    profile_summary,
-                    issues=issues,
-                )
+            singleton_actions = self._query_context_singleton_profile_evidence_actions(
+                dataset,
+                profile_summary,
+                issues=issues,
+            )
+            actions.extend(singleton_actions)
+            ordinary_query_evidence_exclusions.update(
+                action.arguments["evidence_iri"]
+                for action in singleton_actions
+                if action.tool_name == "draft_query_evidence_storage_overlay"
+                and isinstance(action.arguments.get("evidence_iri"), str)
             )
         actions.extend(
             self._query_context_ordinary_query_evidence_actions(
                 dataset,
                 profile_summary,
                 issues=issues,
+                exclude_evidence_iris=ordinary_query_evidence_exclusions,
             )
         )
         if (
@@ -20887,19 +20894,15 @@ class DoxaBase:
         profile_summary: ProfileSummary,
         *,
         issues: list[QueryPlanningIssue],
+        exclude_evidence_iris: set[str] | None = None,
     ) -> list[SuggestedNextAction]:
         if not self._query_context_should_suggest_evidence_storage_overlay(
             issues
         ):
             return []
-        excluded_evidence_iris = set(profile_summary.evidence_iris)
-        excluded_evidence_iris.update(
-            candidate.evidence_iri
-            for candidate in profile_summary.profile_run_candidates
-        )
         evidence_iris = self._query_context_dataset_query_evidence_iris(
             dataset.iri,
-            exclude_evidence_iris=excluded_evidence_iris,
+            exclude_evidence_iris=exclude_evidence_iris or set(),
         )
         actions: list[SuggestedNextAction] = []
         for evidence_iri in evidence_iris[:3]:

@@ -1249,6 +1249,10 @@ the requested dataset.
 `describe_query_context` may suggest this helper directly for singleton
 query/profile evidence with physical blockers; those suggested arguments contain
 review placeholders and must be replaced before use.
+In mixed profile-plus-query contexts, `describe_query_context` may return both
+`describe_profile_run` and `draft_query_evidence_storage_overlay`. Keep both:
+the profile action preserves semantic/profile context, while the overlay action
+uses ordinary query evidence to stage reviewed storage and layout metadata.
 
 The helper does not infer storage values from query text, result artifacts, or
 logs. The caller supplies reviewed values such as `storage_protocol`,

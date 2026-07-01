@@ -3984,6 +3984,12 @@ few useful gaps:
   imported recovery sessions now gate the summary's first safe action to
   `describe_staged_revision_recovery_session` and suppress the first mutation
   shortcut, while keeping mutation-frontier counts visible for orientation.
+- A query/profile bridge scout found mixed profile-run and ordinary query
+  evidence could hide the `draft_query_evidence_storage_overlay` route because
+  query-result evidence was excluded as profile-summary evidence. Query
+  contexts now only suppress ordinary overlay duplicates that were already
+  produced by singleton profile evidence, so profile-run inspection and ordinary
+  query-evidence storage overlays can appear together.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

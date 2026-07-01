@@ -648,6 +648,10 @@ support. Keep the verification status honest: a blocked query may support a
 candidate route, but only real listing or query evidence should justify
 `rc:VerifiedByListingLayout` or `rc:VerifiedByQueryLayout`. Stage, check, apply,
 and rerun `describe_query_context` before drafting the next plan.
+Mixed profile/query contexts can show profile-run inspection and ordinary query
+evidence overlay actions together. Follow the profile action for semantic
+profile context, but do not treat it as a substitute for the overlay action when
+the ordinary query evidence names the reviewed storage route.
 When `describe_query_context.suggested_next_actions` proposes this overlay from
 singleton evidence, use the action as a template only: replace placeholder
 storage protocol, root, location kind, path template, file format, and layout

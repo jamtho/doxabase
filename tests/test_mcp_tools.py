@@ -1599,6 +1599,84 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert plan["scan"]["uri_template"] == str(csv_path)
 
 
+def test_query_context_keeps_query_overlay_with_profile_run_candidates(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n2,pending\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.json"
+    result_path.write_text('{"paid": 1, "pending": 1}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    profile_evidence = "https://example.test/project#OrdersProfileEvidence"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary="Orders profile run recorded row and status evidence.",
+        evidence_summary="Synthetic profile run before query planning.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=profile_evidence,
+        row_count=2,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": "https://example.test/project#OrdersStatus",
+                "column_name": "status",
+                "summary": "Status was profiled in the same run.",
+                "row_count": 2,
+            }
+        ],
+    )
+    query_result = record_query_result_tool(
+        db,
+        summary="Orders status aggregate scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(tmp_path / "orders_status.sql"),
+        query_hash="sha256:mixed-profile-query",
+        result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
+        row_count=2,
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+
+    assert context["readiness"] == "insufficient_metadata"
+    assert context["profile_summary"]["profile_run_candidates"][0][
+        "evidence_iri"
+    ] == profile_evidence
+    action_tools = [
+        action["tool_name"] for action in context["suggested_next_actions"]
+    ]
+    assert action_tools[:2] == [
+        "describe_profile_run",
+        "draft_query_evidence_storage_overlay",
+    ]
+    overlay_actions = [
+        action
+        for action in context["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_evidence_storage_overlay"
+    ]
+    assert len(overlay_actions) == 1
+    overlay_action = overlay_actions[0]
+    assert overlay_action["arguments"]["dataset_iri"] == dataset
+    assert overlay_action["arguments"]["evidence_iri"] == (
+        query_result["evidence_iri"]
+    )
+    assert overlay_action["source_query_evidence"]["query_hash"] == (
+        "sha256:mixed-profile-query"
+    )
+    assert overlay_action["source_query_evidence"]["scanned_source_paths"] == [
+        str(csv_path)
+    ]
+
+
 def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidence(
     tmp_path: Path,
 ) -> None:
