@@ -9,15 +9,19 @@ if str(ROOT) not in sys.path:
 
 from doxabase import DoxaBase
 from doxabase.mcp_tools import load_example_fixtures_tool
+from examples._runtime_paths import example_artifact, reset_file
 
 
-CAPSULE = Path("/tmp/doxabase-first-workflow.sqlite")
+CAPSULE = example_artifact(
+    "first-workflow",
+    "/tmp/doxabase-first-workflow.sqlite",
+    filename="capsule.sqlite",
+)
 AGENT = "urn:doxabase:first-workflow-agent"
 
 
 def main() -> None:
-    if CAPSULE.exists():
-        CAPSULE.unlink()
+    reset_file(CAPSULE)
 
     db = DoxaBase.create(CAPSULE, overwrite=True)
     loaded = load_example_fixtures_tool(db, replace=True)

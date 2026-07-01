@@ -223,6 +223,11 @@ repair to a non-executed DuckDB handoff. Use
 same-slot rebase loop. Use `examples/adversarial-field-trial.py` when you want
 a more demanding staged-revision and systematisation exercise.
 
+The examples keep stable `/tmp/doxabase-*` paths by default for easy manual
+inspection. When running examples concurrently, set
+`DOXABASE_EXAMPLE_RUN_ROOT=/tmp/some-run-root`; each example will write under a
+name-specific subdirectory there instead of sharing the default paths.
+
 ## Python Capsule Example
 
 ```python

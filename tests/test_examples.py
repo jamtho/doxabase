@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -8,34 +9,35 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_adversarial_field_trial_example_runs() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "examples" / "adversarial-field-trial.py")],
+def _run_example(script_name: str, tmp_path: Path) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["DOXABASE_EXAMPLE_RUN_ROOT"] = str(tmp_path / "example-runs")
+    return subprocess.run(
+        [sys.executable, str(ROOT / "examples" / script_name)],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
+        env=env,
     )
 
+
+def test_adversarial_field_trial_example_runs(tmp_path: Path) -> None:
+    result = _run_example("adversarial-field-trial.py", tmp_path)
     report_path = Path(result.stdout.strip())
     report = report_path.read_text(encoding="utf-8")
 
-    assert report_path == Path("/tmp/doxabase-adversarial-field-trial-report.md")
+    assert report_path == (
+        tmp_path / "example-runs" / "doxabase-adversarial-field-trial" / "report.md"
+    )
     assert "Pattern-first hunch" in report
     assert "Premature map caveat candidate" in report
     assert "staged patches are not applied to the current graphs" in report
     assert "severity must be Minor, Moderate, or Severe" in report
 
 
-def test_first_workflow_example_runs() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "examples" / "first-workflow.py")],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_first_workflow_example_runs(tmp_path: Path) -> None:
+    result = _run_example("first-workflow.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase First Workflow" in output
@@ -52,15 +54,8 @@ def test_first_workflow_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
-def test_profile_frontier_workflow_example_runs() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "examples" / "profile-frontier-workflow.py")],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_profile_frontier_workflow_example_runs(tmp_path: Path) -> None:
+    result = _run_example("profile-frontier-workflow.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase Profile Frontier Workflow" in output
@@ -78,18 +73,8 @@ def test_profile_frontier_workflow_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
-def test_staged_semantic_repair_smoke_example_runs() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "examples" / "staged-semantic-repair-smoke.py"),
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("staged-semantic-repair-smoke.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase Staged Semantic Repair Smoke" in output
@@ -110,15 +95,8 @@ def test_staged_semantic_repair_smoke_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
-def test_local_csv_query_smoke_example_runs() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "examples" / "local-csv-query-smoke.py")],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_local_csv_query_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("local-csv-query-smoke.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase Local CSV Query Smoke" in output
@@ -137,18 +115,8 @@ def test_local_csv_query_smoke_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
-def test_missing_metadata_query_repair_smoke_example_runs() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "examples" / "missing-metadata-query-repair-smoke.py"),
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_missing_metadata_query_repair_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("missing-metadata-query-repair-smoke.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase Missing Metadata Query Repair Smoke" in output
@@ -165,15 +133,8 @@ def test_missing_metadata_query_repair_smoke_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
-def test_ais_query_overlay_smoke_example_runs() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "examples" / "ais-query-overlay-smoke.py")],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
+def test_ais_query_overlay_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("ais-query-overlay-smoke.py", tmp_path)
     output = result.stdout
 
     assert "# DoxaBase AIS Query Overlay Smoke" in output

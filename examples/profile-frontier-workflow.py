@@ -9,15 +9,23 @@ if str(ROOT) not in sys.path:
 
 from doxabase import DoxaBase
 from doxabase.mcp_tools import load_example_fixtures_tool
+from examples._runtime_paths import example_artifact, example_run_dir, reset_file
 
 
-CAPSULE = Path("/tmp/doxabase-profile-frontier-workflow.sqlite")
+RUN_DIR = example_run_dir(
+    "profile-frontier-workflow",
+    "/tmp/doxabase-profile-frontier-workflow",
+)
+CAPSULE = example_artifact(
+    "profile-frontier-workflow",
+    "/tmp/doxabase-profile-frontier-workflow.sqlite",
+    filename="capsule.sqlite",
+)
 BASE = "https://example.test/profile-frontier-workflow#"
 
 
 def main() -> None:
-    if CAPSULE.exists():
-        CAPSULE.unlink()
+    reset_file(CAPSULE)
 
     db = DoxaBase.create(CAPSULE, overwrite=True)
     loaded = load_example_fixtures_tool(db, replace=True)
@@ -68,7 +76,7 @@ def _record_synthetic_profile_run(db: DoxaBase) -> tuple[str, str]:
         label="Orders local scratch storage",
         storage_protocol="rc:LocalFilesystemStorage",
         location_kind="directory",
-        storage_root="/tmp/doxabase-profile-frontier-workflow/warehouse",
+        storage_root=str(RUN_DIR / "warehouse"),
         path_templates=["orders/current.csv"],
         layout_verification_status="rc:VerifiedByListingLayout",
         datasets=[dataset_iri],

@@ -9,9 +9,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from doxabase import DoxaBase
+from examples._runtime_paths import example_run_dir
 
 
-RUN_DIR = Path("/tmp/doxabase-ais-query-overlay-smoke")
+RUN_DIR = example_run_dir(
+    "ais-query-overlay-smoke",
+    "/tmp/doxabase-ais-query-overlay-smoke",
+)
 CAPSULE = RUN_DIR / "capsule.sqlite"
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
 AIS = "https://richcanopy.org/example/manifest/ais#"

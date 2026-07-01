@@ -130,6 +130,10 @@ the graph. To continue the local query handoff, reopen the scratch capsule,
 call `describe_query_context()` for the selected table, follow the first
 `draft_query_plan` action, and stop before any network/S3 access unless the
 trial explicitly approves it.
+When multiple agents or pytest runs may execute examples at the same time, set
+`DOXABASE_EXAMPLE_RUN_ROOT=/tmp/doxabase-trial-$USER-$PID` (or another unique
+scratch root) before running the scripts. The examples keep the stable
+`/tmp/doxabase-*` paths only when that variable is unset.
 
 For a small profile-frontier workflow, run:
 

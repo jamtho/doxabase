@@ -8,16 +8,20 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from doxabase import DoxaBase
+from examples._runtime_paths import example_artifact, reset_file
 
 
-CAPSULE = Path("/tmp/doxabase-staged-semantic-repair-smoke.sqlite")
+CAPSULE = example_artifact(
+    "staged-semantic-repair-smoke",
+    "/tmp/doxabase-staged-semantic-repair-smoke.sqlite",
+    filename="capsule.sqlite",
+)
 BASE = "https://example.test/staged-semantic-repair-smoke#"
 RC = "https://richcanopy.org/ns/rc#"
 
 
 def main() -> None:
-    if CAPSULE.exists():
-        CAPSULE.unlink()
+    reset_file(CAPSULE)
 
     db = DoxaBase.create(CAPSULE, overwrite=True)
     orders = f"{BASE}Orders"

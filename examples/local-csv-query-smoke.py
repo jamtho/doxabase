@@ -12,9 +12,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from doxabase import DoxaBase
+from examples._runtime_paths import example_run_dir
 
 
-RUN_DIR = Path("/tmp/doxabase-local-csv-query-smoke")
+RUN_DIR = example_run_dir(
+    "local-csv-query-smoke",
+    "/tmp/doxabase-local-csv-query-smoke",
+)
 CAPSULE = RUN_DIR / "capsule.sqlite"
 CSV_PATH = RUN_DIR / "orders.csv"
 QUERY_PATH = RUN_DIR / "orders_status_summary.sql"

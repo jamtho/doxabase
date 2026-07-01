@@ -9,9 +9,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from doxabase import DoxaBase
+from examples._runtime_paths import example_run_dir
 
 
-RUN_DIR = Path("/tmp/doxabase-missing-metadata-query-repair-smoke")
+RUN_DIR = example_run_dir(
+    "missing-metadata-query-repair-smoke",
+    "/tmp/doxabase-missing-metadata-query-repair-smoke",
+)
 CAPSULE = RUN_DIR / "capsule.sqlite"
 CSV_PATH = RUN_DIR / "orders.csv"
 BASE = "https://example.test/missing-metadata-query-repair-smoke#"

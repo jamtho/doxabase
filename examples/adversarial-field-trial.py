@@ -9,16 +9,24 @@ if str(ROOT) not in sys.path:
 
 from doxabase import DoxaBase
 from doxabase.mcp_tools import load_example_fixtures_tool
+from examples._runtime_paths import example_artifact, reset_file
 
 
-CAPSULE = Path("/tmp/doxabase-adversarial-field-trial.sqlite")
-REPORT = Path("/tmp/doxabase-adversarial-field-trial-report.md")
+CAPSULE = example_artifact(
+    "adversarial-field-trial",
+    "/tmp/doxabase-adversarial-field-trial.sqlite",
+    filename="capsule.sqlite",
+)
+REPORT = example_artifact(
+    "adversarial-field-trial",
+    "/tmp/doxabase-adversarial-field-trial-report.md",
+    filename="report.md",
+)
 AGENT = "urn:doxabase:adversarial-field-trial-agent"
 
 
 def main() -> None:
-    if CAPSULE.exists():
-        CAPSULE.unlink()
+    reset_file(CAPSULE)
 
     db = DoxaBase.create(CAPSULE, overwrite=True)
     loaded = load_example_fixtures_tool(db, replace=True)
