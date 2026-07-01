@@ -27970,9 +27970,15 @@ class DoxaBase:
                 and "shares_dataset_path_template" not in match_reasons
             ):
                 score -= 15
+            route_role_labels = [
+                role.label or self._local_name(role.iri)
+                for role in access.route_roles
+            ]
             candidate = {
                 "storage_access": to_jsonable(self._summary_from_description(access)),
                 "storage_access_iri": access.iri,
+                "route_roles": to_jsonable(access.route_roles),
+                "route_role_labels": route_role_labels,
                 "storage_protocol": to_jsonable(access.storage_protocol),
                 "location_kind": access.location_kind,
                 "storage_root": access.storage_root,

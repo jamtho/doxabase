@@ -1163,6 +1163,7 @@ def test_query_storage_frontier_tool_route_regression(
         iri=f"{base}orphan_archive_storage",
         label="Orphan archive storage",
         storage_protocol="rc:LocalFilesystemStorage",
+        route_roles=["rc:ArchiveRoute"],
         storage_root=str(tmp_path / "warehouse"),
         layout_verification_status="rc:VerifiedByListingLayout",
     )
@@ -1226,6 +1227,17 @@ def test_query_storage_frontier_tool_route_regression(
         ]
     }
     assert archive_storage["iri"] in candidate_storage_iris
+    archive_candidate = next(
+        candidate
+        for candidate in missing_storage_group["repair_context"][
+            "candidate_existing_storage_accesses"
+        ]
+        if candidate["storage_access"]["iri"] == archive_storage["iri"]
+    )
+    assert [role["iri"] for role in archive_candidate["route_roles"]] == [
+        RC + "ArchiveRoute"
+    ]
+    assert archive_candidate["route_role_labels"] == ["archive route"]
 
     context = describe_query_context_tool(db, iri=orders)
     relation_candidate_index = next(

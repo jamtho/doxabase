@@ -276,7 +276,11 @@ Start with `describe_query_context(dataset_iri)`:
    when the reviewed route is production/current/canonical, sample, archive, or
    backfill. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
-   use those ranked candidates for review only. A candidate can carry
+   use those ranked candidates for review only. Existing-candidate rows carry
+   `route_roles` and `route_role_labels`; prefer those reviewed route-intent
+   fields over labels or path strings when deciding whether to link a
+   production/current, sample, archive, backfill, or canonical route. A
+   candidate can carry
    `pending_staged_repair_iris` and `candidate_status="already_pending"` when
    the exact dataset/storage link is already staged. When any visible candidate
    is already pending, the repair hint and lifted repair group also expose

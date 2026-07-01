@@ -3385,7 +3385,11 @@ Missing-storage repair actions have stable `action_type` values:
 `stage_existing_storage_access_link`.
 When existing map storage accesses are present, the repair hint also carries
 bounded `candidate_existing_storage_accesses` so agents can review likely link
-targets before filling the staged assertion's `object`. In the
+targets before filling the staged assertion's `object`. Candidate rows include
+`route_roles` and `route_role_labels`; prefer those reviewed route-intent facts
+over labels or path names when choosing between production/current, sample,
+archive, backfill, or canonical storage routes before the dataset link exists.
+In the
 staged or direct new-storage template, omit optional storage-owned
 `path_templates` when
 the dataset or partition already carries the reviewed file/object path template;

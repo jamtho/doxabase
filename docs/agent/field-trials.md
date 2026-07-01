@@ -4113,6 +4113,13 @@ few useful gaps:
   `query_evidence_storage_overlay_blocker` with the missing seed terms and a
   stale-seed handoff `export_preflight` action, preserving the workflow instead
   of exposing a raw patch-role error.
+- An existing-storage query-planning trial found the staged-review/apply/recheck
+  path worked, but pre-link `candidate_existing_storage_accesses[]` cards did
+  not show whether a candidate had reviewed current, sample, archive, or
+  production route intent. Missing-storage existing-access candidates now expose
+  `route_roles` and `route_role_labels`, including in lifted repair-group
+  contexts, so agents can choose among existing storage accesses before staging
+  the dataset link.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

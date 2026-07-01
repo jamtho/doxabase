@@ -19254,6 +19254,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         "https://example.test/project#messages_storage",
         label="Messages storage",
         storage_protocol="rc:LocalFilesystemStorage",
+        route_roles=["rc:CurrentRoute"],
         storage_root=str(tmp_path / "warehouse"),
         layout_verification_status="rc:VerifiedByListingLayout",
     )
@@ -19272,6 +19273,10 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert candidate["candidate_rank"] == 1
     assert candidate["storage_access_iri"] == storage.iri
     assert candidate["storage_access"]["iri"] == storage.iri
+    assert [role["iri"] for role in candidate["route_roles"]] == [
+        RC + "CurrentRoute"
+    ]
+    assert candidate["route_role_labels"] == ["current route"]
     assert candidate["storage_protocol"]["iri"] == RC + "LocalFilesystemStorage"
     assert candidate["storage_root"] == str(tmp_path / "warehouse")
     assert candidate["path_templates"] == []
@@ -19290,6 +19295,12 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert repair_group.repair_context[
         "candidate_existing_storage_accesses"
     ][0]["storage_access_iri"] == storage.iri
+    assert [
+        role["iri"]
+        for role in repair_group.repair_context[
+            "candidate_existing_storage_accesses"
+        ][0]["route_roles"]
+    ] == [RC + "CurrentRoute"]
     link_action = repair_hint["actions"][2]
 
     assert link_action["action_type"] == "stage_existing_storage_access_link"
