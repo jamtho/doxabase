@@ -2130,6 +2130,19 @@ def test_export_preflight_tool_reports_shareability_hints_for_home_paths(
     assert result["sensitive_literal_count"] == 0
     assert result["privacy_warnings"] == []
     assert result["shareability_hints"] == ["absolute_local_home_path"]
+    assert result["shareability_hint_count"] == 1
+    assert result["returned_shareability_hint_count"] == 1
+    assert result["omitted_shareability_hint_count"] == 0
+    assert result["shareability_hint_matches"][0]["export_part"] == "graphs"
+    assert result["shareability_hint_matches"][0]["hint_code"] == (
+        "absolute_local_home_path"
+    )
+    assert result["shareability_hint_matches"][0]["predicate"] == (
+        RC + "storageRoot"
+    )
+    assert "/Users/example/private/orders.csv" not in json.dumps(
+        result["shareability_hint_matches"]
+    )
     assert result["artifact_disposition"] == (
         "local_only_pending_shareability_review"
     )
@@ -12547,6 +12560,12 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     )
     assert result["privacy_warnings"] == result["export"]["privacy_warnings"]
     assert result["shareability_hints"] == result["export"]["shareability_hints"]
+    assert result["shareability_hint_count"] == (
+        result["export"]["shareability_hint_count"]
+    )
+    assert result["shareability_hint_matches"] == (
+        result["export"]["shareability_hint_matches"]
+    )
     assert result["artifact_disposition"] == result["export"]["artifact_disposition"]
     assert result["git_safe"] is False
     assert result["candidates"][0]["relation_reasons"]

@@ -1106,6 +1106,10 @@ context.matches
 context.privacy_warnings
 context.scanner_note
 context.shareability_hints
+context.shareability_hint_count
+context.returned_shareability_hint_count
+context.omitted_shareability_hint_count
+context.shareability_hint_matches
 context.artifact_disposition
 context.git_safe
 context.seed_profile_observations
@@ -5456,6 +5460,10 @@ preflight.warnings
 preflight.scanner_note
 preflight.suggested_next_actions
 preflight.suggested_next_calls
+preflight.shareability_hint_count
+preflight.returned_shareability_hint_count
+preflight.omitted_shareability_hint_count
+preflight.shareability_hint_matches
 ```
 
 `export_kind` is one of `graph`, `trig`, `revision_snapshots`, or
@@ -5484,6 +5492,27 @@ match.match_kind
 match.redacted_snippet
 match.revision_iri
 ```
+
+Each `shareability_hint_matches[]` item is a `ShareabilityHintMatch`:
+
+```python
+match.export_part
+match.match_id
+match.hint_code
+match.graph
+match.subject
+match.predicate
+match.object_kind
+match.term_position
+match.term_kind
+match.revision_iri
+match.line_number
+```
+
+These records intentionally locate scanner-clean shareability hints without
+including the raw matched local path or endpoint text. Graph and snapshot
+matches use graph/subject/predicate/term fields; Markdown review exports use
+`line_number`.
 
 `match_id` is stable over redacted locator fields and does not hash the raw
 sensitive-looking value. `export_part` is `graphs` or `revision_snapshots`, so

@@ -123,6 +123,7 @@ SHAREABILITY_HINT_MESSAGES: dict[str, str] = {
 }
 
 DEFAULT_ARTIFACT_DISPOSITION = "local_only_pending_shareability_review"
+DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT = 20
 
 MISSING_STORAGE_GENERIC_TOKENS = {
     "archive",
@@ -742,6 +743,21 @@ class ExportPreflightMatch:
 
 
 @dataclass(frozen=True)
+class ShareabilityHintMatch:
+    export_part: str
+    match_id: str
+    hint_code: str
+    graph: str | None = None
+    subject: str | None = None
+    predicate: str | None = None
+    object_kind: str | None = None
+    term_position: str | None = None
+    term_kind: str | None = None
+    revision_iri: str | None = None
+    line_number: int | None = None
+
+
+@dataclass(frozen=True)
 class ExportPreflightRecord:
     export_kind: str
     decision: str
@@ -773,6 +789,12 @@ class ExportPreflightRecord:
     validation_results: list[ValidationDiagnostic] = field(default_factory=list)
     would_block_invalid_export: bool = False
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -800,6 +822,12 @@ class GraphExportRecord:
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -840,6 +868,12 @@ class ContextSliceExportRecord:
     recommended_import_tool: str | None = "doxabase.import_trig"
     recovery_complete: bool = False
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -917,6 +951,12 @@ class RevisionSnapshotBundleExportRecord:
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -954,6 +994,12 @@ class HandoffBundleExportRecord:
         "confidential project facts."
     )
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
     artifact_kind: str = "handoff_bundle"
@@ -1592,6 +1638,12 @@ class StagedGraphRevisionExportRecord:
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
     artifact_kind: str = "staged_revision_review_markdown"
@@ -1778,6 +1830,12 @@ class StagedGraphRevisionsExportRecord:
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
     artifact_kind: str = "staged_revisions_review_markdown"
@@ -1885,6 +1943,12 @@ class ProfileInsightReviewBundleRecord:
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -4760,6 +4824,12 @@ class ContextSlice:
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     shareability_hints: list[str] = field(default_factory=list)
+    shareability_hint_count: int = 0
+    returned_shareability_hint_count: int = 0
+    omitted_shareability_hint_count: int = 0
+    shareability_hint_matches: list[ShareabilityHintMatch] = field(
+        default_factory=list
+    )
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
 
@@ -14390,6 +14460,9 @@ class DoxaBase:
                 limit=privacy_scan_limit,
             )
         )
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_context_triples(triples)
+        )
         shareability_hints = self._shareability_hints_for_context_triples(triples)
         privacy_warnings = self._sensitive_literal_warnings(
             match_count=sensitive_literal_count,
@@ -14490,6 +14563,13 @@ class DoxaBase:
             privacy_warnings=privacy_warnings,
             scanner_note=scanner_note,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
             seed_profile_observations=list(seed_profile_observations.values()),
             dataset_contexts=list(dataset_contexts.values()),
             pattern_contexts=list(pattern_contexts.values()),
@@ -50023,6 +50103,13 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=True,
             )
         )
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_markdown(
+                data,
+                export_part="staged_revision_markdown",
+                final_privacy_warning_line_numbers=bool(privacy_warnings),
+            )
+        )
         shareability_hints = self._shareability_hints_for_text(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
@@ -50046,6 +50133,13 @@ class DoxaBase:
             scanner_clean=sensitive_literal_count == 0,
             would_block_sensitive_export=sensitive_literal_count > 0,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     def export_profile_insight_review_bundle(
@@ -50326,6 +50420,22 @@ class DoxaBase:
             ),
             shareability_hints=(
                 export.shareability_hints if export is not None else []
+            ),
+            shareability_hint_count=(
+                export.shareability_hint_count if export is not None else 0
+            ),
+            returned_shareability_hint_count=(
+                export.returned_shareability_hint_count
+                if export is not None
+                else 0
+            ),
+            omitted_shareability_hint_count=(
+                export.omitted_shareability_hint_count
+                if export is not None
+                else 0
+            ),
+            shareability_hint_matches=(
+                export.shareability_hint_matches if export is not None else []
             ),
             artifact_disposition=(
                 export.artifact_disposition
@@ -52378,6 +52488,13 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=True,
             )
         )
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_markdown(
+                data,
+                export_part="staged_revisions_markdown",
+                final_privacy_warning_line_numbers=bool(privacy_warnings),
+            )
+        )
         shareability_hints = self._shareability_hints_for_text(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
@@ -52404,6 +52521,13 @@ class DoxaBase:
             scanner_clean=sensitive_literal_count == 0,
             would_block_sensitive_export=sensitive_literal_count > 0,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     def _ensure_staged_revision_exportable(self, iri: str) -> None:
@@ -59775,6 +59899,13 @@ class DoxaBase:
         sensitive_literal_count, matches, omitted_match_count = (
             self._context_slice_sensitive_matches(export_triples, limit=limit)
         )
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_context_triples(
+                export_triples,
+                export_part="context_slice_export",
+                limit=limit,
+            )
+        )
         shareability_hints = self._shareability_hints_for_context_triples(
             export_triples
         )
@@ -59899,6 +60030,13 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     def _context_slice_export_history_validation_closure(
@@ -60458,6 +60596,8 @@ class DoxaBase:
         graph_sensitive_count = 0
         graph_privacy_warnings: list[str] = []
         graph_shareability_hints: list[str] = []
+        graph_shareability_hint_count = 0
+        graph_shareability_hint_matches: list[ShareabilityHintMatch] = []
         if graph_names:
             graph_scan = self.scan_sensitive_literals(graph_names, limit=limit)
             graph_matches = self._export_preflight_graph_matches(graph_scan.matches)
@@ -60466,6 +60606,13 @@ class DoxaBase:
             )
             graph_shareability_hints = self._shareability_hints_for_graphs(
                 graph_names
+            )
+            graph_shareability_hint_count, graph_shareability_hint_matches = (
+                self._shareability_hint_matches_for_graphs(
+                    graph_names,
+                    export_part="graphs",
+                    limit=limit,
+                )
             )
         validation = self._export_validation_result(
             graph_names,
@@ -60489,8 +60636,25 @@ class DoxaBase:
         snapshot_shareability_hints = self._shareability_hints_for_snapshot_entries(
             snapshot_entries
         )
+        snapshot_shareability_match_limit = max(
+            0,
+            limit - len(graph_shareability_hint_matches),
+        )
+        snapshot_shareability_hint_count, snapshot_shareability_hint_matches = (
+            self._shareability_hint_matches_for_snapshot_entries(
+                snapshot_entries,
+                limit=snapshot_shareability_match_limit,
+            )
+        )
 
         matches = [*graph_matches, *snapshot_matches]
+        shareability_hint_matches = [
+            *graph_shareability_hint_matches,
+            *snapshot_shareability_hint_matches,
+        ]
+        shareability_hint_count = (
+            graph_shareability_hint_count + snapshot_shareability_hint_count
+        )
         sensitive_literal_count = graph_sensitive_count + snapshot_sensitive_count
         privacy_warnings = [
             *graph_privacy_warnings,
@@ -60560,6 +60724,13 @@ class DoxaBase:
             validation_results=validation.results if validation is not None else [],
             would_block_invalid_export=validation_blocks_export,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
         actions = self._export_preflight_suggested_actions(record)
         return replace(
@@ -60594,6 +60765,9 @@ class DoxaBase:
             self._revision_snapshot_export_privacy_warnings(entries)
         )
         shareability_hints = self._shareability_hints_for_snapshot_entries(entries)
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_snapshot_entries(entries)
+        )
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -60617,6 +60791,13 @@ class DoxaBase:
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     @staticmethod
@@ -60698,12 +60879,33 @@ class DoxaBase:
             graph_names
         )
         trig_shareability_hints = self._shareability_hints_for_graphs(graph_names)
+        trig_shareability_hint_count, trig_shareability_hint_matches = (
+            self._shareability_hint_matches_for_graphs(graph_names)
+        )
         snapshot_sensitive_count, snapshot_privacy_warnings = (
             self._revision_snapshot_export_privacy_warnings(snapshot_entries)
         )
         snapshot_shareability_hints = self._shareability_hints_for_snapshot_entries(
             snapshot_entries
         )
+        snapshot_shareability_match_limit = max(
+            0,
+            DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT
+            - len(trig_shareability_hint_matches),
+        )
+        snapshot_shareability_hint_count, snapshot_shareability_hint_matches = (
+            self._shareability_hint_matches_for_snapshot_entries(
+                snapshot_entries,
+                limit=snapshot_shareability_match_limit,
+            )
+        )
+        shareability_hint_count = (
+            trig_shareability_hint_count + snapshot_shareability_hint_count
+        )
+        shareability_hint_matches = [
+            *trig_shareability_hint_matches,
+            *snapshot_shareability_hint_matches,
+        ]
         sensitive_literal_count = trig_sensitive_count + snapshot_sensitive_count
         privacy_warnings = [
             *trig_privacy_warnings,
@@ -60795,6 +60997,13 @@ class DoxaBase:
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,
             shareability_hints=trig_shareability_hints,
+            shareability_hint_count=trig_shareability_hint_count,
+            returned_shareability_hint_count=len(trig_shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                trig_shareability_hint_count - len(trig_shareability_hint_matches),
+            ),
+            shareability_hint_matches=trig_shareability_hint_matches,
         )
         snapshot_record = RevisionSnapshotBundleExportRecord(
             path=str(revision_snapshot_path),
@@ -60807,6 +61016,14 @@ class DoxaBase:
             sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=snapshot_privacy_warnings,
             shareability_hints=snapshot_shareability_hints,
+            shareability_hint_count=snapshot_shareability_hint_count,
+            returned_shareability_hint_count=len(snapshot_shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                snapshot_shareability_hint_count
+                - len(snapshot_shareability_hint_matches),
+            ),
+            shareability_hint_matches=snapshot_shareability_hint_matches,
         )
         recommended_import_tool = (
             "doxabase.import_handoff_bundle"
@@ -60828,6 +61045,13 @@ class DoxaBase:
             warnings=warnings,
             scanner_note=scanner_note,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
             recommended_import_tool=recommended_import_tool,
             validation_scope=validation.scope if validation is not None else None,
             validation_conforms=(
@@ -60877,6 +61101,13 @@ class DoxaBase:
             warnings=warnings,
             scanner_note=scanner_note,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
             recommended_import_tool=recommended_import_tool,
             validation_scope=validation.scope if validation is not None else None,
             validation_conforms=(
@@ -60906,6 +61137,10 @@ class DoxaBase:
         warnings: list[str],
         scanner_note: str,
         shareability_hints: list[str],
+        shareability_hint_count: int,
+        returned_shareability_hint_count: int,
+        omitted_shareability_hint_count: int,
+        shareability_hint_matches: list[ShareabilityHintMatch],
         recommended_import_tool: str,
         validation_scope: str | None,
         validation_conforms: bool | None,
@@ -60936,6 +61171,16 @@ class DoxaBase:
                     "validation_results": to_jsonable(trig.validation_results),
                     "would_block_invalid_export": trig.would_block_invalid_export,
                     "shareability_hints": trig.shareability_hints,
+                    "shareability_hint_count": trig.shareability_hint_count,
+                    "returned_shareability_hint_count": (
+                        trig.returned_shareability_hint_count
+                    ),
+                    "omitted_shareability_hint_count": (
+                        trig.omitted_shareability_hint_count
+                    ),
+                    "shareability_hint_matches": to_jsonable(
+                        trig.shareability_hint_matches
+                    ),
                     "artifact_disposition": trig.artifact_disposition,
                     "git_safe": trig.git_safe,
                 },
@@ -60958,6 +61203,18 @@ class DoxaBase:
                     ),
                     "privacy_warnings": revision_snapshots.privacy_warnings,
                     "shareability_hints": revision_snapshots.shareability_hints,
+                    "shareability_hint_count": (
+                        revision_snapshots.shareability_hint_count
+                    ),
+                    "returned_shareability_hint_count": (
+                        revision_snapshots.returned_shareability_hint_count
+                    ),
+                    "omitted_shareability_hint_count": (
+                        revision_snapshots.omitted_shareability_hint_count
+                    ),
+                    "shareability_hint_matches": to_jsonable(
+                        revision_snapshots.shareability_hint_matches
+                    ),
                     "artifact_disposition": (
                         revision_snapshots.artifact_disposition
                     ),
@@ -61009,6 +61266,10 @@ class DoxaBase:
             "warnings": warnings,
             "scanner_note": scanner_note,
             "shareability_hints": shareability_hints,
+            "shareability_hint_count": shareability_hint_count,
+            "returned_shareability_hint_count": returned_shareability_hint_count,
+            "omitted_shareability_hint_count": omitted_shareability_hint_count,
+            "shareability_hint_matches": to_jsonable(shareability_hint_matches),
             "artifact_disposition": DEFAULT_ARTIFACT_DISPOSITION,
             "git_safe": False,
         }
@@ -62735,6 +62996,9 @@ class DoxaBase:
             graph_names
         )
         shareability_hints = self._shareability_hints_for_graphs(graph_names)
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_graphs(graph_names)
+        )
         validation = self._export_validation_result(
             graph_names,
             validation_scope=validation_scope,
@@ -62778,6 +63042,13 @@ class DoxaBase:
             validation_results=validation.results if validation is not None else [],
             would_block_invalid_export=validation_blocks_export,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     def export_trig(
@@ -62803,6 +63074,9 @@ class DoxaBase:
             graph_names
         )
         shareability_hints = self._shareability_hints_for_graphs(graph_names)
+        shareability_hint_count, shareability_hint_matches = (
+            self._shareability_hint_matches_for_graphs(graph_names)
+        )
         validation = self._export_validation_result(
             graph_names,
             validation_scope=validation_scope,
@@ -62854,6 +63128,13 @@ class DoxaBase:
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,
             shareability_hints=shareability_hints,
+            shareability_hint_count=shareability_hint_count,
+            returned_shareability_hint_count=len(shareability_hint_matches),
+            omitted_shareability_hint_count=max(
+                0,
+                shareability_hint_count - len(shareability_hint_matches),
+            ),
+            shareability_hint_matches=shareability_hint_matches,
         )
 
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:
@@ -63064,6 +63345,237 @@ class DoxaBase:
 
     def _shareability_hints_for_text(self, text: str) -> list[str]:
         return self._shareability_hints_for_values([text])
+
+    @staticmethod
+    def _shareability_hint_match_id(
+        *,
+        export_part: str,
+        hint_code: str,
+        graph: str | None = None,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object_kind: str | None = None,
+        term_position: str | None = None,
+        term_kind: str | None = None,
+        revision_iri: str | None = None,
+        line_number: int | None = None,
+    ) -> str:
+        digest = hashlib.sha256()
+        for value in (
+            export_part,
+            hint_code,
+            graph or "",
+            subject or "",
+            predicate or "",
+            object_kind or "",
+            term_position or "",
+            term_kind or "",
+            revision_iri or "",
+            "" if line_number is None else str(line_number),
+        ):
+            digest.update(value.encode("utf-8"))
+            digest.update(b"\x1f")
+        return f"shareability-sha256:{digest.hexdigest()}"
+
+    def _shareability_hint_matches_for_graphs(
+        self,
+        graph_names: list[str],
+        *,
+        export_part: str = "graphs",
+        limit: int = DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT,
+    ) -> tuple[int, list[ShareabilityHintMatch]]:
+        matches: list[ShareabilityHintMatch] = []
+        match_count = 0
+        for row in self._sensitive_literal_rows(graph_names):
+            hint_codes = self._shareability_hint_codes_for_value(
+                str(row["term_value"])
+            )
+            if not hint_codes:
+                continue
+            graph = str(row["graph"])
+            subject = self._redact_sensitive_context_value(str(row["subject"]))
+            predicate = self._redact_sensitive_context_value(str(row["predicate"]))
+            object_kind = str(row["object_kind"])
+            term_position = str(row["term_position"])
+            term_kind = str(row["term_kind"])
+            for hint_code in hint_codes:
+                match_count += 1
+                if len(matches) >= limit:
+                    continue
+                matches.append(
+                    ShareabilityHintMatch(
+                        export_part=export_part,
+                        match_id=self._shareability_hint_match_id(
+                            export_part=export_part,
+                            hint_code=hint_code,
+                            graph=graph,
+                            subject=subject,
+                            predicate=predicate,
+                            object_kind=object_kind,
+                            term_position=term_position,
+                            term_kind=term_kind,
+                        ),
+                        hint_code=hint_code,
+                        graph=graph,
+                        subject=subject,
+                        predicate=predicate,
+                        object_kind=object_kind,
+                        term_position=term_position,
+                        term_kind=term_kind,
+                    )
+                )
+        return match_count, matches
+
+    def _shareability_hint_matches_for_snapshot_entries(
+        self,
+        entries: Iterable[Mapping[str, Any]],
+        *,
+        limit: int = DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT,
+    ) -> tuple[int, list[ShareabilityHintMatch]]:
+        matches: list[ShareabilityHintMatch] = []
+        match_count = 0
+        for entry in entries:
+            graph_role = str(entry.get("graph_role") or "")
+            revision_iri = str(entry.get("revision_iri") or "")
+            for quad in entry.get("quads", []):
+                if not isinstance(quad, MappingABC):
+                    continue
+                subject = self._redact_sensitive_context_value(
+                    str(quad.get("subject") or "")
+                )
+                predicate = self._redact_sensitive_context_value(
+                    str(quad.get("predicate") or "")
+                )
+                object_kind = str(quad.get("object_kind") or "")
+                for term_position, term_kind, term_value in (
+                    ("subject", "uri", quad.get("subject")),
+                    ("predicate", "uri", quad.get("predicate")),
+                    ("object", quad.get("object_kind"), quad.get("object")),
+                ):
+                    if term_kind not in {"literal", "uri"} or term_value is None:
+                        continue
+                    for hint_code in self._shareability_hint_codes_for_value(
+                        str(term_value)
+                    ):
+                        match_count += 1
+                        if len(matches) >= limit:
+                            continue
+                        matches.append(
+                            ShareabilityHintMatch(
+                                export_part="revision_snapshots",
+                                match_id=self._shareability_hint_match_id(
+                                    export_part="revision_snapshots",
+                                    hint_code=hint_code,
+                                    graph=graph_role,
+                                    subject=subject,
+                                    predicate=predicate,
+                                    object_kind=object_kind,
+                                    term_position=term_position,
+                                    term_kind=str(term_kind),
+                                    revision_iri=revision_iri,
+                                ),
+                                hint_code=hint_code,
+                                graph=graph_role,
+                                subject=subject,
+                                predicate=predicate,
+                                object_kind=object_kind,
+                                term_position=term_position,
+                                term_kind=str(term_kind),
+                                revision_iri=revision_iri,
+                            )
+                        )
+        return match_count, matches
+
+    def _shareability_hint_matches_for_context_triples(
+        self,
+        triples: Iterable[ResourceTriple],
+        *,
+        export_part: str = "context_slice",
+        limit: int = DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT,
+    ) -> tuple[int, list[ShareabilityHintMatch]]:
+        matches: list[ShareabilityHintMatch] = []
+        match_count = 0
+        for triple in triples:
+            term_values: list[tuple[str, str, str]] = []
+            if triple.subject_kind == "uri":
+                term_values.append(("subject", triple.subject_kind, triple.subject))
+            term_values.append(("predicate", "uri", triple.predicate))
+            if triple.object_kind in {"literal", "uri"}:
+                term_values.append(("object", triple.object_kind, triple.object))
+            subject = self._redact_sensitive_context_value(triple.subject)
+            predicate = self._redact_sensitive_context_value(triple.predicate)
+            for term_position, term_kind, value in term_values:
+                for hint_code in self._shareability_hint_codes_for_value(value):
+                    match_count += 1
+                    if len(matches) >= limit:
+                        continue
+                    matches.append(
+                        ShareabilityHintMatch(
+                            export_part=export_part,
+                            match_id=self._shareability_hint_match_id(
+                                export_part=export_part,
+                                hint_code=hint_code,
+                                graph=triple.graph,
+                                subject=subject,
+                                predicate=predicate,
+                                object_kind=triple.object_kind,
+                                term_position=term_position,
+                                term_kind=term_kind,
+                            ),
+                            hint_code=hint_code,
+                            graph=triple.graph,
+                            subject=subject,
+                            predicate=predicate,
+                            object_kind=triple.object_kind,
+                            term_position=term_position,
+                            term_kind=term_kind,
+                        )
+                    )
+        return match_count, matches
+
+    def _shareability_hint_matches_for_markdown(
+        self,
+        text: str,
+        *,
+        export_part: str,
+        limit: int = DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT,
+        final_privacy_warning_line_numbers: bool = False,
+    ) -> tuple[int, list[ShareabilityHintMatch]]:
+        matches: list[ShareabilityHintMatch] = []
+        match_count = 0
+        lines = text.splitlines()
+        insertion_after_line = (
+            2
+            if final_privacy_warning_line_numbers
+            and len(lines) >= 2
+            and lines[0].startswith("# ")
+            and lines[1] == ""
+            else 0
+        )
+        inserted_line_count = 4 if final_privacy_warning_line_numbers else 0
+        for line_number, line in enumerate(lines, start=1):
+            final_line_number = (
+                line_number + inserted_line_count
+                if line_number > insertion_after_line
+                else line_number
+            )
+            for hint_code in self._shareability_hint_codes_for_value(line):
+                match_count += 1
+                if len(matches) >= limit:
+                    continue
+                matches.append(
+                    ShareabilityHintMatch(
+                        export_part=export_part,
+                        match_id=self._shareability_hint_match_id(
+                            export_part=export_part,
+                            hint_code=hint_code,
+                            line_number=final_line_number,
+                        ),
+                        hint_code=hint_code,
+                        line_number=final_line_number,
+                    )
+                )
+        return match_count, matches
 
     @staticmethod
     def _shareability_hint_warnings(hints: Iterable[str]) -> list[str]:

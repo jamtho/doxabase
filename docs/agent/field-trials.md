@@ -4449,6 +4449,13 @@ few useful gaps:
   sensitive-literal counts. `project_brief` now emits
   `export_validation_review` with validation scope/count fields and a
   safety-first `validate_graph` action before frontier or mutation work.
+- A shareability handoff trial confirmed scanner-clean local path warnings were
+  code-only: `shareability_hints=["absolute_local_home_path"]` did not say which
+  graph term, snapshot row, or Markdown line caused the warning. Export
+  preflights, graph/TriG exports, context-slice exports, handoff manifests, and
+  staged/profile Markdown review exports now expose bounded
+  `shareability_hint_matches` with stable IDs and non-secret locators while
+  preserving the original hint-code list.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -4680,6 +4680,20 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     assert preflight.sensitive_literal_count == 0
     assert preflight.privacy_warnings == []
     assert preflight.shareability_hints == ["absolute_local_home_path"]
+    assert preflight.shareability_hint_count == 1
+    assert preflight.returned_shareability_hint_count == 1
+    assert preflight.omitted_shareability_hint_count == 0
+    assert len(preflight.shareability_hint_matches) == 1
+    preflight_hint = preflight.shareability_hint_matches[0]
+    assert preflight_hint.match_id.startswith("shareability-sha256:")
+    assert preflight_hint.export_part == "graphs"
+    assert preflight_hint.hint_code == "absolute_local_home_path"
+    assert preflight_hint.graph == "map"
+    assert preflight_hint.subject == storage.iri
+    assert preflight_hint.predicate == RC + "storageRoot"
+    assert preflight_hint.term_position == "object"
+    assert preflight_hint.term_kind == "literal"
+    assert local_path not in json.dumps(to_jsonable(preflight_hint))
     assert preflight.artifact_disposition == (
         "local_only_pending_shareability_review"
     )
@@ -4696,6 +4710,9 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     )
     assert graph_export.sensitive_literal_count == 0
     assert graph_export.shareability_hints == ["absolute_local_home_path"]
+    assert graph_export.shareability_hint_matches[0].predicate == (
+        RC + "storageRoot"
+    )
     assert graph_export.artifact_disposition == (
         "local_only_pending_shareability_review"
     )
@@ -4704,6 +4721,8 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     context = db.describe_context_slice(dataset, profile="resource_brief")
     assert context.sensitive_literal_count == 0
     assert context.shareability_hints == ["absolute_local_home_path"]
+    assert context.shareability_hint_matches[0].export_part == "context_slice"
+    assert context.shareability_hint_matches[0].subject == storage.iri
     assert any(
         "absolute local home/private path" in warning
         for warning in context.warnings
@@ -4715,6 +4734,9 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     )
     assert context_preflight.scanner_clean is True
     assert context_preflight.shareability_hints == ["absolute_local_home_path"]
+    assert context_preflight.shareability_hint_matches[0].export_part == (
+        "context_slice_export"
+    )
     assert context_preflight.git_safe is False
 
     context_export = db.export_context_slice(
@@ -4725,6 +4747,9 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     )
     assert context_export.scanner_clean is True
     assert context_export.shareability_hints == ["absolute_local_home_path"]
+    assert context_export.shareability_hint_matches[0].export_part == (
+        "context_slice_export"
+    )
     assert context_export.artifact_disposition == (
         "local_only_pending_shareability_review"
     )
@@ -4739,6 +4764,10 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     assert handoff.shareability_hints == ["absolute_local_home_path"]
     assert handoff.git_safe is False
     assert handoff.trig.shareability_hints == ["absolute_local_home_path"]
+    assert handoff.shareability_hint_matches[0].predicate == RC + "storageRoot"
+    assert handoff.manifest["shareability_hint_matches"][0]["predicate"] == (
+        RC + "storageRoot"
+    )
     assert handoff.revision_snapshots.shareability_hints == []
     assert handoff.manifest["shareability_hints"] == ["absolute_local_home_path"]
     assert handoff.manifest["artifact_disposition"] == (
@@ -4748,6 +4777,9 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     assert handoff.manifest["artifacts"]["trig"]["shareability_hints"] == [
         "absolute_local_home_path"
     ]
+    assert handoff.manifest["artifacts"]["trig"]["shareability_hint_matches"][0][
+        "subject"
+    ] == storage.iri
 
     staged = db.stage_graph_revision(
         summary="Add local path caveat",
@@ -4767,9 +4799,22 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
             }
         ],
     )
+    snapshot_preflight = db.export_preflight(
+        export_kind="revision_snapshots",
+        revision_iris=[staged.revision_iri],
+    )
+    assert snapshot_preflight.shareability_hints == ["absolute_local_home_path"]
+    snapshot_hint = snapshot_preflight.shareability_hint_matches[0]
+    assert snapshot_hint.export_part == "revision_snapshots"
+    assert snapshot_hint.revision_iri == staged.revision_iri
+    assert snapshot_hint.graph == "map"
+    assert snapshot_hint.term_position == "object"
+    assert local_path not in json.dumps(to_jsonable(snapshot_hint))
+
+    single_path = tmp_path / "single-review.md"
     single_export = db.export_staged_revision(
         staged.revision_iri,
-        tmp_path / "single-review.md",
+        single_path,
         fail_on_sensitive=True,
     )
     assert single_export.scanner_clean is True
@@ -4777,14 +4822,34 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     assert single_export.sensitive_literal_count == 0
     assert single_export.shareability_hints == ["absolute_local_home_path"]
     assert single_export.git_safe is False
+    single_line = _line_number_containing(
+        single_path.read_text(encoding="utf-8"),
+        local_path,
+    )
+    assert single_export.shareability_hint_matches[0].export_part == (
+        "staged_revision_markdown"
+    )
+    assert single_export.shareability_hint_matches[0].line_number == single_line
+    assert local_path not in json.dumps(
+        to_jsonable(single_export.shareability_hint_matches)
+    )
 
+    grouped_path = tmp_path / "grouped-review.md"
     grouped_export = db.export_staged_revisions(
         [staged.revision_iri],
-        tmp_path / "grouped-review.md",
+        grouped_path,
         fail_on_sensitive=True,
     )
     assert grouped_export.scanner_clean is True
     assert grouped_export.shareability_hints == ["absolute_local_home_path"]
+    grouped_line = _line_number_containing(
+        grouped_path.read_text(encoding="utf-8"),
+        local_path,
+    )
+    assert grouped_export.shareability_hint_matches[0].export_part == (
+        "staged_revisions_markdown"
+    )
+    assert grouped_export.shareability_hint_matches[0].line_number == grouped_line
     assert grouped_export.artifact_disposition == (
         "local_only_pending_shareability_review"
     )

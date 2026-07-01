@@ -88,9 +88,11 @@ and `shareability_review_status="required_not_completed"` because scanner-clean
 is not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. It also reports `shareability_hints` for non-credential
 risks such as absolute local home/private paths, plus
-`artifact_disposition` and `git_safe`; while review status is incomplete,
-`git_safe=false` means keep the artifact local. Follow the suggested export
-action with `fail_on_sensitive=true` after that separate review.
+`shareability_hint_matches`, `artifact_disposition`, and `git_safe`; while
+review status is incomplete, `git_safe=false` means keep the artifact local.
+Use the locator matches to find the graph term, snapshot row, or Markdown line
+behind scanner-clean local-only warnings. Follow the suggested export action
+with `fail_on_sensitive=true` after that separate review.
 When a broader graph or handoff preflight blocks but the intended handoff only
 needs clean context around known resources, the blocked response suggests
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`. Use that
@@ -1495,9 +1497,10 @@ export triples for credential-like graph terms, and returns the same
 `decision`, `scanner_clean`, `shareability_review_required`,
 `shareability_review_status`, `would_block_sensitive_export`,
 `sensitive_literal_count`, `privacy_warnings`, `shareability_hints`,
-`artifact_disposition`, `git_safe`, `warnings`, and suggested-action style used
-by broader export preflights. `scanner_clean=true` is still not a shareability
-proof; local paths, endpoints, and confidential project facts need human review.
+`shareability_hint_matches`, `artifact_disposition`, `git_safe`, `warnings`, and
+suggested-action style used by broader export preflights. `scanner_clean=true`
+is still not a shareability proof; local paths, endpoints, and confidential
+project facts need human review.
 `handoff_fit` is `resource_scoped_review_context` for ordinary slice exports and
 `resource_scoped_review_context_not_recovery_complete` when
 history graph triples are included. If the selected slice includes `history`, the
