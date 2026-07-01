@@ -3636,6 +3636,7 @@ class QueryResultRecord:
     engine: str | None
     query_source_path: str | None
     query_hash: str | None
+    failure_summary: str | None
     result_sources: list[str]
     scanned_source_paths: list[str]
     scanned_source_handles: list[str]
@@ -20982,6 +20983,104 @@ class DoxaBase:
         rows.sort(reverse=True)
         return list(dict.fromkeys(evidence_iri for _, _, evidence_iri in rows))
 
+    def _query_context_database_relation_candidates_from_evidence(
+        self,
+        dataset: DatasetDescription,
+        *,
+        limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        evidence_iris = self._query_context_dataset_query_evidence_iris(
+            dataset.iri,
+            exclude_evidence_iris=set(),
+        )
+        candidates: list[dict[str, Any]] = []
+        seen_candidates: set[tuple[str, str]] = set()
+        total_count = 0
+        for evidence_iri in evidence_iris:
+            evidence = self._describe_evidence(
+                evidence_iri,
+                self._expand_graphs(["evidence"]),
+                self._lookup_graphs(self._expand_graphs(["all"])),
+            )
+            for handle in evidence.scanned_source_handles:
+                parsed = self._query_database_relation_candidate_from_handle(handle)
+                if parsed is None:
+                    continue
+                connection_reference, relation_identifier = parsed
+                candidate_key = (connection_reference, relation_identifier)
+                if candidate_key in seen_candidates:
+                    continue
+                seen_candidates.add(candidate_key)
+                total_count += 1
+                if len(candidates) >= limit:
+                    continue
+                candidate_arguments = {
+                    "storage_protocol": "rc:DatabaseStorage",
+                    "storage_root": connection_reference,
+                    "location_kind": "connection",
+                    "path_templates": [relation_identifier],
+                }
+                candidates.append(
+                    {
+                        "candidate_rank": len(candidates) + 1,
+                        "candidate_kind": "database_relation_from_query_evidence",
+                        "requires_review": True,
+                        "review_status": "review_required",
+                        "evidence_iri": evidence_iri,
+                        "scanned_source_handle": handle.strip(),
+                        "connection_reference": connection_reference,
+                        "relation_identifier": relation_identifier,
+                        "storage_protocol": "rc:DatabaseStorage",
+                        "storage_root": connection_reference,
+                        "location_kind": "connection",
+                        "path_templates": [relation_identifier],
+                        "stage_query_storage_access_repair_candidate_arguments": (
+                            candidate_arguments
+                        ),
+                        "candidate_value_fields": [
+                            "storage_protocol",
+                            "storage_root",
+                            "location_kind",
+                            "path_templates",
+                        ],
+                        "review_note": (
+                            "Parsed from a query-result scanned_source_handle. "
+                            "Copy these values into stage_query_storage_access_repair "
+                            "only after reviewing the handle as a non-secret "
+                            "database relation route."
+                        ),
+                    }
+                )
+        return candidates, total_count
+
+    @staticmethod
+    def _query_database_relation_candidate_from_handle(
+        handle: str,
+    ) -> tuple[str, str] | None:
+        value = handle.strip()
+        if not value:
+            return None
+        if "://" in value or "/" in value or "\\" in value:
+            return None
+        if value.count(":") != 1:
+            return None
+        connection_reference, relation_identifier = (
+            part.strip() for part in value.split(":", 1)
+        )
+        if not connection_reference or not relation_identifier:
+            return None
+        if len(connection_reference) == 1 and connection_reference.isalpha():
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9_.@$-]+", connection_reference):
+            return None
+        if re.search(r"\s", relation_identifier):
+            return None
+        if ":" in relation_identifier:
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9_.@$-]+", relation_identifier):
+            return None
+        return connection_reference, relation_identifier
+
     @staticmethod
     def _query_context_should_suggest_evidence_storage_overlay(
         issues: Iterable[QueryPlanningIssue],
@@ -27204,6 +27303,13 @@ class DoxaBase:
             dataset,
             limit=8,
         )
+        (
+            database_relation_candidates,
+            database_relation_candidate_total,
+        ) = self._query_context_database_relation_candidates_from_evidence(
+            dataset,
+            limit=3,
+        )
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "stage_reviewed_storage_access",
@@ -27461,9 +27567,30 @@ class DoxaBase:
                     candidate_existing_storage_access_total
                     > len(candidate_existing_storage_accesses)
                 ),
+                "database_relation_candidates": database_relation_candidates,
+                "database_relation_candidate_count": len(
+                    database_relation_candidates
+                ),
+                "database_relation_candidate_total_count": (
+                    database_relation_candidate_total
+                ),
+                "database_relation_candidates_truncated": (
+                    database_relation_candidate_total
+                    > len(database_relation_candidates)
+                ),
                 "actions": actions,
             },
         }
+        if database_relation_candidates:
+            details["repair_hint"]["database_relation_candidate_source"] = (
+                "query_result_scanned_source_handles"
+            )
+            details["repair_hint"]["database_relation_candidate_review_note"] = (
+                "These candidates are parsed from query-result scanned source "
+                "handles and remain review-only. Use them to fill reviewed "
+                "stage_query_storage_access_repair arguments; do not treat them "
+                "as applied map facts."
+            )
         if pending_candidate_repair_iris:
             details["repair_hint"]["already_pending_candidate_count"] = len(
                 pending_candidate_storage_access_iris
@@ -31659,6 +31786,7 @@ class DoxaBase:
             engine=engine_value,
             query_source_path=query_source_path_value,
             query_hash=query_hash_value,
+            failure_summary=failure_summary_value,
             result_sources=result_source_values,
             scanned_source_paths=scanned_source_path_values,
             scanned_source_handles=scanned_source_handle_values,

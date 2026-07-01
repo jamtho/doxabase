@@ -1698,6 +1698,9 @@ def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidenc
         failure_summary="Runtime access was not available in this container.",
         scanned_source_paths=[str(csv_path)],
     )
+    assert result["failure_summary"] == (
+        "Runtime access was not available in this container."
+    )
 
     draft = draft_query_evidence_storage_overlay_tool(
         db,

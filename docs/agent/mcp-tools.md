@@ -1086,7 +1086,16 @@ some visible candidates are already pending, the repair context and compact
 stage-existing-link option expose `already_pending_candidate_count`,
 `already_pending_storage_access_iris`, and `pending_staged_repair_iris`; the
 link action can still be pending if other non-pending candidates remain
-available for review. In `project_brief`, top-level
+available for review. When ordinary query-result evidence includes a compact
+database handle such as `warehouse-prod:analytics.support_ticket_daily`, the
+repair context also exposes `database_relation_candidates[]`. These candidates
+are parsed from `scanned_source_handles`, marked `requires_review=true`, and
+carry `connection_reference`, `relation_identifier`, `storage_root`,
+`path_templates`, plus
+`stage_query_storage_access_repair_candidate_arguments`. Use those structured
+fields as reviewed input for `stage_query_storage_access_repair`; do not split
+the scanned handle in caller code or treat the candidate as an applied map fact.
+In `project_brief`, top-level
 `pending_staged_repair_iris` is limited to current staged rows that change
 query-planning metadata on the dataset or linked query resources such as storage
 accesses, physical layouts, partition schemes, or columns, not arbitrary staged
@@ -1459,6 +1468,9 @@ filesystem path. Later query-context and storage overlay handoffs expose scanned
 source handles separately from query text and result artifacts.
 Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
+The returned payload echoes `failure_summary` when supplied, so a failed-attempt
+handler can continue from the immediate response instead of re-reading the
+evidence summary just to recover the failure text.
 When `observed_asset` is supplied, the returned payload includes
 `suggested_next_actions`: profile-shaped results start with
 `describe_profile_run(observed_asset, evidence_iri)`, every result includes

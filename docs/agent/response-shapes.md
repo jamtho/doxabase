@@ -1285,6 +1285,7 @@ result.execution_status
 result.engine
 result.query_source_path
 result.query_hash
+result.failure_summary
 result.result_sources
 result.scanned_source_paths
 result.scanned_source_handles
@@ -1315,6 +1316,9 @@ both `scanned_source_paths` and `scanned_source_handles` separately.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
+The response echoes `failure_summary` when supplied. Use that immediate field
+for failed-attempt routing; the longer evidence summary remains available in
+the evidence resource slice.
 When `observed_asset` is supplied, the response now includes a
 `describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
 action so an agent can inspect the exact evidence it just wrote, plus a
@@ -3332,7 +3336,13 @@ staged or direct new-storage template, omit optional storage-owned
 `path_templates` when
 the dataset or partition already carries the reviewed file/object path template;
 duplicating it can create equivalent ready query candidates. Database relation
-identifiers are the storage-owned exception. A fixture staleness hint means
+identifiers are the storage-owned exception. When query-result evidence has
+reviewed compact database handles, the repair hint can also carry
+`database_relation_candidates[]` with `requires_review=true`,
+`connection_reference`, `relation_identifier`, `storage_root`, `path_templates`,
+and `stage_query_storage_access_repair_candidate_arguments`. Prefer these
+structured fields over parsing `scanned_source_handles` yourself. A fixture
+staleness hint means
 known AIS or Polymarket fixture tables are present while the capsule has zero
 `rc:StorageAccess` resources; use a fresh scratch fixture load before drawing
 query-target conclusions.

@@ -18895,6 +18895,65 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.reason_codes == []
 
 
+def test_missing_storage_access_lifts_database_relation_candidate_from_query_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#SupportTicketDaily"
+    relation_handle = "warehouse-prod:analytics.support_ticket_daily"
+    db.record_map_dataset(dataset, label="Support ticket daily", is_table=True)
+    db.record_query_result(
+        summary=(
+            "Support ticket daily aggregate ran through an external warehouse "
+            "client before storage metadata was recorded."
+        ),
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="external-sql-client",
+        query_source_path="queries/support_ticket_daily.sql",
+        result_sources=["artifacts/support_ticket_daily.json"],
+        scanned_source_handles=[
+            relation_handle,
+            "s3://warehouse/support_ticket_daily.parquet",
+            "warehouse/support_ticket_daily.csv",
+        ],
+    )
+
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+
+    assert missing_storage.details is not None
+    repair_hint = missing_storage.details["repair_hint"]
+    assert repair_hint["database_relation_candidate_source"] == (
+        "query_result_scanned_source_handles"
+    )
+    assert repair_hint["database_relation_candidate_count"] == 1
+    assert repair_hint["database_relation_candidate_total_count"] == 1
+    candidate = repair_hint["database_relation_candidates"][0]
+    assert candidate["requires_review"] is True
+    assert candidate["scanned_source_handle"] == relation_handle
+    assert candidate["connection_reference"] == "warehouse-prod"
+    assert candidate["relation_identifier"] == "analytics.support_ticket_daily"
+    assert candidate["stage_query_storage_access_repair_candidate_arguments"] == {
+        "storage_protocol": "rc:DatabaseStorage",
+        "storage_root": "warehouse-prod",
+        "location_kind": "connection",
+        "path_templates": ["analytics.support_ticket_daily"],
+    }
+
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_code == "missing_storage_access"
+    assert repair_group.repair_context["database_relation_candidates"] == [
+        candidate
+    ]
+    assert repair_group.repair_context[
+        "database_relation_candidate_review_note"
+    ].startswith("These candidates are parsed")
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_describe_query_context_marks_non_tabular_asset_not_applicable(
     tmp_path: Path,
 ) -> None:
@@ -28766,6 +28825,7 @@ def test_record_query_result_records_failures_as_observations(
 
     assert result.observation_type == "observation"
     assert result.execution_status == "failed"
+    assert result.failure_summary == "ModuleNotFoundError: duckdb"
     assert result.source_span_iri is not None
     assert [action.tool_name for action in result.suggested_next_actions] == [
         "describe_context_slice"

@@ -4021,6 +4021,25 @@ few useful gaps:
   dataset/query/staged/task payloads, and dirty `import_handoff_bundle()`
   results privacy-gate detailed recovery-plan action surfaces to the same
   `export_preflight` review before exposing recovery or mutation actions.
+- A storage-aware query-planning repair trial found the staged
+  `missing_storage_access` lane was usable end to end, but unattended agents
+  still had to split a compact database handle such as
+  `warehouse-prod:analytics.support_ticket_daily` to fill reviewed storage
+  repair arguments. Missing-storage repair contexts now expose review-only
+  `database_relation_candidates[]` parsed from query-result
+  `scanned_source_handles`, with `connection_reference`,
+  `relation_identifier`, and candidate
+  `stage_query_storage_access_repair` values.
+- A plan/result/follow-up trial found failed query attempts preserved
+  `failure_summary` in RDF evidence slices, but the immediate
+  `record_query_result()` response did not echo it. The returned
+  `QueryResultRecord` now includes `failure_summary` so failure handlers can
+  continue from the direct tool response.
+- A storage/query privacy trial found export privacy gates correctly block
+  synthetic sensitive literals without overblocking ordinary local paths, but a
+  dirty `export_preflight` context-slice follow-up still uses placeholder
+  `seed_iris` without structured `placeholder_fields`. That response-shape
+  cleanup remains a useful future loop.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
