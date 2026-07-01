@@ -4199,6 +4199,12 @@ few useful gaps:
   actions now prefill those existing same-evidence support patterns and omit
   `consumes_result_bindings`, so supported value-type assertions are call-ready
   while unsupported type assertions still use the binding handoff.
+- A staged/version browsing trial confirmed sibling restage/apply/recheck
+  workflows are mechanically legible from `list_graph_versions` and
+  `describe_graph_version_diff`, but version rows with restage or apply links
+  still required agents to infer the lineage inspection route from fields such
+  as `restaged_by` and `applied_by`. Graph-version rows with apply/restage
+  links now include a row-local `describe_revision_lineage` suggested action.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

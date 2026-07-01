@@ -9135,6 +9135,33 @@ class DoxaBase:
                 ),
             )
         ]
+        if any(
+            value is not None
+            for value in (
+                revision.applies_staged_revision,
+                revision.applied_by,
+                revision.restaged_from,
+                revision.restaged_by,
+                revision.current_restaged_by,
+            )
+        ):
+            suggested_next_actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect revision lineage",
+                    tool_name="describe_revision_lineage",
+                    mcp_tool_name="doxabase.describe_revision_lineage",
+                    arguments={"iri": revision.iri},
+                    reason=(
+                        "Inspect this row's staged/apply/restage lineage "
+                        "before deciding whether the version row is current "
+                        "work, superseded, or already applied."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_revision_lineage",
+                        {"iri": revision.iri},
+                    ),
+                )
+            )
         if snapshot.exact_snapshot_available:
             suggested_next_actions.append(
                 SuggestedNextAction(

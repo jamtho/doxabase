@@ -4378,7 +4378,10 @@ the revision list: if `is_current_staged_work=False` and
 `review_resolution` before treating stale `application_status` values as
 unresolved work. Exact version rows suggest
 `describe_graph_version_diff()` to compare that stored version with the current
-live graph.
+live graph. Rows with apply/restage links such as `applied_by`,
+`applies_staged_revision`, `restaged_from`, or `restaged_by` also include a
+row-local `describe_revision_lineage` action between snapshot inspection and
+graph-version diff.
 
 `db.describe_graph_version_diff(graph_role, before_revision_iri, ...)` returns
 `GraphVersionDiffDescription`:

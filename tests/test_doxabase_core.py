@@ -14115,9 +14115,15 @@ def test_list_graph_versions_lists_stored_graph_timeline(
         "describe_revision_graph_snapshot"
     )
     assert staged_row.suggested_next_actions[1].tool_name == (
-        "describe_graph_version_diff"
+        "describe_revision_lineage"
     )
     assert staged_row.suggested_next_actions[1].arguments == {
+        "iri": staged.revision_iri
+    }
+    assert staged_row.suggested_next_actions[2].tool_name == (
+        "describe_graph_version_diff"
+    )
+    assert staged_row.suggested_next_actions[2].arguments == {
         "graph_role": "map",
         "before_revision_iri": staged.revision_iri,
         "compare_to_current": True,
@@ -14132,6 +14138,16 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert applied_row.review_resolution is None
     assert applied_row.triple_count == db.triple_count("map")
     assert applied_row.exact_snapshot_available is True
+    assert [
+        action.tool_name for action in applied_row.suggested_next_actions
+    ] == [
+        "describe_revision_graph_snapshot",
+        "describe_revision_lineage",
+        "describe_graph_version_diff",
+    ]
+    assert applied_row.suggested_next_actions[1].arguments == {
+        "iri": applied.applied_revision_iri
+    }
 
     exact_staged = db.list_graph_versions(
         "map",

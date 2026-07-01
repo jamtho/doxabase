@@ -394,7 +394,10 @@ graph role without scripting over revision rows. Rows include `revision_iri`,
 `count_basis`, `exact_snapshot_available`, `snapshot_evidence_status`, lineage
 links, alternative semantic-review gate fields when relevant, and suggested
 calls to `describe_revision_graph_snapshot` and, for exact rows,
-`describe_graph_version_diff`.
+`describe_graph_version_diff`. Rows with apply/restage links also suggest
+`describe_revision_lineage` directly, so version-first agents do not need to
+infer that route from `applied_by`, `applies_staged_revision`, or `restaged_by`
+fields.
 `snapshot_semantics` distinguishes `staged_before_graph`,
 `applied_after_graph`, and `recorded_graph_snapshot`. Set `exact_only=True` to
 hide RDF-only count/digest snapshots, and `include_current=False` when a caller
