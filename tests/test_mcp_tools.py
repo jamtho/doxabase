@@ -2210,18 +2210,18 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
-    assert manifest_import["recovery_summary"]["first_mutation_action"][
-        "tool_name"
-    ] == "apply_staged_revision"
-    assert manifest_import["recovery_summary"]["first_mutation_action"][
-        "arguments"
-    ] == {"iri": staged["revision_iri"]}
+    assert manifest_import["recovery_summary"]["first_mutation_action"] is None
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool_name"] == "apply_staged_revision"
+    ]["tool_name"] == "describe_staged_revision_recovery_session"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["arguments"] == {"iri": staged["revision_iri"]}
+    ]["arguments"]["session_iri"] == manifest_import[
+        "matching_recovery_session_iris"
+    ][0]
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["arguments"]["drift_detail"] == "exact"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_call"
     ] == manifest_import["recovery_summary"][
@@ -2229,10 +2229,11 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     ]["call"]
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_source"
-    ] == "mutation_frontier"
-    assert manifest_import["recovery_summary"]["first_mutation_frontier_item"][
-        "target_iri"
-    ] == staged["revision_iri"]
+    ] == "imported_recovery_session"
+    assert (
+        manifest_import["recovery_summary"]["first_mutation_frontier_item"]
+        is None
+    )
     assert manifest_import["recovery_summary"]["profile_route_revision_count"] == 1
     assert manifest_import["recovery_summary"]["profile_route_group_count"] == 1
     assert manifest_import["recovery_summary"]["profile_route_keys"] == [
@@ -2244,6 +2245,9 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"]["first_suggested_next_action"][
         "tool_name"
     ] == "describe_staged_revision_recovery_session"
+    assert "Continue the imported source recovery session" in (
+        manifest_import["recovery_summary"]["note"]
+    )
     assert manifest_import["recovery_plan"]["lane_counts"] == {
         "apply_after_review": 1
     }

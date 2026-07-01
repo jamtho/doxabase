@@ -3978,6 +3978,12 @@ few useful gaps:
   drift now routes to `ambiguous_same_slot` with a
   `describe_assertion_support` review action, and batch/direct restage reject
   that path until an explicit repair or replacement is authored.
+- A staged handoff/recovery scout found imported handoff summaries could say
+  `recommended_next_step="continue_imported_recovery_session"` while the
+  first-mutation fields already pointed at `apply_staged_revision`. Matching
+  imported recovery sessions now gate the summary's first safe action to
+  `describe_staged_revision_recovery_session` and suppress the first mutation
+  shortcut, while keeping mutation-frontier counts visible for orientation.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

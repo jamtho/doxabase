@@ -5320,6 +5320,13 @@ does not include the resolved target, the blocking snapshot action is labelled
 `handoff_manifest_path` in `arguments`; request or produce that broader source
 bundle, then import it instead of retrying the already-imported manifest
 snapshot artifact.
+When `matching_recovery_session_count` is nonzero, `recommended_next_step` is
+`continue_imported_recovery_session`; in that case the summary keeps mutation
+frontier counts visible but suppresses `first_mutation_action` and points
+`first_safe_review_or_mutation_action` at
+`describe_staged_revision_recovery_session`. Continue the source session first,
+then rerun receiver-local recovery planning before applying any exposed
+frontier row.
 
 `doxabase.import_trig(path, replace=False)` returns:
 
@@ -5742,8 +5749,11 @@ warning.
 `routing_decision` is the effective automation route derived from
 `next_action`: it can be more specific than `decision` for stale conflicts, for
 example `stage_same_slot_replacement`, `inspect_no_effective_change`, or
-`restage_after_review`. Prefer `routing_decision` and `next_action` for the next
-tool call; keep `decision` as the replay/status explanation.
+`restage_after_review`. Ambiguous singleton-slot drift with multiple current
+values routes to `repair_or_replace` with a `describe_assertion_support` next
+action instead of `restage_after_review`. Prefer `routing_decision` and
+`next_action` for the next tool call; keep `decision` as the replay/status
+explanation.
 `review_recommended=True` means the caller should
 review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
@@ -5758,7 +5768,11 @@ same `RevisionNextAction` shape as list/export rows. Prefer it for automation
 after reading the full check: ordinary ready rows route to `apply_after_review`,
 stale count/digest drift routes to `restage_after_review`, validation and patch
 conflicts route to `repair_or_replace`, and already-applied rows route to
-`inspect_already_applied`. A ready restaged successor with
+`inspect_already_applied`. Count/digest drift can still route to
+`repair_or_replace` when exact snapshot rows show a guarded same-slot conflict:
+safe one-current cases suggest `stage_map_assertion_change`, while multiple
+current values suggest `describe_assertion_support` for manual repair review.
+A ready restaged successor with
 `decision == "inspect_restaged_source_validation_failure"` also routes to
 `repair_or_replace`, because current graph state may have supplied semantics
 that the original same-payload framing omitted. A caller-authored successor with
@@ -5966,6 +5980,10 @@ explicit handoff includes both a stale source and its restaged successor, both
 can count under `apply_after_review` even though they collapse to one resolved
 target. Use `resolved_target_group_counts`, `mutation_frontier_items`, or
 `mutation_frontier_iris` for the deduped mutation worklist.
+Rows with `not_restageable_reason == "ambiguous_same_slot"` remain in the
+`repair_or_replace` lane but do not add a helper mutation frontier item until a
+human or agent authors an explicit replacement. Their next action is inspection,
+not a safe mutation.
 
 `db.start_staged_revision_recovery_session(...)` and
 `db.describe_staged_revision_recovery_session(session_iri)` return
@@ -6309,7 +6327,7 @@ a reviewed repair rather than another same-payload restage.
 
 `draft_status` is `drafted`, `not_drafted`, or `redirect`.
 `draft_kind` explains the route, for example `same_slot_replacement`,
-`mechanical_restage_available`, `validation_repair_needed`,
+`ambiguous_same_slot`, `mechanical_restage_available`, `validation_repair_needed`,
 `patch_conflict_repair_needed`, `already_effective`, `already_ready`,
 `already_handled`, or `already_applied`. When the helper recognizes a safe
 single-slot replacement, `preferred_action` and the first `repair_actions[]`
@@ -6323,6 +6341,10 @@ When no safe repair is drafted, the helper filters out its own
 `draft_staged_revision_rebase` action from `next_action` and
 `suggested_next_actions`; follow the remaining inspection/export action or
 author a manual repair instead of calling the same helper in a loop.
+For `draft_kind == "ambiguous_same_slot"`, exact drift found a guarded
+single-valued slot but current graph state has multiple same-subject/predicate
+values. Use the `describe_assertion_support` next action, then author an
+explicit repair or replacement; do not mechanically restage the stale patch.
 
 Top-level `current_revision_iri` is the current route target for the selected
 row; it can be an applied event IRI for redirect cases. Use `draft.lineage` when
@@ -6854,6 +6876,10 @@ that case no successor is created, `restaged_revision_iris` stays empty, and
 can mechanically refresh after review. Sources whose stored staged-time
 validation failed and whose post-batch route is repair-first are withheld from
 that bulk list and reported in `repair_first_revision_iris` instead.
+Guarded same-slot rows that cannot be safely reduced to a single replacement
+are `skipped_not_restageable` with
+`not_restageable_reason == "ambiguous_same_slot"` and an inspection
+`next_action_after`; they are not included in `would_restage_revision_iris`.
 `restaged_revision_iris` is a creation list, not an apply queue;
 created successors can still be `validation_failed`, `noop`, or otherwise not
 ready. For those would-restage rows, `current_revision_by_source` still points

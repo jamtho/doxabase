@@ -55722,6 +55722,9 @@ class DoxaBase:
             recommended_next_step = "inspect_recovery_plan"
         else:
             recommended_next_step = "resume_project_frontier"
+        imported_session_continuation_required = (
+            recommended_next_step == "continue_imported_recovery_session"
+        )
 
         profile_route_keys: list[str] = []
         profile_route_revision_count = 0
@@ -55738,6 +55741,7 @@ class DoxaBase:
         if (
             not privacy_review_required_before_recovery
             and not recovery_preflight_required
+            and not imported_session_continuation_required
             and first_mutation_frontier_item is not None
         ):
             first_mutation_action = first_mutation_frontier_item.action
@@ -55749,6 +55753,15 @@ class DoxaBase:
             )
             first_safe_action_source = (
                 "handoff_import_privacy_review"
+                if first_safe_action is not None
+                else None
+            )
+        elif imported_session_continuation_required:
+            first_safe_action = (
+                suggested_next_actions[0] if suggested_next_actions else None
+            )
+            first_safe_action_source = (
+                "imported_recovery_session"
                 if first_safe_action is not None
                 else None
             )
@@ -55822,6 +55835,11 @@ class DoxaBase:
                 "artifact terms; run the suggested export_preflight before "
                 f"following recovery or mutation actions. {note}"
             )
+        elif imported_session_continuation_required:
+            note = (
+                "Continue the imported source recovery session before following "
+                f"receiver-local mutation-frontier actions. {note}"
+            )
         return HandoffBundleRecoverySummary(
             result_kind="handoff_bundle_recovery_summary",
             dry_run=dry_run,
@@ -55868,6 +55886,7 @@ class DoxaBase:
                 None
                 if privacy_review_required_before_recovery
                 or recovery_preflight_required
+                or imported_session_continuation_required
                 else first_mutation_frontier_item
             ),
             first_mutation_action=first_mutation_action,
