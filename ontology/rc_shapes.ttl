@@ -1131,6 +1131,12 @@ rc:EvidenceShape a sh:NodeShape ;
                 sh:minCount 1 ;
             ]
         ]
+        [
+            sh:property [
+                sh:path rc:scannedSourceHandle ;
+                sh:minCount 1 ;
+            ]
+        ]
     ) ;
     sh:property [
         sh:path rc:summary ;
@@ -1162,7 +1168,12 @@ rc:EvidenceShape a sh:NodeShape ;
         sh:datatype xsd:string ;
         sh:message "queryHash must be a single string if declared." ;
     ] ;
-    sh:message "Evidence must identify a source using dcterms:source or rc:sourceSpan." .
+    sh:property [
+        sh:path rc:scannedSourceHandle ;
+        sh:datatype xsd:string ;
+        sh:message "scannedSourceHandle values must be strings." ;
+    ] ;
+    sh:message "Evidence must identify a source using dcterms:source, rc:sourceSpan, or rc:scannedSourceHandle." .
 
 rc:SourceSpanShape a sh:NodeShape ;
     sh:targetClass rc:SourceSpan ;

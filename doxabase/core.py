@@ -3755,6 +3755,7 @@ class EvidenceDescription:
     summary: str | None
     sources: list[str]
     source_spans: list[SourceSpanDescription]
+    scanned_source_handles: list[str]
     query_execution_status: str | None
     query_engine: str | None
     query_hash: str | None
@@ -20836,6 +20837,13 @@ class DoxaBase:
         scanned_source_paths = [
             span.source_path for span in scanned_source_spans if span.source_path
         ]
+        scanned_source_handles = (
+            list(dict.fromkeys(evidence.scanned_source_handles))
+            if evidence is not None
+            else []
+        )
+        if not scanned_source_handles:
+            scanned_source_handles = list(dict.fromkeys(scanned_source_paths))
         return {
             "evidence_iri": evidence_iri,
             "profile_observation_count": len(profiles),
@@ -20856,7 +20864,7 @@ class DoxaBase:
             ),
             "query_source_paths": query_source_paths[:span_limit],
             "scanned_source_paths": scanned_source_paths[:result_source_limit],
-            "scanned_source_handles": scanned_source_paths[:result_source_limit],
+            "scanned_source_handles": scanned_source_handles[:result_source_limit],
             "query_source_spans": [
                 self._query_context_source_span_preview(span)
                 for span in preview_spans[:span_limit]
@@ -20867,6 +20875,10 @@ class DoxaBase:
             ),
             "omitted_scanned_source_path_count": max(
                 len(scanned_source_paths) - result_source_limit,
+                0,
+            ),
+            "omitted_scanned_source_handle_count": max(
+                len(scanned_source_handles) - result_source_limit,
                 0,
             ),
             "handoff_note": (
@@ -31174,13 +31186,14 @@ class DoxaBase:
             else None
         )
         result_source_values = self._string_values("result_sources", result_sources)
-        scanned_source_path_values = list(
+        scanned_source_path_values = self._string_values(
+            "scanned_source_paths",
+            scanned_source_paths,
+        )
+        scanned_source_handle_values = list(
             dict.fromkeys(
                 [
-                    *self._string_values(
-                        "scanned_source_paths",
-                        scanned_source_paths,
-                    ),
+                    *scanned_source_path_values,
                     *self._string_values(
                         "scanned_source_handles",
                         scanned_source_handles,
@@ -31191,7 +31204,7 @@ class DoxaBase:
         if (
             not result_source_values
             and query_source_path_value is None
-            and not scanned_source_path_values
+            and not scanned_source_handle_values
         ):
             raise DoxaBaseError(
                 "record_query_result requires result_sources, query_source_path, "
@@ -31261,6 +31274,7 @@ class DoxaBase:
             execution_status=status_value,
             engine=engine_value,
             query_hash=query_hash_value,
+            scanned_source_handles=scanned_source_handle_values,
         )
         source_span_triples = 0
         source_span_value: str | None = None
@@ -31303,7 +31317,7 @@ class DoxaBase:
             query_hash=query_hash_value,
             result_sources=result_source_values,
             scanned_source_paths=scanned_source_path_values,
-            scanned_source_handles=scanned_source_path_values,
+            scanned_source_handles=scanned_source_handle_values,
             observation_triples=observation.observation_triples,
             evidence_triples=(
                 observation.evidence_triples
@@ -31405,6 +31419,7 @@ class DoxaBase:
         execution_status: str,
         engine: str | None,
         query_hash: str | None,
+        scanned_source_handles: list[str],
     ) -> int:
         evidence_graph = Graph()
         self._bind_prefixes(evidence_graph)
@@ -31428,6 +31443,14 @@ class DoxaBase:
             "rc:queryHash",
             query_hash,
         )
+        for handle in scanned_source_handles:
+            evidence_graph.add(
+                (
+                    evidence_subject,
+                    URIRef(self.expand_iri("rc:scannedSourceHandle")),
+                    Literal(handle),
+                )
+            )
         return self._insert_graph("evidence", evidence_graph)
 
     def _preflight_source_span_reuse(
@@ -56453,6 +56476,10 @@ class DoxaBase:
                 self._privacy_redacted_source_span_description(span)
                 for span in evidence.source_spans
             ],
+            scanned_source_handles=[
+                self._redact_sensitive_context_value(handle)
+                for handle in evidence.scanned_source_handles
+            ],
             query_execution_status=self._redact_sensitive_optional_text(
                 evidence.query_execution_status
             ),
@@ -60675,6 +60702,11 @@ class DoxaBase:
                         self._objects(graphs, evidence_iri, "rc:sourceSpan")
                     )
                 ]
+            ),
+            scanned_source_handles=list(
+                dict.fromkeys(
+                    self._objects(graphs, evidence_iri, "rc:scannedSourceHandle")
+                )
             ),
             query_execution_status=self._first_object(
                 graphs,

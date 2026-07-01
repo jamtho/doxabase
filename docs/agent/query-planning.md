@@ -579,10 +579,11 @@ For downstream consumers, keep the routing order simple:
 
 If a reviewed plan is executed by an external runtime, record the result or
 failure with `record_query_result`. Use `result_sources` for arbitrary aggregate
-payloads such as grouped counts or JSON output; use `scanned_source_handles`
-for the non-secret source files, objects, relation handles, or path-like inputs
-the external runtime actually scanned. `scanned_source_paths` remains accepted
-for older callers. For `database_relation_handoff`, a value like
+payloads such as grouped counts or JSON output; use `scanned_source_paths` for
+non-secret source files, object keys, or URI-like inputs that should become
+`rc:DataSampleSource` spans; use `scanned_source_handles` for reviewed source
+handles the external runtime actually scanned. For `database_relation_handoff`,
+a value like
 `warehouse-prod:mart.orders` is a suitable reviewed handle when it combines the
 plan's `scan.connection_reference` and `scan.relation_identifier`; do not invent
 a filesystem path. Fill profile-shaped fields such as `row_count` only when

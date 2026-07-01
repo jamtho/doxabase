@@ -128,9 +128,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1420
+    assert graphs["base_ontology"].triple_count == 1424
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1398
+    assert graphs["base_shapes"].triple_count == 1407
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -27719,23 +27719,20 @@ def test_record_query_result_preserves_database_relation_source_handle(
     )
 
     assert result.observation_type == "observation"
-    assert result.scanned_source_paths == [relation_handle]
+    assert result.scanned_source_paths == []
     assert result.scanned_source_handles == [relation_handle]
-    scanned_span = db.describe_resource(
-        result.scanned_source_span_iris[0],
-        graph="evidence",
-    )
-    scanned_span_outgoing = {
-        (triple.predicate, triple.object) for triple in scanned_span.outgoing
+    assert result.scanned_source_span_iris == []
+    evidence = db.describe_resource(result.evidence_iri, graph="evidence")
+    evidence_outgoing = {
+        (triple.predicate, triple.object) for triple in evidence.outgoing
     }
-    assert (RC + "sourcePath", relation_handle) in scanned_span_outgoing
-    assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
+    assert (RC + "scannedSourceHandle", relation_handle) in evidence_outgoing
     evidence_slice = db.describe_context_slice(
         result.evidence_iri,
         profile="resource_brief",
         max_triples=80,
     )
-    assert result.scanned_source_span_iris[0] in {
+    assert result.evidence_iri in {
         resource.iri for resource in evidence_slice.resources
     }
     assert db.validate_graph(scope="all").conforms

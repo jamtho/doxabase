@@ -1303,14 +1303,15 @@ or cancelled attempts stay ordinary observations and reject profile count
 fields. For filtered or grouped aggregate result payloads, prefer
 `result_sources` plus clear `summary`/`sample_scope`/`sample_method` text unless
 the count-like value is intentionally profile evidence.
-Use `scanned_source_handles` for the non-secret table/file/object paths, object
-keys, or database relation handles that the external runtime actually scanned.
-`scanned_source_paths` remains a legacy-compatible alias for the same values.
+Use `scanned_source_paths` for non-secret source files, object keys, or URI-like
+inputs that should be recorded as `rc:DataSampleSource` spans. Use
+`scanned_source_handles` for the reviewed file, object, table, or relation
+handles that the external runtime actually scanned; handle-only values are
+stored as `rc:scannedSourceHandle` metadata rather than source paths.
 For a database handoff, a compact handle such as
 `warehouse-prod:mart.orders` is acceptable when it is the reviewed
-`connection_reference` plus `relation_identifier`; the legacy alias name is
-historical and does not require a filesystem path. These values are stored as
-`rc:DataSampleSource` spans and surface later in query-context handoffs.
+`connection_reference` plus `relation_identifier`. Query-context handoffs expose
+both `scanned_source_paths` and `scanned_source_handles` separately.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.

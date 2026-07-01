@@ -1256,6 +1256,11 @@ rc:queryHash a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "Hash or fingerprint of the external query text when available." .
 
+rc:scannedSourceHandle a rdf:Property ;
+    rdfs:domain rc:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Non-secret file, object, relation, or runtime handle scanned by an external query attempt." .
+
 rc:summary a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A concise human-readable summary." .

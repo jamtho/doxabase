@@ -951,11 +951,11 @@ successful profile-like fields such as `row_count`, `sample_size`,
 ordinary observations and reject profile count fields. Use `query_source_path`
 for a non-secret query file or query artifact, which is stored as an
 `rc:SourceSpan` with `rc:QuerySource`; use `result_sources` for result files,
-logs, or output artifacts; and use `scanned_source_handles` for non-secret
-source files, objects, relation handles, or path-like inputs the external
-runtime actually scanned, which are stored as `rc:DataSampleSource` spans.
-`scanned_source_paths` remains accepted for older callers and returns the same
-values.
+logs, or output artifacts; use `scanned_source_paths` for non-secret files,
+object keys, or URI-like inputs that should become `rc:DataSampleSource` spans;
+and use `scanned_source_handles` for reviewed source handles the external
+runtime actually scanned. Handle-only values are stored as
+`rc:scannedSourceHandle` metadata and are not copied into `sourcePath`.
 When `observed_asset` is supplied, the returned record includes
 `suggested_next_actions`: profile-like results start with
 `describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset

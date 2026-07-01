@@ -1422,10 +1422,11 @@ are supplied, an `rc:ProfileObservation`, linked evidence, and an optional
 Use it after `draft_query_plan` and an external runtime attempt. Supply
 `result_sources` for result files, logs, or output artifacts, and
 `query_source_path` when the query text has a durable non-secret location.
-Supply `scanned_source_handles` for non-secret source files, objects, relation
-handles, or path-like inputs the external runtime actually scanned. The older
-`scanned_source_paths` name remains accepted as an alias. For database
-handoffs, a reviewed handle such as `warehouse-prod:mart.orders` can preserve
+Supply `scanned_source_paths` for non-secret source files, object keys, or
+URI-like inputs that should become `rc:DataSampleSource` spans. Supply
+`scanned_source_handles` for reviewed source handles the external runtime
+actually scanned. For database handoffs, a reviewed handle such as
+`warehouse-prod:mart.orders` can preserve
 `connection_reference` plus `relation_identifier`; do not coerce it into a fake
 filesystem path. Later query-context and storage overlay handoffs expose scanned
 source handles separately from query text and result artifacts.

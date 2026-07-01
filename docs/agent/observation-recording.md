@@ -449,10 +449,11 @@ the capsule to validate cleanly.
 For externally executed queries, prefer `record_query_result`. It records the
 result or failure as observation/evidence, links `query_source_path` as an
 `rc:SourceSpan` with `rc:QuerySource`, and keeps result artifacts in
-`result_sources`. Use `scanned_source_handles` for non-secret source files,
-objects, relation handles, or path-like inputs the external query actually
-scanned. `scanned_source_paths` remains an accepted alias; both names write
-`rc:SourceSpan` resources with `rc:DataSampleSource`. It does not execute
+`result_sources`. Use `scanned_source_paths` for non-secret source files,
+object keys, or URI-like inputs that should become `rc:DataSampleSource` spans.
+Use `scanned_source_handles` for reviewed file, object, table, or relation
+handles the external query actually scanned; handle-only values are stored on
+the evidence as `rc:scannedSourceHandle`. It does not execute
 queries. Successful calls with
 profile-like result fields become profile observations; failed, blocked,
 cancelled, or partial attempts stay ordinary observations and should not carry

@@ -1340,9 +1340,9 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_iri"].startswith(
         "https://richcanopy.org/doxabase/generated/source-span/"
     )
-    assert result["scanned_source_paths"] == ["warehouse/orders.csv"]
+    assert result["scanned_source_paths"] == []
     assert result["scanned_source_handles"] == ["warehouse/orders.csv"]
-    assert len(result["scanned_source_span_iris"]) == 1
+    assert result["scanned_source_span_iris"] == []
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "describe_profile_run",

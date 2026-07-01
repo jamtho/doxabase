@@ -3807,9 +3807,8 @@ few useful gaps:
   applied-source alternative IRIs on `mutation_frontier_items`, so scripts using
   the mutation worklist can see both the semantic-review gate and the already
   applied competing source. Profile handoff held after the alias fix. Remaining
-  lower-priority affordances to retest later include a possible
-  `scanned_source_handles` naming alias for query results, a `safety_gate` flag
-  on project-brief health tasks, and suggested scrub/review actions for blocked
+  lower-priority affordances to retest later include a `safety_gate` flag on
+  project-brief health tasks and suggested scrub/review actions for blocked
   context-slice preflights.
 - The next broad wave retested those fixes against harder context. Project brief
   is steering well: privacy-bearing capsules still route first to
@@ -3832,9 +3831,9 @@ few useful gaps:
   concrete query-planning friction was terminology: database relation handles
   worked through `scanned_source_paths`, but that name made cold agents infer a
   filesystem-only field. `record_query_result` now accepts the preferred
-  `scanned_source_handles` alias, returns both names, and exposes the alias in
-  downstream query-context evidence previews. Docs now state that post-safety
-  frontier resumption is read-only until `mutation_allowed_after` clears.
+  `scanned_source_handles` argument and exposes it in downstream query-context
+  evidence previews. Docs now state that post-safety frontier resumption is
+  read-only until `mutation_allowed_after` clears.
 - A follow-up profile/version/query/privacy wave kept the same broad workflows
   under pressure. Privacy/frontier routing and `scanned_source_handles`
   downstream previews held. The highest-priority gap was staged-version
@@ -3911,6 +3910,13 @@ few useful gaps:
   suggested-action queues, so callers can follow `ready_resolved_mutations`,
   `binding_producers`, `inspection`, or `staged_revision_recheck` without
   parsing source advisory metadata first.
+- A query-planning storage-metadata trial found database relation handles were
+  still mirrored into `scanned_source_paths` and `SourceSpan.sourcePath`, which
+  weakened the handle/path distinction. `record_query_result()` now keeps
+  explicit paths as `rc:DataSampleSource` spans and stores handle-only values as
+  `rc:scannedSourceHandle` evidence metadata, while query-context and storage
+  overlay previews expose `scanned_source_handles` separately from
+  `scanned_source_paths`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
