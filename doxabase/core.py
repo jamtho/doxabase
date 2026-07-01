@@ -54323,6 +54323,9 @@ class DoxaBase:
                 descriptions
             )
         )
+        shared_shapes_context = any(
+            summary.target_graph == "shapes" for summary in shared_patch_summaries
+        )
         for description in descriptions:
             for patch in description.patches:
                 if (
@@ -54420,6 +54423,19 @@ class DoxaBase:
         warnings: list[str] = []
         for description in descriptions:
             receives_shared_context = description.iri in target_set
+            if (
+                shared_shapes_context
+                and not receives_shared_context
+                and description.validation_conforms is False
+            ):
+                warnings.append(
+                    f"Source revision {description.iri} had staged validation "
+                    "failures and is not receiving moved shared shapes; the "
+                    "rerun may become mechanically ready because that validation "
+                    "context was removed. Omit it from the rerun or record an "
+                    "explicit discarded review decision if it was only a "
+                    "diagnostic framing."
+                )
             additions: list[dict[str, str]] = []
             removals: list[dict[str, str]] = []
             moved_shared_patch_count = 0

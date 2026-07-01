@@ -91,6 +91,11 @@ When the staged rows are available in the capsule, prefer
 shared_context_target_revision_iris=[...])` after that semantic choice. It emits
 the complete `stage_systematisation` arguments with shared ontology/shapes moved
 into the selected framings, so agents do not need to copy Turtle by hand.
+If that rerun leaves a previously validation-failed diagnostic row without the
+shared `shapes`, heed the helper warning: the row can become mechanically ready
+only because the validation context was removed. Omit that diagnostic row from
+the rerun or explicitly discard it before staging the rerun when it is not a
+durable candidate.
 
 ## Project Ontology And Shapes
 

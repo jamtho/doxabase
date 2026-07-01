@@ -633,7 +633,22 @@ Staged drift recovery smoke test:
   `draft_staged_revision_rebase` route. Do not mechanically restage this row;
   review the draft's `stage_map_assertion_change(..., restages_revision=...)`
   action, stage the repaired successor, then check and apply it after review.
-  Direct apply results expose `applied_revision_iri`, not `revision_iri`.
+  Direct apply results expose `applied_revision_iri`, not `revision_iri`. In
+  scratch Python probes, convert dataclass responses with `to_jsonable()` before
+  indexing deeply; several staged/recovery helpers return dataclasses, not raw
+  dicts.
+  A successful same-slot loop should look like this:
+  apply one reviewed sibling, rerun
+  `plan_staged_revision_recovery(current_staged_work_only=True,
+  include_drafts=True, drift_detail="exact")`, confirm the stale sibling is in
+  `repair_or_replace` and not `would_restage_revision_iris`, run
+  `restage_staged_revisions(..., dry_run=True)` only as a classification check,
+  inspect `draft_staged_revision_rebase(...).preferred_action`, stage the
+  helper successor with `restages_revision=<stale sibling>`, then use
+  `list_resource_revisions` / `describe_revision_lineage` or
+  `describe_graph_version_diff` to verify the old row is handled by the new
+  successor before any apply. A ready successor with
+  `semantic_review_required=true` still routes first to non-mutating review.
 
 ```python
 from doxabase import DoxaBase

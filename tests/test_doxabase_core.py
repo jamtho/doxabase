@@ -18273,6 +18273,105 @@ def test_stage_systematisation_shared_shapes_validate_preview_framing(
     assert "Snapshot state keys must name a timestamp column." in export_text
 
 
+def test_shared_context_rerun_warns_when_shapes_leave_invalid_framing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shared_ontology = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:SnapshotStateKey a rdfs:Class ;
+        rdfs:label "Snapshot state key" .
+
+    ex:stateTimestampColumn a rdf:Property ;
+        rdfs:label "state timestamp column" .
+    """
+    shared_shape = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+    ex:SnapshotStateKeyShape a sh:NodeShape ;
+        sh:targetClass ex:SnapshotStateKey ;
+        sh:property [
+            sh:path ex:stateTimestampColumn ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Snapshot state keys must name a timestamp column."
+        ] .
+    """
+    incomplete_map_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:incomplete_snapshot_state_key a ex:SnapshotStateKey ;
+        rdfs:label "Incomplete snapshot state key" .
+    """
+    complete_map_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:complete_snapshot_state_key a ex:SnapshotStateKey ;
+        rdfs:label "Complete snapshot state key" ;
+        ex:stateTimestampColumn ex:orders_updated_at .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Compare diagnostic and policy-backed state key framings",
+        intent=(
+            "Keep a validation diagnostic beside a complete candidate before "
+            "moving shared shape context to the selected framing."
+        ),
+        shared_context_summary=(
+            "Define provisional snapshot state-key vocabulary and shape."
+        ),
+        shared_additions=[
+            {"graph": "ontology", "content": shared_ontology},
+            {"graph": "shapes", "content": shared_shape},
+        ],
+        framings=[
+            {
+                "label": "Diagnostic missing timestamp",
+                "graph": "map",
+                "content": incomplete_map_framing,
+                "stance": "rc:CandidateRevision",
+            },
+            {
+                "label": "Policy-backed candidate",
+                "graph": "map",
+                "content": complete_map_framing,
+                "stance": "rc:CandidateRevision",
+            },
+        ],
+        validation_scope="all",
+    )
+    revision_iris = [
+        revision.revision_iri for revision in draft.staged_revisions
+    ]
+    assert draft.framings[0].validation_conforms is False
+    assert draft.framings[1].validation_conforms is True
+
+    rerun_draft = db.draft_systematisation_shared_context_rerun(
+        revision_iris=revision_iris,
+        shared_context_target_revision_iris=[revision_iris[1]],
+    )
+
+    assert len(rerun_draft.warnings) == 1
+    warning = rerun_draft.warnings[0]
+    assert revision_iris[0] in warning
+    assert "staged validation failures" in warning
+    assert "validation context was removed" in warning
+    assert "discarded review decision" in warning
+    assert [
+        (framing.source_revision_iri, framing.receives_shared_context)
+        for framing in rerun_draft.framings
+    ] == [
+        (revision_iris[0], False),
+        (revision_iris[1], True),
+    ]
+
+
 def test_polymarket_outcome_alignment_failure_and_repair_uses_diagnostics(
     tmp_path: Path,
 ) -> None:

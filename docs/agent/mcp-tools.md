@@ -2298,6 +2298,12 @@ those framings' ordinary additions/removals, leaves fallback framings with only
 their own `rc:FramingPatch` content, and returns
 `stage_systematisation_arguments` plus a ready suggested action. It does not
 stage, restage, apply, or write files.
+If a source row had staged validation failures and is not selected to receive
+moved shared `shapes`, the helper warns that the rerun may become mechanically
+ready only because validation context was removed. Treat that as a review gate:
+omit the diagnostic row from the rerun or record an explicit discarded review
+decision before staging the rerun if the row was only meant to demonstrate the
+shape requirement.
 When `link_alternatives=false`, the generated framing arguments preserve
 existing linked comparison sets with `alternative_to_framing_index` so the rerun
 and its grouped export still expose `choose_one_groups` without default-linking
