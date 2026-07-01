@@ -3680,6 +3680,15 @@ few useful gaps:
   documentation, and query repair docs needed a compact reminder that
   `suggested_repair_action_groups` is the metadata mutation lane even when
   `suggested_next_actions` also exposes review-gated `draft_query_plan`.
+- Follow-up mixed-asset, query-overlay/privacy, and profile-export trials
+  passed. Non-tabular transform/grain handoffs preserved tuple grain through
+  describe/context-slice/export/import and kept query planning
+  `not_applicable_non_tabular_asset`; profile follow-through/export strict
+  filtering worked after the binding-key change. The query-overlay trial found
+  a real gap: blocked query-result evidence can carry reviewed source handles
+  without profile rows. `draft_query_evidence_storage_overlay` now accepts
+  linked ordinary query evidence and exposes `source_query_evidence` while
+  retaining `source_profile_evidence` as a compatibility alias.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -581,8 +581,8 @@ handoff preflight later blocks on unrelated dirty graph content, seed
 `profile="resource_brief"` so the query status and source-span evidence can
 travel without unrelated map siblings.
 
-For a cold profile-like query-result handoff where the map has no executable
-storage metadata yet, use this sequence:
+For a cold query-result handoff where the map has no executable storage
+metadata yet, use this sequence:
 
 1. Record the external result with `record_query_result(..., observed_asset=...)`.
 2. Follow the returned `describe_query_context` action.
@@ -597,9 +597,13 @@ storage metadata yet, use this sequence:
 If that evidence identifies a reviewed source but the map still lacks physical
 query-planning metadata, call `draft_query_evidence_storage_overlay` with the
 dataset IRI, evidence IRI, and reviewed storage/path/layout values. The helper
-does not parse query artifacts to guess storage. It returns validation-previewed
-`stage_graph_revision` arguments that add storage access and physical layout
-metadata with the query/profile observation as support. Stage, check, apply,
+does not parse query artifacts to guess storage. It can consume profile-shaped
+successful query evidence or ordinary blocked/failed/partial query evidence
+linked to the dataset. It returns validation-previewed `stage_graph_revision`
+arguments that add storage access and physical layout metadata with evidence
+support. Keep the verification status honest: a blocked query may support a
+candidate route, but only real listing or query evidence should justify
+`rc:VerifiedByListingLayout` or `rc:VerifiedByQueryLayout`. Stage, check, apply,
 and rerun `describe_query_context` before drafting the next plan.
 When `describe_query_context.suggested_next_actions` proposes this overlay from
 singleton evidence, use the action as a template only: replace placeholder

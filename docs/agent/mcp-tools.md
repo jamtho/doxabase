@@ -827,6 +827,10 @@ caveat/systematisation alternatives you want reviewed together. Set
 `include_applied_staged_sources=false` to restrict discovery to current staged
 work, or raise `applied_staged_source_limit` when a profile run has more applied
 source matches than the default scan returns.
+Explicit `revision_iris=[...]` are seeds, not a strict filter. For a strict
+review of only those requested staged rows, also set
+`include_current_staged_work=false` and
+`include_applied_staged_sources=false`.
 Pass `fail_on_sensitive=true` when unattended or shareable profile review
 exports should raise before writing if the generated Markdown contains
 credential-like or secret-looking literals.
@@ -1183,8 +1187,10 @@ object existence, or execute SQL.
 Returns non-mutating `stage_graph_revision` arguments for turning reviewed
 query/profile evidence into storage access and physical layout map metadata.
 Use it after `record_query_result` or `describe_profile_run` shows that an
-external query scanned a real source, but `describe_query_context` is still
-blocked by missing storage, path, or layout metadata.
+external query scanned or attempted a real source, but `describe_query_context`
+is still blocked by missing storage, path, or layout metadata. The evidence may
+be profile-shaped successful query evidence or ordinary blocked/failed/partial
+query-result evidence, as long as it is linked to the requested dataset.
 `describe_query_context` may suggest this helper directly for singleton
 query/profile evidence with physical blockers; those suggested arguments contain
 review placeholders and must be replaced before use.
@@ -1200,8 +1206,10 @@ compression, and replaced dataset verification values. It also reports the
 source query context and source profile/query evidence, previews validation for
 the Turtle addition, and returns `stage_arguments` plus a
 `stage_graph_revision` suggested action. Treat
-`source_profile_evidence.scanned_source_paths` as reviewed provenance context
-for choosing those values, not as an automatically accepted storage root.
+`source_query_evidence.scanned_source_paths` as reviewed provenance context for
+choosing those values, not as an automatically accepted storage root.
+`source_profile_evidence` is retained as a compatibility alias for the same
+payload.
 Call that staged-revision helper, check/apply the staged row, then rerun
 `describe_query_context` before drafting a query plan. When the dataset already
 has a different

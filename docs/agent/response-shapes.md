@@ -1045,6 +1045,8 @@ context.suggested_next_calls
 
 `seed_iris` is the input argument name. The returned field is `seeds` in Python
 and `result["seeds"]` in MCP payloads.
+`dataset_contexts[]` entries are full `DatasetDescription` payloads directly;
+they are not wrapped in `{"dataset": ...}` objects.
 `sensitive_literal_count`, `matches`, `privacy_warnings`, and `scanner_note`
 come from scanning the returned raw triples only. Match rows are redacted, but
 `triples`, `trig`, labels, descriptions, evidence summaries, and other
@@ -1319,6 +1321,7 @@ draft.evidence_iri
 draft.source_query_context_readiness
 draft.source_query_context_issue_codes
 draft.source_profile_evidence
+draft.source_query_evidence
 draft.profile_observation_iris
 draft.storage_access_iri
 draft.physical_layout_iri
@@ -1341,10 +1344,13 @@ draft.suggested_next_calls
 The helper is a side-effect-free bridge from query/profile evidence to a staged
 storage-layout overlay. It requires caller-reviewed storage/path/layout values
 and returns ready `stage_graph_revision` arguments rather than writing map
-facts directly. Use `source_profile_evidence` to verify the source query result
-or profile run, `reviewed_overlay` to audit the supplied storage metadata, and
-`stage_arguments` only after confirming the overlay describes the queried
-source data rather than query text, logs, or result output.
+facts directly. It can consume profile-shaped query results and ordinary
+blocked/failed/partial query-result evidence when that evidence is linked to the
+requested dataset. Use `source_query_evidence` to verify the source query
+result; `source_profile_evidence` is retained as a compatibility alias for the
+same payload. Use `reviewed_overlay` to audit the supplied storage metadata, and
+`stage_arguments` only after confirming the overlay describes the queried source
+data rather than query text, logs, or result output.
 `reviewed_overlay` echoes the generated or caller-supplied storage/layout IRIs,
 labels, protocol, root, access mode, location kind, path templates, file format,
 compression, endpoint/bucket/prefix/region/path-style fields, credential
@@ -2833,6 +2839,9 @@ action.source_profile_evidence["query_source_spans"]
 action.source_profile_evidence["handoff_note"]
 ```
 
+For `draft_query_evidence_storage_overlay` actions, the same payload is also
+available as `action.source_query_evidence`.
+
 If the singleton evidence exists while physical metadata blockers remain,
 `suggested_next_actions` can also include
 `draft_query_evidence_storage_overlay`. That action is a skeleton, not an
@@ -3364,10 +3373,11 @@ it does not resolve endpoint profiles, credentials, object existence, or SQL
 execution. `plan.handoff_kind` is a compact machine-readable route for the
 selected draft. It is one of `no_query_target`, `metadata_review_required`,
 `context_review_required`, `runtime_resolution_required`,
-`database_relation_handoff`, `binding_values_required`, or
-`execution_attempt_ready`. The field is derived from the selected candidate,
-review gate, runtime-resolution state, scan shape, and binding requirements; it
-is a shortcut for routing, not a replacement for reading the underlying fields.
+`database_relation_handoff`, `binding_values_required`,
+`not_applicable_non_tabular_asset`, or `execution_attempt_ready`. The field is
+derived from the selected candidate, review gate, runtime-resolution state, scan
+shape, and binding requirements; it is a shortcut for routing, not a replacement
+for reading the underlying fields.
 `plan.handoff_summary` copies the compact routing facts agents most often need
 for reports or handoffs:
 

@@ -1517,6 +1517,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert overlay_action["source_profile_evidence"]["query_hash"] == (
         "sha256:mcp-orders-status"
     )
+    assert overlay_action["source_query_evidence"] == (
+        overlay_action["source_profile_evidence"]
+    )
     assert overlay_action["source_profile_evidence"]["scanned_source_paths"] == [
         str(csv_path)
     ]
@@ -1546,6 +1549,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         str(csv_path)
     ]
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
+    assert draft["source_query_evidence"] == draft["source_profile_evidence"]
     assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
     assert draft["reviewed_overlay"]["path_templates"] == ["orders.csv"]
     assert draft["reviewed_overlay"]["file_format"] == RC + "CSV"
@@ -1574,6 +1578,58 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     plan = draft_query_plan_tool(db, iri=dataset)
     assert plan["handoff_kind"] == "execution_attempt_ready"
     assert plan["scan"]["uri_template"] == str(csv_path)
+
+
+def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidence(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,blocked\n", encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    result = record_query_result_tool(
+        db,
+        summary="Orders query was blocked after reviewing the intended CSV route.",
+        observed_asset=dataset,
+        execution_status="blocked",
+        engine="python-csv",
+        query_hash="sha256:mcp-orders-blocked",
+        failure_summary="Runtime access was not available in this container.",
+        scanned_source_paths=[str(csv_path)],
+    )
+
+    draft = draft_query_evidence_storage_overlay_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=result["evidence_iri"],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note=(
+            "Reviewed blocked-query evidence named the intended orders.csv route."
+        ),
+    )
+
+    assert draft["validation_conforms"] is True
+    assert draft["profile_observation_iris"] == []
+    assert draft["source_query_evidence"]["execution_status"] == "blocked"
+    assert draft["source_query_evidence"]["query_hash"] == (
+        "sha256:mcp-orders-blocked"
+    )
+    assert draft["source_query_evidence"]["scanned_source_paths"] == [str(csv_path)]
+    assert draft["source_profile_evidence"] == draft["source_query_evidence"]
+    assert draft["reviewed_overlay"]["layout_verification_status"] == (
+        RC + "CandidateLayout"
+    )
+    assert draft["stage_arguments"]["supporting_observations"] == []
+    assert draft["stage_arguments"]["evidence"] == [result["evidence_iri"]]
 
 
 def test_draft_query_evidence_storage_overlay_tool_replaces_status(

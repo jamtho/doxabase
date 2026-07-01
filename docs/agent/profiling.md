@@ -183,6 +183,10 @@ observations, related support patterns, or profile-derived anchors. Leave the
 applied-source scan on for post-apply handoffs where the
 profile map-update row has already been applied but still needs to travel with
 remaining caveat, metric, type, or query-repair review work.
+Explicit `revision_iris=[...]` are seeds for the bundle, not a strict filter.
+For a strict review of only those requested staged rows, also pass
+`include_current_staged_work=False` and
+`include_applied_staged_sources=False`.
 If `candidate_count` is `0`, no Markdown artifact is written and the returned
 `export` field is `None`; inspect `warnings` and
 `open_profile_review_lanes` before assuming the review lane is resolved.

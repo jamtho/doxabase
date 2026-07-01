@@ -3560,6 +3560,7 @@ class QueryEvidenceStorageOverlayDraft:
     source_query_context_readiness: str
     source_query_context_issue_codes: list[str]
     source_profile_evidence: dict[str, Any]
+    source_query_evidence: dict[str, Any]
     profile_observation_iris: list[str]
     storage_access_iri: str
     physical_layout_iri: str
@@ -3865,7 +3866,9 @@ class ProfileEvidenceSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
-class QueryEvidenceOverlaySuggestedNextAction(ProfileEvidenceSuggestedNextAction):
+class QueryEvidenceOverlaySuggestedNextAction(SuggestedNextAction):
+    source_profile_evidence: dict[str, Any]
+    source_query_evidence: dict[str, Any]
     required_extra_arguments: list[str]
     placeholder_fields: list[str]
     reviewed_value_fields: list[str]
@@ -20075,6 +20078,7 @@ class DoxaBase:
                 arguments,
             ),
             source_profile_evidence=source_profile_evidence,
+            source_query_evidence=source_profile_evidence,
             required_extra_arguments=required,
             placeholder_fields=placeholders,
             reviewed_value_fields=placeholders,
@@ -20111,8 +20115,13 @@ class DoxaBase:
         self,
         evidence_iri: str,
         profiles: list[ProfileObservationSummary],
+        *,
+        evidence: EvidenceDescription | None = None,
     ) -> dict[str, Any]:
-        evidence = self._profile_evidence_description(evidence_iri, profiles)
+        evidence = evidence or self._profile_evidence_description(
+            evidence_iri,
+            profiles,
+        )
         evidence_summary = evidence.summary if evidence is not None else None
         metadata = self._query_result_metadata_from_evidence(evidence)
         result_sources = evidence.sources if evidence is not None else []
@@ -20174,8 +20183,34 @@ class DoxaBase:
                 "Singleton profile evidence is not a profile_run_candidate because "
                 "it is attached to one returned profile observation; use "
                 "describe_profile_run for the full bounded handoff."
+                if profiles
+                else (
+                    "Query evidence is linked to the dataset without profile "
+                    "observation rows; use it as reviewed query provenance, not "
+                    "as profile-derived map truth."
+                )
             ),
         }
+
+    def _query_evidence_linked_to_dataset(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+    ) -> bool:
+        observation_graphs = self._expand_graphs(["observations"])
+        for observation_iri in self._subjects(
+            observation_graphs,
+            "rc:evidence",
+            evidence_iri,
+        ):
+            if dataset_iri in self._objects(
+                observation_graphs,
+                observation_iri,
+                "rc:observedAsset",
+            ):
+                return True
+        return False
 
     @staticmethod
     def _profile_evidence_description(
@@ -20742,22 +20777,39 @@ class DoxaBase:
             graph=graph,
             limit=None,
         )
-        if profile_run.total_profile_count == 0:
-            raise DoxaBaseError(
-                "draft_query_evidence_storage_overlay requires profile or "
-                "query-result evidence linked to the dataset"
-            )
-        source_query_context = self.describe_query_context(dataset_value, graph=graph)
         all_profiles = [
             *profile_run.dataset_profile_observations,
             *profile_run.mapped_column_profile_observations,
             *profile_run.unmapped_column_profile_observations,
         ]
-        source_profile_evidence = self._query_context_source_profile_evidence(
+        source_query_evidence = self._query_context_source_profile_evidence(
             evidence_value,
             all_profiles,
+            evidence=profile_run.evidence,
         )
-        execution_status = source_profile_evidence.get("execution_status")
+        if (
+            profile_run.total_profile_count == 0
+            and not source_query_evidence.get("execution_status")
+        ):
+            raise DoxaBaseError(
+                "draft_query_evidence_storage_overlay requires profile or "
+                "query-result evidence linked to the dataset"
+            )
+        if (
+            profile_run.total_profile_count == 0
+            and not self._query_evidence_linked_to_dataset(
+                dataset_iri=dataset_value,
+                evidence_iri=evidence_value,
+            )
+        ):
+            raise DoxaBaseError(
+                "draft_query_evidence_storage_overlay requires query-result "
+                "evidence linked to the requested dataset when no profile "
+                "observations use the evidence"
+            )
+        source_query_context = self.describe_query_context(dataset_value, graph=graph)
+        source_profile_evidence = source_query_evidence
+        execution_status = source_query_evidence.get("execution_status")
         effective_layout_status = layout_verification_status or (
             "rc:VerifiedByQueryLayout"
             if execution_status == "succeeded"
@@ -20938,6 +20990,7 @@ class DoxaBase:
                 source_query_context.issues
             ),
             source_profile_evidence=source_profile_evidence,
+            source_query_evidence=source_query_evidence,
             profile_observation_iris=list(profile_run.profile_observation_iris),
             storage_access_iri=storage_access_value,
             physical_layout_iri=physical_layout_value,
