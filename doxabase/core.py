@@ -3986,6 +3986,9 @@ class QueryEvidenceOverlaySuggestedNextAction(SuggestedNextAction):
 @dataclass(frozen=True)
 class QueryPlanSuggestedNextAction(SuggestedNextAction):
     route_card: dict[str, Any]
+    unattended_recommended: bool = True
+    unattended_caution: str | None = None
+    unattended_review_reason_codes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -20739,6 +20742,22 @@ class DoxaBase:
                     "an explicit candidate_selector if another route is intended."
                 )
 
+        selected_route_intent_peer_indexes = set(
+            decision.route_intent_review_candidate_indexes
+        )
+        selected_unattended_recommended = True
+        selected_unattended_caution = None
+        selected_unattended_review_reason_codes: list[str] = []
+        if (
+            selected_route_intent_peer_indexes
+            and decision.candidate_index not in selected_route_intent_peer_indexes
+        ):
+            selected_unattended_recommended = False
+            selected_unattended_caution = decision.route_intent_caution
+            selected_unattended_review_reason_codes = [
+                "route_intent_review_candidates_present"
+            ]
+
         actions.append(
             QueryPlanSuggestedNextAction(
                 action_label=action_label,
@@ -20752,6 +20771,11 @@ class DoxaBase:
                     candidate=candidate,
                     columns=dataset.columns,
                     partition_schemes=dataset.partition_schemes,
+                ),
+                unattended_recommended=selected_unattended_recommended,
+                unattended_caution=selected_unattended_caution,
+                unattended_review_reason_codes=(
+                    selected_unattended_review_reason_codes
                 ),
             )
         )
@@ -20812,6 +20836,20 @@ class DoxaBase:
                         candidate=peer_candidate,
                         columns=dataset.columns,
                         partition_schemes=dataset.partition_schemes,
+                    ),
+                    unattended_recommended=(
+                        not selected_route_intent_peer_indexes
+                        or peer_index in selected_route_intent_peer_indexes
+                    ),
+                    unattended_caution=(
+                        decision.route_intent_caution
+                        if peer_index in selected_route_intent_peer_indexes
+                        else None
+                    ),
+                    unattended_review_reason_codes=(
+                        ["route_intent_review_candidates_present"]
+                        if peer_index in selected_route_intent_peer_indexes
+                        else []
                     ),
                 )
             )

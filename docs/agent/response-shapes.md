@@ -3125,10 +3125,14 @@ action.route_card["relation_identifier"]
 action.route_card["direct_issue_codes"]
 action.route_card["required_bindings"]
 action.route_card["binding_example"]
+action.unattended_recommended
+action.unattended_caution
+action.unattended_review_reason_codes
 ```
 
-Prefer the route card over parsing `reason` text when choosing peer,
-production/current, sample, archive, backfill, or layout-selection routes.
+Prefer the route card over parsing `reason` text when choosing peer routes.
+When route-intent peer review is required, use `unattended_recommended` before
+taking the first draft action.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per
 compatible linked layout signature with `candidate_selector` and

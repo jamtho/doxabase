@@ -4042,6 +4042,13 @@ few useful gaps:
   preflight's context-slice action now marks `seed_iris` as a required,
   placeholder, reviewed value field before the caller substitutes target
   resource IRIs.
+- A storage-aware query-planning route trial found route-intent warnings and
+  peer route cards were present, but an unattended agent taking the first
+  `draft_query_plan` action could still draft a sample/archive route before a
+  current/production peer. Query-plan suggested actions now expose
+  `unattended_recommended`, `unattended_caution`, and
+  `unattended_review_reason_codes` so route-intent peer actions can be selected
+  without parsing prose or reordering the underlying automatic decision.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

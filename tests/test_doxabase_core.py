@@ -20434,6 +20434,13 @@ def test_query_target_candidates_surface_global_blockers(
     assert "query_context_has_other_blockers" in (
         query_action.route_card["issue_codes"]
     )
+    assert query_action.unattended_recommended is False
+    assert query_action.unattended_caution == (
+        context.query_target_decision.route_intent_caution
+    )
+    assert query_action.unattended_review_reason_codes == [
+        "route_intent_review_candidates_present"
+    ]
     peer_action = context.suggested_next_actions[1]
     assert peer_action.tool_name == "draft_query_plan"
     assert peer_action.action_label == (
@@ -20454,6 +20461,13 @@ def test_query_target_candidates_surface_global_blockers(
         RC + "ProductionRoute",
         RC + "CurrentRoute",
     }
+    assert peer_action.unattended_recommended is True
+    assert peer_action.unattended_caution == (
+        context.query_target_decision.route_intent_caution
+    )
+    assert peer_action.unattended_review_reason_codes == [
+        "route_intent_review_candidates_present"
+    ]
     assert context.suggested_next_calls == [
         action.call for action in context.suggested_next_actions
     ]

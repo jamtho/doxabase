@@ -166,6 +166,10 @@ Start with `describe_query_context(dataset_iri)`:
    the selected candidate skipped ready, direct-clean, or layout-review-gated
    peer card(s) with reviewed production/current/canonical route intent. Inspect
    those cards and pass their `candidate_selector` when that route is intended.
+   In that case, `draft_query_plan` suggested actions also mark the automatic
+   selected action with `unattended_recommended=false` and the route-intent peer
+   action(s) with `unattended_recommended=true`; use that action-level cue before
+   following the first draft action blindly.
    These indexes are candidate-local direct cleanliness or resolvable layout
    ambiguity, so they can be non-empty even when strict
    `ready_candidate_indexes` is empty because sibling metadata or physical

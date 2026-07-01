@@ -8102,6 +8102,33 @@ def test_describe_query_context_tool_flags_unselected_route_intent(
     assert "route_intent_review_candidates_present" in (
         result["query_target_decision"]["selection_reason_codes"]
     )
+    selected_index = result["query_target_decision"]["candidate_index"]
+    selected_action = next(
+        action
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+        and action["route_card"]["candidate_index"] == selected_index
+    )
+    production_action = next(
+        action
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+        and action["route_card"]["candidate_index"] == production_index
+    )
+    assert selected_action["unattended_recommended"] is False
+    assert selected_action["unattended_caution"] == (
+        result["query_target_decision"]["route_intent_caution"]
+    )
+    assert selected_action["unattended_review_reason_codes"] == [
+        "route_intent_review_candidates_present"
+    ]
+    assert production_action["unattended_recommended"] is True
+    assert production_action["unattended_caution"] == (
+        result["query_target_decision"]["route_intent_caution"]
+    )
+    assert production_action["unattended_review_reason_codes"] == [
+        "route_intent_review_candidates_present"
+    ]
 
 
 def test_describe_query_context_tool_flags_review_gated_route_intent(
