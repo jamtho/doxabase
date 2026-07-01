@@ -158,6 +158,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graphs: list[str] | None = None,
         revision_iris: list[str] | None = None,
         snapshot_graph_roles: list[str] | None = None,
+        validation_scope: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
         """Dry-run export privacy scope and conservative shareability decision."""
@@ -168,6 +169,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graphs=graphs,
             revision_iris=revision_iris,
             snapshot_graph_roles=snapshot_graph_roles,
+            validation_scope=validation_scope,
             limit=limit,
         )
 
@@ -1767,6 +1769,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         format: str = "turtle",
         overwrite: bool = False,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: str | None = None,
     ) -> dict[str, Any]:
         """Export one or more graph roles as a flattened RDF graph file."""
 
@@ -1777,6 +1781,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             format=format,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.replace_graph_triples")
@@ -1806,6 +1812,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graphs: list[str] | None = None,
         overwrite: bool = False,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: str | None = None,
     ) -> dict[str, Any]:
         """Export graph roles as a named-graph TriG bundle."""
 
@@ -1815,6 +1823,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graphs=graphs,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.export_revision_snapshots")
@@ -1846,6 +1856,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         snapshot_graph_roles: list[str] | None = None,
         overwrite: bool = False,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: str | None = None,
     ) -> dict[str, Any]:
         """Export project TriG plus revision snapshot JSON as one handoff."""
 
@@ -1859,6 +1871,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             snapshot_graph_roles=snapshot_graph_roles,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.record_graph_revision")

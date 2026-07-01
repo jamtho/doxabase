@@ -67,6 +67,7 @@ def export_preflight_tool(
     graphs: list[str] | str | None = None,
     revision_iris: list[str] | None = None,
     snapshot_graph_roles: list[str] | None = None,
+    validation_scope: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     result = db.export_preflight(
@@ -74,6 +75,7 @@ def export_preflight_tool(
         graphs=graphs,
         revision_iris=revision_iris,
         snapshot_graph_roles=snapshot_graph_roles,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
         limit=limit,
     )
     return to_dict(result)
@@ -1705,6 +1707,8 @@ def export_handoff_bundle_tool(
     snapshot_graph_roles: list[str] | None = None,
     overwrite: bool = False,
     fail_on_sensitive: bool = False,
+    fail_on_invalid: bool = True,
+    validation_scope: str | None = None,
 ) -> dict[str, Any]:
     resolved_trig_path = _resolve_path(trig_path)
     resolved_snapshot_path = _resolve_path(revision_snapshot_path)
@@ -1720,6 +1724,8 @@ def export_handoff_bundle_tool(
         snapshot_graph_roles=snapshot_graph_roles,
         overwrite=overwrite,
         fail_on_sensitive=fail_on_sensitive,
+        fail_on_invalid=fail_on_invalid,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return to_dict(result)
 
@@ -1762,6 +1768,8 @@ def export_graph_tool(
     format: str = "turtle",
     overwrite: bool = False,
     fail_on_sensitive: bool = False,
+    fail_on_invalid: bool = True,
+    validation_scope: str | None = None,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_graph(
@@ -1770,6 +1778,8 @@ def export_graph_tool(
         format=format,
         overwrite=overwrite,
         fail_on_sensitive=fail_on_sensitive,
+        fail_on_invalid=fail_on_invalid,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return to_dict(result)
 
@@ -1800,6 +1810,8 @@ def export_trig_tool(
     graphs: list[str] | None = None,
     overwrite: bool = False,
     fail_on_sensitive: bool = False,
+    fail_on_invalid: bool = True,
+    validation_scope: str | None = None,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_trig(
@@ -1807,6 +1819,8 @@ def export_trig_tool(
         graphs=graphs,
         overwrite=overwrite,
         fail_on_sensitive=fail_on_sensitive,
+        fail_on_invalid=fail_on_invalid,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return to_dict(result)
 

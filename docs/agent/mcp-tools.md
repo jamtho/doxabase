@@ -111,12 +111,18 @@ Privacy/export route matrix:
 
 | Artifact goal | Preflight route | Write route |
 | --- | --- | --- |
-| Flattened graph/Turtle | `export_preflight(export_kind="graph", graphs=[...])` | `export_graph(..., fail_on_sensitive=true)` |
-| Named-graph TriG | `export_preflight(export_kind="trig", graphs=...)` | `export_trig(..., fail_on_sensitive=true)` |
+| Flattened graph/Turtle | `export_preflight(export_kind="graph", graphs=[...])` | `export_graph(..., fail_on_sensitive=true, fail_on_invalid=true)` |
+| Named-graph TriG | `export_preflight(export_kind="trig", graphs=...)` | `export_trig(..., fail_on_sensitive=true, fail_on_invalid=true)` |
 | Revision snapshot JSON | `export_preflight(export_kind="revision_snapshots", ...)` | `export_revision_snapshots(..., fail_on_sensitive=true)` |
-| Recovery-complete project handoff | `export_preflight(export_kind="handoff_bundle", graphs=["project"])` | `export_handoff_bundle(..., fail_on_sensitive=true)` |
+| Recovery-complete project handoff | `export_preflight(export_kind="handoff_bundle", graphs=["project"])` | `export_handoff_bundle(..., fail_on_sensitive=true, fail_on_invalid=true)` |
 | Context slice TriG | `preflight_context_slice_export(...)` | `export_context_slice(..., fail_on_sensitive=true)` |
 | Staged/profile Markdown review | Attempt the relevant export with `fail_on_sensitive=true` | `export_staged_revision`, `export_staged_revisions`, or `export_profile_insight_review_bundle` |
+
+Graph/TriG/handoff preflights also run live SHACL validation for the selected
+export scope. If `would_block_invalid_export=true`, repair the graph or pass
+`fail_on_invalid=false` only when the goal is a deliberately reviewed invalid
+artifact. Revision snapshot JSON is not validation-gated in this route because
+it preserves historical snapshot rows rather than the current graph.
 
 Staged/profile Markdown has no separate export preflight because the generated
 review text depends on live apply checks and route accounting. Treat
@@ -2711,13 +2717,16 @@ created.
 Exports one or more graph roles as one flattened RDF graph file. The default is
 the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
 result includes per-graph triple counts plus privacy warning counts from
-`scan_sensitive_literals`. Warnings do not block export and the written RDF is
-not redacted. Pass `fail_on_sensitive=true` when the export should raise before
-creating or overwriting an artifact if the selected graph roles contain
-sensitive-looking subject URI, predicate URI, object URI, or literal terms.
+`scan_sensitive_literals` and SHACL validation status for the export scope.
+Warnings do not redact the written RDF. Pass `fail_on_sensitive=true` when the
+export should raise before creating or overwriting an artifact if the selected
+graph roles contain sensitive-looking subject URI, predicate URI, object URI,
+or literal terms. Keep the default `fail_on_invalid=true` for unattended
+exports; use `fail_on_invalid=false` only for a reviewed invalid diagnostic
+artifact.
 Use `doxabase.export_preflight(export_kind="graph", graphs=[...])` first when an
-agent needs a read-only decision, redacted match IDs, and the exact blocking
-export action before choosing a path.
+agent needs a read-only decision, redacted match IDs, validation diagnostics,
+and the exact blocking export action before choosing a path.
 Export result records expose `artifact_kind`, `importable`,
 `recommended_import_tool`, and `recovery_complete`. Use those fields rather
 than file extension alone: staged/profile Markdown bundles are review artifacts
@@ -2761,7 +2770,11 @@ graphs; workflow exports include evidence, so source paths, subject IRIs, and
 evidence source strings can trigger privacy warnings. Pass
 `fail_on_sensitive=true` for unattended or shareable exports; the tool scans
 first and raises before creating or overwriting the artifact when potential
-sensitive graph terms are found.
+sensitive graph terms are found. Keep the default `fail_on_invalid=true` unless
+you are intentionally exporting invalid graph state for review; failed
+validation raises before any file is written and the result/preflight includes
+`validation_scope`, `validation_conforms`, `validation_result_count`, and
+`validation_results`.
 If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. `project_brief` reports `current_staged_revision_count`
@@ -2787,8 +2800,11 @@ applied-diff, stale-drift, or revision-lineage reconstruction after RDF import.
 It composes the same faithful `export_trig` and `export_revision_snapshots`
 payloads, but preflights both output paths and combined privacy warnings before
 creating either file. Pass `fail_on_sensitive=true` for unattended or shareable
-handoffs; pass `revision_iris` or `snapshot_graph_roles` only when the snapshot
-JSON should be narrower than the default all-stored-snapshot export. Pass
+handoffs; the default `fail_on_invalid=true` also validates the live graph
+scope before any paired artifact is written. Pass `fail_on_invalid=false` only
+for a deliberately reviewed invalid diagnostic handoff. Pass `revision_iris` or
+`snapshot_graph_roles` only when the snapshot JSON should be narrower than the
+default all-stored-snapshot export. Pass
 `manifest_path` to also write a small JSON manifest that pairs the two artifact
 paths, records redacted privacy warnings, sets top-level
 `recommended_import_tool="doxabase.import_handoff_bundle"`, and still lists the
@@ -2800,7 +2816,8 @@ result contains nested `trig` and `revision_snapshots` export records, the
 manifest payload, optional manifest write metadata, plus combined
 `sensitive_literal_count`, graph/snapshot sensitive counts, `decision`,
 `scanner_clean`, `shareability_review_status`, `privacy_warnings`,
-`shareability_hints`, `artifact_disposition`, `git_safe`, and `warnings`.
+validation fields, `shareability_hints`, `artifact_disposition`, `git_safe`,
+and `warnings`.
 `scanner_clean=true` still means scanner-clean only; receivers should treat
 `shareability_review_status="required_not_completed"` as a live sharing gate.
 Read `recovery_complete` at the paired handoff level for the bundle as a whole;

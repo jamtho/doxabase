@@ -74,7 +74,11 @@ using normal revision helpers.
 db.export_graph("/tmp/map.ttl", graphs="map")
 db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
-db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
+db.export_trig(
+    "/tmp/shareable-project.trig",
+    fail_on_sensitive=True,
+    fail_on_invalid=True,
+)
 db.export_preflight(export_kind="handoff_bundle")
 db.preflight_context_slice_export(
     ["https://example.test/project#child_table"],
@@ -93,6 +97,7 @@ db.export_handoff_bundle(
     "/tmp/revision-snapshots.json",
     manifest_path="/tmp/handoff-manifest.json",
     fail_on_sensitive=True,
+    fail_on_invalid=True,
 )
 ```
 
@@ -108,6 +113,11 @@ found. The scanner is conservative and not a complete secret detector, but it
 catches common private-key headers, bearer tokens, AWS access key IDs,
 `sk_` live/test style keys, key/password/secret assignments or query parameters,
 and explicit fake-secret test markers.
+Graph/TriG/handoff exports also validate the selected live graph scope by
+default and raise before writing when SHACL does not conform. Pass
+`fail_on_invalid=False` only for a deliberately reviewed invalid diagnostic
+artifact; results include validation scope, conformance, result count, and
+diagnostics.
 TriG workflow/review exports also include a non-privacy `warnings` entry saying
 they are review context only and omit history plus revision snapshot rows. Use
 `export_context_slice()` when a handoff should include only the selected

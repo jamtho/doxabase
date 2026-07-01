@@ -737,6 +737,11 @@ class ExportPreflightRecord:
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    validation_scope: str | None = None
+    validation_conforms: bool | None = None
+    validation_result_count: int = 0
+    validation_results: list[ValidationDiagnostic] = field(default_factory=list)
+    would_block_invalid_export: bool = False
     shareability_hints: list[str] = field(default_factory=list)
     artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
     git_safe: bool = False
@@ -753,6 +758,11 @@ class GraphExportRecord:
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    validation_scope: str | None = None
+    validation_conforms: bool | None = None
+    validation_result_count: int = 0
+    validation_results: list[ValidationDiagnostic] = field(default_factory=list)
+    would_block_invalid_export: bool = False
     artifact_kind: str = "graph_rdf_export"
     importable: bool = True
     recommended_import_tool: str | None = "DoxaBase.import_turtle"
@@ -902,6 +912,11 @@ class HandoffBundleExportRecord:
     snapshot_sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    validation_scope: str | None = None
+    validation_conforms: bool | None = None
+    validation_result_count: int = 0
+    validation_results: list[ValidationDiagnostic] = field(default_factory=list)
+    would_block_invalid_export: bool = False
     scanner_note: str = (
         "Scanner-clean means no selected export content matched DoxaBase's "
         "credential-like graph-term patterns; it is not proof that an artifact "
@@ -57940,6 +57955,72 @@ class DoxaBase:
                     omitted += 1
         return len(matches) + omitted, matches, omitted
 
+    @staticmethod
+    def _default_graph_export_validation_scope(graph_names: list[str]) -> str:
+        graph_set = set(graph_names)
+        if graph_set <= {"map"}:
+            return "map"
+        if graph_set <= {"base_ontology", "ontology"}:
+            return "ontology"
+        if graph_set <= {"base_shapes", "shapes"}:
+            return "shapes"
+        if graph_set <= {
+            "base_ontology",
+            "ontology",
+            "observations",
+            "patterns",
+            "evidence",
+        }:
+            return "patterns"
+        return "all"
+
+    def _export_validation_result(
+        self,
+        graph_names: list[str],
+        *,
+        validation_scope: str | None,
+        default_scope: str | None,
+        limit_results: int = 20,
+    ) -> ValidationResult | None:
+        if not graph_names:
+            return None
+        scope = (
+            validation_scope
+            or default_scope
+            or self._default_graph_export_validation_scope(graph_names)
+        )
+        return self.validate_graph(scope=scope, limit_results=limit_results)  # type: ignore[arg-type]
+
+    @staticmethod
+    def _export_validation_warnings(
+        validation: ValidationResult | None,
+    ) -> list[str]:
+        if validation is None or validation.conforms:
+            return []
+        return [
+            "Export validation failed for scope "
+            f"{validation.scope!r} with {validation.result_count} SHACL "
+            "result(s). Run validate_graph for that scope before exporting, "
+            "or pass fail_on_invalid=False only for a deliberately reviewed "
+            "invalid artifact."
+        ]
+
+    @staticmethod
+    def _raise_if_invalid_export_blocked(
+        *,
+        fail_on_invalid: bool,
+        validation: ValidationResult | None,
+    ) -> None:
+        if not fail_on_invalid or validation is None or validation.conforms:
+            return
+        raise DoxaBaseError(
+            "Export blocked because fail_on_invalid=True and validation "
+            f"scope {validation.scope!r} produced {validation.result_count} "
+            "SHACL result(s). Run validate_graph before exporting, or pass "
+            "fail_on_invalid=False only for a deliberately reviewed invalid "
+            "artifact."
+        )
+
     def export_preflight(
         self,
         *,
@@ -57952,6 +58033,14 @@ class DoxaBase:
         graphs: Iterable[str] | str | None = None,
         revision_iris: Iterable[str] | str | None = None,
         snapshot_graph_roles: Iterable[str] | str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
         limit: int = 20,
     ) -> ExportPreflightRecord:
         if limit < 1:
@@ -58011,6 +58100,14 @@ class DoxaBase:
             graph_shareability_hints = self._shareability_hints_for_graphs(
                 graph_names
             )
+        validation = self._export_validation_result(
+            graph_names,
+            validation_scope=validation_scope,
+            default_scope=(
+                "all" if export_kind in {"trig", "handoff_bundle"} else None
+            ),
+        )
+        validation_warnings = self._export_validation_warnings(validation)
 
         snapshot_match_limit = max(0, limit - len(graph_matches))
         snapshot_sensitive_count, snapshot_matches = (
@@ -58046,10 +58143,11 @@ class DoxaBase:
             export_kind=export_kind,
             graph_names=graph_names,
         )
-        warnings = [*privacy_warnings, *export_scope_warnings]
+        warnings = [*privacy_warnings, *validation_warnings, *export_scope_warnings]
         if scanner_clean:
             warnings.append(scanner_note)
         warnings[0:0] = self._shareability_hint_warnings(shareability_hints)
+        validation_blocks_export = validation is not None and not validation.conforms
         snapshot_revision_iris = list(
             dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
         )
@@ -58060,7 +58158,7 @@ class DoxaBase:
             export_kind=export_kind,
             decision=(
                 "block"
-                if sensitive_literal_count
+                if sensitive_literal_count or validation_blocks_export
                 else "clean_by_scanner_only"
             ),
             scanner_clean=scanner_clean,
@@ -58085,6 +58183,15 @@ class DoxaBase:
             scanner_note=scanner_note,
             suggested_next_actions=[],
             suggested_next_calls=[],
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
             shareability_hints=shareability_hints,
         )
         actions = self._export_preflight_suggested_actions(record)
@@ -58183,6 +58290,15 @@ class DoxaBase:
         overwrite: bool = False,
         graph_iri_prefix: str = RCG_PREFIX,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
     ) -> HandoffBundleExportRecord:
         self._preflight_handoff_bundle_export_paths(
             trig_path,
@@ -58229,9 +58345,16 @@ class DoxaBase:
         shareability_hints = list(
             dict.fromkeys([*trig_shareability_hints, *snapshot_shareability_hints])
         )
+        validation = self._export_validation_result(
+            graph_names,
+            validation_scope=validation_scope,
+            default_scope="all",
+        )
+        validation_warnings = self._export_validation_warnings(validation)
+        validation_blocks_export = validation is not None and not validation.conforms
         decision = (
             "block"
-            if sensitive_literal_count
+            if sensitive_literal_count or validation_blocks_export
             else "clean_by_scanner_only"
         )
         scanner_clean = sensitive_literal_count == 0
@@ -58246,6 +58369,7 @@ class DoxaBase:
         )
         warnings = [
             *privacy_warnings,
+            *validation_warnings,
             *self._shareability_hint_warnings(shareability_hints),
             scanner_note,
         ]
@@ -58253,6 +58377,10 @@ class DoxaBase:
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+        )
+        self._raise_if_invalid_export_blocked(
+            fail_on_invalid=fail_on_invalid,
+            validation=validation,
         )
 
         dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
@@ -58284,8 +58412,18 @@ class DoxaBase:
             privacy_warnings=trig_privacy_warnings,
             warnings=[
                 *trig_privacy_warnings,
+                *validation_warnings,
                 *self._shareability_hint_warnings(trig_shareability_hints),
             ],
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
             artifact_kind="handoff_trig",
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,
@@ -58324,6 +58462,15 @@ class DoxaBase:
             scanner_note=scanner_note,
             shareability_hints=shareability_hints,
             recommended_import_tool=recommended_import_tool,
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
         )
         manifest_bytes_written = None
         if manifest_path is not None:
@@ -58364,6 +58511,15 @@ class DoxaBase:
             scanner_note=scanner_note,
             shareability_hints=shareability_hints,
             recommended_import_tool=recommended_import_tool,
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
         )
 
     @staticmethod
@@ -58384,6 +58540,11 @@ class DoxaBase:
         scanner_note: str,
         shareability_hints: list[str],
         recommended_import_tool: str,
+        validation_scope: str | None,
+        validation_conforms: bool | None,
+        validation_result_count: int,
+        validation_results: list[ValidationDiagnostic],
+        would_block_invalid_export: bool,
     ) -> dict[str, Any]:
         return {
             "format": "doxabase.handoff_bundle.v1",
@@ -58402,6 +58563,11 @@ class DoxaBase:
                     "bytes_written": trig.bytes_written,
                     "sensitive_literal_count": trig.sensitive_literal_count,
                     "privacy_warnings": trig.privacy_warnings,
+                    "validation_scope": trig.validation_scope,
+                    "validation_conforms": trig.validation_conforms,
+                    "validation_result_count": trig.validation_result_count,
+                    "validation_results": to_jsonable(trig.validation_results),
+                    "would_block_invalid_export": trig.would_block_invalid_export,
                     "shareability_hints": trig.shareability_hints,
                     "artifact_disposition": trig.artifact_disposition,
                     "git_safe": trig.git_safe,
@@ -58464,10 +58630,15 @@ class DoxaBase:
             "shareability_review_required": shareability_review_required,
             "shareability_review_status": shareability_review_status,
             "would_block_sensitive_export": would_block_sensitive_export,
+            "would_block_invalid_export": would_block_invalid_export,
             "sensitive_literal_count": sensitive_literal_count,
             "graph_sensitive_literal_count": graph_sensitive_literal_count,
             "snapshot_sensitive_literal_count": snapshot_sensitive_literal_count,
             "privacy_warnings": privacy_warnings,
+            "validation_scope": validation_scope,
+            "validation_conforms": validation_conforms,
+            "validation_result_count": validation_result_count,
+            "validation_results": to_jsonable(validation_results),
             "warnings": warnings,
             "scanner_note": scanner_note,
             "shareability_hints": shareability_hints,
@@ -59744,6 +59915,28 @@ class DoxaBase:
     ) -> list[SuggestedNextAction]:
         if record.decision == "block":
             actions: list[SuggestedNextAction] = []
+            if record.would_block_invalid_export and record.validation_scope:
+                arguments = {
+                    "scope": record.validation_scope,
+                    "limit_results": max(record.limit, 20),
+                }
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Inspect export validation failures",
+                        tool_name="validate_graph",
+                        mcp_tool_name="doxabase.validate_graph",
+                        arguments=arguments,
+                        reason=(
+                            "The live graph validation gate failed for this "
+                            "export scope. Inspect SHACL diagnostics and repair "
+                            "the graph before writing a recovery or share artifact."
+                        ),
+                        call=self._suggested_call_string(
+                            "validate_graph",
+                            arguments,
+                        ),
+                    )
+                )
             if record.graph_sensitive_literal_count and record.graphs:
                 arguments: dict[str, Any] = {
                     "graphs": record.graphs,
@@ -59827,26 +60020,32 @@ class DoxaBase:
                 "path": "<review-artifact.ttl>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
+                "fail_on_invalid": True,
             }
+            if record.validation_scope is not None:
+                arguments["validation_scope"] = record.validation_scope
             tool_name = "export_graph"
             action_label = "Export graph artifact"
             reason = (
                 "The selected graph terms scanned clean; keep "
-                "fail_on_sensitive=True so the write still blocks if content "
-                "changes before export."
+                "fail_on_sensitive=True and fail_on_invalid=True so the write "
+                "still blocks if content changes before export."
             )
         elif record.export_kind == "trig":
             arguments = {
                 "path": "<project-review-bundle.trig>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
+                "fail_on_invalid": True,
             }
+            if record.validation_scope is not None:
+                arguments["validation_scope"] = record.validation_scope
             tool_name = "export_trig"
             action_label = "Export TriG bundle"
             reason = (
                 "The selected named graphs scanned clean; keep "
-                "fail_on_sensitive=True so the write still blocks if content "
-                "changes before export."
+                "fail_on_sensitive=True and fail_on_invalid=True so the write "
+                "still blocks if content changes before export."
             )
         elif record.export_kind == "revision_snapshots":
             arguments = {
@@ -59871,7 +60070,10 @@ class DoxaBase:
                 "manifest_path": "<handoff-manifest.json>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
+                "fail_on_invalid": True,
             }
+            if record.validation_scope is not None:
+                arguments["validation_scope"] = record.validation_scope
             if record.revision_iris:
                 arguments["revision_iris"] = record.revision_iris
             if record.snapshot_graph_roles:
@@ -59880,8 +60082,8 @@ class DoxaBase:
             action_label = "Export handoff bundle"
             reason = (
                 "The selected RDF graphs and snapshot rows scanned clean; keep "
-                "fail_on_sensitive=True so the paired write still blocks if "
-                "content changes before export."
+                "fail_on_sensitive=True and fail_on_invalid=True so the paired "
+                "write still blocks if content changes before export."
             )
 
         action_class = SuggestedNextAction
@@ -60151,16 +60353,36 @@ class DoxaBase:
         format: str = "turtle",
         overwrite: bool = False,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
     ) -> GraphExportRecord:
         graph_names = self._graph_names_for_export(graphs)
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
         shareability_hints = self._shareability_hints_for_graphs(graph_names)
+        validation = self._export_validation_result(
+            graph_names,
+            validation_scope=validation_scope,
+            default_scope=None,
+        )
+        validation_warnings = self._export_validation_warnings(validation)
+        validation_blocks_export = validation is not None and not validation.conforms
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+        )
+        self._raise_if_invalid_export_blocked(
+            fail_on_invalid=fail_on_invalid,
+            validation=validation,
         )
         rdf_graph = self._to_graph_roles(graph_names)
         data = rdf_graph.serialize(format=format)
@@ -60176,8 +60398,18 @@ class DoxaBase:
             privacy_warnings=privacy_warnings,
             warnings=[
                 *privacy_warnings,
+                *validation_warnings,
                 *self._shareability_hint_warnings(shareability_hints),
             ],
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
             shareability_hints=shareability_hints,
         )
 
@@ -60189,12 +60421,28 @@ class DoxaBase:
         overwrite: bool = False,
         graph_iri_prefix: str = RCG_PREFIX,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
     ) -> GraphExportRecord:
         graph_names = self._graph_names_for_export(graphs, default_preset="project")
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
         shareability_hints = self._shareability_hints_for_graphs(graph_names)
+        validation = self._export_validation_result(
+            graph_names,
+            validation_scope=validation_scope,
+            default_scope="all",
+        )
+        validation_warnings = self._export_validation_warnings(validation)
+        validation_blocks_export = validation is not None and not validation.conforms
         export_scope_warnings = self._export_scope_warnings(
             export_kind="trig",
             graph_names=graph_names,
@@ -60203,6 +60451,10 @@ class DoxaBase:
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+        )
+        self._raise_if_invalid_export_blocked(
+            fail_on_invalid=fail_on_invalid,
+            validation=validation,
         )
         dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
         data = dataset.serialize(format="trig")
@@ -60218,9 +60470,19 @@ class DoxaBase:
             privacy_warnings=privacy_warnings,
             warnings=[
                 *privacy_warnings,
+                *validation_warnings,
                 *self._shareability_hint_warnings(shareability_hints),
                 *export_scope_warnings,
             ],
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
             artifact_kind=self._trig_export_artifact_kind(graph_names),
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,

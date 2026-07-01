@@ -30078,6 +30078,100 @@ def test_agent_authored_observation_rdf_requires_evidence(tmp_path: Path) -> Non
     )
 
 
+def test_export_preflight_and_writes_gate_invalid_graphs(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation should block unattended export." .
+        }
+        """
+    )
+
+    preflight = db.export_preflight(export_kind="handoff_bundle", limit=5)
+
+    assert preflight.decision == "block"
+    assert preflight.scanner_clean is True
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.would_block_invalid_export is True
+    assert preflight.validation_scope == "all"
+    assert preflight.validation_conforms is False
+    assert preflight.validation_result_count > 0
+    assert preflight.validation_results
+    assert preflight.suggested_next_actions[0].tool_name == "validate_graph"
+    assert preflight.suggested_next_actions[0].arguments == {
+        "scope": "all",
+        "limit_results": 20,
+    }
+    assert not any(
+        action.tool_name == "export_handoff_bundle"
+        for action in preflight.suggested_next_actions
+    )
+
+    blocked_graph_path = tmp_path / "invalid-observations.ttl"
+    with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
+        db.export_graph(blocked_graph_path, graphs=["observations"])
+    assert not blocked_graph_path.exists()
+
+    blocked_trig_path = tmp_path / "invalid-project.trig"
+    with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
+        db.export_trig(blocked_trig_path)
+    assert not blocked_trig_path.exists()
+
+    blocked_handoff_trig = tmp_path / "blocked-handoff.trig"
+    blocked_handoff_snapshots = tmp_path / "blocked-snapshots.json"
+    blocked_handoff_manifest = tmp_path / "blocked-manifest.json"
+    with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
+        db.export_handoff_bundle(
+            blocked_handoff_trig,
+            blocked_handoff_snapshots,
+            manifest_path=blocked_handoff_manifest,
+        )
+    assert not blocked_handoff_trig.exists()
+    assert not blocked_handoff_snapshots.exists()
+    assert not blocked_handoff_manifest.exists()
+
+    override_path = tmp_path / "reviewed-invalid-project.trig"
+    override = db.export_trig(override_path, fail_on_invalid=False)
+
+    assert override_path.exists()
+    assert override.validation_scope == "all"
+    assert override.validation_conforms is False
+    assert override.validation_result_count > 0
+    assert override.would_block_invalid_export is True
+    assert any("Export validation failed" in warning for warning in override.warnings)
+
+    handoff_trig = tmp_path / "reviewed-invalid-handoff.trig"
+    handoff_snapshots = tmp_path / "reviewed-invalid-snapshots.json"
+    handoff_manifest = tmp_path / "reviewed-invalid-manifest.json"
+    handoff = db.export_handoff_bundle(
+        handoff_trig,
+        handoff_snapshots,
+        manifest_path=handoff_manifest,
+        fail_on_invalid=False,
+    )
+
+    assert handoff_trig.exists()
+    assert handoff_snapshots.exists()
+    assert handoff_manifest.exists()
+    assert handoff.decision == "block"
+    assert handoff.would_block_invalid_export is True
+    assert handoff.validation_scope == "all"
+    assert handoff.validation_conforms is False
+    assert handoff.validation_result_count > 0
+    assert handoff.trig.validation_conforms is False
+    manifest = json.loads(handoff_manifest.read_text(encoding="utf-8"))
+    assert manifest["would_block_invalid_export"] is True
+    assert manifest["validation_conforms"] is False
+    assert manifest["validation_result_count"] == handoff.validation_result_count
+    assert manifest["artifacts"]["trig"]["validation_conforms"] is False
+
+
 def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     result = db.record_claim_observation(

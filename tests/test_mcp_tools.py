@@ -2076,6 +2076,54 @@ def test_export_preflight_tool_reports_shareability_hints_for_home_paths(
     )
 
 
+def test_export_preflight_tool_reports_invalid_graph_gate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation should block MCP exports." .
+        }
+        """
+    )
+
+    result = export_preflight_tool(db, export_kind="handoff_bundle", limit=5)
+
+    assert result["decision"] == "block"
+    assert result["scanner_clean"] is True
+    assert result["would_block_sensitive_export"] is False
+    assert result["would_block_invalid_export"] is True
+    assert result["validation_scope"] == "all"
+    assert result["validation_conforms"] is False
+    assert result["validation_result_count"] > 0
+    assert result["validation_results"]
+    assert result["suggested_next_actions"][0]["tool_name"] == "validate_graph"
+
+    with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
+        export_trig_tool(db, str(tmp_path / "blocked-invalid.trig"))
+    assert not (tmp_path / "blocked-invalid.trig").exists()
+
+    override = export_trig_tool(
+        db,
+        str(tmp_path / "reviewed-invalid.trig"),
+        fail_on_invalid=False,
+    )
+
+    assert override["validation_scope"] == "all"
+    assert override["validation_conforms"] is False
+    assert override["validation_result_count"] > 0
+    assert override["would_block_invalid_export"] is True
+    assert any(
+        "Export validation failed" in warning for warning in override["warnings"]
+    )
+
+
 def test_export_preflight_tool_marks_handoff_path_placeholders(
     tmp_path: Path,
 ) -> None:
