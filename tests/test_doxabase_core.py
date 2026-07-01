@@ -35492,6 +35492,41 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert {item.iri for item in staged.evidence} == {evidence}
     assert status_value_type in {item.iri for item in staged.revision_anchors}
 
+    rerun = db.draft_profile_map_updates(dataset, evidence)
+    rerun_advisory = rerun.type_advisories[0]
+    assert rerun_advisory.pending_staged_promotion_iris == [staged.iri]
+    assert rerun_advisory.pending_staged_promotion_count == 1
+    assert rerun_advisory.pending_staged_assertion_iris == []
+    assert [
+        action.tool_name for action in rerun_advisory.suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_systematisation",
+        "describe_pattern",
+        "describe_pattern",
+        "describe_staged_revision",
+        "export_staged_revisions",
+        "stage_map_assertion_change",
+        "stage_map_assertion_change",
+    ]
+    assert not any(
+        action.tool_name == "stage_pattern_promotion"
+        for action in rerun_advisory.suggested_next_actions
+    )
+    pending_promotion_export = next(
+        action
+        for action in rerun.suggested_next_action_groups["profile_type_review"]
+        if action.tool_name == "export_staged_revisions"
+        and action.semantic_move == "define_value_type"
+    )
+    assert pending_promotion_export.source_profile_advisory[
+        "action_status"
+    ] == "already_pending"
+    assert pending_promotion_export.source_profile_advisory[
+        "pending_staged_promotion_iris"
+    ] == [staged.iri]
+
     review = db.export_profile_insight_review_bundle(
         dataset,
         evidence,
@@ -35644,6 +35679,36 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         implication_pattern.pattern_iri,
     ]
     staged_assertion = db.stage_map_assertion_change(**value_type_args)
+    rerun_after_assertion = db.draft_profile_map_updates(dataset, evidence)
+    rerun_assertion_advisory = rerun_after_assertion.type_advisories[0]
+    assert rerun_assertion_advisory.pending_staged_promotion_iris == [staged.iri]
+    assert rerun_assertion_advisory.pending_staged_assertion_iris == [
+        staged_assertion.revision_iri
+    ]
+    assert rerun_assertion_advisory.pending_staged_assertion_count == 1
+    assert not any(
+        action.tool_name == "stage_pattern_promotion"
+        for action in rerun_assertion_advisory.suggested_next_actions
+    )
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in rerun_assertion_advisory.suggested_next_actions
+    )
+    pending_assertion_export = next(
+        action
+        for action in rerun_after_assertion.suggested_next_action_groups[
+            "profile_type_review"
+        ]
+        if action.tool_name == "export_staged_revisions"
+        and action.semantic_move == "assert_map_type"
+    )
+    assert pending_assertion_export.source_profile_advisory[
+        "action_status"
+    ] == "already_pending"
+    assert pending_assertion_export.source_profile_advisory[
+        "pending_staged_assertion_iris"
+    ] == [staged_assertion.revision_iri]
+
     final_review = db.export_profile_insight_review_bundle(
         dataset,
         evidence,

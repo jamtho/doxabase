@@ -3584,6 +3584,10 @@ class ProfileTypeFindingAdvisory:
     related_recommendation_kinds: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    pending_staged_promotion_iris: list[str] = field(default_factory=list)
+    pending_staged_promotion_count: int = 0
+    pending_staged_assertion_iris: list[str] = field(default_factory=list)
+    pending_staged_assertion_count: int = 0
     duplicate_group_key: str = ""
     duplicate_count: int = 1
     duplicate_advisory_indexes: list[int] = field(default_factory=list)
@@ -30305,7 +30309,9 @@ class DoxaBase:
                     ],
                 )
             )
-        return self._with_profile_type_advisory_duplicate_metadata(advisories)
+        return self._with_profile_type_pending_staged_metadata(
+            self._with_profile_type_advisory_duplicate_metadata(advisories)
+        )
 
     @staticmethod
     def _profile_type_related_recommendations(
@@ -30448,6 +30454,58 @@ class DoxaBase:
                 )
             )
         return annotated
+
+    def _with_profile_type_pending_staged_metadata(
+        self,
+        advisories: list[ProfileTypeFindingAdvisory],
+    ) -> list[ProfileTypeFindingAdvisory]:
+        updated: list[ProfileTypeFindingAdvisory] = []
+        for advisory in advisories:
+            pending_staged_promotion_iris: list[str] = []
+            pending_staged_assertion_iris: list[str] = []
+            source = DoxaBase._profile_advisory_source_for_advisory(
+                advisory,
+                advisory_kind="profile_type_review",
+                index_field="type_advisory_index",
+            )
+            for action in advisory.suggested_next_actions:
+                action_source = DoxaBase._profile_advisory_source_with_route_keys(
+                    source,
+                    action,
+                )
+                semantic_move = action_source.get("semantic_move")
+                if semantic_move == "define_value_type":
+                    for staged_iri in self._pending_staged_profile_route_iris(
+                        action_source,
+                        semantic_move="define_value_type",
+                    ):
+                        DoxaBase._append_unique(
+                            pending_staged_promotion_iris,
+                            staged_iri,
+                        )
+                elif semantic_move == "assert_map_type":
+                    for staged_iri in self._pending_staged_profile_route_iris(
+                        action_source,
+                        semantic_move="assert_map_type",
+                    ):
+                        DoxaBase._append_unique(
+                            pending_staged_assertion_iris,
+                            staged_iri,
+                        )
+            updated.append(
+                replace(
+                    advisory,
+                    pending_staged_promotion_iris=pending_staged_promotion_iris,
+                    pending_staged_promotion_count=len(
+                        pending_staged_promotion_iris
+                    ),
+                    pending_staged_assertion_iris=pending_staged_assertion_iris,
+                    pending_staged_assertion_count=len(
+                        pending_staged_assertion_iris
+                    ),
+                )
+            )
+        return updated
 
     def _profile_type_advisory_actions_with_duplicate_support(
         self,
@@ -31636,6 +31694,21 @@ class DoxaBase:
                     source["pending_staged_promotion_count"] = len(
                         pending_values
                     )
+                pending_staged_assertion_iris = getattr(
+                    advisory,
+                    "pending_staged_assertion_iris",
+                    [],
+                )
+                if pending_staged_assertion_iris:
+                    pending_values = source.setdefault(
+                        "pending_staged_assertion_iris",
+                        [],
+                    )
+                    for staged_iri in pending_staged_assertion_iris:
+                        DoxaBase._append_unique(pending_values, staged_iri)
+                    source["pending_staged_assertion_count"] = len(
+                        pending_values
+                    )
 
         actions: list[SuggestedNextAction] = []
         for key in action_order:
@@ -31706,12 +31779,156 @@ class DoxaBase:
                     pending_fallback_iris
                 )
             ]
+        pending_value_type_promotion_iris = (
+            DoxaBase._string_values_from_any(
+                source_profile_advisory.get("pending_staged_promotion_iris")
+            )
+        )
+        if (
+            action.tool_name == "stage_pattern_promotion"
+            and source_profile_advisory.get("semantic_move") == "define_value_type"
+        ):
+            if not pending_value_type_promotion_iris:
+                pending_value_type_promotion_iris = (
+                    self._pending_staged_profile_route_iris(
+                        source_profile_advisory,
+                        semantic_move="define_value_type",
+                    )
+                )
+            if pending_value_type_promotion_iris:
+                source = dict(source_profile_advisory)
+                source["action_status"] = "already_pending"
+                source["pending_staged_promotion_iris"] = list(
+                    pending_value_type_promotion_iris
+                )
+                source["pending_staged_promotion_count"] = len(
+                    pending_value_type_promotion_iris
+                )
+                return [
+                    DoxaBase._profile_advisory_suggested_action(
+                        pending_action,
+                        source_profile_advisory=source,
+                    )
+                    for pending_action in self._profile_pending_type_review_actions(
+                        pending_value_type_promotion_iris,
+                        semantic_move="define_value_type",
+                    )
+                ]
+        pending_type_assertion_iris = DoxaBase._string_values_from_any(
+            source_profile_advisory.get("pending_staged_assertion_iris")
+        )
+        if (
+            action.tool_name == "stage_map_assertion_change"
+            and source_profile_advisory.get("semantic_move") == "assert_map_type"
+        ):
+            if not pending_type_assertion_iris:
+                pending_type_assertion_iris = self._pending_staged_profile_route_iris(
+                    source_profile_advisory,
+                    semantic_move="assert_map_type",
+                )
+            if pending_type_assertion_iris:
+                source = dict(source_profile_advisory)
+                source["action_status"] = "already_pending"
+                source["pending_staged_assertion_iris"] = list(
+                    pending_type_assertion_iris
+                )
+                source["pending_staged_assertion_count"] = len(
+                    pending_type_assertion_iris
+                )
+                return [
+                    DoxaBase._profile_advisory_suggested_action(
+                        pending_action,
+                        source_profile_advisory=source,
+                    )
+                    for pending_action in self._profile_pending_type_review_actions(
+                        pending_type_assertion_iris,
+                        semantic_move="assert_map_type",
+                    )
+                ]
         return [
             DoxaBase._profile_advisory_suggested_action(
                 action,
                 source_profile_advisory=source_profile_advisory,
             )
         ]
+
+    def _profile_pending_type_review_actions(
+        self,
+        pending_staged_iris: list[str],
+        *,
+        semantic_move: str,
+    ) -> list[SuggestedNextAction]:
+        if semantic_move == "define_value_type":
+            inspect_label = "Inspect pending value type vocabulary promotion"
+            export_label = "Export pending value type vocabulary promotions"
+            export_slug = "profile-value-type-vocabulary-pending"
+            inspect_reason = (
+                "A current staged value-type vocabulary skeleton already "
+                "covers this profile type route. Inspect it before drafting "
+                "another duplicate skeleton."
+            )
+            export_reason = (
+                "Write a grouped review bundle for pending staged value-type "
+                "vocabulary skeletons before deciding whether more value-type "
+                "promotion work is needed. The export blocks if "
+                "scanner-matching content appears before export."
+            )
+        else:
+            inspect_label = "Inspect pending profile type assertion"
+            export_label = "Export pending profile type assertions"
+            export_slug = "profile-type-assertion-pending"
+            inspect_reason = (
+                "A current staged profile type assertion already covers this "
+                "type advisory route. Inspect it before drafting another "
+                "duplicate assertion."
+            )
+            export_reason = (
+                "Write a grouped review bundle for pending staged profile type "
+                "assertions before deciding whether more type assertion work is "
+                "needed. The export blocks if scanner-matching content appears "
+                "before export."
+            )
+        actions: list[SuggestedNextAction] = []
+        for staged_iri in pending_staged_iris[:3]:
+            arguments = {
+                "iri": staged_iri,
+                "include_current_apply_check": True,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label=inspect_label,
+                    tool_name="describe_staged_revision",
+                    mcp_tool_name="doxabase.describe_staged_revision",
+                    arguments=arguments,
+                    reason=inspect_reason,
+                    call=self._suggested_call_string(
+                        "describe_staged_revision",
+                        arguments,
+                    ),
+                )
+            )
+        arguments = {
+            "revision_iris": list(pending_staged_iris),
+            "path": self._suggested_review_export_path(
+                export_slug,
+                pending_staged_iris,
+            ),
+            "fail_on_sensitive": True,
+        }
+        actions.append(
+            SuggestedNextAction(
+                action_label=export_label,
+                tool_name="export_staged_revisions",
+                mcp_tool_name="doxabase.export_staged_revisions",
+                arguments=arguments,
+                reason=export_reason,
+                call=self._suggested_call_string(
+                    "export_staged_revisions",
+                    arguments,
+                ),
+            )
+        )
+        return actions
 
     def _profile_pending_fallback_review_actions(
         self,
@@ -31774,6 +31991,17 @@ class DoxaBase:
     ) -> list[str]:
         if source_profile_advisory.get("semantic_move") != "caveat_fallback":
             return []
+        return self._pending_staged_profile_route_iris(
+            source_profile_advisory,
+            semantic_move="caveat_fallback",
+        )
+
+    def _pending_staged_profile_route_iris(
+        self,
+        source_profile_advisory: MappingABC[str, Any],
+        *,
+        semantic_move: str,
+    ) -> list[str]:
         review_lane = source_profile_advisory.get("review_lane")
         route_group_key = source_profile_advisory.get("route_group_key")
         if not isinstance(review_lane, str) or not isinstance(
@@ -31817,7 +32045,7 @@ class DoxaBase:
             for stored_source in self._stored_profile_insight_route_sources(
                 revision.iri
             ):
-                if stored_source.get("semantic_move") != "caveat_fallback":
+                if stored_source.get("semantic_move") != semantic_move:
                     continue
                 if stored_source.get("review_lane") != review_lane:
                     continue
@@ -31880,6 +32108,21 @@ class DoxaBase:
                 )
                 source["pending_staged_promotion_count"] = len(
                     advisory.pending_staged_promotion_iris
+                )
+        if isinstance(advisory, ProfileTypeFindingAdvisory):
+            if advisory.pending_staged_promotion_iris:
+                source["pending_staged_promotion_iris"] = list(
+                    advisory.pending_staged_promotion_iris
+                )
+                source["pending_staged_promotion_count"] = len(
+                    advisory.pending_staged_promotion_iris
+                )
+            if advisory.pending_staged_assertion_iris:
+                source["pending_staged_assertion_iris"] = list(
+                    advisory.pending_staged_assertion_iris
+                )
+                source["pending_staged_assertion_count"] = len(
+                    advisory.pending_staged_assertion_iris
                 )
         if advisory.mixed_support_patterns:
             other_lane = (

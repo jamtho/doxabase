@@ -464,6 +464,10 @@ same-evidence support pattern may need the `pattern_iri` produced by
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.
+If a profile type advisory already has current staged work for the same route,
+it sets `pending_staged_promotion_iris` for value-type vocabulary work or
+`pending_staged_assertion_iris` for type assertions, then routes to
+inspect/export the staged revision instead of proposing duplicate type staging.
 If a metric or type advisory already has a staged `caveat_fallback` route,
 `draft_profile_map_updates` sets
 `source_profile_advisory.pending_staged_fallback_iris` on the pending-review
