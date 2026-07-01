@@ -1762,7 +1762,10 @@ graph. `snapshot_drifts` gives staged/current `sha256:<hex>` digest mismatches,
 including same-count graph changes. For new revisions, `snapshot_drifts` also
 includes exact triples added to and removed from the target graph since the
 stored snapshot, a `drift_relevance` hint, and any patch-subject or
-patch-predicate, patch-object, or revision-anchor overlaps.
+patch-predicate, patch-object, or revision-anchor overlaps. It also includes a
+capped `changed_resources[]` summary and
+`changed_resource_suggested_next_actions` for resource-level review routing
+before expanding raw triples.
 `no_patch_subject_overlap` is useful triage context, not semantic approval to
 apply. Predicate and object overlap can be broad; `broad_patch_object_overlap`
 marks weak object overlap through shared class/type vocabulary such as

@@ -1078,9 +1078,15 @@ the target graph. When stored snapshot rows are
 available, `snapshot_drifts` carries the exact target graph triples added and
 removed since staging, plus a conservative `drift_relevance` hint and any
 patch-subject, patch-predicate, patch-object, or revision-anchor overlaps.
+It also carries a capped `changed_resources[]` triage view with changed
+subject/object resources, their changed-triple counts, matching roles, predicate
+displays, and resource-revision follow-up actions. Read this before expanding
+raw triples when you need to decide whether drift is unrelated, resource-local,
+or anchored to the staged proposal.
 Revision-list summary rows keep those relevance and overlap fields, plus
-added/removed exact-change counts, while omitting the actual changed-triple
-arrays unless `drift_detail="exact"` is requested.
+added/removed exact-change counts and changed-resource summaries, while
+omitting the actual changed-triple arrays unless `drift_detail="exact"` is
+requested.
 Treat `no_patch_subject_overlap` as "probably unrelated but still stale", not
 as permission to apply without review. Predicate and object overlap can be
 broad; `broad_patch_object_overlap` is the weak object-overlap label for shared
@@ -1089,9 +1095,9 @@ touched a resource the staged revision named as review context. Older revisions 
 `exact_changed_triples_available=False` if they were recorded before snapshot
 row storage existed. `snapshot_drifts` also gives staged/current graph content
 digests and stored graph counts for digest drift, including same-count graph
-changes. Markdown exports show compact display values in the exact-drift tables;
-use the API payload's raw fields when a follow-up graph edit needs exact RDF
-terms.
+changes. Markdown exports show compact changed-resource and exact-triple display
+values; use the API payload's raw fields when a follow-up graph edit needs exact
+RDF terms.
 Suggested actions are ordered review-first; apply or restage calls come after
 inspection/export suggestions. If stale drift has count/digest evidence but
 `exact_changed_triples_available=False`, the suggested actions can include

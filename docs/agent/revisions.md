@@ -822,7 +822,11 @@ arbitrary stored-version-to-current comparison, or pass `after_revision_iri` to
 compare two stored versions. `describe_graph_version_diff` also carries compact
 before/after revision context plus lineage/applied-diff follow-up actions; use
 those when a zero or small graph delta might hide staged/applied/restaged
-recovery state. `list_graph_versions` still does not provide checkout/replay.
+recovery state. When exact snapshot rows are available, it also returns capped
+changed-resource summaries and resource revision follow-up actions even when
+raw changed triples are omitted. Use those summaries first when deciding which
+resources need lineage review. `list_graph_versions` still does not provide
+checkout/replay.
 
 ## Limits
 

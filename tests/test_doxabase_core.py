@@ -8254,6 +8254,20 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.patch_overlap_predicates == []
     assert drift.patch_overlap_objects == []
     assert drift.revision_anchor_overlap == []
+    assert drift.changed_resource_count == 1
+    assert drift.changed_resources_returned_count == 1
+    assert drift.changed_resources_omitted_count == 0
+    assert drift.changed_resources[0].resource.iri == (
+        "https://example.test/project#SeedDataset"
+    )
+    assert drift.changed_resources[0].changed_triple_count == 2
+    assert drift.changed_resources[0].added_triple_count == 1
+    assert drift.changed_resources[0].removed_triple_count == 1
+    assert drift.changed_resources[0].matched_by == ["changed_subject"]
+    assert drift.changed_resources[0].predicate_displays == ["rdfs:label"]
+    assert drift.changed_resource_suggested_next_actions[0].tool_name == (
+        "list_resource_revisions"
+    )
     assert "Predicate overlap is reported separately, even when empty" in drift.note
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
@@ -8287,6 +8301,11 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     ) in export_text
     assert "| map | 2 | 2 |" in export_text
     assert "| True | 1 | 1 |" in export_text
+    assert "#### Snapshot Drift Changed Resources: map" in export_text
+    assert "| Seed dataset renamed | 2 | 1 | 1 | changed_subject | rdfs:label |" in (
+        export_text
+    )
+    assert "list_resource_revisions(resource_iri=" in export_text
     assert "#### Snapshot Drift Triples: map" in export_text
     assert "exact raw RDF terms remain available" in export_text
     assert "SeedDataset" in export_text
@@ -8316,6 +8335,13 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     )
     assert summary_drift.patch_overlap_objects == []
     assert summary_drift.revision_anchor_overlap == []
+    assert summary_drift.changed_resource_count == 1
+    assert summary_drift.changed_resources[0].resource.iri == (
+        "https://example.test/project#SeedDataset"
+    )
+    assert summary_drift.changed_resource_suggested_next_actions[0].tool_name == (
+        "list_resource_revisions"
+    )
     assert "omitted from this summary response" in summary_drift.note
     assert "are included" not in summary_drift.note
 
@@ -8355,6 +8381,10 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert lane_drift_summary[0].exact_changed_triples_available is True
     assert lane_drift_summary[0].exact_changed_triples_included is False
     assert lane_drift_summary[0].drift_relevance == "no_patch_subject_overlap"
+    assert lane_drift_summary[0].changed_resource_count == 1
+    assert lane_drift_summary[0].changed_resources[0].resource.iri == (
+        "https://example.test/project#SeedDataset"
+    )
     assert "raw changed triples are intentionally omitted" in (
         lane_drift_summary[0].note
     )
@@ -8441,6 +8471,18 @@ def test_apply_check_reports_object_and_anchor_snapshot_drift_overlap(
     assert drift.revision_anchor_overlap == [
         "https://example.test/project#OperationalIdentifier"
     ]
+    assert drift.changed_resource_count == 1
+    assert drift.changed_resources[0].resource.iri == (
+        "https://example.test/project#OperationalIdentifier"
+    )
+    assert drift.changed_resources[0].matched_by == [
+        "revision_anchor",
+        "patch_object",
+        "changed_subject",
+    ]
+    assert drift.changed_resource_suggested_next_actions[0].tool_name == (
+        "describe_resource_revision_lineage"
+    )
     assert "patch objects and revision anchors" in drift.note
 
 
@@ -14837,6 +14879,19 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert stored_diff.triples_removed_count == 0
     assert stored_diff.triples_added_truncated is True
     assert stored_diff.triples_removed_truncated is False
+    assert stored_diff.changed_resource_count == 2
+    assert stored_diff.changed_resources_returned_count == 2
+    assert stored_diff.changed_resources_omitted_count == 0
+    assert [item.resource.iri for item in stored_diff.changed_resources] == [
+        "https://example.test/project#Messages",
+        "https://richcanopy.org/ns/rc#Dataset",
+    ]
+    assert stored_diff.changed_resources[0].matched_by == ["changed_subject"]
+    assert stored_diff.changed_resources[1].matched_by == ["changed_object"]
+    assert [
+        action.tool_name
+        for action in stored_diff.changed_resource_suggested_next_actions
+    ] == ["list_resource_revisions", "list_resource_revisions"]
     assert [action.tool_name for action in stored_diff.suggested_next_actions] == [
         "describe_revision_graph_snapshot",
         "describe_revision_graph_snapshot",
@@ -14878,6 +14933,15 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert current_diff.max_triples == 1
     assert len(current_diff.triples_added) == 1
     assert current_diff.triples_removed == []
+    assert current_diff.changed_resource_count == 3
+    assert [item.resource.iri for item in current_diff.changed_resources] == [
+        "https://example.test/project#Messages",
+        "https://example.test/project#Orders",
+        "https://richcanopy.org/ns/rc#Dataset",
+    ]
+    assert current_diff.changed_resources[0].matched_by == ["changed_subject"]
+    assert current_diff.changed_resources[1].matched_by == ["changed_subject"]
+    assert current_diff.changed_resources[2].matched_by == ["changed_object"]
     assert {triple.subject for triple in current_diff.triples_added} <= {
         "https://example.test/project#Messages",
         "https://example.test/project#Orders",

@@ -4624,6 +4624,11 @@ diff.triples_removed_count
 diff.triples_added_truncated
 diff.triples_removed_truncated
 diff.max_triples
+diff.changed_resource_count
+diff.changed_resources_returned_count
+diff.changed_resources_omitted_count
+diff.changed_resources
+diff.changed_resource_suggested_next_actions
 diff.triples_added
 diff.triples_removed
 diff.suggested_next_actions
@@ -4638,8 +4643,9 @@ two stored graph versions instead. `after_target_kind` is
 `current_graph` or `stored_revision_snapshot`; `after_snapshot` is populated
 only for stored-version comparisons, and `current_graph` is populated only for
 snapshot-to-current comparisons. When `exact_changed_triples_available=True`,
-the helper can report exact added/removed triples; pass `include_triples=True`
-only when those triples are safe and useful to inspect. Snapshot-evidence
+the helper can report exact added/removed triples and always reports a capped
+changed-resource summary; pass `include_triples=True` only when raw triples are
+safe and useful to inspect. Snapshot-evidence
 import actions from the before/after snapshots are promoted into
 `diff.suggested_next_actions`, so RDF-only or snapshot-only handoff imports can
 self-route to `import_revision_snapshots` or `import_trig`.
@@ -6121,10 +6127,24 @@ snapshot_drift.patch_overlap_subjects
 snapshot_drift.patch_overlap_predicates
 snapshot_drift.patch_overlap_objects
 snapshot_drift.revision_anchor_overlap
+snapshot_drift.changed_resource_count
+snapshot_drift.changed_resources_returned_count
+snapshot_drift.changed_resources_omitted_count
+snapshot_drift.changed_resources
+snapshot_drift.changed_resource_suggested_next_actions
 snapshot_drift.triples_added_since_snapshot
 snapshot_drift.triples_removed_since_snapshot
 snapshot_drift.note
 ```
+
+`snapshot_drift.changed_resources[]` is a capped resource-level triage view over
+the exact changed triples. Each row has `resource`, `changed_triple_count`,
+`added_triple_count`, `removed_triple_count`, `matched_by`, `predicate_iris`,
+and `predicate_displays`. `matched_by` can include `changed_subject`,
+`changed_object`, `patch_subject`, `patch_object`, and `revision_anchor`.
+Treat these as review-routing hints: use the suggested resource revision calls
+to inspect overlapping resources before restaging, but do not treat a clean
+resource list as semantic approval.
 
 `restaged_by`, `current_restaged_by`, and `stale_resolution_state` mirror the
 revision-list/export routing fields on direct apply checks. A handled stale
@@ -6553,9 +6573,11 @@ When count or digest drift routes a lane, read
 `lane.exact_drift_summary[]` first. It is a compact per-graph summary with
 `has_count_drift`, `has_snapshot_digest_drift`, `count_drift_deltas`,
 `patch_triple_status_counts`, snapshot/current graph counts, exact-triple
-availability, added/removed-since-snapshot counts, and drift relevance. It does
-not include raw triples; inspect `batch_item` or the staged revision's current
-apply check when exact changed triples are needed for review.
+availability, added/removed-since-snapshot counts, drift relevance, and the
+same capped `changed_resources[]` / `changed_resource_suggested_next_actions`
+resource triage used by `snapshot_drifts[]`. It does not include raw triples;
+inspect `batch_item` or the staged revision's current apply check when exact
+changed triples are needed for review.
 
 `plan.resolved_target_groups[]` is the target-family view over those source
 lanes. It collapses rows that point at the same queue and resolved target while

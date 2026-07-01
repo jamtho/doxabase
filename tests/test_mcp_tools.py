@@ -3761,30 +3761,48 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
 
     assert result["would_restage_revision_iris"] == [staged["revision_iri"]]
     lane = result["lanes"][0]
-    assert lane["exact_drift_summary"] == [
-        {
-            "graph_role": "map",
-            "blocking_reasons": ["target_count_drift"],
-            "has_count_drift": True,
-            "has_snapshot_digest_drift": True,
-            "count_drift_count": 1,
-            "count_drift_deltas": [2],
-            "patch_triple_status_counts": {"all_patch_triples_absent": 1},
-            "snapshot_triple_count": 0,
-            "current_triple_count": 2,
-            "triples_added_since_snapshot_count": 2,
-            "triples_removed_since_snapshot_count": 0,
-            "exact_changed_triples_available": True,
-            "exact_changed_triples_included": False,
-            "drift_relevance": "broad_patch_object_overlap",
-            "note": (
-                "Count drift summarizes patch-level count checks for this graph. "
-                "Snapshot drift summarizes graph-level count/digest drift; raw "
-                "changed triples are intentionally omitted from this compact "
-                "recovery-lane field."
-            ),
-        }
+    assert len(lane["exact_drift_summary"]) == 1
+    summary = lane["exact_drift_summary"][0]
+    assert summary["graph_role"] == "map"
+    assert summary["blocking_reasons"] == ["target_count_drift"]
+    assert summary["has_count_drift"] is True
+    assert summary["has_snapshot_digest_drift"] is True
+    assert summary["count_drift_count"] == 1
+    assert summary["count_drift_deltas"] == [2]
+    assert summary["patch_triple_status_counts"] == {
+        "all_patch_triples_absent": 1
+    }
+    assert summary["snapshot_triple_count"] == 0
+    assert summary["current_triple_count"] == 2
+    assert summary["triples_added_since_snapshot_count"] == 2
+    assert summary["triples_removed_since_snapshot_count"] == 0
+    assert summary["exact_changed_triples_available"] is True
+    assert summary["exact_changed_triples_included"] is False
+    assert summary["drift_relevance"] == "broad_patch_object_overlap"
+    assert summary["changed_resource_count"] == 2
+    assert summary["changed_resources_returned_count"] == 2
+    assert summary["changed_resources_omitted_count"] == 0
+    assert summary["changed_resources"][0]["resource"]["iri"] == (
+        "https://richcanopy.org/ns/rc#Dataset"
+    )
+    assert summary["changed_resources"][0]["matched_by"] == [
+        "patch_object",
+        "changed_object",
     ]
+    assert summary["changed_resources"][1]["resource"]["iri"] == (
+        "https://example.test/project#Drift"
+    )
+    assert summary["changed_resources"][1]["matched_by"] == ["changed_subject"]
+    assert [
+        action["tool_name"]
+        for action in summary["changed_resource_suggested_next_actions"]
+    ] == ["describe_resource_revision_lineage", "list_resource_revisions"]
+    assert summary["note"] == (
+        "Count drift summarizes patch-level count checks for this graph. "
+        "Snapshot drift summarizes graph-level count/digest drift; raw "
+        "changed triples are intentionally omitted from this compact "
+        "recovery-lane field."
+    )
     assert lane["batch_item"]["exact_drift_summary_before"] == (
         lane["exact_drift_summary"]
     )

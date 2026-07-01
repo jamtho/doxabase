@@ -1193,6 +1193,17 @@ class GraphTripleDescription:
 
 
 @dataclass(frozen=True)
+class ChangedGraphResourceSummary:
+    resource: ResourceSummary
+    changed_triple_count: int
+    added_triple_count: int
+    removed_triple_count: int
+    matched_by: list[str]
+    predicate_iris: list[str]
+    predicate_displays: list[str]
+
+
+@dataclass(frozen=True)
 class StagedGraphSnapshotDrift:
     graph_role: str
     snapshot_triple_count: int
@@ -1208,6 +1219,11 @@ class StagedGraphSnapshotDrift:
     patch_overlap_predicates: list[str]
     patch_overlap_objects: list[str]
     revision_anchor_overlap: list[str]
+    changed_resource_count: int | None
+    changed_resources_returned_count: int
+    changed_resources_omitted_count: int | None
+    changed_resources: list[ChangedGraphResourceSummary]
+    changed_resource_suggested_next_actions: list[SuggestedNextAction]
     triples_added_since_snapshot: list[GraphTripleDescription]
     triples_removed_since_snapshot: list[GraphTripleDescription]
     note: str
@@ -1229,6 +1245,11 @@ class StagedRevisionExactDriftSummary:
     exact_changed_triples_available: bool
     exact_changed_triples_included: bool
     drift_relevance: str | None
+    changed_resource_count: int | None
+    changed_resources_returned_count: int
+    changed_resources_omitted_count: int | None
+    changed_resources: list[ChangedGraphResourceSummary]
+    changed_resource_suggested_next_actions: list[SuggestedNextAction]
     note: str
 
 
@@ -2169,6 +2190,15 @@ class _StagedRevisionDriftTerms:
     revision_anchors: set[str]
 
 
+@dataclass
+class _ChangedGraphResourceAccumulator:
+    iri: str
+    added_triple_count: int = 0
+    removed_triple_count: int = 0
+    matched_by: set[str] = field(default_factory=set)
+    predicate_iris: set[str] = field(default_factory=set)
+
+
 @dataclass(frozen=True)
 class GraphSnapshotDescription:
     graph_role: str
@@ -2544,6 +2574,11 @@ class GraphVersionDiffDescription:
     triples_added_truncated: bool
     triples_removed_truncated: bool
     max_triples: int
+    changed_resource_count: int | None
+    changed_resources_returned_count: int
+    changed_resources_omitted_count: int | None
+    changed_resources: list[ChangedGraphResourceSummary]
+    changed_resource_suggested_next_actions: list[SuggestedNextAction]
     triples_added: list[GraphTripleDescription]
     triples_removed: list[GraphTripleDescription]
     suggested_next_actions: list[SuggestedNextAction]
@@ -9339,24 +9374,39 @@ class DoxaBase:
         triples_added_truncated = False
         triples_removed_truncated = False
         exact_included = False
+        changed_resource_count: int | None = None
+        changed_resources_returned_count = 0
+        changed_resources_omitted_count: int | None = None
+        changed_resources: list[ChangedGraphResourceSummary] = []
+        changed_resource_suggested_next_actions: list[SuggestedNextAction] = []
 
         if exact_available:
             added_rows = self._sort_graph_storage_rows(after_rows - before_rows)
             removed_rows = self._sort_graph_storage_rows(before_rows - after_rows)
             triples_added_count = len(added_rows)
             triples_removed_count = len(removed_rows)
+            added_descriptions = [
+                self._graph_triple_description(row) for row in added_rows
+            ]
+            removed_descriptions = [
+                self._graph_triple_description(row) for row in removed_rows
+            ]
+            (
+                changed_resource_count,
+                changed_resources_returned_count,
+                changed_resources_omitted_count,
+                changed_resources,
+                changed_resource_suggested_next_actions,
+            ) = self._changed_graph_resource_summary(
+                triples_added=added_descriptions,
+                triples_removed=removed_descriptions,
+            )
             if include_triples:
                 exact_included = True
                 triples_added_truncated = triples_added_count > max_triples
                 triples_removed_truncated = triples_removed_count > max_triples
-                triples_added = [
-                    self._graph_triple_description(row)
-                    for row in added_rows[:max_triples]
-                ]
-                triples_removed = [
-                    self._graph_triple_description(row)
-                    for row in removed_rows[:max_triples]
-                ]
+                triples_added = added_descriptions[:max_triples]
+                triples_removed = removed_descriptions[:max_triples]
                 note = (
                     "Exact graph-version changed triples are included from "
                     "stored snapshot rows and the selected after target."
@@ -9466,6 +9516,13 @@ class DoxaBase:
             triples_added_truncated=triples_added_truncated,
             triples_removed_truncated=triples_removed_truncated,
             max_triples=max_triples,
+            changed_resource_count=changed_resource_count,
+            changed_resources_returned_count=changed_resources_returned_count,
+            changed_resources_omitted_count=changed_resources_omitted_count,
+            changed_resources=changed_resources,
+            changed_resource_suggested_next_actions=(
+                changed_resource_suggested_next_actions
+            ),
             triples_added=triples_added,
             triples_removed=triples_removed,
             suggested_next_actions=suggested_next_actions,
@@ -11872,6 +11929,17 @@ class DoxaBase:
                     patch_overlap_predicates=drift.patch_overlap_predicates,
                     patch_overlap_objects=drift.patch_overlap_objects,
                     revision_anchor_overlap=drift.revision_anchor_overlap,
+                    changed_resource_count=drift.changed_resource_count,
+                    changed_resources_returned_count=(
+                        drift.changed_resources_returned_count
+                    ),
+                    changed_resources_omitted_count=(
+                        drift.changed_resources_omitted_count
+                    ),
+                    changed_resources=drift.changed_resources,
+                    changed_resource_suggested_next_actions=(
+                        drift.changed_resource_suggested_next_actions
+                    ),
                     triples_added_since_snapshot=[],
                     triples_removed_since_snapshot=[],
                     note=note,
@@ -44126,6 +44194,31 @@ class DoxaBase:
                         if snapshot_drift is not None
                         else None
                     ),
+                    changed_resource_count=(
+                        snapshot_drift.changed_resource_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    changed_resources_returned_count=(
+                        snapshot_drift.changed_resources_returned_count
+                        if snapshot_drift is not None
+                        else 0
+                    ),
+                    changed_resources_omitted_count=(
+                        snapshot_drift.changed_resources_omitted_count
+                        if snapshot_drift is not None
+                        else None
+                    ),
+                    changed_resources=(
+                        snapshot_drift.changed_resources
+                        if snapshot_drift is not None
+                        else []
+                    ),
+                    changed_resource_suggested_next_actions=(
+                        snapshot_drift.changed_resource_suggested_next_actions
+                        if snapshot_drift is not None
+                        else []
+                    ),
                     note=" ".join(note_parts),
                 )
             )
@@ -46881,6 +46974,11 @@ class DoxaBase:
                 triples_added_since_snapshot: list[GraphTripleDescription] = []
                 triples_removed_since_snapshot: list[GraphTripleDescription] = []
                 exact_changed_triples_available = False
+                changed_resource_count = None
+                changed_resources_returned_count = 0
+                changed_resources_omitted_count = None
+                changed_resources: list[ChangedGraphResourceSummary] = []
+                changed_resource_suggested_next_actions: list[SuggestedNextAction] = []
                 note = (
                     "The graph content digest changed since this revision was "
                     "staged. DoxaBase can detect that the graph state is not "
@@ -46890,6 +46988,18 @@ class DoxaBase:
             else:
                 triples_added_since_snapshot, triples_removed_since_snapshot = diff
                 exact_changed_triples_available = True
+                (
+                    changed_resource_count,
+                    changed_resources_returned_count,
+                    changed_resources_omitted_count,
+                    changed_resources,
+                    changed_resource_suggested_next_actions,
+                ) = self._changed_graph_resource_summary(
+                    triples_added=triples_added_since_snapshot,
+                    triples_removed=triples_removed_since_snapshot,
+                    patch_terms=patch_terms_by_graph.get(graph_role),
+                    source_revision_iri=staged.iri,
+                )
                 note = (
                     "The graph content digest changed since this revision was "
                     "staged. Exact triples added to and removed from the target "
@@ -46935,6 +47045,13 @@ class DoxaBase:
                     patch_overlap_predicates=patch_overlap_predicates,
                     patch_overlap_objects=patch_overlap_objects,
                     revision_anchor_overlap=revision_anchor_overlap,
+                    changed_resource_count=changed_resource_count,
+                    changed_resources_returned_count=changed_resources_returned_count,
+                    changed_resources_omitted_count=changed_resources_omitted_count,
+                    changed_resources=changed_resources,
+                    changed_resource_suggested_next_actions=(
+                        changed_resource_suggested_next_actions
+                    ),
                     triples_added_since_snapshot=triples_added_since_snapshot,
                     triples_removed_since_snapshot=triples_removed_since_snapshot,
                     note=note,
@@ -46970,6 +47087,161 @@ class DoxaBase:
                 graph_terms.patch_predicates.add(str(predicate))
                 graph_terms.patch_objects.add(str(object_node))
         return terms_by_graph
+
+    def _changed_graph_resource_summary(
+        self,
+        *,
+        triples_added: Iterable[GraphTripleDescription],
+        triples_removed: Iterable[GraphTripleDescription],
+        patch_terms: _StagedRevisionDriftTerms | None = None,
+        source_revision_iri: str | None = None,
+        max_resources: int = 12,
+        max_predicates_per_resource: int = 8,
+    ) -> tuple[
+        int,
+        int,
+        int,
+        list[ChangedGraphResourceSummary],
+        list[SuggestedNextAction],
+    ]:
+        accumulators: dict[str, _ChangedGraphResourceAccumulator] = {}
+
+        def accumulator(iri: str) -> _ChangedGraphResourceAccumulator:
+            if iri not in accumulators:
+                accumulators[iri] = _ChangedGraphResourceAccumulator(iri=iri)
+            return accumulators[iri]
+
+        def collect(
+            triple: GraphTripleDescription,
+            *,
+            change_kind: TypingLiteral["added", "removed"],
+        ) -> None:
+            resources: dict[str, set[str]] = {}
+            if triple.subject_kind == "uri":
+                resources.setdefault(triple.subject, set()).add("changed_subject")
+            if triple.object_kind == "uri":
+                resources.setdefault(triple.object, set()).add("changed_object")
+            for iri, roles in resources.items():
+                acc = accumulator(iri)
+                if change_kind == "added":
+                    acc.added_triple_count += 1
+                else:
+                    acc.removed_triple_count += 1
+                acc.matched_by.update(roles)
+                acc.predicate_iris.add(triple.predicate)
+
+        for triple in triples_added:
+            collect(triple, change_kind="added")
+        for triple in triples_removed:
+            collect(triple, change_kind="removed")
+
+        if patch_terms is not None:
+            for iri, acc in accumulators.items():
+                if iri in patch_terms.patch_subjects:
+                    acc.matched_by.add("patch_subject")
+                if iri in patch_terms.patch_objects:
+                    acc.matched_by.add("patch_object")
+                if iri in patch_terms.revision_anchors:
+                    acc.matched_by.add("revision_anchor")
+
+        role_order = {
+            "patch_subject": 0,
+            "revision_anchor": 1,
+            "patch_object": 2,
+            "changed_subject": 3,
+            "changed_object": 4,
+        }
+
+        def sort_key(acc: _ChangedGraphResourceAccumulator) -> tuple[int, int, str]:
+            rank = min((role_order.get(role, 99) for role in acc.matched_by), default=99)
+            changed_count = acc.added_triple_count + acc.removed_triple_count
+            return (rank, -changed_count, acc.iri)
+
+        ordered = sorted(accumulators.values(), key=sort_key)
+        returned = ordered[:max_resources]
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        summaries: list[ChangedGraphResourceSummary] = []
+        for acc in returned:
+            predicate_iris = sorted(acc.predicate_iris)[:max_predicates_per_resource]
+            summaries.append(
+                ChangedGraphResourceSummary(
+                    resource=self._resource_summary(lookup_graphs, acc.iri),
+                    changed_triple_count=(
+                        acc.added_triple_count + acc.removed_triple_count
+                    ),
+                    added_triple_count=acc.added_triple_count,
+                    removed_triple_count=acc.removed_triple_count,
+                    matched_by=sorted(
+                        acc.matched_by,
+                        key=lambda role: (role_order.get(role, 99), role),
+                    ),
+                    predicate_iris=predicate_iris,
+                    predicate_displays=[
+                        self._graph_term_display(
+                            predicate,
+                            "uri",
+                            curie=self._compact_iri(predicate),
+                        )
+                        for predicate in predicate_iris
+                    ],
+                )
+            )
+        actions = [
+            self._changed_graph_resource_suggested_action(
+                summary,
+                source_revision_iri=source_revision_iri,
+            )
+            for summary in summaries
+        ]
+        total = len(ordered)
+        return total, len(summaries), max(total - len(summaries), 0), summaries, actions
+
+    def _changed_graph_resource_suggested_action(
+        self,
+        summary: ChangedGraphResourceSummary,
+        *,
+        source_revision_iri: str | None,
+    ) -> SuggestedNextAction:
+        resource_iri = summary.resource.iri
+        if source_revision_iri is not None and any(
+            role in summary.matched_by
+            for role in ("patch_subject", "patch_object", "revision_anchor")
+        ):
+            arguments: dict[str, Any] = {
+                "resource_iri": resource_iri,
+                "revision_iri": source_revision_iri,
+            }
+            tool_name = "describe_resource_revision_lineage"
+            return SuggestedNextAction(
+                action_label="Inspect changed resource lineage",
+                tool_name=tool_name,
+                mcp_tool_name=f"doxabase.{tool_name}",
+                arguments=arguments,
+                reason=(
+                    "This changed resource overlaps a staged patch subject, "
+                    "patch object, or revision anchor; inspect its resource-level "
+                    "revision route before restaging or applying."
+                ),
+                call=self._suggested_call_string(tool_name, arguments),
+            )
+        arguments = {
+            "resource_iri": resource_iri,
+            "include_patch_mentions": True,
+            "include_apply_checks": True,
+        }
+        tool_name = "list_resource_revisions"
+        return SuggestedNextAction(
+            action_label="List changed resource revisions",
+            tool_name=tool_name,
+            mcp_tool_name=f"doxabase.{tool_name}",
+            arguments=arguments,
+            reason=(
+                "Review other staged, applied, or historical revision records "
+                "that mention this changed resource before deciding whether "
+                "the graph drift is relevant."
+            ),
+            call=self._suggested_call_string(tool_name, arguments),
+        )
 
     def _staged_snapshot_drift_relevance(
         self,
@@ -56885,6 +57157,8 @@ class DoxaBase:
                     + " |"
                 )
             for drift in check.snapshot_drifts:
+                lines.extend(self._snapshot_drift_changed_resources_markdown(drift))
+            for drift in check.snapshot_drifts:
                 lines.extend(self._snapshot_drift_triples_markdown(drift))
 
         if check.patch_checks:
@@ -56955,6 +57229,53 @@ class DoxaBase:
                     f"- **{action.action_label}:** `{action.call}`{note}"
                 )
                 lines.append(f"  {action.reason}")
+        return lines
+
+    def _snapshot_drift_changed_resources_markdown(
+        self,
+        drift: StagedGraphSnapshotDrift,
+        *,
+        action_limit: int = 5,
+    ) -> list[str]:
+        if drift.changed_resource_count is None or not drift.changed_resources:
+            return []
+        lines = [
+            "",
+            f"#### Snapshot Drift Changed Resources: {drift.graph_role}",
+            "",
+            (
+                "| Resource | Changed triples | Added | Removed | Matched by | "
+                "Predicates |"
+            ),
+            "|---|---:|---:|---:|---|---|",
+        ]
+        for item in drift.changed_resources:
+            label = item.resource.label or self._local_name(item.resource.iri)
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        self._markdown_table_cell(label or item.resource.iri),
+                        str(item.changed_triple_count),
+                        str(item.added_triple_count),
+                        str(item.removed_triple_count),
+                        self._markdown_table_cell(", ".join(item.matched_by)),
+                        self._markdown_table_cell(
+                            ", ".join(item.predicate_displays)
+                        ),
+                    ]
+                )
+                + " |"
+            )
+        if drift.changed_resources_omitted_count:
+            lines.append(
+                "| ... | "
+                f"{drift.changed_resources_omitted_count} more omitted | | | | |"
+            )
+        if drift.changed_resource_suggested_next_actions:
+            lines.extend(["", "Suggested changed-resource review calls:", ""])
+            for action in drift.changed_resource_suggested_next_actions[:action_limit]:
+                lines.append(f"- **{action.action_label}:** `{action.call}`")
         return lines
 
     def _snapshot_drift_triples_markdown(

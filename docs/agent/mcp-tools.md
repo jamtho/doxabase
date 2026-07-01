@@ -428,8 +428,9 @@ or the current live graph for the same graph role. Call it after
 version?" rather than merely inspect count/digest metadata. Pass
 `after_revision_iri` to compare two stored snapshots; omit it to compare the
 `before_revision_iri` snapshot with the current graph. Exact added/removed
-triple counts are reported when stored rows are available, and
-`include_triples=true` includes bounded changed-triple arrays.
+triple counts and capped changed-resource summaries are reported when stored
+rows are available, and `include_triples=true` includes bounded changed-triple
+arrays.
 The response also carries compact before/after revision context and
 `related_revision_iris`, including alternative semantic-review gate fields when
 a staged comparison point competes with an already-applied alternative, plus
@@ -2204,7 +2205,10 @@ target graph since the stored snapshot. It also includes `drift_relevance`,
 `patch_overlap_subjects`, `patch_overlap_predicates`, `patch_overlap_objects`,
 and `revision_anchor_overlap` so agents can separate "no staged patch subject
 changed" from stronger overlaps. Predicate and object overlap can be broad, so
-they are review hints rather than apply decisions.
+they are review hints rather than apply decisions. New snapshot drift rows also
+carry capped `changed_resources[]` and
+`changed_resource_suggested_next_actions` so review can start from affected
+subjects/objects and resource lineage before expanding raw triples.
 One narrow exception to the usual restage route is a stale single-assertion add
 or authored replacement for a curated singleton map slot where exact snapshot
 rows show the current map added a different value for the same subject and
