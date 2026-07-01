@@ -21,6 +21,9 @@ logical analysis context: inspect `describe_analysis_view` for source datasets,
 denominator, caveats, and query snippets. Query or repair the source datasets
 when needed; only add physical storage/layout metadata to a separate
 materialized table route when that route actually exists.
+`project_brief` surfaces these resources as `analysis_view_review`, not
+`query_context_review`, so unattended agents can inspect the logical definition
+without entering a physical-route repair loop.
 
 When starting from a query metadata resource instead of a dataset, such as a
 storage access, physical layout, partition scheme, or mapped column, call

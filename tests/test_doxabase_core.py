@@ -27084,6 +27084,21 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert context.safe_inspection_action_indexes == [0, 1]
     assert context.first_unattended_action_index is None
 
+    brief = db.project_brief(limit=5)
+    view_tasks = [
+        task
+        for task in brief.recommended_next_tasks
+        if task.resource is not None and task.resource.iri == view
+    ]
+    assert len(view_tasks) == 1
+    assert view_tasks[0].task_type == "analysis_view_review"
+    assert view_tasks[0].source == "describe_analysis_view"
+    assert view_tasks[0].suggested_next_action is not None
+    assert view_tasks[0].suggested_next_action.tool_name == "describe_analysis_view"
+    assert "query_context_review" not in [
+        task.task_type for task in view_tasks
+    ]
+
 
 def test_record_map_table_bundle_records_parquet_table_map(
     tmp_path: Path,

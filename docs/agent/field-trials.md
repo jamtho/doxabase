@@ -4429,6 +4429,20 @@ few useful gaps:
   address-looking values and low-frequency domain pairs by default; it still
   does not parse addresses, infer internal-domain rules, or assert that a
   network analysis is valid.
+- A profile-to-capsule/Enron handoff check found `describe_query_context`
+  correctly marked `rc:AnalysisView` resources as `logical_analysis_view`, but
+  `project_brief` still routed those views through `query_context_review`.
+  Logical views now surface as `analysis_view_review` with a
+  `describe_analysis_view` action, keeping denominator/query-recipe inspection
+  visible without implying missing physical storage metadata.
+- Parallel read-only scouts from the same wave identified three larger next
+  candidates that are not implemented here: a no-I/O profile-to-capsule manifest
+  helper that composes table bundles, profile bundles, analysis views, and
+  optional explicit profile-derived map promotion; locator-grade
+  `shareability_hints` that name the graph term, revision snapshot, resource,
+  or Markdown line behind local-only handoff warnings; and a
+  `project_brief` export-validation health task for scanner-clean but
+  SHACL-invalid handoff preflights.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

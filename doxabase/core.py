@@ -6290,6 +6290,27 @@ class DoxaBase:
                         pending_staged_repair_iris=pending_staged_repair_iris,
                     )
                 )
+            elif dataset.query.readiness == "logical_analysis_view":
+                review_action = self._project_brief_describe_analysis_view_action(
+                    dataset.dataset.iri,
+                    query_summary=dataset.query,
+                )
+                tasks.append(
+                    ProjectBriefRecommendedTask(
+                        priority=65,
+                        task_type="analysis_view_review",
+                        source="describe_analysis_view",
+                        resource=dataset.dataset,
+                        reason=(
+                            "Dataset is a logical analysis view: inspect the "
+                            "denominator, source datasets, caveats, and query "
+                            "snippets without treating it as missing physical "
+                            "query metadata."
+                        ),
+                        suggested_next_action=review_action,
+                        suggested_next_call=review_action.call,
+                    )
+                )
             elif dataset.query.readiness not in {
                 "ready_for_query_planning",
                 "ready",
@@ -6444,6 +6465,32 @@ class DoxaBase:
             ),
             call=self._suggested_call_string(
                 "describe_context_slice",
+                arguments,
+            ),
+        )
+
+    def _project_brief_describe_analysis_view_action(
+        self,
+        dataset_iri: str,
+        *,
+        query_summary: ProjectBriefDatasetQuerySummary,
+    ) -> SuggestedNextAction:
+        for action in query_summary.suggested_next_actions:
+            if action.tool_name == "describe_analysis_view":
+                return action
+        arguments = {"iri": dataset_iri}
+        return SuggestedNextAction(
+            action_label="Describe analysis view",
+            tool_name="describe_analysis_view",
+            mcp_tool_name="doxabase.describe_analysis_view",
+            arguments=arguments,
+            reason=(
+                "Read the logical view denominator, source datasets, caveats, "
+                "and query snippet metadata before deciding whether to query "
+                "the source datasets or materialize a new physical route."
+            ),
+            call=self._suggested_call_string(
+                "describe_analysis_view",
                 arguments,
             ),
         )

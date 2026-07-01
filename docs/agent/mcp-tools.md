@@ -223,6 +223,9 @@ templates before drafting or executing any route. Tasks labelled
 context currently has no lifted repair template; the task action points to
 `describe_query_context` even when the dataset summary still lists a
 review-gated `draft_query_plan` action for deeper inspection.
+Tasks labelled `analysis_view_review` point to `describe_analysis_view` for an
+`rc:AnalysisView` with `readiness="logical_analysis_view"`. These are logical
+population/query-recipe reviews, not physical query-repair work.
 Tasks labelled `query_plan_handoff` are low-priority ready-query lanes. They
 appear when `describe_query_context` reports `ready_for_query_planning` and point
 to the query context's `draft_query_plan` action when one is available, even when

@@ -3240,6 +3240,10 @@ repair template currently exists. Its top-level task action points to
 `describe_query_context`; the bounded dataset query summary may still keep a
 review-gated `draft_query_plan` action for agents that need plan-specific scan,
 runtime, and blocker fields after the context review.
+For an `rc:AnalysisView`, `project_brief` uses `analysis_view_review` with a
+`describe_analysis_view` action instead of `query_context_review`, because
+`readiness="logical_analysis_view"` is reviewed logical context rather than a
+missing physical route.
 When any repair group has non-skippable `pending_action_options`,
 `draft_query_plan` actions stay in `suggested_next_actions` as diagnostic or
 review handoffs, but they are not unattended recommendations:
