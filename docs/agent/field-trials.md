@@ -3862,9 +3862,11 @@ few useful gaps:
   `physical_layout_iri` could leave old verification status/note triples in
   place and fail max-count SHACL checks. `draft_query_evidence_storage_overlay`
   now removes replaced verification status/note values from reused dataset,
-  storage access, and physical layout resources before staging. Remaining
-  non-blocking affordances for later waves: generic `export_staged_revisions`
-  should repeat sampled-profile cautions in the profile route bridge, and batch
+  storage access, and physical layout resources before staging. A sampled-profile
+  caution trial then found the dedicated profile review bundle guarded sampled
+  evidence correctly, but the generic staged Markdown did not repeat that caution;
+  `export_staged_revisions()` now renders sampled evidence cautions in its
+  Profile Route Bridge. Remaining non-blocking affordance for later waves: batch
   restage responses could make the dry-run-to-real-run continuation easier for
   top-level-action-only executors.
 

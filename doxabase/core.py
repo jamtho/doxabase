@@ -52361,9 +52361,9 @@ class DoxaBase:
         lines = [
             (
                 "| Row | Candidate | Revision | Profile route keys | "
-                "Review lanes | Semantic moves |"
+                "Review lanes | Semantic moves | Evidence cautions |"
             ),
-            "|---:|---|---|---|---|---|",
+            "|---:|---|---|---|---|---|---|",
         ]
         for index, summary in enumerate(summaries, start=1):
             if not summary.profile_route_groups:
@@ -52379,6 +52379,11 @@ class DoxaBase:
             semantic_moves = self._staged_revisions_profile_route_move_cell(
                 summary.profile_route_groups
             )
+            evidence_cautions = (
+                self._staged_revisions_profile_route_caution_cell(
+                    summary.profile_route_groups
+                )
+            )
             lines.append(
                 "| "
                 + " | ".join(
@@ -52393,6 +52398,7 @@ class DoxaBase:
                         self._markdown_table_cell(route_keys),
                         self._markdown_table_cell(review_lanes),
                         self._markdown_table_cell(semantic_moves),
+                        self._markdown_table_cell(evidence_cautions),
                     ]
                 )
                 + " |"
@@ -52431,6 +52437,17 @@ class DoxaBase:
                     f"{review_lane}: {', '.join(all_moves) or 'unspecified'}"
                 )
         return "; ".join(cells)
+
+    @staticmethod
+    def _staged_revisions_profile_route_caution_cell(
+        groups: Iterable[dict[str, Any]],
+    ) -> str:
+        cautions: list[str] = []
+        for group in groups:
+            for caution in group.get("sampled_evidence_cautions") or []:
+                if isinstance(caution, str):
+                    DoxaBase._append_unique(cautions, caution)
+        return "; ".join(cautions) or "none"
 
     def _staged_revisions_modelling_choice_markdown(
         self,

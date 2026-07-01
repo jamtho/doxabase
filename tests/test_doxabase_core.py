@@ -35938,6 +35938,25 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
     assert "Profile basis" in sampled_review_text
     assert "sample: 1" in sampled_review_text
     assert "Mechanical readiness is not full-scan evidence" in sampled_review_text
+    generic_sampled_review_path = tmp_path / "sampled-generic-staged-review.md"
+    generic_sampled_export = db.export_staged_revisions(
+        [sampled_stage.staged_revision.revision_iri],
+        generic_sampled_review_path,
+    )
+    generic_route_group = generic_sampled_export.revision_summaries[
+        0
+    ].profile_route_groups[0]
+    assert generic_route_group["sampled_evidence_cautions"] == [
+        sampled_draft.sampled_evidence_caution
+    ]
+    generic_sampled_review_text = generic_sampled_review_path.read_text(
+        encoding="utf-8"
+    )
+    assert "## Profile Route Bridge" in generic_sampled_review_text
+    assert "Evidence cautions" in generic_sampled_review_text
+    assert "Mechanical readiness is not full-scan evidence" in (
+        generic_sampled_review_text
+    )
     assert db.validate_graph(scope="all").conforms
 
 

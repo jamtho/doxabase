@@ -236,9 +236,10 @@ Generic staged inspection preserves the stored trail too:
 `describe_staged_revision()` exposes `profile_route_sources`,
 `profile_route_keys`, and `profile_route_groups`, and
 `export_staged_revisions()` adds a compact `Profile Route Bridge` when those
-stored sources exist. Use the full profile insight bundle when you need live
-open-lane analysis; use the generic bridge when a handoff only has a staged
-review bundle or one staged row.
+stored sources exist. The generic bridge includes evidence cautions from stored
+profile route groups, including sampled-profile warnings. Use the full profile
+insight bundle when you need live open-lane analysis; use the generic bridge
+when a handoff only has a staged review bundle or one staged row.
 When several route groups map to the same lane, match strength, and support
 kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key
@@ -269,8 +270,10 @@ names the decision, mutation policy, safe-single candidates, blocked candidates,
 open lanes, candidate rationales, and whether a rerun is required after
 mutation. Then inspect the detailed candidate/lane rows before applying
 anything. When `sampled_evidence_caution` appears on the bundle, a candidate, or
-`safe_single_apply_candidate_rationales[]`, treat it as a scope-review prompt:
-the staged row may be mechanically ready without being full-scan-backed.
+`safe_single_apply_candidate_rationales[]`, or as an evidence caution in the
+generic `export_staged_revisions()` Profile Route Bridge, treat it as a
+scope-review prompt: the staged row may be mechanically ready without being
+full-scan-backed.
 For the narrow positive case with one ordinary profile map-update candidate,
 `bulk_apply_allowed=true` and `decision="bulk_apply_after_review"` can be safe,
 but scripts should still count, not parse the word "bulk": require exactly one

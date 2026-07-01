@@ -2354,9 +2354,11 @@ deeper restage chains while `restaged_by` preserves the direct provenance edge.
 preserves provenance. The payload also returns
 per-row `profile_route_keys` and `profile_route_groups` when staged rows store
 profile route sources, and grouped Markdown includes a compact `Profile Route
-Bridge` table for those rows. Use that bridge for profile-derived staged rows
-when you have only a generic staged review bundle rather than a full
-`export_profile_insight_review_bundle` artifact.
+Bridge` table for those rows. The bridge repeats stored sampled-profile
+evidence cautions so a Markdown-only staged review does not hide scope warnings.
+Use that bridge for profile-derived staged rows when you have only a generic
+staged review bundle rather than a full `export_profile_insight_review_bundle`
+artifact.
 The payload also returns `bundle_summary` with status/state counts, unresolved
 stale sources, handled
 stale sources, ready successors, all validation-failed revisions by current

@@ -6470,7 +6470,9 @@ When stored profile route metadata is present, `item.profile_route_keys` and
 `item.profile_route_groups` mirror the generic staged Markdown `Profile Route
 Bridge`; use them to connect staged rows back to profile map-update, metric,
 type, query-context, or caveat review lanes without regenerating a full profile
-insight bundle.
+insight bundle. The Markdown bridge also renders stored
+`sampled_evidence_cautions`, so generic staged exports preserve sampled-profile
+scope warnings for Markdown-only reviewers.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
 for the row's current status, such as validation repair or restage advice.
