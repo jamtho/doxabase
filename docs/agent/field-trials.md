@@ -4331,6 +4331,14 @@ few useful gaps:
   and source spans preserved. The route is now covered as one cold workflow so
   future query-planning changes cannot pass by only satisfying the individual
   helper tests.
+- A staged-revision conflict/rebase/version trial confirmed drift, same-slot
+  replacement, lineage, exact graph-version diff, and handoff recovery routes
+  are broadly usable, but found an unattended-agent hazard in mixed plans: a
+  mechanically restageable sibling could appear as `first_mutation_call` while a
+  semantic-review-gated alternative was also present. Recovery plans now leave
+  `first_mutation_action` empty whenever any mutation-frontier item requires
+  semantic review, while preserving the post-review restage/apply actions in
+  `mutation_frontier_items[]`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

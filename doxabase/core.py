@@ -42212,6 +42212,14 @@ class DoxaBase:
         if review_action is not None:
             first_safe_action = review_action
             first_safe_source = "suggested_review_action"
+        if any(
+            item.requires_semantic_review_before_mutation
+            for item in mutation_frontier_items
+        ):
+            if first_safe_action is None and suggested_next_actions:
+                first_safe_action = suggested_next_actions[0]
+                first_safe_source = "suggested_next_action"
+            return first_mutation_action, first_safe_action, first_safe_source
         first_ungated_mutation_item = next(
             (
                 item

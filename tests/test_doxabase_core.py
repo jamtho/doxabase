@@ -10354,10 +10354,13 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert helper_item.requires_semantic_review_before_mutation is True
     assert "semantic review is required before mutation" in helper_item.reason
     assert "do not mutate unattended" in helper_item.reason
-    assert stale_plan.first_mutation_action is not None
-    assert stale_plan.first_mutation_action.tool_name == "restage_staged_revision"
-    assert stale_plan.first_mutation_action.arguments["iri"] == (
-        independent.revision_iri
+    assert stale_plan.first_mutation_action is None
+    assert stale_plan.first_mutation_call is None
+    assert any(
+        item.action.tool_name == "restage_staged_revision"
+        and item.action.arguments == {"iri": independent.revision_iri}
+        and item.requires_semantic_review_before_mutation is False
+        for item in stale_plan.mutation_frontier_items
     )
     lanes_by_source = {
         lane.source_revision_iri: lane for lane in stale_plan.lanes
@@ -29173,8 +29176,14 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     assert source_plan.mutation_allowed_after == (
         "semantic_review_required_before_mutation"
     )
-    assert source_plan.first_mutation_action is not None
-    assert source_plan.first_mutation_action.tool_name == "restage_staged_revision"
+    assert source_plan.first_mutation_action is None
+    assert source_plan.first_mutation_call is None
+    assert any(
+        item.action.tool_name == "restage_staged_revision"
+        and item.action.arguments == {"iri": stale_mechanical.revision_iri}
+        and item.requires_semantic_review_before_mutation is False
+        for item in source_plan.mutation_frontier_items
+    )
     assert source_plan.first_safe_review_or_mutation_action is not None
     assert source_plan.first_safe_review_or_mutation_action.tool_name == (
         "restage_staged_revisions"
@@ -29247,9 +29256,13 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
         "apply_after_review": 1,
         "restage_after_review": 1,
     }
-    assert receiver_plan.first_mutation_action is not None
-    assert receiver_plan.first_mutation_action.tool_name == (
-        "restage_staged_revision"
+    assert receiver_plan.first_mutation_action is None
+    assert receiver_plan.first_mutation_call is None
+    assert any(
+        item.action.tool_name == "restage_staged_revision"
+        and item.action.arguments == {"iri": stale_mechanical.revision_iri}
+        and item.requires_semantic_review_before_mutation is False
+        for item in receiver_plan.mutation_frontier_items
     )
     assert receiver_plan.first_safe_review_or_mutation_action is not None
     assert receiver_plan.first_safe_review_or_mutation_action.tool_name == (

@@ -6549,11 +6549,13 @@ For scripts that need one canonical next hop, use
 `first_safe_review_or_mutation_action` / `first_safe_review_or_mutation_call`.
 When handoff preflight blocks mutation, this points at the first blocking import
 or preflight action and `first_mutation_action` stays empty. Once preflight is
-clear, `first_mutation_action` points at the first `mutation_frontier_items[]`
-action whose `requires_semantic_review_before_mutation` is false. If every
-frontier item is still semantic-review-gated, `first_mutation_action` stays
-empty even though `mutation_frontier_items[]` preserves the post-review action.
-The first safe action points at an earlier read-only or
+clear, `first_mutation_action` is populated only when no mutation-frontier item
+is semantic-review-gated; mixed plans with even one
+`requires_semantic_review_before_mutation=true` item keep
+`first_mutation_action` empty so unattended scripts cannot skip the review lane.
+In those plans, `mutation_frontier_items[]` still preserves each post-review
+action, including ungated sibling restages. The first safe action points at an
+earlier read-only or
 `mutation_scope="none"` review suggestion when the plan offers one; otherwise it
 mirrors the first mutation-frontier action with
 `first_safe_review_or_mutation_source="mutation_frontier"`.

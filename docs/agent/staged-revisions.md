@@ -379,7 +379,11 @@ Compact cookbook for a mixed stale queue:
 4. Review `plan.lanes[]`. Treat `would_restage_revision_iris` as the only
    mechanical restage worklist; do not feed `repair_or_replace`,
    `skipped_not_restageable`, informational, or already-applied rows into a bulk
-   restage.
+   restage. In mixed plans, `first_mutation_action` stays empty when any
+   mutation-frontier item is semantic-review-gated; use
+   `first_safe_review_or_mutation_action` first, then inspect
+   `mutation_frontier_items[]` for the reviewed restage/apply actions that
+   remain available after that gate.
    When a lane has `shared_context_applies=true`, read
    `shared_context_graphs` and the plan or export
    `bundle_summary.shared_context_*` fields before mutating it; shared staged

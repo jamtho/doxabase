@@ -1895,11 +1895,11 @@ For a single executable-or-review next hop, read
 `first_safe_review_or_mutation_action` and
 `first_safe_review_or_mutation_call`. Handoff preflight keeps
 `first_mutation_action` empty and points the safe first action at the blocking
-import/preflight step. Once preflight is clear, `first_mutation_action` points
-at the first mutation-frontier action whose
-`requires_semantic_review_before_mutation` is false. If every frontier item is
-still semantic-review-gated, `first_mutation_action` stays empty while
-`mutation_frontier_items[]` preserves the post-review action and reason. The
+import/preflight step. Once preflight is clear, `first_mutation_action` is
+populated only when no mutation-frontier item is semantic-review-gated. If the
+frontier is mixed, with one reviewed semantic choice and one mechanically
+restageable sibling, `first_mutation_action` stays empty while
+`mutation_frontier_items[]` preserves each post-review action and reason. The
 safe first action prefers any earlier read-only or `mutation_scope="none"`
 review suggestion before falling back to an ungated mutation.
 For multi-step or imported recovery work without a matching imported source
