@@ -1610,6 +1610,58 @@ def test_project_brief_surfaces_fixture_storage_health_task(
     )
 
 
+def test_project_brief_flags_fixture_table_without_linked_storage(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    unrelated = "https://example.test/project#UnrelatedOrders"
+    db.record_map_dataset(
+        dataset,
+        label="AIS Daily Broadcast Positions",
+        is_table=True,
+    )
+    db.record_map_dataset(unrelated, label="Unrelated orders", is_table=True)
+    db.record_map_storage_access(
+        "https://example.test/project#unrelated_storage",
+        datasets=[unrelated],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/tmp/unrelated",
+    )
+
+    brief = db.project_brief(limit=5)
+
+    fixture_task = next(
+        task
+        for task in brief.health_tasks
+        if task.task_type == "query_fixture_staleness_review"
+    )
+    assert fixture_task.storage_access_count == 1
+    assert fixture_task.known_fixture_table_iris == [dataset]
+    assert "without linked rc:StorageAccess" in fixture_task.reason
+    repair_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+        and task.resource is not None
+        and task.resource.iri == dataset
+    )
+    assert repair_task.task_advisories[0]["storage_access_count"] == 1
+    assert repair_task.task_group is not None
+    assert repair_task.task_group["group_member_count"] == 1
+
+    db.record_map_storage_access(
+        "https://example.test/project#ais_storage",
+        datasets=[dataset],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/tmp/ais-fixture",
+    )
+    repaired_brief = db.project_brief(limit=5)
+    assert "query_fixture_staleness_review" not in {
+        task.task_type for task in repaired_brief.health_tasks
+    }
+
+
 def test_project_brief_groups_fixture_storage_query_task_advisories(
     tmp_path: Path,
 ) -> None:
@@ -19447,6 +19499,59 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     )
 
 
+def test_missing_storage_existing_candidates_expose_route_intent_indexes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    archive = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_archive_storage",
+        label="Warehouse orders archive",
+        route_roles=["rc:ArchiveRoute"],
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://archive/warehouse/orders",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    current = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_current_storage",
+        label="Warehouse orders current",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders_current"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(dataset, label="Warehouse orders", is_table=True)
+
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+
+    assert missing_storage.details is not None
+    repair_hint = missing_storage.details["repair_hint"]
+    candidates = repair_hint["candidate_existing_storage_accesses"]
+    candidate_iris = [candidate["storage_access_iri"] for candidate in candidates]
+    archive_index = candidate_iris.index(archive.iri)
+    current_index = candidate_iris.index(current.iri)
+    assert repair_hint[
+        "candidate_existing_storage_access_route_intent_preferred_indexes"
+    ] == [current_index]
+    assert repair_hint[
+        "first_candidate_existing_storage_access_route_intent_preferred_index"
+    ] == current_index
+    assert archive_index in repair_hint[
+        "candidate_existing_storage_access_route_intent_caution_indexes"
+    ]
+    assert "CurrentRoute" in repair_hint[
+        "candidate_existing_storage_access_route_intent_note"
+    ]
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.repair_context[
+        "first_candidate_existing_storage_access_route_intent_preferred_index"
+    ] == current_index
+
+
 def test_stage_query_storage_access_repair_unblocks_missing_storage(
     tmp_path: Path,
 ) -> None:
@@ -19828,6 +19933,41 @@ def test_describe_query_context_flags_known_fixture_without_storage_access(
     assert advisory["dataset_matches_known_fixture"] is True
     assert dataset in advisory["known_fixture_table_iris"]
     assert advisory["suggested_next_action"]["tool_name"] == "project_brief"
+
+
+def test_describe_query_context_flags_known_fixture_without_linked_storage(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    unrelated = "https://example.test/project#UnrelatedOrders"
+    db.record_map_dataset(dataset, label="AIS Daily Broadcast Positions", is_table=True)
+    db.record_map_dataset(unrelated, label="Unrelated orders", is_table=True)
+    db.record_map_storage_access(
+        "https://example.test/project#unrelated_storage",
+        datasets=[unrelated],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/tmp/unrelated",
+    )
+
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+
+    assert missing_storage.details is not None
+    fixture_hint = missing_storage.details["fixture_staleness_hint"]
+    assert fixture_hint["fixture_names"] == ["AIS"]
+    assert fixture_hint["global_storage_access_count"] == 1
+    assert fixture_hint["dataset_matches_known_fixture"] is True
+    assert dataset in fixture_hint["known_fixture_table_iris"]
+    assert "without linked rc:StorageAccess" in fixture_hint["message"]
+
+    advisory = context.suggested_repair_action_groups[0].group_advisories[0]
+    assert advisory["code"] == "query_fixture_staleness_review"
+    assert advisory["storage_access_count"] == 1
+    assert advisory["dataset_matches_known_fixture"] is True
+    assert dataset in advisory["known_fixture_table_iris"]
 
 
 def test_describe_query_context_matches_current_polymarket_fixture_names(

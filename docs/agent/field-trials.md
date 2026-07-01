@@ -4139,6 +4139,19 @@ few useful gaps:
   `record_map_partition_scheme` now reject those controlled values before
   writing, matching the existing early checks for schema stability, caveat
   severity, and layout verification status.
+- A project-brief/frontier/privacy trial found fixture staleness only surfaced
+  when the whole capsule had zero `rc:StorageAccess` resources. Mixed capsules
+  with unrelated storage could hide known AIS/Polymarket fixture tables that
+  still had no linked storage. Fixture-staleness health tasks and query repair
+  advisories now check storage coverage per known fixture table while retaining
+  the global storage count as diagnostic context.
+- A storage-metadata query-planning trial found broad routing fields kept
+  unattended agents off selectorless sample/archive draft plans, but
+  `missing_storage_access` existing-storage candidate ranks could still put an
+  archive route ahead of a production/current route. Repair hints now expose
+  route-intent preferred and caution indexes for visible existing storage
+  candidates, so scripts can choose current/production/canonical links before
+  rank when match evidence is otherwise ambiguous.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

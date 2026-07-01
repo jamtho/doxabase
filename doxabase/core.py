@@ -5512,31 +5512,48 @@ class DoxaBase:
             return None
         known_fixture_table_iris = list(hint["known_fixture_table_iris"])
         representative_dataset_iri = known_fixture_table_iris[0]
+        if storage_access_count == 0:
+            reason = (
+                "Known query-planning fixture tables are present while the "
+                "capsule has zero rc:StorageAccess resources. Treat the capsule "
+                "as stale or intentionally reduced for storage-aware query "
+                "trials until a representative query context is reviewed or "
+                "fresh fixtures are loaded into scratch."
+            )
+            action_reason = (
+                "Known AIS or Polymarket fixture tables are present but the "
+                "capsule has no rc:StorageAccess resources; inspect one "
+                "representative query context before staging repeated "
+                "missing-storage repairs."
+            )
+        else:
+            reason = (
+                "Known query-planning fixture tables are present without linked "
+                "rc:StorageAccess resources, even though unrelated storage "
+                "accesses exist elsewhere in the capsule. Treat those fixture "
+                "tables as stale or intentionally reduced for storage-aware "
+                "query trials until a representative query context is reviewed "
+                "or fresh fixtures are loaded into scratch."
+            )
+            action_reason = (
+                "Known AIS or Polymarket fixture tables are present without "
+                "linked rc:StorageAccess resources; inspect one representative "
+                "query context before staging repeated missing-storage repairs."
+            )
         arguments = {"iri": representative_dataset_iri}
         action = SuggestedNextAction(
             action_label="Inspect fixture storage frontier",
             tool_name="describe_query_context",
             mcp_tool_name="doxabase.describe_query_context",
             arguments=arguments,
-            reason=(
-                "Known AIS or Polymarket fixture tables are present but the "
-                "capsule has no rc:StorageAccess resources; inspect one "
-                "representative query context before staging repeated "
-                "missing-storage repairs."
-            ),
+            reason=action_reason,
             call=self._suggested_call_string("describe_query_context", arguments),
         )
         return ProjectBriefHealthTask(
             priority=15,
             task_type="query_fixture_staleness_review",
             source="fixture_storage_access_check",
-            reason=(
-                "Known query-planning fixture tables are present while the "
-                "capsule has zero rc:StorageAccess resources. Treat the capsule "
-                "as stale or intentionally reduced for storage-aware query "
-                "trials until a representative query context is reviewed or "
-                "fresh fixtures are loaded into scratch."
-            ),
+            reason=reason,
             suggested_next_action=action,
             suggested_next_call=action.call,
             queue_types=["query_repair_review"],
@@ -27651,6 +27668,35 @@ class DoxaBase:
             dataset,
             limit=3,
         )
+        route_intent_preferred_roles = {
+            self.expand_iri("rc:ProductionRoute"),
+            self.expand_iri("rc:CurrentRoute"),
+            self.expand_iri("rc:CanonicalRoute"),
+        }
+        route_intent_caution_roles = {
+            self.expand_iri("rc:SampleRoute"),
+            self.expand_iri("rc:ArchiveRoute"),
+            self.expand_iri("rc:BackfillRoute"),
+        }
+        candidate_existing_storage_access_route_intent_preferred_indexes: list[int] = []
+        candidate_existing_storage_access_route_intent_caution_indexes: list[int] = []
+        for index, candidate in enumerate(candidate_existing_storage_accesses):
+            role_iris = {
+                str(role.get("iri"))
+                for role in candidate.get("route_roles", [])
+                if isinstance(role, MappingABC) and role.get("iri") is not None
+            }
+            if (
+                role_iris & route_intent_preferred_roles
+                and not candidate.get("pending_staged_repair_iris")
+            ):
+                candidate_existing_storage_access_route_intent_preferred_indexes.append(
+                    index
+                )
+            if role_iris & route_intent_caution_roles:
+                candidate_existing_storage_access_route_intent_caution_indexes.append(
+                    index
+                )
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "stage_reviewed_storage_access",
@@ -27907,6 +27953,26 @@ class DoxaBase:
                 "candidate_existing_storage_accesses_truncated": (
                     candidate_existing_storage_access_total
                     > len(candidate_existing_storage_accesses)
+                ),
+                "candidate_existing_storage_access_route_intent_preferred_indexes": (
+                    candidate_existing_storage_access_route_intent_preferred_indexes
+                ),
+                "first_candidate_existing_storage_access_route_intent_preferred_index": (
+                    candidate_existing_storage_access_route_intent_preferred_indexes[0]
+                    if candidate_existing_storage_access_route_intent_preferred_indexes
+                    else None
+                ),
+                "candidate_existing_storage_access_route_intent_caution_indexes": (
+                    candidate_existing_storage_access_route_intent_caution_indexes
+                ),
+                "candidate_existing_storage_access_route_intent_note": (
+                    "Review route_roles before linking an existing storage access. "
+                    "Indexes with CurrentRoute, ProductionRoute, or CanonicalRoute "
+                    "are preferred for unattended current-data repair; indexes "
+                    "with SampleRoute, ArchiveRoute, or BackfillRoute require "
+                    "explicit route-intent review."
+                    if candidate_existing_storage_accesses
+                    else None
                 ),
                 "database_relation_candidates": database_relation_candidates,
                 "database_relation_candidate_count": len(
@@ -28270,16 +28336,27 @@ class DoxaBase:
         dataset_matches_known_fixture = any(
             dataset_resource.iri == table_iri for table_iri in present_tables
         )
-        return {
-            **fixture_hint,
-            "dataset_matches_known_fixture": dataset_matches_known_fixture,
-            "message": (
+        if storage_access_count == 0:
+            message = (
                 "Known AIS or Polymarket fixture tables are present but no "
                 "rc:StorageAccess resources exist in the capsule. Treat this "
                 "capsule as stale or intentionally reduced for query-planning "
                 "trials; load current fixtures into a scratch capsule before "
                 "drawing conclusions about query-target behavior."
-            ),
+            )
+        else:
+            message = (
+                "Known AIS or Polymarket fixture tables are present without "
+                "linked rc:StorageAccess resources, even though unrelated "
+                "storage accesses exist elsewhere in the capsule. Treat those "
+                "fixture tables as stale or intentionally reduced for "
+                "query-planning trials; load current fixtures into a scratch "
+                "capsule before drawing conclusions about query-target behavior."
+            )
+        return {
+            **fixture_hint,
+            "dataset_matches_known_fixture": dataset_matches_known_fixture,
+            "message": message,
         }
 
     def _known_fixture_tables_without_storage_access_hint(
@@ -28287,8 +28364,6 @@ class DoxaBase:
         *,
         storage_access_count: int,
     ) -> dict[str, Any] | None:
-        if storage_access_count != 0:
-            return None
         map_graphs = self._expand_graphs(["map"])
         present_tables: list[str] = []
         fixture_names: list[str] = []
@@ -28297,6 +28372,11 @@ class DoxaBase:
                 f"{namespace}{local_name}"
                 for local_name in local_names
                 if self._subject_exists(f"{namespace}{local_name}", map_graphs)
+                and not self._objects(
+                    map_graphs,
+                    f"{namespace}{local_name}",
+                    "rc:hasStorageAccess",
+                )
             ]
             if table_iris:
                 fixture_names.append(fixture_name)

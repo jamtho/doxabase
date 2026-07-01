@@ -412,9 +412,10 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 `profile_candidate_limit`, `privacy_export_review` when the default
 handoff-bundle export preflight finds potential sensitive project-graph or
 revision-snapshot terms, `query_fixture_staleness_review` when known AIS or
-Polymarket fixture tables are present with zero `rc:StorageAccess` resources,
-and `seed_recovery_review` when immutable seed graphs are missing current
-staging vocabulary.
+Polymarket fixture tables are present without linked `rc:StorageAccess`
+resources, and `seed_recovery_review` when immutable seed graphs are missing
+current staging vocabulary. `storage_access_count` on the fixture task is the
+global capsule count; it can be nonzero when unrelated storage exists elsewhere.
 `next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are
@@ -3086,7 +3087,7 @@ candidate reviewed values, and mismatch reasons. Jump back to
 staleness hints.
 `group_advisories` carries group-level warnings copied from sibling issue
 details when a script might otherwise follow only the lifted repair group. For
-example, known AIS or Polymarket fixture tables with zero storage accesses add
+example, known AIS or Polymarket fixture tables without linked storage add
 `code="query_fixture_staleness_review"` and
 `recommended_handling="review_fixture_staleness_before_staging"`. This is an
 anti-loop advisory: it does not remove actions or mark them skipped.
@@ -3398,6 +3399,15 @@ targets before filling the staged assertion's `object`. Candidate rows include
 `route_roles` and `route_role_labels`; prefer those reviewed route-intent facts
 over labels or path names when choosing between production/current, sample,
 archive, backfill, or canonical storage routes before the dataset link exists.
+The repair hint also exposes
+`candidate_existing_storage_access_route_intent_preferred_indexes` and
+`first_candidate_existing_storage_access_route_intent_preferred_index` for
+visible candidates carrying `rc:CurrentRoute`, `rc:ProductionRoute`, or
+`rc:CanonicalRoute`, plus
+`candidate_existing_storage_access_route_intent_caution_indexes` for
+`rc:SampleRoute`, `rc:ArchiveRoute`, or `rc:BackfillRoute`. Use these indexes
+before rank when unattended repair wants the current/production route and match
+evidence is otherwise ambiguous.
 In the
 staged or direct new-storage template, omit optional storage-owned
 `path_templates` when
@@ -3410,9 +3420,10 @@ reviewed compact database handles, the repair hint can also carry
 and `stage_query_storage_access_repair_candidate_arguments`. Prefer these
 structured fields over parsing `scanned_source_handles` yourself. A fixture
 staleness hint means
-known AIS or Polymarket fixture tables are present while the capsule has zero
+known AIS or Polymarket fixture tables are present without linked
 `rc:StorageAccess` resources; use a fresh scratch fixture load before drawing
-query-target conclusions.
+query-target conclusions, even when unrelated storage exists elsewhere in the
+capsule.
 When a direct-clean selected query target is context-blocked by a stale
 partition scheme linked to the dataset, the blocking `layout_needs_verification`
 issue can carry `details.repair_hint.action_type =
@@ -3456,6 +3467,10 @@ repair_hint.candidate_existing_storage_accesses
 repair_hint.candidate_existing_storage_access_count
 repair_hint.candidate_existing_storage_access_total_count
 repair_hint.candidate_existing_storage_accesses_truncated
+repair_hint.candidate_existing_storage_access_route_intent_preferred_indexes
+repair_hint.first_candidate_existing_storage_access_route_intent_preferred_index
+repair_hint.candidate_existing_storage_access_route_intent_caution_indexes
+repair_hint.candidate_existing_storage_access_route_intent_note
 repair_hint.candidate_existing_storage_accesses[].candidate_status
 repair_hint.candidate_existing_storage_accesses[].pending_staged_repair_iris
 repair_hint.already_pending_candidate_count
