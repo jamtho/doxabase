@@ -3527,6 +3527,52 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     )
 
 
+def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = stage_graph_revision_tool(
+        source,
+        summary="Stage live messages table",
+        rationale="Exercise direct apply-check routing after RDF-only handoff.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:LiveMessages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    project_path = tmp_path / "project.trig"
+    source.export_trig(project_path, graphs="project")
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    receiver.import_trig(project_path)
+
+    check = check_staged_revision_apply_tool(receiver, staged["revision_iri"])
+
+    assert check["status"] == "ready"
+    assert check["can_apply"] is True
+    assert check["next_action"]["tool_name"] == "apply_staged_revision"
+    assert check["snapshot_evidence"]["status"] == "history_only_count_digest"
+    assert check["snapshot_evidence_completeness"] == "history-only"
+    assert check["mutation_allowed_after"] == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert [action["tool_name"] for action in check["blocking_preflight_actions"]] == [
+        "import_revision_snapshots"
+    ]
+    assert check["blocking_preflight_calls"]
+    assert check["first_safe_next_action"]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert check["first_safe_next_action"]["queue"] == "complete_handoff_import"
+    assert check["first_safe_next_call"] == check["blocking_preflight_calls"][0]
+
+
 def test_restage_staged_revision_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

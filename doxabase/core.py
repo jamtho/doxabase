@@ -1120,6 +1120,15 @@ class StagedRevisionApplyCheck:
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    snapshot_evidence: RevisionSnapshotEvidenceStatus | None = None
+    snapshot_evidence_completeness: str = "unknown"
+    blocking_preflight_actions: list[SuggestedNextAction] = field(
+        default_factory=list
+    )
+    blocking_preflight_calls: list[str] = field(default_factory=list)
+    mutation_allowed_after: str = "direct_check_no_preflight"
+    first_safe_next_action: RevisionNextAction | None = None
+    first_safe_next_call: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41759,6 +41768,39 @@ class DoxaBase:
             cache[cache_key] = check
         return check
 
+    @staticmethod
+    def _staged_apply_check_blocking_preflight_actions(
+        snapshot_evidence: RevisionSnapshotEvidenceStatus,
+    ) -> list[SuggestedNextAction]:
+        if (
+            snapshot_evidence.status == "history_plus_snapshot_rows"
+            and not snapshot_evidence.missing_current_graph_roles
+            and not snapshot_evidence.missing_snapshot_row_graph_roles
+        ):
+            return []
+        return list(snapshot_evidence.suggested_next_actions)
+
+    @staticmethod
+    def _staged_apply_check_mutation_allowed_after(
+        blocking_preflight_actions: list[SuggestedNextAction],
+    ) -> str:
+        if blocking_preflight_actions:
+            return "handoff_preflight_required_before_mutation"
+        return "direct_check_no_preflight"
+
+    def _staged_apply_check_first_safe_next_action(
+        self,
+        next_action: RevisionNextAction | None,
+        *,
+        blocking_preflight_actions: list[SuggestedNextAction],
+    ) -> RevisionNextAction | None:
+        snapshot_next_action = self._snapshot_evidence_completion_next_action(
+            blocking_preflight_actions
+        )
+        if snapshot_next_action is not None:
+            return snapshot_next_action
+        return next_action
+
     def apply_staged_revision(
         self,
         iri: str,
@@ -42359,6 +42401,13 @@ class DoxaBase:
             staged,
             changed_graphs,
         )
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            staged.iri,
+            self._expand_graphs(["history"]),
+        )
+        blocking_preflight_actions = (
+            self._staged_apply_check_blocking_preflight_actions(snapshot_evidence)
+        )
         snapshot_drift_by_graph = {
             drift.graph_role: drift for drift in snapshot_drifts
         }
@@ -42436,6 +42485,12 @@ class DoxaBase:
                 decision,
                 next_action,
             )
+            first_safe_next_action = (
+                self._staged_apply_check_first_safe_next_action(
+                    next_action,
+                    blocking_preflight_actions=blocking_preflight_actions,
+                )
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 revision_iri=staged.iri,
@@ -42492,6 +42547,27 @@ class DoxaBase:
                 suggested_next_calls=[
                     action.call for action in suggested_next_actions
                 ],
+                snapshot_evidence=snapshot_evidence,
+                snapshot_evidence_completeness=(
+                    self._snapshot_evidence_completeness_label(snapshot_evidence)
+                ),
+                blocking_preflight_actions=blocking_preflight_actions,
+                blocking_preflight_calls=[
+                    action.call
+                    for action in blocking_preflight_actions
+                    if action.call
+                ],
+                mutation_allowed_after=(
+                    self._staged_apply_check_mutation_allowed_after(
+                        blocking_preflight_actions
+                    )
+                ),
+                first_safe_next_action=first_safe_next_action,
+                first_safe_next_call=(
+                    first_safe_next_action.call
+                    if first_safe_next_action is not None
+                    else None
+                ),
             )
             return _StagedRevisionApplicationPreview(
                 staged=staged,
@@ -42786,6 +42862,10 @@ class DoxaBase:
             decision,
             next_action,
         )
+        first_safe_next_action = self._staged_apply_check_first_safe_next_action(
+            next_action,
+            blocking_preflight_actions=blocking_preflight_actions,
+        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
             revision_iri=staged.iri,
@@ -42840,6 +42920,25 @@ class DoxaBase:
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
+            snapshot_evidence=snapshot_evidence,
+            snapshot_evidence_completeness=(
+                self._snapshot_evidence_completeness_label(snapshot_evidence)
+            ),
+            blocking_preflight_actions=blocking_preflight_actions,
+            blocking_preflight_calls=[
+                action.call for action in blocking_preflight_actions if action.call
+            ],
+            mutation_allowed_after=(
+                self._staged_apply_check_mutation_allowed_after(
+                    blocking_preflight_actions
+                )
+            ),
+            first_safe_next_action=first_safe_next_action,
+            first_safe_next_call=(
+                first_safe_next_action.call
+                if first_safe_next_action is not None
+                else None
+            ),
         )
         return _StagedRevisionApplicationPreview(
             staged=staged,

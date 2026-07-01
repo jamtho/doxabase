@@ -6499,6 +6499,27 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     imported = DoxaBase.create(tmp_path / "rdf-only.sqlite")
     imported.import_trig(project_path)
 
+    direct_check = imported.check_staged_revision_apply(staged.revision_iri)
+    assert direct_check.status == "ready"
+    assert direct_check.can_apply is True
+    assert direct_check.next_action is not None
+    assert direct_check.next_action.tool_name == "apply_staged_revision"
+    assert direct_check.snapshot_evidence is not None
+    assert direct_check.snapshot_evidence.status == "history_only_count_digest"
+    assert direct_check.snapshot_evidence_completeness == "history-only"
+    assert (
+        direct_check.mutation_allowed_after
+        == "handoff_preflight_required_before_mutation"
+    )
+    assert [
+        action.tool_name for action in direct_check.blocking_preflight_actions
+    ] == ["import_revision_snapshots"]
+    assert direct_check.first_safe_next_action is not None
+    assert direct_check.first_safe_next_action.tool_name == (
+        "import_revision_snapshots"
+    )
+    assert direct_check.first_safe_next_action.queue == "complete_handoff_import"
+
     plan = imported.plan_staged_revision_recovery([staged.revision_iri])
 
     assert plan.lane_counts == {"apply_after_review": 1}
@@ -6547,6 +6568,26 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert "Next action - apply after review" in grouped_text
     assert grouped_text.index("Snapshot evidence is incomplete") < grouped_text.index(
         "## Review Queues"
+    )
+
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    db.export_revision_snapshots(snapshot_path, revision_iris=[staged.revision_iri])
+    imported.import_revision_snapshots(snapshot_path)
+    direct_check_after_snapshots = imported.check_staged_revision_apply(
+        staged.revision_iri
+    )
+    assert direct_check_after_snapshots.snapshot_evidence is not None
+    assert direct_check_after_snapshots.snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert direct_check_after_snapshots.blocking_preflight_actions == []
+    assert (
+        direct_check_after_snapshots.mutation_allowed_after
+        == "direct_check_no_preflight"
+    )
+    assert direct_check_after_snapshots.first_safe_next_action is not None
+    assert direct_check_after_snapshots.first_safe_next_action.tool_name == (
+        "apply_staged_revision"
     )
 
 

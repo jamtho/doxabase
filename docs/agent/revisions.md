@@ -218,6 +218,13 @@ On the receiving capsule:
 5. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
    rows reach `history_plus_snapshot_rows`.
 6. Then call `check_staged_revision_apply()` for staged proposals,
+   but still read `check.mutation_allowed_after` before using
+   `check.next_action`. If it is
+   `handoff_preflight_required_before_mutation`, follow
+   `check.first_safe_next_action` or `check.blocking_preflight_actions[0]`
+   before applying, restaging, or repairing. Direct checks keep mechanical
+   `status` / `can_apply` visible even when handoff snapshot evidence is still
+   incomplete.
    `describe_applied_revision_diff()` for applied events, or
    `describe_revision_lineage()` when you need the whole chain before mutating.
 7. For a cold continuation check, confirm

@@ -5676,10 +5676,26 @@ check.effective_delta_summary
 check.next_action
 check.suggested_next_actions
 check.suggested_next_calls
+check.snapshot_evidence
+check.snapshot_evidence_completeness
+check.blocking_preflight_actions
+check.blocking_preflight_calls
+check.mutation_allowed_after
+check.first_safe_next_action
+check.first_safe_next_call
 ```
 
 `revision_iri` is an alias of `staged_revision_iri` so copied check payloads
 carry the checked resource under the same name used by list and export rows.
+`snapshot_evidence` has the same shape as
+`describe_revision_snapshot_evidence()`. When
+`mutation_allowed_after == "handoff_preflight_required_before_mutation"`, do not
+follow the mechanical `next_action` directly. Follow
+`first_safe_next_action` / `blocking_preflight_actions[0]`, usually
+`import_revision_snapshots` or `import_trig`, then rerun
+`check_staged_revision_apply()` before applying, restaging, or repairing.
+`status` and `can_apply` still describe patch replay and validation readiness;
+they are not a handoff snapshot-completeness approval.
 Use `check.status` on the direct apply-check object. Revision list rows, grouped
 export summaries, and compact nested description rows use `application_status`
 for the live or summarized apply-check status. Likewise, use `check.decision`
