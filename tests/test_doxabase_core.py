@@ -10215,6 +10215,8 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
         applied_event.applied_revision_iri
     ]
     assert helper_item.requires_semantic_review_before_mutation is True
+    assert "semantic review is required before mutation" in helper_item.reason
+    assert "do not mutate unattended" in helper_item.reason
     lanes_by_source = {
         lane.source_revision_iri: lane for lane in stale_plan.lanes
     }
@@ -10320,6 +10322,8 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
         applied_event.applied_revision_iri
     ]
     assert frontier_item.requires_semantic_review_before_mutation is True
+    assert "semantic review is required before mutation" in frontier_item.reason
+    assert "do not mutate unattended" in frontier_item.reason
 
 
 def test_stale_column_same_slot_drift_keeps_restage_route(
@@ -12243,6 +12247,7 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert dry_item.action == "would_restage"
     assert dry_run.would_restage_revision_iris == []
     assert dry_run.repair_first_revision_iris == [source.revision_iri]
+    assert dry_run.repair_or_replace_source_revision_iris == [source.revision_iri]
     assert dry_item.source_staged_validation_status == "failed"
     assert dry_item.routing_decision_after == "repair_or_replace"
     assert dry_item.next_action_after is not None

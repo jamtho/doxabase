@@ -4041,6 +4041,7 @@ def test_restage_staged_revisions_tool_can_dry_run(
         first["revision_iri"],
         second["revision_iri"],
     ]
+    assert result["repair_or_replace_source_revision_iris"] == []
     assert result["restaged_revision_iris"] == []
     assert result["not_restageable_revision_iris"] == [ready["revision_iri"]]
     assert result["not_restageable_revision_iris_by_reason"] == {

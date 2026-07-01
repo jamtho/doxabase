@@ -1680,6 +1680,7 @@ class StagedGraphRevisionBatchRestageRecord:
     dry_run: bool
     would_restage_revision_iris: list[str]
     repair_first_revision_iris: list[str]
+    repair_or_replace_source_revision_iris: list[str]
     restaged_revision_iris: list[str]
     skipped_revision_iris: list[str]
     already_handled_revision_iris: list[str]
@@ -38098,12 +38099,23 @@ class DoxaBase:
             items=items,
             validation_scope=validation_scope,
         )
+        repair_or_replace_source_revision_iris = list(
+            dict.fromkeys(
+                item.source_revision_iri
+                for item in items
+                if item.next_action_after is not None
+                and item.next_action_after.queue == "repair_or_replace"
+            )
+        )
         return StagedGraphRevisionBatchRestageRecord(
             requested_revision_iris=requested_revision_iris,
             processed_revision_iris=processed_revision_iris,
             dry_run=dry_run,
             would_restage_revision_iris=would_restage_revision_iris,
             repair_first_revision_iris=repair_first_revision_iris,
+            repair_or_replace_source_revision_iris=(
+                repair_or_replace_source_revision_iris
+            ),
             restaged_revision_iris=restaged_revision_iris,
             skipped_revision_iris=skipped_revision_iris,
             already_handled_revision_iris=already_handled_revision_iris,
@@ -39336,6 +39348,7 @@ class DoxaBase:
             dry_run=True,
             would_restage_revision_iris=[],
             repair_first_revision_iris=[],
+            repair_or_replace_source_revision_iris=[],
             restaged_revision_iris=[],
             skipped_revision_iris=[],
             already_handled_revision_iris=[],
@@ -40182,9 +40195,19 @@ class DoxaBase:
                         group.alternative_semantic_review_required
                     ),
                     reason=(
-                        "Resolved staged-revision mutation target. Review the "
-                        "row and action, then mutate this target before "
-                        "replanning if required."
+                        (
+                            "Resolved staged-revision mutation target, but "
+                            "semantic review is required before mutation. "
+                            "Review the row, alternative gate, and action; do "
+                            "not mutate unattended until that semantic choice "
+                            "is resolved."
+                        )
+                        if group.alternative_semantic_review_required
+                        else (
+                            "Resolved staged-revision mutation target. Review "
+                            "the row and action, then mutate this target before "
+                            "replanning if required."
+                        )
                     ),
                 )
             )
@@ -40235,8 +40258,18 @@ class DoxaBase:
                         "requires_semantic_review_before_mutation"
                     ],
                     reason=(
-                        "Repair helper mutation for a staged recovery lane "
-                        "that does not have a concrete successor IRI yet."
+                        (
+                            "Repair helper mutation for a staged recovery lane "
+                            "that does not have a concrete successor IRI yet, "
+                            "but semantic review is required before mutation. "
+                            "Review the alternative gate; do not mutate "
+                            "unattended before running this helper."
+                        )
+                        if context["requires_semantic_review_before_mutation"]
+                        else (
+                            "Repair helper mutation for a staged recovery lane "
+                            "that does not have a concrete successor IRI yet."
+                        )
                     ),
                 )
             )

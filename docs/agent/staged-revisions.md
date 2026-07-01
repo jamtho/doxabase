@@ -1269,6 +1269,8 @@ Rows skipped as
 validation-failed, `patch_conflict`, and `already_effective` skips for quick
 triage. `already_effective` means a stale source's patch payload has no current
 delta, so inspect/export it rather than creating a no-op restage successor. Use
+batch `repair_or_replace_source_revision_iris` when you need the broad
+repair/replace source queue without reconstructing it from reason groups. Use
 `dry_run=true` when an autonomous loop wants to inspect which rows would be
 refreshed before taking the mutation.
 

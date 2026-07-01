@@ -6220,7 +6220,9 @@ mutating; they preserve collapsed `source_revision_iris` and `row_iris`. Items
 with `item_kind="helper_action"` carry same-slot repair helper actions that
 create a successor and therefore have no existing target IRI.
 Each item includes `requires_semantic_review_before_mutation`; when true,
-semantic review is still required even if the target is mechanically ready.
+semantic review is still required even if the target is mechanically ready, and
+`reason` explicitly says not to mutate unattended before that semantic choice is
+resolved.
 Serialized items look like this:
 
 ```python
@@ -6865,6 +6867,7 @@ batch.processed_revision_iris
 batch.dry_run
 batch.would_restage_revision_iris
 batch.repair_first_revision_iris
+batch.repair_or_replace_source_revision_iris
 batch.restaged_revision_iris
 batch.skipped_revision_iris
 batch.already_handled_revision_iris
@@ -6909,6 +6912,11 @@ that case no successor is created, `restaged_revision_iris` stays empty, and
 can mechanically refresh after review. Sources whose stored staged-time
 validation failed and whose post-batch route is repair-first are withheld from
 that bulk list and reported in `repair_first_revision_iris` instead.
+`repair_or_replace_source_revision_iris` is the broader top-level list of batch
+source rows whose current post-batch route is `repair_or_replace`, including
+validation repair, same-slot replacement, ambiguous same-slot inspection, or
+other repair-first routes. Use it instead of reconstructing repair lanes from
+`not_restageable_revision_iris_by_reason` when scripting unattended follow-up.
 Guarded same-slot rows that cannot be safely reduced to a single replacement
 are `skipped_not_restageable` with
 `not_restageable_reason == "ambiguous_same_slot"` and an inspection
