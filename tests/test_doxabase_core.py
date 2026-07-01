@@ -33720,6 +33720,9 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert open_lanes["profile_type_review"].closed_semantic_moves == [
         "define_value_type"
     ]
+    assert open_lanes["profile_type_review"].closed_route_step_keys == [
+        value_type_route_source["route_step_key"]
+    ]
     assert "assert_map_type" in open_lanes[
         "profile_type_review"
     ].remaining_semantic_moves
@@ -33732,6 +33735,12 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert open_lanes["profile_type_review"].action_count == 5
     assert review.closed_semantic_moves == ["define_value_type"]
     assert "assert_map_type" in review.remaining_semantic_moves
+    assert review.closed_route_step_keys == [
+        value_type_route_source["route_step_key"]
+    ]
+    assert set(review.remaining_route_step_keys) == set(
+        open_lanes["profile_type_review"].route_step_keys
+    )
     assert review.semantic_move_closure_summary.startswith(
         "Closed semantic moves: define_value_type."
     )
@@ -33748,12 +33757,23 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert "assert_map_type" in review.executor_decision_summary[
         "open_review_lanes"
     ][0]["remaining_semantic_moves"]
+    assert review.executor_decision_summary["open_review_lanes"][0][
+        "closed_route_step_keys"
+    ] == [value_type_route_source["route_step_key"]]
+    assert set(
+        review.executor_decision_summary["open_review_lanes"][0][
+            "remaining_route_step_keys"
+        ]
+    ) == set(open_lanes["profile_type_review"].route_step_keys)
     assert review.executor_decision_summary["candidate_roles"] == {
         "profile_type_candidate": 1
     }
     exported = (tmp_path / "orders-profile-type-review.md").read_text(
         encoding="utf-8"
     )
+    assert "Closed route steps:" in exported
+    assert value_type_route_source["route_step_key"] in exported
+    assert "Remaining route steps:" in exported
     assert "### Semantic Move Closure" in exported
     assert "Closed semantic moves: define_value_type" in exported
     assert "Remaining semantic moves:" in exported

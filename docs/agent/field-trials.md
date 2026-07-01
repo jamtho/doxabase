@@ -4076,6 +4076,12 @@ few useful gaps:
   `first_unattended_action_index` as top-level indexes into
   `suggested_next_actions[]`, so unattended scripts can choose the reviewed
   production/current peer without reordering legacy actions.
+- A profile promotion trial found profile map facts, type assertions, and
+  value-type vocabulary work can complete independently inside one broad
+  `profile_type_review` lane. Profile insight bundles now expose closed and
+  remaining `route_step_key` rollups, and the Markdown closure section repeats
+  them, so `closed_semantic_moves=["assert_map_type"]` is not mistaken for a
+  fully closed type followthrough when vocabulary steps remain.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

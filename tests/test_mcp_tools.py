@@ -11468,6 +11468,11 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["candidates"][0]["profile_route_groups"][0][
         "match_strength"
     ] == "direct_action"
+    direct_route_step_keys = result["candidates"][0]["profile_route_groups"][0][
+        "direct_route_step_keys"
+    ]
+    assert result["closed_route_step_keys"] == direct_route_step_keys
+    assert result["remaining_route_step_keys"] == []
     assert result["open_profile_review_lanes"] == []
     assert result["open_profile_review_lane_count"] == 0
     assert result["executor_decision_summary"]["decision"] == (

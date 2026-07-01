@@ -1590,6 +1590,7 @@ class ProfileInsightOpenReviewLane:
     review_lane: str
     route_group_count: int
     route_group_keys: list[str]
+    closed_route_step_keys: list[str]
     route_step_keys: list[str]
     closed_semantic_moves: list[str]
     remaining_semantic_moves: list[str]
@@ -1614,6 +1615,8 @@ class ProfileInsightReviewBundleRecord:
     open_profile_review_lane_count: int
     closed_semantic_moves: list[str]
     remaining_semantic_moves: list[str]
+    closed_route_step_keys: list[str]
+    remaining_route_step_keys: list[str]
     semantic_move_closure_summary: str
     export: StagedGraphRevisionsExportRecord | None
     warnings: list[str]
@@ -45940,6 +45943,13 @@ class DoxaBase:
             open_profile_review_lanes,
         )
         (
+            closed_route_step_keys,
+            remaining_route_step_keys,
+        ) = self._profile_insight_route_step_closure(
+            candidates,
+            open_profile_review_lanes,
+        )
+        (
             semantic_apply_gate_summary,
             bulk_apply_allowed,
             safe_single_apply_candidate_revision_iris,
@@ -45979,6 +45989,8 @@ class DoxaBase:
                         open_profile_review_lanes=open_profile_review_lanes,
                         closed_semantic_moves=closed_semantic_moves,
                         remaining_semantic_moves=remaining_semantic_moves,
+                        closed_route_step_keys=closed_route_step_keys,
+                        remaining_route_step_keys=remaining_route_step_keys,
                         semantic_move_closure_summary=(
                             semantic_move_closure_summary
                         ),
@@ -46012,6 +46024,8 @@ class DoxaBase:
             open_profile_review_lane_count=len(open_profile_review_lanes),
             closed_semantic_moves=closed_semantic_moves,
             remaining_semantic_moves=remaining_semantic_moves,
+            closed_route_step_keys=closed_route_step_keys,
+            remaining_route_step_keys=remaining_route_step_keys,
             semantic_move_closure_summary=semantic_move_closure_summary,
             export=export,
             warnings=warnings,
@@ -46971,6 +46985,7 @@ class DoxaBase:
         direct_satisfied_route_moves: set[tuple[str, str]] = set()
         direct_satisfied_moves_by_route_key: dict[str, list[str]] = {}
         direct_satisfied_route_steps: set[str] = set()
+        direct_satisfied_steps_by_route_key: dict[str, list[str]] = {}
         legacy_direct_satisfied_route_keys: set[str] = set()
         fallback_satisfied_route_keys: set[str] = set()
         for candidate in candidates:
@@ -47001,7 +47016,15 @@ class DoxaBase:
                         ),
                         semantic_move,
                     )
-                direct_satisfied_route_steps.update(direct_route_step_keys)
+                for route_step in direct_route_step_keys:
+                    direct_satisfied_route_steps.add(route_step)
+                    DoxaBase._append_unique(
+                        direct_satisfied_steps_by_route_key.setdefault(
+                            route_group_key,
+                            [],
+                        ),
+                        route_step,
+                    )
                 if not direct_semantic_moves:
                     legacy_direct_satisfied_route_keys.add(route_group_key)
                 if (
@@ -47058,6 +47081,7 @@ class DoxaBase:
                 lane = {
                     "review_lane": review_lane,
                     "route_group_keys": [],
+                    "closed_route_step_keys": [],
                     "route_step_keys": [],
                     "closed_semantic_moves": [],
                     "remaining_semantic_moves": [],
@@ -47073,6 +47097,14 @@ class DoxaBase:
                 DoxaBase._append_unique(
                     lane["closed_semantic_moves"],
                     closed_semantic_move,
+                )
+            for closed_route_step in direct_satisfied_steps_by_route_key.get(
+                route_group_key,
+                [],
+            ):
+                DoxaBase._append_unique(
+                    lane["closed_route_step_keys"],
+                    closed_route_step,
                 )
             if isinstance(semantic_move, str):
                 DoxaBase._append_unique(
@@ -47101,6 +47133,7 @@ class DoxaBase:
                     review_lane=review_lane,
                     route_group_count=len(lane["route_group_keys"]),
                     route_group_keys=lane["route_group_keys"],
+                    closed_route_step_keys=lane["closed_route_step_keys"],
                     route_step_keys=lane["route_step_keys"],
                     closed_semantic_moves=lane["closed_semantic_moves"],
                     remaining_semantic_moves=lane["remaining_semantic_moves"],
@@ -47181,6 +47214,32 @@ class DoxaBase:
                 "review bundle."
             )
         return closed_semantic_moves, remaining_semantic_moves, summary
+
+    @staticmethod
+    def _profile_insight_route_step_closure(
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> tuple[list[str], list[str]]:
+        closed_route_step_keys: list[str] = []
+        for candidate in candidates:
+            for group in candidate.profile_route_groups:
+                if group.get("match_strength") != "direct_action":
+                    continue
+                for route_step_key in group.get("direct_route_step_keys") or []:
+                    if isinstance(route_step_key, str):
+                        DoxaBase._append_unique(
+                            closed_route_step_keys,
+                            route_step_key,
+                        )
+
+        remaining_route_step_keys: list[str] = []
+        for lane in open_profile_review_lanes:
+            for route_step_key in lane.route_step_keys:
+                DoxaBase._append_unique(
+                    remaining_route_step_keys,
+                    route_step_key,
+                )
+        return closed_route_step_keys, remaining_route_step_keys
 
     @staticmethod
     def _profile_insight_semantic_apply_gate_summary(
@@ -47288,6 +47347,8 @@ class DoxaBase:
                 "review_lane": lane.review_lane,
                 "route_group_count": lane.route_group_count,
                 "route_group_keys": list(lane.route_group_keys),
+                "closed_route_step_keys": list(lane.closed_route_step_keys),
+                "remaining_route_step_keys": list(lane.route_step_keys),
                 "remaining_semantic_moves": list(lane.remaining_semantic_moves),
                 "action_count": lane.action_count,
                 "matched_candidate_revision_iris": list(
@@ -47372,6 +47433,8 @@ class DoxaBase:
         open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
         closed_semantic_moves: list[str],
         remaining_semantic_moves: list[str],
+        closed_route_step_keys: list[str],
+        remaining_route_step_keys: list[str],
         semantic_move_closure_summary: str,
         semantic_apply_gate_summary: str,
         executive_summary: str | None = None,
@@ -47392,6 +47455,8 @@ class DoxaBase:
         closure_markdown = self._profile_insight_semantic_move_closure_markdown(
             closed_semantic_moves=closed_semantic_moves,
             remaining_semantic_moves=remaining_semantic_moves,
+            closed_route_step_keys=closed_route_step_keys,
+            remaining_route_step_keys=remaining_route_step_keys,
             semantic_move_closure_summary=semantic_move_closure_summary,
             open_profile_review_lanes=open_profile_review_lanes,
         )
@@ -47424,21 +47489,47 @@ class DoxaBase:
         *,
         closed_semantic_moves: list[str],
         remaining_semantic_moves: list[str],
+        closed_route_step_keys: list[str],
+        remaining_route_step_keys: list[str],
         semantic_move_closure_summary: str,
         open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
     ) -> str:
-        if not closed_semantic_moves and not remaining_semantic_moves:
+        if (
+            not closed_semantic_moves
+            and not remaining_semantic_moves
+            and not closed_route_step_keys
+            and not remaining_route_step_keys
+        ):
             return ""
         lines = [semantic_move_closure_summary]
+        if closed_route_step_keys or remaining_route_step_keys:
+            lines.extend(
+                [
+                    "",
+                    "Closed route steps: "
+                    + (
+                        ", ".join(f"`{key}`" for key in closed_route_step_keys)
+                        or "none"
+                    )
+                    + ".",
+                    "Remaining route steps: "
+                    + (
+                        ", ".join(f"`{key}`" for key in remaining_route_step_keys)
+                        or "none"
+                    )
+                    + ".",
+                ]
+            )
         if open_profile_review_lanes:
             lines.extend(
                 [
                     "",
                     (
                         "| Review lane | Closed moves | Remaining moves | "
+                        "Closed route steps | Remaining route steps | "
                         "Matched exported revisions |"
                     ),
-                    "|---|---|---|---|",
+                    "|---|---|---|---|---|---|",
                 ]
             )
             for lane in open_profile_review_lanes:
@@ -47458,6 +47549,13 @@ class DoxaBase:
                             self._markdown_table_cell(
                                 ", ".join(lane.remaining_semantic_moves)
                                 or "none"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(lane.closed_route_step_keys)
+                                or "none"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(lane.route_step_keys) or "none"
                             ),
                             self._markdown_table_cell(
                                 matched_revisions or "none"

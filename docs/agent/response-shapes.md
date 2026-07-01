@@ -2499,6 +2499,8 @@ result.open_profile_review_lanes
 result.open_profile_review_lane_count
 result.closed_semantic_moves
 result.remaining_semantic_moves
+result.closed_route_step_keys
+result.remaining_route_step_keys
 result.semantic_move_closure_summary
 result.export
 result.warnings
@@ -2605,6 +2607,7 @@ have a direct candidate for the same route semantic move or exact route step:
 lane.review_lane
 lane.route_group_count
 lane.route_group_keys
+lane.closed_route_step_keys
 lane.route_step_keys
 lane.closed_semantic_moves
 lane.remaining_semantic_moves
@@ -2624,8 +2627,10 @@ points agents back through `describe_query_context` and a query/storage repair
 before applying profile-derived map updates.
 `closed_semantic_moves`, `remaining_semantic_moves`, and
 `semantic_move_closure_summary` are bundle-level rollups over direct candidate
-route groups and open lanes. Read them before treating a vocabulary-definition
-row as complete profile type followthrough: a bundle can report
+route groups and open lanes. `closed_route_step_keys` and
+`remaining_route_step_keys` provide the same distinction for exact draft route
+steps. Read these before treating a vocabulary-definition row as complete
+profile type followthrough: a bundle can report
 `closed_semantic_moves=["define_value_type"]` while
 `remaining_semantic_moves` still includes `assert_map_type`.
 The reverse can also happen: a direct `assert_map_type` staged assertion closes

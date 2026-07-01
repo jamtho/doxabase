@@ -269,8 +269,9 @@ and `assert_map_type`; staging the value-type vocabulary skeleton closes the
 definition move, not the later map assertion. The bundle-level
 `semantic_move_closure_summary`, `closed_semantic_moves`, and
 `remaining_semantic_moves` fields repeat this distinction for unattended
-scripts, and the Markdown review summary renders a `Semantic Move Closure`
-section before the open-lane table.
+scripts. Use `closed_route_step_keys` and `remaining_route_step_keys` when
+semantic moves are too broad for exact progress tracking. The Markdown review
+summary renders a `Semantic Move Closure` section before the open-lane table.
 Use the profile bundle's semantic apply-gate fields for executor decisions:
 `bulk_apply_allowed`, `safe_single_apply_candidate_revision_iris`,
 `semantic_apply_gate_summary`, `semantic_apply_gate_counts`,
