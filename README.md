@@ -195,11 +195,13 @@ uv run python tools/validate_rdf.py
 Run tests:
 
 ```bash
-uv run pytest -q -n auto
+uv run pytest -q -n 16
 ```
 
 For focused debugging, run the relevant test file or node serially first, then
-use the parallel full-suite command before finishing.
+use the parallel full-suite command before finishing. On the current July 1,
+2026 YOLO container, `-n 16` measured faster than `-n auto`; remeasure if the
+visible CPU count or cgroup limits change.
 
 Run the smallest end-to-end example:
 

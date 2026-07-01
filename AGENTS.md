@@ -42,7 +42,7 @@ autonomously in a trial/improvement loop:
 4. Use `docs/agent/project-strategy.md` when recent loops are dominated by one
    local queue family or when choosing the next broad workflow trial axis.
 5. Update tests and agent docs with the behavior or lesson the trial revealed.
-6. Run focused checks first, then full `uv run pytest -q -n auto`,
+6. Run focused checks first, then full `uv run pytest -q -n 16`,
    `uv run python tools/validate_rdf.py`, and `git diff --check`.
 7. Commit coherent verified changes on a `codex/...` branch when the work is
    ready, with a rationale-focused commit message.
@@ -84,12 +84,14 @@ uv run python tools/validate_rdf.py
 Run tests:
 
 ```bash
-uv run pytest -q -n auto
+uv run pytest -q -n 16
 ```
 
 For focused work, run the relevant pytest file first, then the full suite before
 finishing. Use serial pytest for one-off debugging when worker startup would
-obscure local output.
+obscure local output. On the current July 1, 2026 YOLO container, `-n 16`
+measured faster than `-n auto`; remeasure if the visible CPU count or cgroup
+limits change.
 
 ## Working In The Codebase
 

@@ -231,16 +231,16 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 For normal repository development, use:
 
 ```bash
-uv run pytest -q -n auto
+uv run pytest -q -n 16
 uv run python tools/validate_rdf.py
 ```
 
 The full pytest suite is integration-heavy. On the June 2026 development
 container, serial `uv run pytest -q` previously took about 309 seconds. After
 caching parsed seed RDF graphs, `uv run pytest -q -n 8` took about 46 seconds
-and `uv run pytest -q -n auto` took about 37 seconds. Prefer `-n auto` for the
-full gate, and use serial pytest only for focused debugging where direct output
-matters more than full-suite throughput.
+and `uv run pytest -q -n auto` took about 37 seconds. At that point, `-n auto`
+was preferred for the full gate. Use serial pytest only for focused debugging
+where direct output matters more than full-suite throughput.
 On June 30, 2026, a timing check in the YOLO development container showed no
 visible cgroup CPU or memory cap (`cpu.max=max`, 24 visible CPUs,
 `memory.max=max`): serial `uv run pytest -q --durations=40` took 278 seconds,
@@ -265,9 +265,14 @@ memory cap. Collection was about 4.5 seconds; the bottleneck was broad
 integration-heavy execution, not one runaway test. In that trial
 `uv run pytest -q -n auto --maxprocesses=8` took about 76 seconds,
 `uv run pytest -q -n 12` took about 52 seconds, and `-n 16` regressed to about
-58 seconds. Use 12 workers when fastest local completion matters on this
-container; keep the 8-worker cap only when intentionally leaving CPU headroom
-for concurrent agents.
+58 seconds. At that point, 12 workers were fastest locally and the 8-worker cap
+was only for intentionally leaving CPU headroom for concurrent agents.
+A later July 1, 2026 remeasurement after example-run isolation collected 645
+tests in about 0.8 seconds and found `uv run pytest -q -n 16` fastest among
+tested full-suite settings: about 44 seconds, versus about 50 seconds for
+`-n 12`, 56 seconds for `-n auto`, and 46 seconds for `-n 20`. Use `-n 16` as
+the current full-gate default on this container; remeasure if container CPU
+visibility, cgroup quotas, or test composition change.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

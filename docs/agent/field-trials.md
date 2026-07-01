@@ -38,7 +38,7 @@ For repository verification after implementing a trial-driven fix, prefer the
 parallel full-suite gate:
 
 ```bash
-uv run pytest -q -n auto
+uv run pytest -q -n 16
 uv run python tools/validate_rdf.py
 ```
 
@@ -50,8 +50,8 @@ versus about 46 seconds with `-n 8`.
 On July 1, 2026, the rebuilt YOLO container exposed 24 CPUs, no cgroup CPU
 quota, and no memory cap; `uv run pytest -q -n auto --durations=25` completed
 the full suite in about 41 seconds, while serial `tests/test_mcp_tools.py` alone
-took about 63 seconds. Keep `-n auto` as the local full-gate default unless a
-shared runner needs lower aggregate CPU use.
+took about 63 seconds. At that point, `-n auto` was the local full-gate default
+unless a shared runner needed lower aggregate CPU use.
 A later serial full-suite timing pass with
 `uv run pytest -q --durations=25 --durations-min=0.1` took about 325 seconds.
 The slowest individual test was about 7 seconds, and the slow tail was mostly
@@ -68,8 +68,14 @@ about 4.5 seconds and found the slow tail spread across staged-revision,
 profile, query, project-brief, and example coverage rather than one runaway
 test. On this container, `uv run pytest -q -n 12` passed in about 52 seconds,
 beating the 8-worker cap at about 76 seconds; `-n 16` regressed to about
-58 seconds. Use 12 workers when fastest local completion matters, and keep the
-8-worker cap only when preserving CPU headroom for concurrent agents.
+58 seconds. At that point, 12 workers were fastest locally and the 8-worker cap
+was only for preserving CPU headroom for concurrent agents.
+A later July 1, 2026 remeasurement after example-run isolation collected 645
+tests in about 0.8 seconds and found `uv run pytest -q -n 16` fastest among
+tested full-suite settings: about 44 seconds, versus about 50 seconds for
+`-n 12`, 56 seconds for `-n auto`, and 46 seconds for `-n 20`. Use `-n 16` as
+the current full-gate default on this container; remeasure if container CPU
+visibility, cgroup quotas, or test composition change.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
@@ -3984,6 +3990,11 @@ few useful gaps:
   callers must invoke `stage_profile_map_updates(...,
   allow_pending_profile_updates=True)` explicitly after review when another
   staged update is intentional.
+- Mixed-frontier regressions now cover the broad route explicitly: when staged
+  work, ready query handoffs or query-repair review, and hidden profile
+  candidates coexist under a tight `project_brief` bound, the first hop is full
+  frontier expansion; after expansion, `plan_staged_revision_recovery` stays
+  ahead of profile and query actions.
 - A query-planning scout found database relation and partition handoffs could
   be recorded as query evidence correctly, but the returned follow-up sent
   agents back to dataset query context without a direct route to the evidence

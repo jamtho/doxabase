@@ -535,6 +535,226 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert rerun.first_unattended_action == rerun.frontier_first_action
 
 
+def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mixed-frontier#"
+    dataset = f"{base}Orders"
+    evidence = f"{base}OrdersProfileEvidence"
+    storage = db.record_map_storage_access(
+        f"{base}OrdersStorage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}OrdersParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled with one aggregate.",
+        evidence_summary="Synthetic profile evidence.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+    db.stage_graph_revision(
+        summary="Stage related Orders caveat",
+        rationale="Create current staged frontier pressure.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{base}OrdersCaveat> a rc:KnownCaveat ;
+                        rdfs:label "Orders caveat" .
+                """,
+            }
+        ],
+    )
+
+    tight = db.project_brief(limit=1, profile_candidate_limit=0)
+
+    assert tight.frontier_first_source == "full_frontier_expansion"
+    assert tight.frontier_first_action is not None
+    assert tight.frontier_first_action.tool_name == "project_brief"
+    assert tight.frontier_first_action.arguments == {
+        "limit": 4,
+        "profile_candidate_limit": 1,
+    }
+    assert tight.queue_counts == {
+        "staged_frontier_review": 1,
+        "staged_review": 1,
+        "query_plan_handoff": 1,
+    }
+    assert tight.omitted_queue_counts == {
+        "staged_review": 1,
+        "query_plan_handoff": 1,
+    }
+    assert tight.profile_queue_counts["profile_candidate_omitted"] == 1
+    assert (
+        tight.frontier_status.mutation_allowed_after
+        == "frontier_expansion_required_before_mutation"
+    )
+
+    expanded = db.project_brief(**tight.frontier_first_action.arguments)
+
+    assert expanded.omitted_queue_counts == {}
+    assert expanded.profile_queue_counts["profile_candidate_omitted"] == 0
+    assert expanded.queue_counts == {
+        "staged_frontier_review": 1,
+        "staged_review": 1,
+        "profile_review": 1,
+        "query_plan_handoff": 1,
+    }
+    assert [
+        (task.task_type, task.suggested_next_action.tool_name)
+        for task in expanded.recommended_next_tasks
+        if task.suggested_next_action is not None
+    ] == [
+        ("staged_frontier_review", "plan_staged_revision_recovery"),
+        ("staged_review", "describe_staged_revision"),
+        ("profile_review", "stage_profile_map_updates"),
+        ("query_plan_handoff", "draft_query_plan"),
+    ]
+    assert (
+        expanded.frontier_first_source
+        == "recommended_next_tasks:staged_frontier_review"
+    )
+    assert expanded.frontier_first_action is not None
+    assert expanded.frontier_first_action.tool_name == "plan_staged_revision_recovery"
+    assert expanded.first_unattended_source == expanded.frontier_first_source
+    assert expanded.first_unattended_action == expanded.frontier_first_action
+
+
+def test_project_brief_expanded_mixed_repair_frontier_routes_staged_first(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mixed-repair-frontier#"
+    dataset = f"{base}Tickets"
+    evidence = f"{base}TicketsProfileEvidence"
+    db.record_map_dataset(
+        dataset,
+        label="Tickets",
+        is_table=True,
+        row_count_snapshot=1000,
+        path_templates=["tickets/date={date}/*.parquet"],
+    )
+    db.record_map_physical_layout(
+        f"{base}TicketsParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Tickets physical profile pass.",
+        evidence_summary="Tickets profile evidence.",
+        evidence_sources=["test://tickets/full"],
+        evidence_iri=evidence,
+        sample_size=1200,
+        sample_scope="All rows in the local Tickets table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=1200,
+        update_map_snapshot=False,
+    )
+    db.stage_graph_revision(
+        summary="Stage Tickets caveat",
+        rationale="Create current staged frontier pressure.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{base}TicketsCaveat> a rc:KnownCaveat ;
+                        rdfs:label "Tickets caveat" .
+                """,
+            }
+        ],
+    )
+
+    tight = db.project_brief(limit=1, profile_candidate_limit=0)
+
+    assert tight.frontier_first_source == "full_frontier_expansion"
+    assert tight.frontier_first_action is not None
+    assert tight.frontier_first_action.tool_name == "project_brief"
+    assert tight.frontier_first_action.arguments == {
+        "limit": 4,
+        "profile_candidate_limit": 1,
+    }
+    assert tight.queue_counts == {
+        "staged_frontier_review": 1,
+        "staged_review": 1,
+        "query_repair_review": 1,
+    }
+    assert tight.omitted_queue_counts == {
+        "staged_review": 1,
+        "query_repair_review": 1,
+    }
+    assert tight.profile_queue_counts["profile_candidate_omitted"] == 1
+
+    expanded = db.project_brief(**tight.frontier_first_action.arguments)
+
+    assert expanded.omitted_queue_counts == {}
+    assert expanded.profile_queue_counts["profile_candidate_omitted"] == 0
+    assert expanded.queue_counts == {
+        "staged_frontier_review": 1,
+        "staged_review": 1,
+        "query_repair_review": 1,
+        "profile_review": 1,
+    }
+    assert [
+        (task.task_type, task.suggested_next_action.tool_name)
+        for task in expanded.recommended_next_tasks
+        if task.suggested_next_action is not None
+    ] == [
+        ("staged_frontier_review", "plan_staged_revision_recovery"),
+        ("staged_review", "describe_staged_revision"),
+        ("query_repair_review", "describe_query_context"),
+        ("profile_review", "describe_query_context"),
+    ]
+    profile_task = next(
+        task
+        for task in expanded.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+    assert profile_task.inspection_next_action is not None
+    assert profile_task.inspection_next_action.tool_name == (
+        "draft_profile_map_updates"
+    )
+    assert (
+        expanded.frontier_first_source
+        == "recommended_next_tasks:staged_frontier_review"
+    )
+    assert expanded.frontier_first_action is not None
+    assert expanded.frontier_first_action.tool_name == "plan_staged_revision_recovery"
+    assert expanded.first_unattended_source == expanded.frontier_first_source
+    assert expanded.first_unattended_action == expanded.frontier_first_action
+
+
 def test_project_brief_reuses_staged_apply_checks_during_frontier_expansion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
