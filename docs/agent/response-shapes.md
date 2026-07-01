@@ -1790,6 +1790,8 @@ draft.profile_observation_iris
 draft.recommendations
 draft.recommendation_count
 draft.representative_recommendation_indexes
+draft.profile_quality_summary
+draft.sampled_evidence_caution
 draft.scalar_conflict_groups
 draft.scalar_conflict_group_count
 draft.metric_advisories
@@ -1898,6 +1900,12 @@ recommendations remain review candidates but are skipped by default unless
 `allow_sampled_row_count_updates=True`. Same-evidence scalar conflicts, such as
 multiple full-scan row counts for one dataset or multiple nullable values for
 one column, are also non-default-stageable until one value is chosen explicitly.
+`profile_quality_summary` gives compact evidence-basis counts, sampled
+recommendation indexes, sampled default-stageable indexes, and sample
+scope/method previews. `sampled_evidence_caution` is non-null when sampled
+recommendations need executor attention; sampled positive-null nullable updates
+can still be default-stageable, so read this caution before treating a ready
+staged profile map update as full-scan-backed.
 `unmapped_profiled_column` duplicate groups are keyed by the helper mutation,
 not profile-specific sample details, so one accepted representative can stage the
 column shell while preserving all supporting profile observations.
@@ -2447,6 +2455,8 @@ result.semantic_move_closure_summary
 result.export
 result.warnings
 result.review_note
+result.profile_quality_summary
+result.sampled_evidence_caution
 result.artifact_kind
 result.importable
 result.recommended_import_tool
@@ -2498,6 +2508,8 @@ candidate.semantic_choice_group_key
 candidate.apply_cardinality
 candidate.bulk_apply_allowed
 candidate.safe_single_apply_candidate
+candidate.profile_quality_summary
+candidate.sampled_evidence_caution
 candidate.semantic_apply_gate_reason
 ```
 
@@ -2527,6 +2539,12 @@ query-planning repair review notes for already-applied query repairs whose live
 blocker is gone. For already-applied profile-map sources,
 persisted/generated route sources can be direct; fresh live draft follow-up
 routes for the same lane are support until staged separately.
+For profile-map candidates, `profile_quality_summary` mirrors the selected
+route's evidence basis and sample-scope summary. If
+`sampled_evidence_caution` is non-null, read it together with
+`semantic_apply_gate_reason` before applying even a safe-single candidate; a
+ready apply check is mechanical readiness, not proof that sampled evidence has
+full-scan scope.
 When several semantic moves share one `route_group_key`, for example
 `define_value_type` and `assert_map_type` inside `profile_type_review`, a direct
 candidate only closes the moves named in `direct_semantic_moves` /
@@ -2587,8 +2605,10 @@ already-applied source rows must remain out of
 `executor_decision_summary` is the compact scripting view over the same gate:
 it includes `decision`, `mutation_policy`, `recommended_next_step`,
 `must_recheck_after_mutation`, `safe_single_apply_candidate_revision_iris`,
-`blocked_candidate_revision_iris`, `open_review_lanes`, `candidate_roles`, and
-the underlying semantic gate counts/blocking reasons. Use it for first-pass
+`safe_single_apply_candidate_rationales`, `blocked_candidate_revision_iris`,
+`open_review_lanes`, `candidate_roles`, and the underlying semantic gate
+counts/blocking reasons. Use the rationales to see sampled-evidence caution and
+basis/scope summary beside each safe-single candidate. Use it for first-pass
 executor routing, then inspect the detailed `candidates[]` and
 `open_profile_review_lanes[]` rows before mutating.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports

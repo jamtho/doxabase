@@ -35692,11 +35692,34 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         ("dataset_row_count_snapshot", False),
         ("column_nullable", True),
     ]
+    assert sampled_draft.profile_quality_summary["basis_counts"] == {"sample": 2}
+    assert sampled_draft.profile_quality_summary[
+        "default_stageable_basis_counts"
+    ] == {"sample": 1}
+    assert sampled_draft.profile_quality_summary[
+        "sampled_default_stageable_recommendation_indexes"
+    ] == [1]
+    assert sampled_draft.profile_quality_summary["sample_scopes"] == [
+        "Sampled partition rows; not the full Payments table."
+    ]
+    assert sampled_draft.sampled_evidence_caution is not None
+    assert "Mechanical readiness is not full-scan evidence" in (
+        sampled_draft.sampled_evidence_caution
+    )
     assert sampled_draft.suggested_next_actions[0].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": sampled_evidence,
         "accepted_recommendation_indexes": [1],
     }
+    sampled_action_source = (
+        sampled_draft.suggested_next_actions[0].source_profile_map_update
+    )
+    assert sampled_action_source["profile_quality_summary"][
+        "sampled_default_stageable_recommendation_indexes"
+    ] == [1]
+    assert sampled_action_source["sampled_evidence_caution"] == (
+        sampled_draft.sampled_evidence_caution
+    )
     sampled_stage = db.stage_profile_map_updates(
         dataset,
         sampled_evidence,
@@ -35709,6 +35732,37 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
     }
     assert sampled_stage.staged_recommendation_indexes == [1]
     assert sampled_stage.skipped_recommendation_indexes == [0]
+    sampled_review_path = tmp_path / "sampled-profile-review.md"
+    sampled_review = db.export_profile_insight_review_bundle(
+        dataset,
+        sampled_evidence,
+        sampled_review_path,
+        revision_iris=[sampled_stage.staged_revision.revision_iri],
+    )
+    assert sampled_review.profile_quality_summary == (
+        sampled_draft.profile_quality_summary
+    )
+    assert sampled_review.sampled_evidence_caution == (
+        sampled_draft.sampled_evidence_caution
+    )
+    sampled_candidate = sampled_review.candidates[0]
+    assert sampled_candidate.safe_single_apply_candidate is True
+    assert sampled_candidate.profile_quality_summary[
+        "sampled_default_stageable_recommendation_indexes"
+    ] == [1]
+    assert sampled_candidate.sampled_evidence_caution == (
+        sampled_draft.sampled_evidence_caution
+    )
+    assert "Mechanical readiness is not full-scan evidence" in (
+        sampled_candidate.semantic_apply_gate_reason
+    )
+    assert sampled_review.executor_decision_summary[
+        "safe_single_apply_candidate_rationales"
+    ][0]["sampled_evidence_caution"] == sampled_draft.sampled_evidence_caution
+    sampled_review_text = sampled_review_path.read_text(encoding="utf-8")
+    assert "Profile basis" in sampled_review_text
+    assert "sample: 1" in sampled_review_text
+    assert "Mechanical readiness is not full-scan evidence" in sampled_review_text
     assert db.validate_graph(scope="all").conforms
 
 

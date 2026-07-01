@@ -1569,6 +1569,8 @@ class ProfileInsightReviewCandidate:
     apply_cardinality: str = "inspect_only"
     bulk_apply_allowed: bool = False
     safe_single_apply_candidate: bool = False
+    profile_quality_summary: dict[str, Any] = field(default_factory=dict)
+    sampled_evidence_caution: str | None = None
     semantic_apply_gate_reason: str = (
         "No profile apply gate was computed for this candidate."
     )
@@ -1606,6 +1608,8 @@ class ProfileInsightReviewBundleRecord:
     export: StagedGraphRevisionsExportRecord | None
     warnings: list[str]
     review_note: str
+    profile_quality_summary: dict[str, Any] = field(default_factory=dict)
+    sampled_evidence_caution: str | None = None
     artifact_kind: str = "profile_insight_review_bundle"
     importable: bool = False
     recommended_import_tool: str | None = None
@@ -3479,6 +3483,8 @@ class ProfileMapUpdateDraft:
     recommendations: list[ProfileMapUpdateRecommendation]
     recommendation_count: int
     representative_recommendation_indexes: list[int]
+    profile_quality_summary: dict[str, Any]
+    sampled_evidence_caution: str | None
     scalar_conflict_groups: list[ProfileScalarConflictGroup]
     scalar_conflict_group_count: int
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
@@ -15961,6 +15967,14 @@ class DoxaBase:
         recommendations = self._with_profile_update_duplicate_metadata(
             recommendations
         )
+        profile_quality_summary = self._profile_quality_summary(
+            recommendations,
+            metric_advisory_count=len(metric_advisories),
+            type_advisory_count=len(type_advisories),
+        )
+        sampled_evidence_caution = self._profile_sampled_evidence_caution(
+            profile_quality_summary
+        )
         representative_recommendation_indexes = (
             self._profile_update_representative_indexes(recommendations)
         )
@@ -16067,6 +16081,8 @@ class DoxaBase:
             recommendations=recommendations,
             recommendation_count=len(recommendations),
             representative_recommendation_indexes=representative_recommendation_indexes,
+            profile_quality_summary=profile_quality_summary,
+            sampled_evidence_caution=sampled_evidence_caution,
             scalar_conflict_groups=scalar_conflict_groups,
             scalar_conflict_group_count=len(scalar_conflict_groups),
             metric_advisories=metric_advisories,
@@ -17084,6 +17100,206 @@ class DoxaBase:
         )
 
     @staticmethod
+    def _profile_quality_summary(
+        recommendations: Iterable[ProfileMapUpdateRecommendation],
+        *,
+        metric_advisory_count: int = 0,
+        type_advisory_count: int = 0,
+    ) -> dict[str, Any]:
+        recommendation_list = list(recommendations)
+        basis_counts: dict[str, int] = {}
+        default_stageable_basis_counts: dict[str, int] = {}
+        sampled_recommendation_indexes: list[int] = []
+        sampled_default_stageable_recommendation_indexes: list[int] = []
+        sampled_row_count_recommendation_indexes: list[int] = []
+        sample_scopes: list[str] = []
+        sample_methods: list[str] = []
+        for recommendation in recommendation_list:
+            basis_counts[recommendation.basis] = (
+                basis_counts.get(recommendation.basis, 0) + 1
+            )
+            if recommendation.default_stageable:
+                default_stageable_basis_counts[recommendation.basis] = (
+                    default_stageable_basis_counts.get(recommendation.basis, 0)
+                    + 1
+                )
+            if recommendation.basis == "sample":
+                sampled_recommendation_indexes.append(
+                    recommendation.recommendation_index
+                )
+                if recommendation.default_stageable:
+                    sampled_default_stageable_recommendation_indexes.append(
+                        recommendation.recommendation_index
+                    )
+                if recommendation.kind == "dataset_row_count_snapshot":
+                    sampled_row_count_recommendation_indexes.append(
+                        recommendation.recommendation_index
+                    )
+                if recommendation.sample_scope:
+                    DoxaBase._append_unique(sample_scopes, recommendation.sample_scope)
+                if recommendation.sample_method:
+                    DoxaBase._append_unique(
+                        sample_methods,
+                        recommendation.sample_method,
+                    )
+        return {
+            "recommendation_count": len(recommendation_list),
+            "basis_counts": basis_counts,
+            "default_stageable_basis_counts": default_stageable_basis_counts,
+            "sampled_recommendation_indexes": sampled_recommendation_indexes,
+            "sampled_recommendation_count": len(sampled_recommendation_indexes),
+            "sampled_default_stageable_recommendation_indexes": (
+                sampled_default_stageable_recommendation_indexes
+            ),
+            "sampled_default_stageable_recommendation_count": len(
+                sampled_default_stageable_recommendation_indexes
+            ),
+            "sampled_row_count_recommendation_indexes": (
+                sampled_row_count_recommendation_indexes
+            ),
+            "sample_scopes": sample_scopes,
+            "sample_methods": sample_methods,
+            "metric_advisory_count": metric_advisory_count,
+            "type_advisory_count": type_advisory_count,
+        }
+
+    @staticmethod
+    def _profile_sampled_evidence_caution(
+        profile_quality_summary: Mapping[str, Any],
+    ) -> str | None:
+        sampled_count = DoxaBase._profile_summary_count(
+            profile_quality_summary.get("sampled_recommendation_count")
+        )
+        if sampled_count <= 0:
+            return None
+        sampled_stageable_count = DoxaBase._profile_summary_count(
+            profile_quality_summary.get(
+                "sampled_default_stageable_recommendation_count",
+            )
+        )
+        row_count_indexes = DoxaBase._int_values(
+            profile_quality_summary.get("sampled_row_count_recommendation_indexes")
+        )
+        if sampled_stageable_count:
+            return (
+                "Sampled profile evidence has default-stageable map "
+                "recommendations. Mechanical readiness is not full-scan "
+                "evidence; review sample_scope and sample_method before applying."
+            )
+        if row_count_indexes:
+            return (
+                "Sampled row-count profile recommendations are present and are "
+                "skipped by default unless explicitly allowed after scope review."
+            )
+        return (
+            "Sampled profile evidence is present. Review sample_scope and "
+            "sample_method before treating recommendations as durable map facts."
+        )
+
+    @staticmethod
+    def _profile_quality_summary_from_route_groups(
+        groups: Iterable[MappingABC[str, Any]],
+    ) -> dict[str, Any]:
+        summaries: list[MappingABC[str, Any]] = []
+        for group in groups:
+            for summary in group.get("profile_quality_summaries") or []:
+                if isinstance(summary, MappingABC):
+                    summaries.append(summary)
+        if not summaries:
+            return {}
+
+        basis_counts: dict[str, int] = {}
+        default_stageable_basis_counts: dict[str, int] = {}
+        sampled_recommendation_indexes: list[int] = []
+        sampled_default_stageable_recommendation_indexes: list[int] = []
+        sampled_row_count_recommendation_indexes: list[int] = []
+        sample_scopes: list[str] = []
+        sample_methods: list[str] = []
+        recommendation_count = 0
+        metric_advisory_count = 0
+        type_advisory_count = 0
+
+        def summary_count(value: Any) -> int:
+            return DoxaBase._profile_summary_count(value)
+
+        def merge_counts(target: dict[str, int], value: Any) -> None:
+            if not isinstance(value, MappingABC):
+                return
+            for key, count in value.items():
+                count_value = summary_count(count)
+                if isinstance(key, str) and count_value:
+                    target[key] = target.get(key, 0) + count_value
+
+        for summary in summaries:
+            recommendation_count += summary_count(
+                summary.get("recommendation_count")
+            )
+            metric_advisory_count += summary_count(
+                summary.get("metric_advisory_count")
+            )
+            type_advisory_count += summary_count(
+                summary.get("type_advisory_count")
+            )
+            merge_counts(basis_counts, summary.get("basis_counts"))
+            merge_counts(
+                default_stageable_basis_counts,
+                summary.get("default_stageable_basis_counts"),
+            )
+            for index in DoxaBase._int_values(
+                summary.get("sampled_recommendation_indexes")
+            ):
+                DoxaBase._append_unique(sampled_recommendation_indexes, index)
+            for index in DoxaBase._int_values(
+                summary.get("sampled_default_stageable_recommendation_indexes")
+            ):
+                DoxaBase._append_unique(
+                    sampled_default_stageable_recommendation_indexes,
+                    index,
+                )
+            for index in DoxaBase._int_values(
+                summary.get("sampled_row_count_recommendation_indexes")
+            ):
+                DoxaBase._append_unique(
+                    sampled_row_count_recommendation_indexes,
+                    index,
+                )
+            for scope in DoxaBase._string_values_from_any(
+                summary.get("sample_scopes")
+            ):
+                DoxaBase._append_unique(sample_scopes, scope)
+            for method in DoxaBase._string_values_from_any(
+                summary.get("sample_methods")
+            ):
+                DoxaBase._append_unique(sample_methods, method)
+
+        return {
+            "recommendation_count": recommendation_count,
+            "basis_counts": basis_counts,
+            "default_stageable_basis_counts": default_stageable_basis_counts,
+            "sampled_recommendation_indexes": sampled_recommendation_indexes,
+            "sampled_recommendation_count": len(sampled_recommendation_indexes),
+            "sampled_default_stageable_recommendation_indexes": (
+                sampled_default_stageable_recommendation_indexes
+            ),
+            "sampled_default_stageable_recommendation_count": len(
+                sampled_default_stageable_recommendation_indexes
+            ),
+            "sampled_row_count_recommendation_indexes": (
+                sampled_row_count_recommendation_indexes
+            ),
+            "sample_scopes": sample_scopes,
+            "sample_methods": sample_methods,
+            "metric_advisory_count": metric_advisory_count,
+            "type_advisory_count": type_advisory_count,
+        }
+
+    @staticmethod
+    def _profile_summary_count(value: Any) -> int:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        return 0
+
+    @staticmethod
     def _profile_map_update_draft_review_note(
         *,
         query_context_review_actions: list[SuggestedNextAction],
@@ -17886,6 +18102,12 @@ class DoxaBase:
             "profile_map_updates",
             duplicate_group_keys or route_anchor_iris,
         )
+        profile_quality_summary = self._profile_quality_summary(
+            selected_recommendations
+        )
+        sampled_evidence_caution = self._profile_sampled_evidence_caution(
+            profile_quality_summary
+        )
         return self._with_profile_route_step_key(
             {
                 "review_lane": "profile_map_updates",
@@ -17900,6 +18122,8 @@ class DoxaBase:
                 ),
                 "route_anchor_iris": route_anchor_iris,
                 "route_pattern_iris": list(supporting_patterns),
+                "profile_quality_summary": profile_quality_summary,
+                "sampled_evidence_caution": sampled_evidence_caution,
                 "action_status": (
                     "available_after_pending_review"
                     if pending_staged_profile_update_iris
@@ -44245,6 +44469,8 @@ class DoxaBase:
                 "expected scalar conflict, metric, or type review revisions are "
                 "not staged yet."
             ),
+            profile_quality_summary=draft.profile_quality_summary,
+            sampled_evidence_caution=draft.sampled_evidence_caution,
             semantic_apply_gate_summary=semantic_apply_gate_summary,
             bulk_apply_allowed=bulk_apply_allowed,
             safe_single_apply_candidate_revision_iris=(
@@ -44679,6 +44905,12 @@ class DoxaBase:
         application_status: str | None,
     ) -> dict[str, Any]:
         groups = [dict(group) for group in profile_route_groups]
+        profile_quality_summary = (
+            DoxaBase._profile_quality_summary_from_route_groups(groups)
+        )
+        sampled_evidence_caution = DoxaBase._profile_sampled_evidence_caution(
+            profile_quality_summary
+        )
         direct_groups = [
             group
             for group in groups
@@ -44812,12 +45044,17 @@ class DoxaBase:
             else:
                 role = "profile_review_candidate"
 
+        if sampled_evidence_caution and safe_single_apply_candidate:
+            reason = f"{reason} {sampled_evidence_caution}"
+
         return {
             "semantic_apply_role": role,
             "semantic_choice_group_key": choice_key(),
             "apply_cardinality": apply_cardinality,
             "bulk_apply_allowed": bulk_apply_allowed,
             "safe_single_apply_candidate": safe_single_apply_candidate,
+            "profile_quality_summary": profile_quality_summary,
+            "sampled_evidence_caution": sampled_evidence_caution,
             "semantic_apply_gate_reason": reason,
         }
 
@@ -44959,6 +45196,8 @@ class DoxaBase:
                     "remaining_semantic_moves": [],
                     "matched_by": [],
                     "match_strength": match_strength,
+                    "profile_quality_summaries": [],
+                    "sampled_evidence_cautions": [],
                 },
             )
             route_group["match_strength"] = (
@@ -44991,6 +45230,17 @@ class DoxaBase:
                     )
             for match in matched_by:
                 DoxaBase._append_unique(route_group["matched_by"], match)
+            profile_quality_summary = source.get("profile_quality_summary")
+            if isinstance(profile_quality_summary, MappingABC):
+                route_group["profile_quality_summaries"].append(
+                    copy.deepcopy(dict(profile_quality_summary))
+                )
+            sampled_evidence_caution = source.get("sampled_evidence_caution")
+            if isinstance(sampled_evidence_caution, str):
+                DoxaBase._append_unique(
+                    route_group["sampled_evidence_cautions"],
+                    sampled_evidence_caution,
+                )
 
         for route_group in by_route_key.values():
             closed_semantic_moves = [
@@ -45431,6 +45681,16 @@ class DoxaBase:
             for candidate in candidates
             if not candidate.safe_single_apply_candidate
         ]
+        safe_single_candidate_rationales = [
+            {
+                "revision_iri": candidate.revision_iri,
+                "semantic_apply_gate_reason": candidate.semantic_apply_gate_reason,
+                "profile_quality_summary": candidate.profile_quality_summary,
+                "sampled_evidence_caution": candidate.sampled_evidence_caution,
+            }
+            for candidate in candidates
+            if candidate.safe_single_apply_candidate
+        ]
         candidate_roles: dict[str, int] = {}
         for candidate in candidates:
             candidate_roles[candidate.semantic_apply_role] = (
@@ -45498,6 +45758,9 @@ class DoxaBase:
             "bulk_apply_allowed": bulk_apply_allowed,
             "safe_single_apply_candidate_revision_iris": list(
                 safe_single_apply_candidate_revision_iris
+            ),
+            "safe_single_apply_candidate_rationales": (
+                safe_single_candidate_rationales
             ),
             "safe_single_apply_candidate_count": len(
                 safe_single_apply_candidate_revision_iris
@@ -45630,9 +45893,9 @@ class DoxaBase:
             "",
             (
                 "| Row | Candidate | Role | Cardinality | Safe single | "
-                "Bulk candidate | Choice group |"
+                "Bulk candidate | Choice group | Profile basis | Evidence caution |"
             ),
-            "|---|---|---|---|---|---|---|",
+            "|---|---|---|---|---|---|---|---|---|",
         ]
         for index, candidate in enumerate(candidates, start=1):
             lines.append(
@@ -45652,11 +45915,33 @@ class DoxaBase:
                         self._markdown_table_cell(
                             candidate.semantic_choice_group_key or "none"
                         ),
+                        self._markdown_table_cell(
+                            self._profile_quality_basis_markdown(
+                                candidate.profile_quality_summary
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            candidate.sampled_evidence_caution or "none"
+                        ),
                     ]
                 )
                 + " |"
             )
         return "\n".join(lines)
+
+    @staticmethod
+    def _profile_quality_basis_markdown(
+        profile_quality_summary: Mapping[str, Any],
+    ) -> str:
+        basis_counts = profile_quality_summary.get("basis_counts")
+        if not isinstance(basis_counts, MappingABC) or not basis_counts:
+            return "none"
+        parts = [
+            f"{basis}: {count}"
+            for basis, count in sorted(basis_counts.items())
+            if isinstance(basis, str) and isinstance(count, int)
+        ]
+        return ", ".join(parts) or "none"
 
     def _profile_insight_open_review_lanes_markdown(
         self,

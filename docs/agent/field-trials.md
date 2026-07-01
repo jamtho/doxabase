@@ -3842,8 +3842,11 @@ few useful gaps:
   not the staged/applied/restaged lineage, so a zero staged-before/current diff
   could hide a ready or semantically gated staged row. Graph-version diffs now
   include compact before/after revision contexts, `related_revision_iris`, and
-  suggested lineage/applied-diff follow-ups. Remaining useful affordances for
-  later waves: top-level sampled profile caution/safe-single rationale, route
+  suggested lineage/applied-diff follow-ups. A follow-up profile patch addressed
+  the sampled-profile caution: drafts, profile review bundles, candidates,
+  executor summaries, and Markdown apply-gate tables now surface profile basis
+  counts, sampled default-stageable indexes, sample scopes/methods, and
+  sampled-evidence caution. Remaining useful affordances for later waves: route
   cards on query-planning peer actions, partition binding examples, and clearer
   validation behavior when query-evidence storage overlays reuse existing
   storage/layout IRIs.

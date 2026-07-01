@@ -266,8 +266,11 @@ choose-one-and-recheck unless the apply gate explicitly says bulk apply is
 allowed.
 Use `executor_decision_summary` as the compact unattended routing object: it
 names the decision, mutation policy, safe-single candidates, blocked candidates,
-open lanes, and whether a rerun is required after mutation. Then inspect the
-detailed candidate/lane rows before applying anything.
+open lanes, candidate rationales, and whether a rerun is required after
+mutation. Then inspect the detailed candidate/lane rows before applying
+anything. When `sampled_evidence_caution` appears on the bundle, a candidate, or
+`safe_single_apply_candidate_rationales[]`, treat it as a scope-review prompt:
+the staged row may be mechanically ready without being full-scan-backed.
 For the narrow positive case with one ordinary profile map-update candidate,
 `bulk_apply_allowed=true` and `decision="bulk_apply_after_review"` can be safe,
 but scripts should still count, not parse the word "bulk": require exactly one
