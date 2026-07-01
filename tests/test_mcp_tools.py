@@ -2880,6 +2880,8 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
             "alternative_set_source_iri": None,
             "alternative_set_roles": [],
             "alternative_gate_statuses": ["not_applicable"],
+            "alternative_applied_source_iris": [],
+            "alternative_applied_revision_iris": [],
             "requires_semantic_review_before_mutation": False,
             "reason": (
                 "Resolved staged-revision mutation target. Review the row and "
@@ -7801,6 +7803,13 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         result["query_target_candidates"].index(object_candidate),
         result["query_target_candidates"].index(database_candidates[0]),
     }
+    database_candidate_index = result["query_target_candidates"].index(
+        database_candidates[0]
+    )
+    assert result["query_target_decision"][
+        "route_intent_review_candidate_indexes"
+    ] == []
+    assert result["query_target_decision"]["candidate_index"] == database_candidate_index
     peer_actions = [
         action
         for action in result["suggested_next_actions"]
@@ -7809,6 +7818,69 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         == object_candidate["candidate_selector"]
     ]
     assert peer_actions
+
+
+def test_describe_query_context_tool_flags_unselected_route_intent(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    sample_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#aaa_orders_sample_storage",
+        label="Orders sample relation",
+        route_roles=["rc:SampleRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-dev",
+        path_templates=["scratch.orders_sample"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    production_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#zzz_orders_production_storage",
+        label="Orders production relation",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders_current"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    table_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[sample_storage["iri"], production_storage["iri"]],
+        physical_layouts=[table_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    production_candidate = next(
+        candidate
+        for candidate in result["query_target_candidates"]
+        if candidate["storage_access"]["iri"] == production_storage["iri"]
+    )
+    production_index = result["query_target_candidates"].index(production_candidate)
+    assert result["query_target_decision"]["candidate_index"] != production_index
+    assert result["query_target_decision"][
+        "route_intent_review_candidate_indexes"
+    ] == [production_index]
+    assert "production/current/canonical route role intent" in (
+        result["query_target_decision"]["route_intent_caution"]
+    )
+    assert "route_intent_review_candidates_present" in (
+        result["query_target_decision"]["selection_reason_codes"]
+    )
 
 
 def test_describe_query_context_tool_lifts_repair_action_groups(

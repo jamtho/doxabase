@@ -264,9 +264,10 @@ revision targets with helper actions for repair lanes that create a successor
 and therefore have no current target IRI. Revision-target items also carry
 grouped `semantic_risk_level` / `semantic_risk_reasons`,
 `alternative_set_iris`, `alternative_set_source_iri`,
-`alternative_set_roles`, and `alternative_gate_statuses`, so executors can see
-choose-one and semantic-review context without joining back through
-`next_action_queue_items`. Treat
+`alternative_set_roles`, `alternative_gate_statuses`,
+`alternative_applied_source_iris`, and `alternative_applied_revision_iris`, so
+executors can see choose-one and semantic-review context without joining back
+through `next_action_queue_items`. Treat
 `lane_counts` and `next_action_queue_item_counts` as source-row counts, not a
 deduped apply/restage list; explicit inputs that include both a stale source and
 its restaged successor can count two `apply_after_review` lanes while the
@@ -297,7 +298,10 @@ Read `mutation_frontier_items[].requires_semantic_review_before_mutation`
 before applying from an unattended loop. A row can be mechanically ready and
 still require semantic review when it is an alternative to an already-applied
 source; inspect the item's semantic-risk and alternative-set fields, then the
-row's `alternative_gate` and applied source before any mutation.
+row's `alternative_gate` and applied source before any mutation. For
+`alternative_to_applied_source`, the frontier item includes the applied source
+and applied revision IRIs even when the source row is no longer current staged
+work.
 When helper mutation actions are present, the planner also warns that they are
 not represented by `mutation_frontier_iris`; treat that warning as an unattended
 loop guard, not as a blocker.

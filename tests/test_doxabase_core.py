@@ -9686,14 +9686,20 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert frontier_item.target_iri == repair.staged_revision.revision_iri
     assert frontier_item.semantic_risk_level == semantic_item.semantic_risk_level
     assert frontier_item.semantic_risk_reasons == semantic_item.semantic_risk_reasons
-    assert frontier_item.alternative_set_iris == semantic_item.alternative_set_iris
-    assert (
-        frontier_item.alternative_set_source_iri
-        == semantic_item.alternative_set_source_iri
-    )
-    assert frontier_item.alternative_set_roles == []
+    assert frontier_item.alternative_set_iris == [
+        event_rows.revision_iri,
+        repair.staged_revision.revision_iri,
+    ]
+    assert frontier_item.alternative_set_source_iri == event_rows.revision_iri
+    assert frontier_item.alternative_set_roles == ["alternative"]
     assert frontier_item.alternative_gate_statuses == [
         semantic_item.alternative_gate_status
+    ]
+    assert frontier_item.alternative_applied_source_iris == [
+        event_rows.revision_iri
+    ]
+    assert frontier_item.alternative_applied_revision_iris == [
+        applied_event.applied_revision_iri
     ]
     assert frontier_item.requires_semantic_review_before_mutation is True
 
@@ -22396,6 +22402,16 @@ def test_query_target_candidates_expose_storage_route_roles(
     assert automatic_candidate.storage_access is not None
     assert automatic_candidate.storage_access.iri == sample_storage.iri
     assert context.query_target_decision.peer_ready_requires_intent_review is True
+    assert context.query_target_decision.route_intent_review_candidate_indexes == [
+        context.query_target_candidates.index(production_candidate)
+    ]
+    assert context.query_target_decision.route_intent_caution is not None
+    assert "production/current/canonical route role intent" in (
+        context.query_target_decision.route_intent_caution
+    )
+    assert "route_intent_review_candidates_present" in (
+        context.query_target_decision.selection_reason_codes
+    )
 
     production_plan = db.draft_query_plan(
         dataset,
@@ -22406,6 +22422,8 @@ def test_query_target_candidates_expose_storage_route_roles(
     assert production_plan.selected_candidate is not None
     assert production_plan.selected_candidate.route_roles == production_candidate.route_roles
     assert production_plan.source_context.selection_mode == "candidate_selector"
+    assert production_plan.source_context.route_intent_review_candidate_indexes == []
+    assert production_plan.handoff_summary.route_intent_review_candidate_indexes == []
 
 
 def test_database_storage_does_not_treat_dataset_template_as_relation(

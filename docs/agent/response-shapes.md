@@ -3073,6 +3073,10 @@ When `decision.peer_ready_requires_intent_review` is true, read
 `decision.selection_reason_codes` and `decision.selection_caution` before
 executing unattended. Automatic selection among peer ready candidates is
 DoxaBase precedence, not project intent.
+When `decision.route_intent_review_candidate_indexes` is non-empty, those ready
+peer cards carry production/current/canonical route-role intent that the
+selected candidate lacks; inspect them and pass their `candidate_selector` when
+that route is intended.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:
@@ -3089,6 +3093,8 @@ decision.reason_codes
 decision.selection_reason_codes
 decision.peer_ready_requires_intent_review
 decision.selection_caution
+decision.route_intent_review_candidate_indexes
+decision.route_intent_caution
 ```
 
 `selected_candidate_direct_clean` is `true` when the selected candidate has no
@@ -3430,6 +3436,8 @@ handoff_summary.unselected_direct_clean_candidate_indexes
 handoff_summary.selection_reason_codes
 handoff_summary.peer_ready_requires_intent_review
 handoff_summary.selection_caution
+handoff_summary.route_intent_review_candidate_indexes
+handoff_summary.route_intent_caution
 handoff_summary.primary_repair_issue_index
 handoff_summary.primary_repair_issue_code
 handoff_summary.primary_repair_group_action_type
@@ -3496,6 +3504,8 @@ source_context.allow_context_blocked_candidate
 source_context.selection_reason_codes
 source_context.peer_ready_requires_intent_review
 source_context.selection_caution
+source_context.route_intent_review_candidate_indexes
+source_context.route_intent_caution
 ```
 
 `plan.scan` is the non-executed handoff card. Do not treat a relation or URI
@@ -6059,6 +6069,8 @@ Serialized items look like this:
     "alternative_set_source_iri": None,
     "alternative_set_roles": [],
     "alternative_gate_statuses": ["not_applicable"],
+    "alternative_applied_source_iris": [],
+    "alternative_applied_revision_iris": [],
     "requires_semantic_review_before_mutation": False,
     "reason": "Resolved staged-revision mutation target...",
 }
@@ -6071,6 +6083,10 @@ For revision targets, the semantic-risk and alternative-set fields are copied
 from the grouped queue rows. Check them before restaging or applying, especially
 when `alternative_set_iris` is non-empty or
 `requires_semantic_review_before_mutation` is true.
+For rows gated by `alternative_to_applied_source`,
+`alternative_applied_source_iris` and `alternative_applied_revision_iris` name
+the already-durable competing source even when that source is absent from the
+current staged queue.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
 apply/restage queues plus mutating repair targets; it intentionally excludes
 informational rows, already-applied inspection targets, diagnostic

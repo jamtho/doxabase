@@ -3797,6 +3797,20 @@ few useful gaps:
   completed full-scan/sample/advisory lanes and safe map apply; direct
   `stage_profile_map_updates` results now expose the same top-level
   `revision_iri` alias as the MCP wrapper for staged and all-skipped outcomes.
+- A follow-up four-trial wave covered storage query followthrough,
+  project-brief/privacy frontier routing, staged-revision alternative recovery,
+  and profile review-bundle handoff. Storage query planning still should not
+  change automatic precedence, but when precedence skips ready
+  production/current/canonical route roles the decision now exposes
+  `route_intent_review_candidate_indexes` / `route_intent_caution` so a cold
+  agent can select the intended `candidate_selector`. Staged recovery now carries
+  applied-source alternative IRIs on `mutation_frontier_items`, so scripts using
+  the mutation worklist can see both the semantic-review gate and the already
+  applied competing source. Profile handoff held after the alias fix. Remaining
+  lower-priority affordances to retest later include a possible
+  `scanned_source_handles` naming alias for query results, a `safety_gate` flag
+  on project-brief health tasks, and suggested scrub/review actions for blocked
+  context-slice preflights.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

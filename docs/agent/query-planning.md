@@ -161,6 +161,10 @@ Start with `describe_query_context(dataset_iri)`:
    `selection_reason_codes` records whether the selected route came from
    automatic ranking or an explicit selector. Treat automatic selection among
    peer ready candidates as precedence, not project intent.
+   If `query_target_decision.route_intent_review_candidate_indexes` is non-empty,
+   the selected candidate skipped ready peer card(s) with reviewed
+   production/current/canonical route intent. Inspect those cards and pass their
+   `candidate_selector` when that route is intended.
    These indexes are candidate-local direct readiness, so they can be non-empty
    even when top-level `readiness == "needs_review"` because sibling metadata
    still blocks the whole context.

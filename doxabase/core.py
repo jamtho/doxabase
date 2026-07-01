@@ -1761,6 +1761,8 @@ class StagedRevisionResolvedTargetGroup:
     alternative_set_source_iri: str | None
     alternative_set_roles: list[str]
     alternative_gate_statuses: list[str]
+    alternative_applied_source_iris: list[str]
+    alternative_applied_revision_iris: list[str]
     alternative_semantic_review_required: bool
 
 
@@ -1780,6 +1782,8 @@ class StagedRevisionMutationFrontierItem:
     alternative_set_source_iri: str | None
     alternative_set_roles: list[str]
     alternative_gate_statuses: list[str]
+    alternative_applied_source_iris: list[str]
+    alternative_applied_revision_iris: list[str]
     requires_semantic_review_before_mutation: bool
     reason: str
 
@@ -2690,6 +2694,8 @@ class QueryTargetDecision:
     selection_reason_codes: list[str] = field(default_factory=list)
     peer_ready_requires_intent_review: bool = False
     selection_caution: str | None = None
+    route_intent_review_candidate_indexes: list[int] = field(default_factory=list)
+    route_intent_caution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2756,6 +2762,8 @@ class DraftQueryPlanSourceContext:
     selection_reason_codes: list[str] = field(default_factory=list)
     peer_ready_requires_intent_review: bool = False
     selection_caution: str | None = None
+    route_intent_review_candidate_indexes: list[int] = field(default_factory=list)
+    route_intent_caution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2876,6 +2884,8 @@ class DraftQueryPlanHandoffSummary:
     selection_reason_codes: list[str]
     peer_ready_requires_intent_review: bool
     selection_caution: str | None
+    route_intent_review_candidate_indexes: list[int] = field(default_factory=list)
+    route_intent_caution: str | None = None
     primary_repair_issue_index: int | None = None
     primary_repair_issue_code: str | None = None
     primary_repair_group_action_type: str | None = None
@@ -20769,15 +20779,28 @@ class DoxaBase:
             if index != selected_candidate_index
         ]
         peer_ready_requires_intent_review = bool(unselected_ready_candidate_indexes)
+        route_intent_review_candidate_indexes = (
+            self._query_target_route_intent_review_candidate_indexes(
+                selected_candidate,
+                context.query_target_candidates,
+                unselected_ready_candidate_indexes,
+            )
+        )
         selection_reason_codes = self._query_target_selection_reason_codes(
             selected_candidate,
             status=selected_decision.status,
             selection_mode=selection_mode,
             peer_ready_requires_intent_review=peer_ready_requires_intent_review,
+            route_intent_review_candidate_indexes=(
+                route_intent_review_candidate_indexes
+            ),
         )
         selection_caution = self._query_target_selection_caution(
             unselected_ready_candidate_indexes,
             selection_mode=selection_mode,
+            route_intent_review_candidate_indexes=(
+                route_intent_review_candidate_indexes
+            ),
         )
         selected_candidate_note = self._draft_query_plan_selected_candidate_note(
             selected_candidate,
@@ -20816,6 +20839,12 @@ class DoxaBase:
             selection_reason_codes=selection_reason_codes,
             peer_ready_requires_intent_review=peer_ready_requires_intent_review,
             selection_caution=selection_caution,
+            route_intent_review_candidate_indexes=(
+                route_intent_review_candidate_indexes
+            ),
+            route_intent_caution=self._query_target_route_intent_caution(
+                route_intent_review_candidate_indexes
+            ),
         )
         required_bindings = [binding.name for binding in binding_requirements]
         handoff_summary = self._draft_query_plan_handoff_summary(
@@ -22380,6 +22409,13 @@ class DoxaBase:
             for index in ready_candidate_indexes
             if index != selected_candidate_index
         ]
+        route_intent_review_candidate_indexes = (
+            self._query_target_route_intent_review_candidate_indexes(
+                selected_candidate,
+                context.query_target_candidates,
+                unselected_ready_candidate_indexes,
+            )
+        )
         return self._query_target_decision_for_candidate(
             selected_candidate,
             index=selected_candidate_index,
@@ -22395,6 +22431,12 @@ class DoxaBase:
             selection_caution=self._query_target_selection_caution(
                 unselected_ready_candidate_indexes,
                 selection_mode=selection_mode,
+                route_intent_review_candidate_indexes=(
+                    route_intent_review_candidate_indexes
+                ),
+            ),
+            route_intent_review_candidate_indexes=(
+                route_intent_review_candidate_indexes
             ),
         )
 
@@ -22528,6 +22570,10 @@ class DoxaBase:
                 source_context.peer_ready_requires_intent_review
             ),
             selection_caution=source_context.selection_caution,
+            route_intent_review_candidate_indexes=list(
+                source_context.route_intent_review_candidate_indexes
+            ),
+            route_intent_caution=source_context.route_intent_caution,
             **primary_repair_cue,
         )
 
@@ -24051,6 +24097,13 @@ class DoxaBase:
                 for item_index in ready_candidate_indexes
                 if item_index != index
             ]
+            route_intent_review_candidate_indexes = (
+                self._query_target_route_intent_review_candidate_indexes(
+                    candidate,
+                    candidates,
+                    unselected_ready_candidate_indexes,
+                )
+            )
             return self._query_target_decision_for_candidate(
                 candidate,
                 index=index,
@@ -24066,6 +24119,12 @@ class DoxaBase:
                 selection_caution=self._query_target_selection_caution(
                     unselected_ready_candidate_indexes,
                     selection_mode="automatic",
+                    route_intent_review_candidate_indexes=(
+                        route_intent_review_candidate_indexes
+                    ),
+                ),
+                route_intent_review_candidate_indexes=(
+                    route_intent_review_candidate_indexes
                 ),
             )
 
@@ -24116,7 +24175,9 @@ class DoxaBase:
         selection_mode: str = "automatic",
         peer_ready_requires_intent_review: bool = False,
         selection_caution: str | None = None,
+        route_intent_review_candidate_indexes: list[int] | None = None,
     ) -> QueryTargetDecision:
+        route_intent_indexes = list(route_intent_review_candidate_indexes or [])
         return QueryTargetDecision(
             status=status,
             summary=summary,
@@ -24136,9 +24197,14 @@ class DoxaBase:
                 peer_ready_requires_intent_review=(
                     peer_ready_requires_intent_review
                 ),
+                route_intent_review_candidate_indexes=route_intent_indexes,
             ),
             peer_ready_requires_intent_review=peer_ready_requires_intent_review,
             selection_caution=selection_caution,
+            route_intent_review_candidate_indexes=route_intent_indexes,
+            route_intent_caution=self._query_target_route_intent_caution(
+                route_intent_indexes
+            ),
         )
 
     @staticmethod
@@ -24148,6 +24214,7 @@ class DoxaBase:
         status: str,
         selection_mode: str,
         peer_ready_requires_intent_review: bool,
+        route_intent_review_candidate_indexes: list[int] | None = None,
     ) -> list[str]:
         codes: list[str] = []
         if selection_mode == "automatic":
@@ -24163,13 +24230,16 @@ class DoxaBase:
                 )
         if peer_ready_requires_intent_review:
             codes.append("peer_ready_candidates_present")
+        if route_intent_review_candidate_indexes:
+            codes.append("route_intent_review_candidates_present")
         return codes
 
-    @staticmethod
     def _query_target_selection_caution(
+        self,
         unselected_ready_candidate_indexes: list[int],
         *,
         selection_mode: str,
+        route_intent_review_candidate_indexes: list[int] | None = None,
     ) -> str | None:
         if not unselected_ready_candidate_indexes:
             return None
@@ -24179,11 +24249,59 @@ class DoxaBase:
             if selection_mode == "automatic"
             else f"Explicit {selection_mode} selection used the caller selector"
         )
-        return (
+        caution = (
             "Peer direct-ready query target candidate(s) exist. "
             f"{selection_note}; inspect "
             f"candidate card(s) {indexes} or pass an explicit candidate_selector "
             "before unattended execution."
+        )
+        route_intent_caution = self._query_target_route_intent_caution(
+            route_intent_review_candidate_indexes or []
+        )
+        if route_intent_caution is not None:
+            caution = f"{caution} {route_intent_caution}"
+        return caution
+
+    def _query_target_route_intent_review_candidate_indexes(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        candidates: list[QueryTargetCandidate],
+        candidate_indexes: Iterable[int],
+    ) -> list[int]:
+        if selected_candidate is None:
+            return []
+        priority_roles = {
+            self.expand_iri("rc:ProductionRoute"),
+            self.expand_iri("rc:CurrentRoute"),
+            self.expand_iri("rc:CanonicalRoute"),
+        }
+        selected_roles = {role.iri for role in selected_candidate.route_roles}
+        selected_priority_roles = selected_roles & priority_roles
+        review_indexes: list[int] = []
+        for index in candidate_indexes:
+            if index < 0 or index >= len(candidates):
+                continue
+            candidate_priority_roles = (
+                {role.iri for role in candidates[index].route_roles}
+                & priority_roles
+            )
+            if candidate_priority_roles - selected_priority_roles:
+                review_indexes.append(index)
+        return review_indexes
+
+    @staticmethod
+    def _query_target_route_intent_caution(
+        candidate_indexes: Iterable[int],
+    ) -> str | None:
+        indexes = list(candidate_indexes)
+        if not indexes:
+            return None
+        formatted = ", ".join(str(index) for index in indexes)
+        return (
+            "Candidate card(s) "
+            f"{formatted} carry production/current/canonical route role intent "
+            "that automatic precedence did not select; review route_roles and "
+            "pass candidate_selector when that route is intended."
         )
 
     def _query_target_candidate_decision_rank(
@@ -38452,6 +38570,8 @@ class DoxaBase:
                     "alternative_set_source_iri": None,
                     "alternative_set_roles": [],
                     "alternative_gate_statuses": [],
+                    "alternative_applied_source_iris": [],
+                    "alternative_applied_revision_iris": [],
                     "alternative_semantic_review_required": False,
                 }
                 group_order.append(key)
@@ -38484,6 +38604,14 @@ class DoxaBase:
                     group["applied_event_iris"],
                     item.alternative_applied_revision_iri,
                 )
+                add_unique(
+                    group["alternative_applied_source_iris"],
+                    item.alternative_applied_source_iri,
+                )
+                add_unique(
+                    group["alternative_applied_revision_iris"],
+                    item.alternative_applied_revision_iri,
+                )
                 group["semantic_risk_level"] = higher_risk(
                     group["semantic_risk_level"],
                     item.semantic_risk_level,
@@ -38513,6 +38641,25 @@ class DoxaBase:
                     group["applied_event_iris"],
                     lane.alternative_gate.applied_revision_iri,
                 )
+                add_unique(
+                    group["alternative_applied_source_iris"],
+                    lane.alternative_gate.applied_source_iri,
+                )
+                add_unique(
+                    group["alternative_applied_revision_iris"],
+                    lane.alternative_gate.applied_revision_iri,
+                )
+                if lane.alternative_gate.status != "not_applicable":
+                    add_unique(
+                        group["alternative_set_iris"],
+                        lane.alternative_gate.current_alternative_to,
+                    )
+                    add_unique(group["alternative_set_iris"], lane.row_iri)
+                    if group["alternative_set_source_iri"] is None:
+                        group["alternative_set_source_iri"] = (
+                            lane.alternative_gate.current_alternative_to
+                        )
+                    add_unique(group["alternative_set_roles"], "alternative")
                 group["alternative_semantic_review_required"] = (
                     group["alternative_semantic_review_required"]
                     or lane.alternative_gate.semantic_review_required
@@ -38546,6 +38693,12 @@ class DoxaBase:
                 alternative_set_source_iri=group["alternative_set_source_iri"],
                 alternative_set_roles=group["alternative_set_roles"],
                 alternative_gate_statuses=group["alternative_gate_statuses"],
+                alternative_applied_source_iris=group[
+                    "alternative_applied_source_iris"
+                ],
+                alternative_applied_revision_iris=group[
+                    "alternative_applied_revision_iris"
+                ],
                 alternative_semantic_review_required=group[
                     "alternative_semantic_review_required"
                 ],
@@ -38628,6 +38781,12 @@ class DoxaBase:
                     alternative_set_source_iri=group.alternative_set_source_iri,
                     alternative_set_roles=list(group.alternative_set_roles),
                     alternative_gate_statuses=list(group.alternative_gate_statuses),
+                    alternative_applied_source_iris=list(
+                        group.alternative_applied_source_iris
+                    ),
+                    alternative_applied_revision_iris=list(
+                        group.alternative_applied_revision_iris
+                    ),
                     requires_semantic_review_before_mutation=(
                         group.alternative_semantic_review_required
                     ),
@@ -38660,6 +38819,8 @@ class DoxaBase:
                     alternative_set_source_iri=None,
                     alternative_set_roles=[],
                     alternative_gate_statuses=[],
+                    alternative_applied_source_iris=[],
+                    alternative_applied_revision_iris=[],
                     requires_semantic_review_before_mutation=False,
                     reason=(
                         "Repair helper mutation for a staged recovery lane "
