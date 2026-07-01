@@ -652,7 +652,9 @@ metric, promotion pattern, or revision when you need to rediscover the
 supporting promotion trail. `project_brief` preserves the defined metric in
 profile draft summaries and `profile_queue_counts`, but does not create a
 `profile_review` task when `project_metric_defined` is the only remaining
-profile finding for that draft.
+profile finding for that draft. Read the draft `status` field to distinguish
+open map/advisory work from `profile evidence captured; no pending map
+recommendations` after a profile has already been reflected in the map.
 That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
 text, rationale, or summary when available; otherwise it uses a generic
 review-first comment. It is still a draft vocabulary definition; sharpen units,

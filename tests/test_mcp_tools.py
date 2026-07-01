@@ -569,6 +569,42 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["recommended_next_tasks"], list)
 
 
+def test_project_brief_tool_serializes_profile_draft_status(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+
+    record_map_dataset_tool(
+        db,
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=12,
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled with matching row count evidence.",
+        evidence_summary="Synthetic completed profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+
+    result = project_brief_tool(db, limit=2, profile_candidate_limit=1)
+    draft = result["datasets"][0]["profile"]["drafts"][0]
+
+    assert draft["status"] == (
+        "profile evidence captured; no pending map recommendations"
+    )
+    assert draft["recommendation_count"] == 0
+
+
 def test_project_brief_tool_serializes_fixture_storage_health_task(
     tmp_path: Path,
 ) -> None:

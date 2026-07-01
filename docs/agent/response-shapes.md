@@ -271,6 +271,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
                 "drafts": [
                     {
                         "evidence_iri": "https://...",
+                        "status": "pending map recommendations",
                         "profile_observation_count": 4,
                         "recommendation_count": 2,
                         "scalar_conflict_group_count": 0,
@@ -340,6 +341,11 @@ work. `queue_counts["staged_review"]` uses `staged_review.count`, while
 `staged_review.items` and `returned_queue_counts` stay bounded by `limit`.
 `staged_review.items[].revision_anchor_iris` lists graph revision anchors for
 the returned staged row, and `evidence_iris` lists its direct revision evidence.
+Profile draft summaries include `status`, for example
+`pending map recommendations`, `pending profile advisory review`,
+`pending staged profile update review`, or
+`profile evidence captured; no pending map recommendations`. Use that compact
+status before treating nonzero `profile_drafts` as unresolved work.
 When current staged work exists, `staged_review` tasks are ordered ahead of
 fresh mutation-capable `query_repair_review` and `profile_review` tasks; omitted
 fresh queues are reported through `omitted_queue_counts` and `health_tasks`.

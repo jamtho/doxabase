@@ -279,6 +279,7 @@ def test_project_brief_surfaces_singleton_profile_draft(
     assert profile.profile_evidence_iris == [evidence]
     assert profile.draft_evidence_iris == [evidence]
     assert profile.draft_count == 1
+    assert profile.drafts[0].status == "pending map recommendations"
     assert profile.drafts[0].recommendation_count == 1
     assert brief.profile_queue_counts["profile_observations"] == 1
     assert brief.profile_queue_counts["profile_drafts"] == 1
@@ -301,6 +302,43 @@ def test_project_brief_surfaces_singleton_profile_draft(
         f"draft_profile_map_updates(dataset_iri='{dataset}', "
         f"evidence_iri='{evidence}')"
     )
+
+
+def test_project_brief_marks_completed_profile_draft(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=12,
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled with matching row count evidence.",
+        evidence_summary="Synthetic completed profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+
+    brief = db.project_brief(limit=2, profile_candidate_limit=1)
+    profile = brief.datasets[0].profile
+
+    assert profile.draft_count == 1
+    assert profile.drafts[0].status == (
+        "profile evidence captured; no pending map recommendations"
+    )
+    assert profile.drafts[0].recommendation_count == 0
+    assert "profile_review" not in brief.queue_counts
 
 
 def test_project_brief_uses_profile_inspection_for_unattended_route(

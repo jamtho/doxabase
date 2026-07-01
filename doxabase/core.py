@@ -520,6 +520,7 @@ class ProjectBriefDatasetQuerySummary:
 @dataclass(frozen=True)
 class ProjectBriefProfileDraftSummary:
     evidence_iri: str
+    status: str
     profile_observation_count: int
     recommendation_count: int
     scalar_conflict_group_count: int
@@ -5236,6 +5237,7 @@ class DoxaBase:
             drafts.append(
                 ProjectBriefProfileDraftSummary(
                     evidence_iri=evidence_iri,
+                    status=self._project_brief_profile_draft_status(draft),
                     profile_observation_count=len(draft.profile_observation_iris),
                     recommendation_count=draft.recommendation_count,
                     scalar_conflict_group_count=draft.scalar_conflict_group_count,
@@ -5269,6 +5271,35 @@ class DoxaBase:
             draft_evidence_iris=[draft.evidence_iri for draft in drafts],
             drafts=drafts,
         )
+
+    @staticmethod
+    def _project_brief_profile_draft_status(
+        draft: ProfileMapUpdateDraft,
+    ) -> str:
+        context_only_metric_advisories = draft.metric_advisory_status_counts.get(
+            "project_metric_defined",
+            0,
+        )
+        open_metric_advisory_count = max(
+            0,
+            draft.metric_advisory_count - context_only_metric_advisories,
+        )
+        open_profile_review_count = (
+            draft.scalar_conflict_group_count
+            + open_metric_advisory_count
+            + draft.type_advisory_count
+        )
+        if draft.pending_staged_profile_update_count:
+            if draft.recommendation_count or open_profile_review_count:
+                return "pending staged profile update; open review lanes remain"
+            return "pending staged profile update review"
+        if draft.recommendation_count:
+            return "pending map recommendations"
+        if open_profile_review_count:
+            return "pending profile advisory review"
+        if draft.metric_advisory_count:
+            return "profile evidence captured; metric context only"
+        return "profile evidence captured; no pending map recommendations"
 
     def _project_brief_profile_draft_evidence_iris(
         self,
