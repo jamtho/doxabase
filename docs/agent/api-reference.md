@@ -901,6 +901,8 @@ payload keeps every `profile_route_key` and `profile_route_group`. It does not
 stage missing advisory-lane work for you. Already-applied profile-map candidates keep
 their persisted direct route source, while fresh same-lane live follow-ups are
 support routes until staged separately.
+The nested `export` record is the same staged Markdown export shape and carries
+`shareability_review_required` / `shareability_review_status`.
 Pass `fail_on_sensitive=True` when unattended or shareable profile review
 exports should raise before writing if the generated Markdown contains
 credential-like or secret-looking literals.
@@ -1569,6 +1571,11 @@ revision-derived `/tmp` filenames with a short hash to reduce collisions; caller
 may override them with run-specific paths. Pass `fail_on_sensitive=True` when
 unattended or shareable Markdown review exports should raise before writing if
 the generated bundle contains credential-like or secret-looking literals.
+Returned staged Markdown export records also set
+`shareability_review_required=True` and
+`shareability_review_status="required_not_completed"`; scanner-clean review
+Markdown still needs explicit shareability review before it leaves the intended
+project context.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

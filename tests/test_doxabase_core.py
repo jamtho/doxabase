@@ -4167,6 +4167,10 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     export = db.export_staged_revision(staged.revision_iri, export_path)
     assert export.path == str(export_path)
     assert export.format == "markdown"
+    assert export.shareability_review_required is True
+    assert export.shareability_review_status == "required_not_completed"
+    assert export.sensitive_literal_count == 0
+    assert export.privacy_warnings == []
     export_text = export_path.read_text()
     assert "exploratory hunch" in export_text
     assert "ex:Messages" in export_text
@@ -4202,6 +4206,8 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     single_text = single_path.read_text(encoding="utf-8")
 
     assert single_export.sensitive_literal_count == 1
+    assert single_export.shareability_review_required is True
+    assert single_export.shareability_review_status == "required_not_completed"
     assert single_export.privacy_warnings
     assert fake_secret not in " ".join(single_export.privacy_warnings)
     assert secret_text in single_text
@@ -4224,6 +4230,8 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     grouped_text = grouped_path.read_text(encoding="utf-8")
 
     assert grouped_export.sensitive_literal_count == 1
+    assert grouped_export.shareability_review_required is True
+    assert grouped_export.shareability_review_status == "required_not_completed"
     assert grouped_export.privacy_warnings
     assert fake_secret not in " ".join(grouped_export.privacy_warnings)
     assert secret_text in grouped_text
@@ -32890,6 +32898,8 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert result.export.recommended_import_tool is None
     assert result.export.recovery_complete is False
     assert result.export.sensitive_literal_count == 1
+    assert result.export.shareability_review_required is True
+    assert result.export.shareability_review_status == "required_not_completed"
     assert result.export.privacy_warnings
     assert fake_secret not in " ".join(result.export.privacy_warnings)
     assert related_pattern.pattern_iri in result.related_pattern_iris

@@ -885,7 +885,10 @@ support/evidence/anchor fields, `profile_route_keys`,
 `export_staged_revisions` record when a bundle was written. When no candidate
 revision is found, `candidate_count` is `0`, `export` is `None`, and no
 Markdown file is written; use `warnings` and `open_profile_review_lanes` as the
-handoff signal. It also includes
+handoff signal. The nested `export` includes
+`shareability_review_required` and `shareability_review_status`; treat
+scanner-clean profile Markdown as requiring explicit shareability review. It
+also includes
 `open_profile_review_lanes`: live draft route groups that still lack a
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a
@@ -2475,7 +2478,11 @@ When a Markdown privacy warning reports line examples, those line numbers refer
 to the final written artifact, after the warning block has been inserted. Pass
 `fail_on_sensitive=true` when unattended or shareable Markdown review exports
 should raise before writing if the generated bundle contains credential-like or
-secret-looking literals.
+secret-looking literals. The returned record also sets
+`shareability_review_required=true` and
+`shareability_review_status="required_not_completed"` even when
+`sensitive_literal_count=0`; scanner-clean review Markdown still needs explicit
+shareability review.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs and include
 `fail_on_sensitive=true` by default; callers may override the path. This is for

@@ -2602,8 +2602,11 @@ found; otherwise it is `None` and `warnings` explains that no bundle was
 written. When the nested staged Markdown export contains credential-like patch
 literals, `result.export.sensitive_literal_count` and
 `result.export.privacy_warnings` carry the same warning fields as direct grouped
-staged exports. Pass `fail_on_sensitive=True` to block before writing the nested
-Markdown bundle when such matches are present. Default discovery includes
+staged exports. The nested export also carries
+`shareability_review_required=True` and
+`shareability_review_status="required_not_completed"` even when scanner-clean.
+Pass `fail_on_sensitive=True` to block before writing the nested
+Markdown bundle when sensitive matches are present. Default discovery includes
 current staged work and already-applied staged source rows matched through the
 same profile evidence/observation/pattern/anchor routes; set
 `include_applied_staged_sources=false` only when a caller intentionally wants
@@ -6780,7 +6783,9 @@ patch literals, the export inserts a top `Privacy Warning` section and returns
 redacted warning fields. Warning line examples refer to the final written
 Markdown artifact. The staged patch content itself is preserved and is not
 redacted. Pass `fail_on_sensitive=True` to raise before writing when the
-generated Markdown contains such matches.
+generated Markdown contains such matches. Staged Markdown export records also
+set `shareability_review_required=True` and
+`shareability_review_status="required_not_completed"` even when scanner-clean.
 In grouped exports, `Staged validation` is the staged description's original
 preview result, while `Current validation` is derived from the live apply check
 and can be `skipped: conflicts_present`. Both cells include a result count when
@@ -6798,6 +6803,8 @@ export.revision_summaries
 export.bundle_summary
 export.sensitive_literal_count
 export.privacy_warnings
+export.shareability_review_required
+export.shareability_review_status
 export.artifact_kind
 export.importable
 export.recommended_import_tool

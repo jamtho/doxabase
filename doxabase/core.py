@@ -1482,6 +1482,8 @@ class StagedGraphRevisionExportRecord:
     bytes_written: int
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
     artifact_kind: str = "staged_revision_review_markdown"
     importable: bool = False
     recommended_import_tool: str | None = None
@@ -1660,6 +1662,8 @@ class StagedGraphRevisionsExportRecord:
     bundle_summary: StagedGraphRevisionBundleSummary
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
     artifact_kind: str = "staged_revisions_review_markdown"
     importable: bool = False
     recommended_import_tool: str | None = None

@@ -264,6 +264,10 @@ stored sources exist. The generic bridge includes evidence cautions from stored
 profile route groups, including sampled-profile warnings. Use the full profile
 insight bundle when you need live open-lane analysis; use the generic bridge
 when a handoff only has a staged review bundle or one staged row.
+Profile insight review bundles carry the nested staged export record, including
+`shareability_review_required=True` and
+`shareability_review_status="required_not_completed"`; scanner-clean review
+Markdown still needs explicit shareability review.
 When several route groups map to the same lane, match strength, and support
 kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key

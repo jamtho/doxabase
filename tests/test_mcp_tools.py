@@ -2945,6 +2945,10 @@ def test_staged_markdown_export_tools_return_privacy_warnings(
 
     assert single["sensitive_literal_count"] == 1
     assert grouped["sensitive_literal_count"] == 1
+    assert single["shareability_review_required"] is True
+    assert single["shareability_review_status"] == "required_not_completed"
+    assert grouped["shareability_review_required"] is True
+    assert grouped["shareability_review_status"] == "required_not_completed"
     assert single["artifact_kind"] == "staged_revision_review_markdown"
     assert grouped["artifact_kind"] == "staged_revisions_review_markdown"
     assert single["importable"] is False
@@ -12103,6 +12107,12 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     ] == []
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
+    assert result["export"]["sensitive_literal_count"] == 0
+    assert result["export"]["privacy_warnings"] == []
+    assert result["export"]["shareability_review_required"] is True
+    assert result["export"]["shareability_review_status"] == (
+        "required_not_completed"
+    )
     assert result["candidates"][0]["relation_reasons"]
     assert export_path.exists()
     exported = export_path.read_text(encoding="utf-8")

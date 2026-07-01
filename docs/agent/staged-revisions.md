@@ -169,7 +169,11 @@ artifact itself. If the generated Markdown contains credential-like or
 secret-looking staged patch literals, the export record returns
 `sensitive_literal_count` and `privacy_warnings`, and the artifact starts with a
 `Privacy Warning`; warning line examples refer to the final written Markdown
-artifact. Patch content is preserved and not redacted. Pass
+artifact. Patch content is preserved and not redacted. The export record also
+sets `shareability_review_required=true` and
+`shareability_review_status="required_not_completed"` even when the scanner is
+clean, because staged Markdown can still contain share-sensitive paths,
+endpoints, route handles, or project facts. Pass
 `fail_on_sensitive=true` for unattended or shareable Markdown review exports
 that should raise before writing when the generated bundle contains
 credential-like or secret-looking literals. Suggested

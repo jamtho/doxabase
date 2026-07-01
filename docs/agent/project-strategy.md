@@ -23,6 +23,22 @@ Use this sequence when working unattended:
 5. Treat trial reports as product signal even when the right next move is docs,
    response-shape clarification, or a new workflow primitive rather than code.
 
+## Cold Frontier Decision Table
+
+Use this table after `project_brief.first_unattended_action` and any safety
+gate have been handled. It maps capsule-local routing hints to the broader
+repo-improvement axis to test next; it does not add strategic labels to
+`project_brief.queue_counts`.
+
+| `project_brief` signal | Strategic axis | Practical next trial |
+| --- | --- | --- |
+| `health_tasks[].task_type == "seed_recovery_review"` | `staged_conflict_rebase_versions` | Verify the recovery-complete handoff route; if the current agent cannot write/import the handoff, stop polishing visible query/profile queues and report the recovery gate. |
+| `recommended_next_tasks[].task_type == "staged_frontier_review"` or current staged work exists | `staged_conflict_rebase_versions` | Run `plan_staged_revision_recovery`, grouped export/import, or resource-lineage trials before staging new helper output. |
+| `recommended_next_tasks[].task_type == "profile_review"` or `profile_queue_counts` shows omitted profile candidates | `profile_metrics_and_joint_writes` | Expand profile candidates when advised, then test profile-to-map, metric/type vocabulary, pattern support, and review-bundle routing. |
+| `recommended_next_tasks[].task_type` is `query_context_review`, `query_repair_review`, or `query_plan_handoff` | `storage_aware_query_planning` | Test whether storage/layout/path metadata leads to a reviewed non-secret query handoff, especially when fixture staleness or required bindings are present. |
+| `health_tasks[].task_type == "query_fixture_staleness_review"` | `storage_aware_query_planning` | Compare the active capsule with a fresh scratch fixture load before drawing product conclusions from missing storage repairs. |
+| `export_preflight` is scanner-clean but `shareability_review_required=true` | Cross-cutting safety | Treat scanner-clean as a review prompt, not export approval; continue only after the intended shareability review is explicit. |
+
 ## Current Build Priorities
 
 ### staged_conflict_rebase_versions

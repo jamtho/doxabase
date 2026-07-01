@@ -234,6 +234,21 @@ On the receiving capsule:
    `plan_staged_revision_recovery(current_staged_work_only=True)` to verify the
    remaining staged queue.
 
+Receiver smoke recipe for scratch or field-trial handoffs:
+
+1. Export both a Markdown review bundle and
+   `export_handoff_bundle(..., manifest_path=...)` from the source.
+2. On a fresh receiver, run `import_trig(trig_path)` alone and verify the
+   relevant staged revisions report `history_only_count_digest`.
+3. Import the companion snapshot JSON or run `import_handoff_bundle(manifest_path)`
+   and verify those rows reach `history_plus_snapshot_rows`.
+4. Inspect `recovery_summary`, grouped queue counts, and the first safe dry-run
+   action before mutating.
+5. After each restage or apply, rerun
+   `plan_staged_revision_recovery(current_staged_work_only=True)`; if
+   `requires_recheck_after_each_apply=true`, apply at most one ready successor
+   before the next recheck.
+
 Suggested lower-level import actions may carry `path_is_placeholder=True`;
 replace those placeholder paths with the real handoff artifact paths before
 calling import tools. A manifest import avoids that translation when the paired

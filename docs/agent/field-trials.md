@@ -4286,6 +4286,29 @@ few useful gaps:
   could miss path-template parameter requirements until drafting; query target
   candidates now also carry `required_bindings`, `required_binding_details`,
   `binding_example`, and `binding_examples` copied from route cards.
+- A project-brief frontier-selection trial confirmed capsule-local routing is
+  reliable but strategic axis selection still required manual joining between
+  `project_brief` and `project_strategy`. The active capsule correctly routed
+  stale-seed work to handoff preflight before query/profile queues; a fresh
+  fixture capsule removed that gate and pointed to storage-aware query-planning
+  trials. `project_strategy` now includes a cold frontier decision table mapping
+  project-brief signals to the three broad build-priority axes.
+- A review-bundle handoff trial confirmed a cold receiver can complete a
+  Markdown-review plus manifest handoff: TriG-only import reports
+  `history_only_count_digest`, manifest/snapshot import reaches
+  `history_plus_snapshot_rows`, grouped queues expose restage/apply work, and
+  rerunning recovery after each mutation clears the frontier. The remaining
+  friction was remembering that lower-level snapshot placeholder paths must be
+  replaced and that applying one ready successor can stale another; the
+  revisions cookbook now includes a receiver smoke recipe for this exact path.
+- A privacy/export hygiene trial confirmed dirty staged Markdown, grouped
+  staged Markdown, context-slice, and handoff exports block with
+  `fail_on_sensitive=true`, while clean scoped review artifacts can still be
+  exported after dirty sibling graph content exists. The concrete response-shape
+  gap was scanner-clean review Markdown lacking the same machine-readable
+  shareability gate as handoff/context exports; staged and profile Markdown
+  export records now carry `shareability_review_required` and
+  `shareability_review_status`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
