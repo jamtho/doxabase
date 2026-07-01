@@ -3902,6 +3902,11 @@ few useful gaps:
   targets, promotes blocking snapshot/preflight actions before recovery-session
   setup when `mutation_allowed_after` requires handoff preflight, and leaves
   `first_mutation_action` empty until that preflight/import step is complete.
+  A later handoff recovery scout found the promoted import could still point at
+  a generic snapshot placeholder after the paired manifest snapshot artifact had
+  already been imported. That route now names missing resolved target revision
+  IRIs and asks for a broader source snapshot bundle; clean handoff preflight
+  also includes a manifest path in its `export_handoff_bundle` action.
 - A profile follow-through trial found the map, metric, type-review, sampled
   caution, and pattern-binding behavior worked, but unattended agents had to
   hand-filter a flat `plan_profile_followthrough.suggested_next_actions` list

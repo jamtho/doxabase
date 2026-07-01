@@ -195,6 +195,11 @@ On the receiving capsule:
    mutation. After import, rerun
    `plan_staged_revision_recovery(current_staged_work_only=True)` before
    selecting any mutation from the receiver queue.
+   If the first safe action is `Import broader source snapshot bundle`, the
+   paired manifest snapshot JSON has already been tried and does not contain
+   the resolved target revision named in `missing_revision_iris`; get a broader
+   source-side snapshot export and import that JSON rather than retrying the
+   current manifest artifact.
 3. If no manifest arrived, import the project/history RDF with
    `import_trig(trig_path)`, then import the companion snapshot JSON with
    `import_revision_snapshots(revision_snapshot_path)`. If snapshot JSON arrived

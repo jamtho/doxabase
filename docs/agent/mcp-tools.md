@@ -2519,7 +2519,11 @@ When a manifest revision resolves to a current staged successor that lacks exact
 snapshot rows, the import promotes the blocking `import_revision_snapshots` or
 preflight action ahead of recovery-session setup and suppresses
 `first_mutation_action`; use the summary's first safe action before following
-any mutation frontier.
+any mutation frontier. If the paired manifest snapshot JSON was already
+imported but omitted that resolved target, the promoted snapshot action is a
+placeholder for a broader source-side snapshot bundle and names the missing
+revision IRI(s); do not retry the same manifest snapshot artifact expecting the
+gate to clear.
 If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is

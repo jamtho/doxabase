@@ -55277,6 +55277,12 @@ class DoxaBase:
                     offset=0,
                     total_count=0,
                 )
+            recovery_plan = self._import_handoff_bundle_recovery_plan(
+                recovery_plan,
+                manifest_path=source_label if manifest_path is not None else None,
+                snapshot_path=str(snapshot_path),
+                revision_snapshots=snapshot_import,
+            )
             recovery_suggested_next_actions = self._dedupe_suggested_next_actions(
                 [
                     *self._import_handoff_bundle_recovery_session_actions(
@@ -55576,6 +55582,149 @@ class DoxaBase:
             first_suggested_next_action=first_action,
             recommended_next_step=recommended_next_step,
             note=note,
+        )
+
+    def _import_handoff_bundle_recovery_plan(
+        self,
+        recovery_plan: StagedRevisionRecoveryPlan,
+        *,
+        manifest_path: str | None,
+        snapshot_path: str,
+        revision_snapshots: RevisionSnapshotBundleImportRecord | None,
+    ) -> StagedRevisionRecoveryPlan:
+        if revision_snapshots is None:
+            return recovery_plan
+        missing_evidence = self._import_handoff_bundle_missing_resolved_snapshots(
+            recovery_plan,
+            bundled_snapshot_revision_iris=revision_snapshots.revision_iris,
+        )
+        if not missing_evidence:
+            return recovery_plan
+        replacement = self._import_handoff_bundle_broader_snapshot_action(
+            missing_evidence,
+            manifest_path=manifest_path,
+            snapshot_path=snapshot_path,
+            revision_snapshots=revision_snapshots,
+        )
+
+        def replace_actions(
+            actions: list[SuggestedNextAction],
+        ) -> list[SuggestedNextAction]:
+            replaced = False
+            values: list[SuggestedNextAction] = []
+            for action in actions:
+                if self._is_placeholder_snapshot_import_action(action):
+                    if not replaced:
+                        values.append(replacement)
+                        replaced = True
+                    continue
+                values.append(action)
+            return self._dedupe_suggested_next_actions(values)
+
+        blocking_preflight_actions = replace_actions(
+            recovery_plan.blocking_preflight_actions
+        )
+        suggested_next_actions = replace_actions(recovery_plan.suggested_next_actions)
+        return replace(
+            recovery_plan,
+            blocking_preflight_actions=blocking_preflight_actions,
+            blocking_preflight_calls=[
+                action.call for action in blocking_preflight_actions if action.call
+            ],
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+        )
+
+    @staticmethod
+    def _is_placeholder_snapshot_import_action(
+        action: SuggestedNextAction,
+    ) -> bool:
+        return (
+            action.tool_name == "import_revision_snapshots"
+            and action.arguments.get("path_is_placeholder") is True
+        )
+
+    @staticmethod
+    def _import_handoff_bundle_missing_resolved_snapshots(
+        recovery_plan: StagedRevisionRecoveryPlan,
+        *,
+        bundled_snapshot_revision_iris: list[str],
+    ) -> list[RevisionSnapshotEvidenceStatus]:
+        bundled = set(bundled_snapshot_revision_iris)
+        missing_by_iri: dict[str, RevisionSnapshotEvidenceStatus] = {}
+        for lane in recovery_plan.lanes:
+            for evidence in (
+                lane.source_snapshot_evidence,
+                lane.current_snapshot_evidence,
+            ):
+                if evidence.revision_iri in bundled:
+                    continue
+                if evidence.status == "history_plus_snapshot_rows":
+                    continue
+                missing_by_iri.setdefault(evidence.revision_iri, evidence)
+        return list(missing_by_iri.values())
+
+    def _import_handoff_bundle_broader_snapshot_action(
+        self,
+        missing_evidence: list[RevisionSnapshotEvidenceStatus],
+        *,
+        manifest_path: str | None,
+        snapshot_path: str,
+        revision_snapshots: RevisionSnapshotBundleImportRecord,
+    ) -> SuggestedNextAction:
+        missing_revision_iris = [evidence.revision_iri for evidence in missing_evidence]
+        missing_graph_roles = list(
+            dict.fromkeys(
+                graph_role
+                for evidence in missing_evidence
+                for graph_role in (
+                    evidence.missing_snapshot_row_graph_roles
+                    or evidence.rdf_snapshot_graph_roles
+                    or evidence.exact_snapshot_graph_roles
+                )
+            )
+        )
+        arguments: dict[str, Any] = {
+            "path": "<broader-source-revision-snapshots.json>",
+            "path_is_placeholder": True,
+            "missing_revision_iris": missing_revision_iris,
+            "already_imported_snapshot_path": snapshot_path,
+        }
+        if manifest_path is not None:
+            arguments["handoff_manifest_path"] = manifest_path
+        if missing_graph_roles:
+            arguments["missing_graph_roles"] = missing_graph_roles
+        imported_text = (
+            f"imported {revision_snapshots.imported_snapshot_count}, "
+            f"skipped {revision_snapshots.skipped_snapshot_count}"
+        )
+        reason = (
+            "The paired handoff snapshot artifact has already been imported "
+            f"({imported_text}) from '{snapshot_path}', but it does not contain "
+            "complete snapshot rows for resolved recovery target revision(s): "
+            f"{', '.join(missing_revision_iris)}. Re-importing the current "
+            "manifest's snapshot JSON will not clear this gate; request or "
+            "create a broader source-side revision snapshot bundle containing "
+            "those revision_iris, then import that broader JSON here before "
+            "mutating recovered staged work."
+        )
+        if missing_graph_roles:
+            reason += (
+                " Missing graph role(s): "
+                f"{', '.join(missing_graph_roles)}."
+            )
+        return SuggestedNextAction(
+            action_label="Import broader source snapshot bundle",
+            tool_name="import_revision_snapshots",
+            mcp_tool_name="doxabase.import_revision_snapshots",
+            arguments=arguments,
+            reason=reason,
+            call=self._suggested_call_string(
+                "import_revision_snapshots",
+                arguments,
+            ),
         )
 
     @staticmethod
@@ -56194,6 +56343,7 @@ class DoxaBase:
             arguments = {
                 "trig_path": "<project-handoff.trig>",
                 "revision_snapshot_path": "<revision-snapshots.json>",
+                "manifest_path": "<handoff-manifest.json>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
             }

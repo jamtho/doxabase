@@ -5312,7 +5312,14 @@ manifest revisions and resolved recovery targets. In that case
 `recommended_next_step="complete_handoff_preflight_before_recovery_mutation"`,
 `first_safe_review_or_mutation_action` points to the blocking snapshot/preflight
 action, and `first_mutation_action` stays empty until the handoff preflight is
-complete.
+complete. If the paired manifest snapshot JSON has already been imported but
+does not include the resolved target, the blocking snapshot action is labelled
+`Import broader source snapshot bundle`, carries a placeholder path such as
+`<broader-source-revision-snapshots.json>`, and records
+`missing_revision_iris`, `already_imported_snapshot_path`, and
+`handoff_manifest_path` in `arguments`; request or produce that broader source
+bundle, then import it instead of retrying the already-imported manifest
+snapshot artifact.
 
 `doxabase.import_trig(path, replace=False)` returns:
 

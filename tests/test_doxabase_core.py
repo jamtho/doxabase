@@ -2576,10 +2576,18 @@ def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapsh
         "import_revision_snapshots"
     )
     assert imported.suggested_next_actions[0] == plan.blocking_preflight_actions[0]
-    assert imported.suggested_next_actions[0].arguments == {
-        "path": "/tmp/revision-snapshots.json",
+    first_action = imported.suggested_next_actions[0]
+    assert first_action.action_label == "Import broader source snapshot bundle"
+    assert first_action.arguments == {
+        "path": "<broader-source-revision-snapshots.json>",
         "path_is_placeholder": True,
+        "missing_revision_iris": [restaged.revision_iri],
+        "already_imported_snapshot_path": str(snapshot_path),
+        "handoff_manifest_path": str(manifest_path),
+        "missing_graph_roles": ["map"],
     }
+    assert "Re-importing the current manifest" in first_action.reason
+    assert restaged.revision_iri in first_action.reason
     summary = imported.recovery_summary
     assert summary.recommended_next_step == (
         "complete_handoff_preflight_before_recovery_mutation"
@@ -2849,6 +2857,9 @@ def test_export_preflight_returns_scanner_clean_export_action(
     assert project_preflight.warnings == [project_preflight.scanner_note]
     handoff_preflight = db.export_preflight(export_kind="handoff_bundle")
     assert handoff_preflight.warnings == [handoff_preflight.scanner_note]
+    handoff_action = handoff_preflight.suggested_next_actions[0]
+    assert handoff_action.tool_name == "export_handoff_bundle"
+    assert handoff_action.arguments["manifest_path"] == "<handoff-manifest.json>"
 
 
 def test_replace_graph_triples_can_create_same_count_digest_drift(
