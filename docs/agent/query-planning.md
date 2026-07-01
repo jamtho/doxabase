@@ -714,10 +714,16 @@ Local file/object candidates can be ready for an execution attempt when the
 path or template is verified enough, the scan function is inferred, and runtime
 resolution is not required. Still supply binding values and perform ordinary
 filesystem/object-existence checks before running anything.
+If a storage access records an absolute local `storage_root`, complete absolute
+path templates are review-only unless they stay under that root. This applies
+to both dataset-owned templates and storage-access-owned templates.
 
 S3-compatible candidates often need endpoint profile, credential reference, and
 region or equivalent local runtime setup. DoxaBase records non-secret planning
 facts; it does not store secrets or prove the object exists.
+Complete S3 templates are checked against recorded S3 `storage_root` as well as
+bucket/prefix fields; a template that escapes the reviewed root remains
+orientation-only even when endpoint and credential references are present.
 When `storage_protocol_location_mismatch` appears, read
 `details.repair_hint` before hand-authoring a repair. It offers reviewed
 `stage_map_assertion_change` templates for fixing protocol/root/bucket/prefix

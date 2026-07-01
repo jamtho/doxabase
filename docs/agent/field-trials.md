@@ -4167,6 +4167,12 @@ few useful gaps:
   `mutates_project_graph`, `writes_history`, `writes_files`, and
   `writes_storage`, distinguishing snapshot-storage imports, file exports,
   history-only staging/restage work, and graph-applying mutations.
+- A storage-aware query-planning trial found complete local and S3 path
+  templates could escape a recorded, reviewed storage root and still become
+  execution-attempt-ready. Candidate metadata checks now gate absolute local
+  templates outside an absolute local `storage_root` and complete S3 templates
+  outside a recorded S3 `storage_root` with
+  `storage_protocol_location_mismatch`, preserving the existing repair route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

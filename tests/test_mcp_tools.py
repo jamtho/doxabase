@@ -8159,6 +8159,58 @@ def test_describe_query_context_tool_warns_on_complete_s3_template_without_resol
     )
 
 
+def test_describe_query_context_tool_blocks_s3_template_outside_storage_root(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://orders-lake/warehouse",
+        path_templates=["s3://other-bucket/orders.csv"],
+        endpoint_profile="orders-prod",
+        credential_reference="profile:orders-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "needs_review"
+    candidate = result["query_target_candidates"][0]
+    assert candidate["candidate_path"] == "s3://other-bucket/orders.csv"
+    assert candidate["composition"] == "template_as_returned"
+    assert candidate["candidate_path_status"] == "orientation_only"
+    assert candidate["direct_review_required"] is True
+    assert candidate["review_reasons"][0]["code"] == (
+        "storage_protocol_location_mismatch"
+    )
+    assert "outside recorded storage_root" in candidate["review_reasons"][0][
+        "details"
+    ]["mismatch_reasons"][0]
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"]["reason_codes"] == [
+        "storage_protocol_location_mismatch"
+    ]
+
+
 def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_route(
     tmp_path: Path,
 ) -> None:
@@ -9100,6 +9152,160 @@ def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
     assert result["query_target_decision"]["candidate_path"] == (
         f"{storage_root}/orders/*.parquet"
     )
+    assert result["query_target_decision"]["reason_codes"] == []
+
+
+def test_describe_query_context_tool_blocks_dataset_absolute_template_outside_local_root(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#LocalOrders"
+    storage_root = str(tmp_path / "lake")
+    outside_template = str(tmp_path / "external" / "orders.csv")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Local orders",
+        is_table=True,
+        path_templates=[outside_template],
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "needs_review"
+    target = result["query_target_candidates"][0]
+    assert target["template_source"] == "dataset"
+    assert target["composition"] == "template_as_returned"
+    assert target["candidate_path"] == outside_template
+    assert target["candidate_path_status"] == "orientation_only"
+    assert target["direct_review_required"] is True
+    assert target["review_reasons"][0]["code"] == (
+        "storage_protocol_location_mismatch"
+    )
+    assert "outside recorded storage_root" in target["review_reasons"][0][
+        "details"
+    ]["mismatch_reasons"][0]
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"]["reason_codes"] == [
+        "storage_protocol_location_mismatch"
+    ]
+
+
+def test_describe_query_context_tool_blocks_storage_absolute_template_outside_local_root(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#LocalOrders"
+    storage_root = str(tmp_path / "lake")
+    outside_template = str(tmp_path / "external" / "orders.csv")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=storage_root,
+        path_templates=[outside_template],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Local orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "needs_review"
+    target = result["query_target_candidates"][0]
+    assert target["template_source"] == "storage_access"
+    assert target["composition"] == "template_as_returned"
+    assert target["candidate_path"] == outside_template
+    assert target["candidate_path_status"] == "orientation_only"
+    assert target["direct_review_required"] is True
+    assert target["review_reasons"][0]["code"] == (
+        "storage_protocol_location_mismatch"
+    )
+    assert "outside recorded storage_root" in target["review_reasons"][0][
+        "details"
+    ]["mismatch_reasons"][0]
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"]["reason_codes"] == [
+        "storage_protocol_location_mismatch"
+    ]
+
+
+def test_describe_query_context_tool_keeps_absolute_template_inside_local_root_ready(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#LocalOrders"
+    storage_root = str(tmp_path / "lake")
+    inside_template = str(tmp_path / "lake" / "orders" / "current.csv")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=storage_root,
+        path_templates=[inside_template],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Local orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "ready_for_query_planning"
+    target = result["query_target_candidates"][0]
+    assert target["template_source"] == "storage_access"
+    assert target["composition"] == "template_as_returned"
+    assert target["candidate_path"] == inside_template
+    assert target["candidate_path_status"] == "ready"
+    assert target["review_reasons"] == []
+    assert result["query_target_decision"]["status"] == "ready"
     assert result["query_target_decision"]["reason_codes"] == []
 
 

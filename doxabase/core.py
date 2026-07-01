@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import ntpath
+import posixpath
 import re
 import sqlite3
 import warnings
@@ -27328,11 +27330,60 @@ class DoxaBase:
             return None
         return match.group(1), (match.group(2) or "").strip("/")
 
+    def _s3_template_under_root(
+        self,
+        template: str,
+        storage_root: str | None,
+    ) -> bool | None:
+        template_location = self._s3_template_location(template)
+        if template_location is None or not storage_root:
+            return None
+        root_location = self._s3_template_location(storage_root)
+        if root_location is None:
+            return None
+        template_bucket, template_key = template_location
+        root_bucket, root_key = root_location
+        if template_bucket != root_bucket:
+            return False
+        if not root_key:
+            return True
+        return template_key == root_key or template_key.startswith(f"{root_key}/")
+
     def _looks_like_absolute_local_path(self, storage_root: str | None) -> bool:
         if storage_root is None:
             return False
         text = storage_root.strip()
         return text.startswith("/") or bool(re.match(r"^[A-Za-z]:[\\/]", text))
+
+    def _local_path_under_root(
+        self,
+        template: str,
+        storage_root: str | None,
+    ) -> bool | None:
+        if not (
+            self._looks_like_absolute_local_path(template)
+            and self._looks_like_absolute_local_path(storage_root)
+        ):
+            return None
+        template_text = template.strip()
+        root_text = (storage_root or "").strip()
+        if re.match(r"^[A-Za-z]:[\\/]", template_text) or re.match(
+            r"^[A-Za-z]:[\\/]",
+            root_text,
+        ):
+            template_norm = ntpath.normcase(ntpath.normpath(template_text))
+            root_norm = ntpath.normcase(ntpath.normpath(root_text))
+            try:
+                return ntpath.commonpath([template_norm, root_norm]) == root_norm
+            except ValueError:
+                return False
+
+        template_norm = posixpath.normpath(template_text)
+        root_norm = posixpath.normpath(root_text)
+        try:
+            return posixpath.commonpath([template_norm, root_norm]) == root_norm
+        except ValueError:
+            return False
 
     def _s3_access_resolution_unrecorded(
         self,
@@ -27376,10 +27427,28 @@ class DoxaBase:
                     reasons.append(
                         "path template looks remote for local filesystem access"
                     )
+                local_under_root = self._local_path_under_root(
+                    template,
+                    access.storage_root,
+                )
+                if local_under_root is False:
+                    reasons.append(
+                        "absolute local path template is outside recorded "
+                        f"storage_root '{access.storage_root}'"
+                    )
 
         s3_location = self._s3_template_location(template)
         if s3_location is not None:
             template_bucket, template_key = s3_location
+            under_s3_root = self._s3_template_under_root(
+                template,
+                access.storage_root,
+            )
+            if under_s3_root is False:
+                reasons.append(
+                    "complete S3 path template is outside recorded "
+                    f"storage_root '{access.storage_root}'"
+                )
             bucket_name = (access.bucket_name or "").strip().strip("/")
             if bucket_name and template_bucket != bucket_name:
                 reasons.append(
