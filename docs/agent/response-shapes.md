@@ -1330,6 +1330,10 @@ both `scanned_source_paths` and `scanned_source_handles` separately.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
+When the linked evidence is retrieved as an `EvidenceDescription`,
+`result_sources` is exposed through the generic `sources` list. Query source
+paths, scanned source paths, scanned source handles, and source spans remain
+separate structured metadata.
 The response echoes `failure_summary` when supplied. Use that immediate field
 for failed-attempt routing; the longer evidence summary remains available in
 the evidence resource slice.

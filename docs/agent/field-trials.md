@@ -4252,6 +4252,22 @@ few useful gaps:
   `mixed_support_review_groups`: `action_count` now counts represented route
   steps so it matches `route_step_keys` and `action_labels` even when suggested
   calls are de-duplicated.
+- A response-shape parity trial found no Python/MCP mismatch after recent query
+  and profile response changes: context-blocked handoff summaries, repair-gated
+  unattended suppression, already-pending repair cues, and mixed-support
+  `action_count` semantics serialized consistently.
+- An AIS/query-result pressure trial confirmed the fixture path remains a safe
+  non-executed handoff (`runtime_resolution_required`), while a synthetic local
+  CSV route can reach `execution_attempt_ready`, run externally, and preserve
+  query source, hash, scanned source, result artifact, source spans, and
+  follow-up inspection actions through `record_query_result`. No runtime patch
+  was needed.
+- A non-tabular transform pressure trial confirmed
+  `record_map_asset_transform` preserves derived and aggregated asset semantics
+  with ordered endpoints, conditions, outputs, and tuple grain without abusing
+  table/column helpers. Complete context slices can truthfully return no
+  suggested next actions; treat that quiet state as "inspect or export as
+  needed" rather than a missing workflow.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

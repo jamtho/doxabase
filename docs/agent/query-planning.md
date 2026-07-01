@@ -614,7 +614,10 @@ as long as `engine` and `sample_method` say what actually ran.
 `record_query_result` stores execution status, engine, query hash, query-source
 paths, and scanned source paths as structured evidence metadata, so custom
 evidence summaries still remain machine-readable in later query-context
-handoffs.
+handoffs. When the result evidence is later retrieved as an
+`EvidenceDescription`, `result_sources` appears under the generic evidence
+`sources` field; the source-span fields keep query source and scanned source
+metadata separate.
 After recording the result, follow the returned
 `describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
 action when you need the exact result evidence, relation handle, source span, or
