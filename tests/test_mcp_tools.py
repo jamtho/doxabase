@@ -3889,6 +3889,19 @@ def test_restage_staged_revisions_tool_can_dry_run(
         None,
         "ready",
     ]
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "restage_staged_revisions"
+    ]
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "revision_iris": [
+            first["revision_iri"],
+            second["revision_iri"],
+        ],
+        "dry_run": False,
+    }
+    assert result["suggested_next_calls"] == [
+        action["call"] for action in result["suggested_next_actions"]
+    ]
     assert list_graph_revisions_tool(
         db,
         revision_type="rc:StagedRevision",

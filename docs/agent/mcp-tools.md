@@ -2280,6 +2280,16 @@ Each item also carries `next_action_after` and
 `current_revision_iri`, which is the direct row-level route to follow after the
 batch decision. `next_action_queue_item_after` is scoped to
 `current_revision_iri`, not the original source row.
+The batch response also carries top-level `suggested_next_actions` and
+`suggested_next_calls`. Dry runs with mechanical candidates promote one reviewed
+`restage_staged_revisions(dry_run=False, revision_iris=[...])` action over
+`would_restage_revision_iris`; the suggested call intentionally omits any
+dry-run export path so a follow-up does not overwrite the review artifact. Real
+batch runs promote deduped item-local continuation actions, such as apply,
+inspect, or repair calls for the current successors. If
+`requires_recheck_after_each_apply` is true, still apply at most one ready row
+from that action list and rerun the recovery plan or export before the next
+mutation.
 Each item also carries `restaged_from` when its source is itself a refreshed
 successor. It does not apply refreshed revisions; review and apply
 remain explicit follow-up steps. In dry-run mode, passing `path` still writes

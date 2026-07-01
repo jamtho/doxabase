@@ -434,10 +434,18 @@ created during that run, not as an apply queue. Each item's `status_after`,
 `check_staged_revision_apply()` before each apply. The item-local queue item is
 scoped to `current_revision_iri`, which avoids having to join the batch item to
 `bundle_summary.next_action_queue_items` manually.
+The batch-level `suggested_next_actions` / `suggested_next_calls` are the
+automation shortcut. Dry-run batches with restageable rows suggest the reviewed
+real batch restage call over `would_restage_revision_iris` and omit any dry-run
+export path. Real batches promote deduped item-local continuation actions for
+the current successors. Respect `requires_recheck_after_each_apply`: apply at
+most one ready successor from any promoted action list, then replan or export
+before another mutation.
 
 For recovery scripts, use this short loop: dry-run batch restage, inspect
-item-local `next_action_after` and `next_action_queue_item_after`, create only
-the mechanical successors you intend to review, apply at most one ready
+top-level `suggested_next_actions` plus item-local `next_action_after` and
+`next_action_queue_item_after`, create only the mechanical successors you intend
+to review, apply at most one ready
 successor, then rerun
 `plan_staged_revision_recovery(current_staged_work_only=True)` before the next
 mutation. If a script keeps its own bundle worklist, union

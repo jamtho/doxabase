@@ -6767,6 +6767,8 @@ batch.bundle_summary
 batch.requires_recheck_after_each_apply
 batch.sequential_apply_recheck_candidate_iris
 batch.export_record
+batch.suggested_next_actions
+batch.suggested_next_calls
 ```
 
 Each `batch.items` row reports `source_revision_iri`, `summary`,
@@ -6821,6 +6823,15 @@ should not have to drill into the nested bundle.
 Read `suggested_next_actions_after`
 when a script needs concrete follow-up calls without joining back through
 `list_graph_revisions`.
+Read top-level `suggested_next_actions` / `suggested_next_calls` when a script
+needs the batch-level continuation. In dry-run mode, a batch with
+`would_restage_revision_iris` promotes a reviewed real
+`restage_staged_revisions(dry_run=False, revision_iris=[...])` action and does
+not carry through the dry-run export path. In real batch mode, the top-level
+actions are deduped item-local post-batch actions for the current revisions.
+These actions do not remove the sequential-apply guard: if
+`requires_recheck_after_each_apply` is true, apply at most one ready successor
+and rerun recovery planning before the next mutation.
 For single-row or per-item batch-restage automation, prefer
 `next_action_after.arguments["iri"]` when present, or `current_revision_iri`
 otherwise. `restaged_revision_iri` is only

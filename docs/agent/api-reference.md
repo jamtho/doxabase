@@ -1896,6 +1896,13 @@ Each row also carries `next_action_after` and
 `current_revision_iri`, so autonomous scripts can route the post-batch current
 revision without a separate listing join. The item-local queue item is scoped to
 `current_revision_iri`; bundle-level queue items remain scoped to review rows.
+The batch response also carries top-level `suggested_next_actions` and
+`suggested_next_calls`. Dry runs with `would_restage_revision_iris` promote a
+reviewed real `restage_staged_revisions(dry_run=False, revision_iris=[...])`
+call and intentionally omit any dry-run export path. Real batch runs promote
+deduped item-local continuation actions for the current successors. If
+`requires_recheck_after_each_apply` is true, apply at most one ready successor
+from those actions before rerunning the recovery plan or grouped export.
 Each item also carries
 `restaged_from` when its source is itself a refreshed successor. The helper
 deliberately does not apply anything; applying one successor can make sibling

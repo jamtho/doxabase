@@ -11319,6 +11319,17 @@ def test_batch_restage_preserves_source_patch_sequences(
             interleaved.revision_iri,
         ],
     }
+    assert {
+        action.arguments["iri"]
+        for action in batch.suggested_next_actions
+        if action.tool_name == "apply_staged_revision"
+    } == {
+        by_source[removal_first.revision_iri],
+        by_source[interleaved.revision_iri],
+    }
+    assert batch.suggested_next_calls == [
+        action.call for action in batch.suggested_next_actions
+    ]
 
 
 def test_batch_restage_dry_run_reports_plan_without_creating_successors(
@@ -11483,6 +11494,16 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
     ]
     assert batch.bundle_summary.validation_failed_revision_iris == [
         validation_failed.revision_iri
+    ]
+    assert [action.tool_name for action in batch.suggested_next_actions] == [
+        "restage_staged_revisions"
+    ]
+    assert batch.suggested_next_actions[0].arguments == {
+        "revision_iris": [second.revision_iri],
+        "dry_run": False,
+    }
+    assert batch.suggested_next_calls == [
+        action.call for action in batch.suggested_next_actions
     ]
     assert batch.export_record is not None
     assert batch.export_record.path == str(export_path)

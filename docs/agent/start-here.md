@@ -205,7 +205,8 @@ Do not write ordinary user or project facts to immutable package seed graphs:
   proposal.
 - Several stale staged patches: use `restage_staged_revisions(dry_run=True)`
   first to classify the batch without creating successors, then run the real
-  batch restage for rows you still want to refresh.
+  batch restage suggested in top-level `suggested_next_actions` for rows you
+  still want to refresh.
 - Grouped staged review: use `bundle_summary.review_sequence` or Markdown
   `Review Sequence` first when the bundle mixes inspection, repair, restage,
   apply, and recheck work. Use `bundle_summary.next_action_queue` for coarse

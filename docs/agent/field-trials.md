@@ -3866,9 +3866,12 @@ few useful gaps:
   caution trial then found the dedicated profile review bundle guarded sampled
   evidence correctly, but the generic staged Markdown did not repeat that caution;
   `export_staged_revisions()` now renders sampled evidence cautions in its
-  Profile Route Bridge. Remaining non-blocking affordance for later waves: batch
-  restage responses could make the dry-run-to-real-run continuation easier for
-  top-level-action-only executors.
+  Profile Route Bridge. A staged recovery scout then found that batch restage
+  was clear at the item level but awkward for top-level-action-only executors.
+  Batch restage responses now expose top-level `suggested_next_actions`: dry
+  runs promote the reviewed real batch restage call for
+  `would_restage_revision_iris`, while real batches promote deduped item-local
+  continuation actions for current successors.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

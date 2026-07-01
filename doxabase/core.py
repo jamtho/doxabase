@@ -1684,6 +1684,8 @@ class StagedGraphRevisionBatchRestageRecord:
     requires_recheck_after_each_apply: bool
     sequential_apply_recheck_candidate_iris: list[str]
     export_record: StagedGraphRevisionsExportRecord | None
+    suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
+    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -37506,6 +37508,12 @@ class DoxaBase:
                 ),
             )
 
+        suggested_next_actions = self._batch_restage_suggested_next_actions(
+            dry_run=dry_run,
+            would_restage_revision_iris=would_restage_revision_iris,
+            items=items,
+            validation_scope=validation_scope,
+        )
         return StagedGraphRevisionBatchRestageRecord(
             requested_revision_iris=requested_revision_iris,
             processed_revision_iris=processed_revision_iris,
@@ -37532,7 +37540,56 @@ class DoxaBase:
                 bundle_summary.sequential_apply_recheck_candidate_iris
             ),
             export_record=export_record,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
+
+    def _batch_restage_suggested_next_actions(
+        self,
+        *,
+        dry_run: bool,
+        would_restage_revision_iris: list[str],
+        items: list[StagedGraphRevisionBatchRestageItem],
+        validation_scope: str | None,
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        if dry_run and would_restage_revision_iris:
+            arguments: dict[str, Any] = {
+                "revision_iris": list(would_restage_revision_iris),
+                "dry_run": False,
+            }
+            if validation_scope is not None:
+                arguments["validation_scope"] = validation_scope
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Run reviewed batch restage",
+                    tool_name="restage_staged_revisions",
+                    mcp_tool_name="doxabase.restage_staged_revisions",
+                    arguments=arguments,
+                    reason=(
+                        "The dry run identified stale staged revisions that can "
+                        "be mechanically restaged. Run the real batch after "
+                        "reviewing classifications and repair-first warnings; "
+                        "the action omits the dry-run export path to avoid "
+                        "overwriting the review artifact."
+                    ),
+                    call=self._suggested_call_string(
+                        "restage_staged_revisions",
+                        arguments,
+                    ),
+                )
+            )
+        if dry_run and actions:
+            return actions
+        for item in items:
+            action = self._suggested_action_from_revision_next_action(
+                item.next_action_after
+            )
+            if action is not None:
+                actions.append(action)
+        return self._dedupe_suggested_next_actions(actions)
 
     def plan_staged_revision_recovery(
         self,
