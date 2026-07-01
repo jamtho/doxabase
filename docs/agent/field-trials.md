@@ -3670,6 +3670,16 @@ few useful gaps:
   docs now show a serialized `mutation_frontier_items[]` example, revision docs
   include a cold version-browsing recipe, and handoff import summaries expose
   `first_safe_review_or_mutation_action` separately from session suggestions.
+- Profile, storage-query, and onboarding trials after that passed across
+  scratch capsules and the active capsule. Cold agents could complete
+  full-scan/sampled profile review lanes, storage/layout repair to a query
+  handoff, query-result evidence capture, privacy preflights, and
+  project-strategy routing away from staged-only polish. The useful frictions
+  were affordance-level: profile follow-through needed top-level
+  `missing_binding_keys`, profile review exports needed clearer strict-filter
+  documentation, and query repair docs needed a compact reminder that
+  `suggested_repair_action_groups` is the metadata mutation lane even when
+  `suggested_next_actions` also exposes review-gated `draft_query_plan`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -9636,6 +9636,14 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     ][0]["binding_key"]
     pattern = record_pattern_tool(db, **pattern_action["arguments"])
 
+    missing_result = plan_profile_followthrough_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    assert missing_result["missing_binding_keys"] == [binding_key]
+    assert missing_result["missing_binding_action_count"] >= 1
+
     result = plan_profile_followthrough_tool(
         db,
         dataset_iri=table,
@@ -9645,6 +9653,7 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
 
     assert result["result_kind"] == "profile_followthrough_plan"
     assert result["result_binding_keys"] == [binding_key]
+    assert result["missing_binding_keys"] == []
     assert result["draft"]["type_advisory_count"] == 1
     assert result["draft"]["type_advisories"][0]["promotion_pattern_count"] == 1
     assert result["produced_binding_count"] >= 1

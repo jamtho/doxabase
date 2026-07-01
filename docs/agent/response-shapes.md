@@ -1801,6 +1801,7 @@ plan.binding_resolution_count
 plan.binding_resolutions
 plan.action_resolutions
 plan.resolved_action_count
+plan.missing_binding_keys
 plan.missing_binding_action_count
 plan.produced_bindings
 plan.produced_binding_count
@@ -1819,6 +1820,14 @@ Resolved action rows keep the structured `action.arguments` updated; prefer
 those arguments over `action.call`. `revision_checks[]` mirrors
 `check_staged_revision_apply` routing for supplied staged rows and records any
 explicit `restage_stale_revisions=True` refresh.
+Use `missing_binding_keys` as the compact script-facing worklist when the first
+follow-through call says some actions still need a prior result such as a
+`record_pattern().pattern_iri`. The detailed `action_resolutions[]` rows still
+show which route groups and tools consume each key.
+When serializing a nested field directly, such as
+`draft.advisory_followthrough_plan` or `plan.action_resolutions`, use
+`to_jsonable(...)` rather than `to_dict(...)`; `to_dict(...)` is for a single
+returned dataclass-like object.
 
 Each `draft.recommendations[]` row is read-only review context, not an applied
 or staged change:
@@ -2425,14 +2434,18 @@ written. When the nested staged Markdown export contains credential-like patch
 literals, `result.export.sensitive_literal_count` and
 `result.export.privacy_warnings` carry the same warning fields as direct grouped
 staged exports. Pass `fail_on_sensitive=True` to block before writing the nested
-Markdown bundle when such matches are present. Default discovery includes current
-staged work and
-already-applied staged source rows matched through the same profile
-evidence/observation/pattern/anchor routes; set
+Markdown bundle when such matches are present. Default discovery includes
+current staged work and already-applied staged source rows matched through the
+same profile evidence/observation/pattern/anchor routes; set
 `include_applied_staged_sources=false` only when a caller intentionally wants
 current staged rows without applied profile-map sources. Raise
 `applied_staged_source_limit` when a profile run has more applied source matches
 than the default scan returns.
+Explicit `revision_iris=[...]` are seeds, not a strict filter, while
+`include_current_staged_work` and `include_applied_staged_sources` keep their
+default broad discovery behavior. For a strict review of only the requested
+staged rows, pass `include_current_staged_work=False` and
+`include_applied_staged_sources=False`.
 
 Each `result.candidates[]` row explains why one staged revision was included:
 

@@ -3391,6 +3391,7 @@ class ProfileFollowthroughPlan:
     binding_resolutions: list[ProfileFollowthroughBindingResolution]
     action_resolutions: list[ProfileFollowthroughActionResolution]
     resolved_action_count: int
+    missing_binding_keys: list[str]
     missing_binding_action_count: int
     produced_bindings: list[dict[str, Any]]
     produced_binding_count: int
@@ -15931,6 +15932,13 @@ class DoxaBase:
         for check in revision_checks:
             suggested_next_actions.extend(check.suggested_next_actions)
         suggested_next_calls = [action.call for action in suggested_next_actions]
+        missing_binding_keys = sorted(
+            {
+                resolution.binding_key
+                for resolution in binding_resolutions
+                if resolution.status == "missing"
+            }
+        )
         return ProfileFollowthroughPlan(
             result_kind="profile_followthrough_plan",
             dataset=draft.dataset,
@@ -15947,6 +15955,7 @@ class DoxaBase:
                 for resolution in action_resolutions
                 if resolution.binding_status == "resolved"
             ),
+            missing_binding_keys=missing_binding_keys,
             missing_binding_action_count=sum(
                 1
                 for resolution in action_resolutions

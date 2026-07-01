@@ -363,6 +363,29 @@ Start with `describe_query_context(dataset_iri)`:
    `examples/missing-metadata-query-repair-smoke.py`; it stages storage repair
    first, reruns `describe_query_context`, then stages physical-layout repair
    before drafting the final CSV handoff.
+   Cold repair loop in compact form:
+
+   ```python
+   context = db.describe_query_context(dataset_iri)
+   repair_group = context.suggested_repair_action_groups[0]
+   repair_action = repair_group.pending_action_options[0]
+   staged_storage = db.stage_query_storage_access_repair(...)
+   db.apply_staged_revision(staged_storage.revision_iri)
+
+   context = db.describe_query_context(dataset_iri)
+   staged_layout = db.stage_query_physical_layout_repair(...)
+   db.apply_staged_revision(staged_layout.revision_iri)
+
+   plan = db.draft_query_plan(dataset_iri)
+   ```
+
+   Treat `suggested_repair_action_groups` as the metadata mutation lane. A
+   `suggested_next_actions[]` entry for `draft_query_plan` can still be a
+   review or handoff route while metadata is insufficient; it is not a signal
+   to skip the repair group. After drafting, use
+   `execution_attempt_blocking_reason_codes` for execution blockers. Broader
+   fields such as `all_issue_codes` may still include informational context,
+   for example a verification note that did not block the selected handoff.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

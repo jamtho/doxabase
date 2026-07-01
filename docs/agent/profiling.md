@@ -376,6 +376,11 @@ related `staged_revision_iris` when a previous apply may have made sibling
 staged rows stale; `restage_stale_revisions=True` can mechanically refresh
 rows whose next action is `restage_staged_revision`, but the helper does not
 apply profile-generated map or ontology changes.
+If the first follow-through pass reports `missing_binding_keys`, run or inspect
+the producing action for those keys, then pass the returned values back through
+`result_bindings`. For example, a value-type support route may need the
+`pattern_iri` produced by `record_pattern` before its
+`stage_map_assertion_change` arguments are complete.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

@@ -747,7 +747,9 @@ arguments; do not parse `action.call`.
 Pass `result_bindings` as a mapping from `binding_key` to the returned value,
 for example `{binding_key: pattern_iri}` after `record_pattern`. The result
 includes `binding_resolutions`, `action_resolutions`, `produced_bindings`, and
-fresh `suggested_next_actions`. A resolved paired
+fresh `suggested_next_actions`. Use top-level `missing_binding_keys` as the
+compact worklist when a first pass needs prior action results before some
+actions can be called. A resolved paired
 `stage_map_assertion_change` action has the bound `pattern_iri` appended to
 `arguments.supporting_patterns` and annotated under
 `arguments.profile_route_sources[].resolved_result_bindings`, preserving the
