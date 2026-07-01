@@ -20,6 +20,7 @@ from doxabase import (
 from doxabase.core import (
     ProfileScalarConflictRecommendationContext,
     ProjectBriefRecommendedTask,
+    RevisionNextActionQueueItem,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13567,6 +13568,93 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         second_restaged.revision_iri,
     ]
     assert applied.applied_revision_iri in active_lineage.related_revision_iris
+
+
+def test_lineage_queue_items_carry_alternative_set_membership(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    source = db.stage_graph_revision(
+        summary="Model Orders as events",
+        rationale="Source framing for choose-one review.",
+        revision_anchors=[orders],
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    alternative = db.stage_graph_revision(
+        summary="Model Orders as snapshots",
+        rationale="Alternative framing for choose-one review.",
+        revision_anchors=[orders],
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderSnapshots a rc:Dataset .
+                """,
+            }
+        ],
+        alternative_to=source.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    expected_set = {source.revision_iri, alternative.revision_iri}
+
+    def assert_queue_item_membership(
+        item: RevisionNextActionQueueItem | None,
+        *,
+        row_iri: str,
+        role: str,
+    ) -> None:
+        assert item is not None
+        assert item.row_iri == row_iri
+        assert set(item.alternative_set_iris) == expected_set
+        assert item.alternative_set_source_iri == source.revision_iri
+        assert item.alternative_set_role == role
+
+    graph_source = db.describe_revision_lineage(source.revision_iri)
+    graph_alternative = db.describe_revision_lineage(alternative.revision_iri)
+    resource_source = db.describe_resource_revision_lineage(
+        orders,
+        source.revision_iri,
+    )
+    resource_alternative = db.describe_resource_revision_lineage(
+        orders,
+        alternative.revision_iri,
+    )
+
+    assert_queue_item_membership(
+        graph_source.next_action_queue_item,
+        row_iri=source.revision_iri,
+        role="source",
+    )
+    assert_queue_item_membership(
+        graph_alternative.next_action_queue_item,
+        row_iri=alternative.revision_iri,
+        role="alternative",
+    )
+    assert_queue_item_membership(
+        resource_source.next_action_queue_item,
+        row_iri=source.revision_iri,
+        role="source",
+    )
+    assert_queue_item_membership(
+        resource_alternative.next_action_queue_item,
+        row_iri=alternative.revision_iri,
+        role="alternative",
+    )
 
 
 def test_describe_revision_lineage_warns_about_imported_odd_history(

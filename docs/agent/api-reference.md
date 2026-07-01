@@ -1455,7 +1455,10 @@ pointer and can name an applied event after the current staged successor has
 been applied. It also carries graph-level `restage_chain_iris` and
 `alternative_revision_iris`, so a resource-first handoff can see sibling
 alternatives without a separate generic lineage call. `next_action_queue_item`
-provides the selected row's compact resolved-target card.
+provides the selected row's compact resolved-target card and, for visible
+source/alternative rows, carries `alternative_set_iris`,
+`alternative_set_source_iri`, and `alternative_set_role` like list/export queue
+items.
 It is not a full graph-version browser and does not replace
 `describe_staged_revision()` when patch content is needed.
 `application_status="validation_failed"` means the current replay reached SHACL

@@ -9194,6 +9194,20 @@ class DoxaBase:
             semantic_risk_reasons=selected.application_semantic_risk_reasons,
             alternative_gate=selected.alternative_gate,
         )
+        if next_action_queue_item is not None:
+            next_action_queue_item = (
+                self._revision_next_action_queue_items_with_alternative_sets(
+                    [next_action_queue_item],
+                    (
+                        (
+                            item.iri,
+                            item.alternative_to,
+                            item.current_alternative_to,
+                        )
+                        for item in listing.revisions
+                    ),
+                )[0]
+            )
         alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
             selected=selected,
             restage_chain=restage_chain,
@@ -10095,6 +10109,20 @@ class DoxaBase:
             ),
             alternative_gate=selected.revision.alternative_gate,
         )
+        if lineage_next_action_queue_item is not None:
+            lineage_next_action_queue_item = (
+                self._revision_next_action_queue_items_with_alternative_sets(
+                    [lineage_next_action_queue_item],
+                    (
+                        (
+                            item.revision.iri,
+                            item.revision.alternative_to,
+                            item.revision.current_alternative_to,
+                        )
+                        for item in lineage.revisions
+                    ),
+                )[0]
+            )
 
         return ResourceRevisionLineageDescription(
             resource=lineage.resource,

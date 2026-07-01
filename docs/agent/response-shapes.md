@@ -4539,7 +4539,10 @@ staged source that was actually applied. For still-current or stale unapplied
 staged rows, `applied_source_revision_iri` is `None`; use
 `current_staged_revision_iri` for the live staged target instead.
 `next_action_queue_item` names the selected row and exposes the resolved applied
-or current target without requiring a separate resource list join.
+or current target without requiring a separate resource list join. It also
+includes `alternative_set_iris`, `alternative_set_source_iri`, and
+`alternative_set_role` when the selected row is in a visible choose-one
+alternative set.
 `restage_chain_iris` preserves the original source route. `applied_diff_status`
 is `available`, `unavailable`, `omitted`, or `not_applicable`. When present,
 `applied_diff.graph_diffs[]` contains resource-filtered added/removed counts

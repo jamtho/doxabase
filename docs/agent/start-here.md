@@ -242,6 +242,11 @@ On July 1, 2026, the rebuilt YOLO container still exposed no CPU or memory cap;
 `uv run pytest -q -n auto --durations=25` took about 41 seconds and remained
 faster wall-clock than `-n 12`. Use `-n 12` only when reducing aggregate CPU
 load matters more than local completion time.
+Later that day, serial `uv run pytest -q --durations=25 --durations-min=0.1`
+took about 325 seconds. The slowest individual test was about 7 seconds and the
+slow tail was mostly staged-revision, project-brief, and example integration
+coverage, so this did not point to a single pathological test or container
+resource limit.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

@@ -35,6 +35,10 @@ when their primary call stages a map assertion, pattern promotion, or
 systematisation. Preserve that argument when following the generated call. For
 caller-authored followthrough alternatives, use the matching
 `advisory_followthrough_plan[].source_profile_advisories` entry the same way.
+For a combined type-review framing, such as defining a project value type and
+asserting `rc:valueType` on a column in one staged revision, include the route
+sources for both `define_value_type` and `assert_map_type`. The review bundle
+closes lanes by route source, not by guessing intent from arbitrary Turtle.
 
 Put the preferred comparison anchor first when `link_alternatives=True`, because
 later framings are linked with `alternative_to` pointing at the first framing by

@@ -690,7 +690,10 @@ staged successor that actually applied; use row-local `next_action` when you
 just need the next inspection call.
 Lineage responses also expose `next_action_queue_item`, scoped to the selected
 row and lineage-level `next_action`; use its `resolved_target_iri` and
-`row_is_target` fields before mutating stale rows with successors. Use
+`row_is_target` fields before mutating stale rows with successors. When the
+selected row is part of a returned choose-one alternative set, the queue item
+also carries `alternative_set_iris`, `alternative_set_source_iri`, and
+`alternative_set_role`, matching resource listings and grouped exports. Use
 lineage-level `selected_revision_iri` / `paired_revision_iri` for first-pass
 routing, then open the nested `selected_revision` / `paired_revision` rows when
 you need status, snapshot, or support context.
@@ -742,6 +745,10 @@ the lineage `next_action` / `suggested_next_actions`; they prefer inspecting
 the applied event while keeping the stale source and successor discoverable in
 `related_revision_iris`.
 `next_action_queue_item` is the compact row-vs-target card for that same route.
+For source/alternative staged rows, it carries the same `alternative_set_*`
+membership fields as `list_resource_revisions(...).next_action_queue_items`,
+so a resource-first lineage handoff can distinguish "source" from
+"alternative" without joining back to the listing response.
 
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass

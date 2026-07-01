@@ -93,6 +93,11 @@ required move after the same route group has staged the reviewed
 `assert_map_type` path. In value-type workflows, a vocabulary promotion can
 close only `define_value_type`; stage the reviewed map assertion separately when
 the profile finding should become current map truth.
+If you author one combined `stage_systematisation` framing that both defines a
+project value type and asserts `rc:valueType` on the column, carry route sources
+for both semantic moves. Otherwise the review bundle should still show the
+missing `define_value_type` or `assert_map_type` lane as open, even if the Turtle
+contains both shapes of triple.
 Do not select rows by `semantic_move` alone when scripting. A draft can expose
 several `define_metric` rows, for example context inspection and a staging call.
 Use `primary_action_kind` to choose the route you intend:

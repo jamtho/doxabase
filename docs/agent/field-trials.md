@@ -52,6 +52,12 @@ quota, and no memory cap; `uv run pytest -q -n auto --durations=25` completed
 the full suite in about 41 seconds, while serial `tests/test_mcp_tools.py` alone
 took about 63 seconds. Keep `-n auto` as the local full-gate default unless a
 shared runner needs lower aggregate CPU use.
+A later serial full-suite timing pass with
+`uv run pytest -q --durations=25 --durations-min=0.1` took about 325 seconds.
+The slowest individual test was about 7 seconds, and the slow tail was mostly
+staged-revision, project-brief, and example integration coverage. Treat slow
+serial pytest as expected suite breadth unless a future duration table shows a
+new outlier.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
@@ -3754,6 +3760,21 @@ few useful gaps:
   vocabulary such as sample, canonical, production, archive, derived, and
   backfill before relying on automatic candidate choice in ambiguous multi-route
   capsules.
+- A broad query-result, MCP-parity, lineage, and profile-systematisation wave
+  passed on scratch capsules. Polymarket query planning could reach a reviewed
+  DuckDB handoff and correctly record a blocked result when fixture data was not
+  bundled; dataset context slices now reverse-follow recent ordinary
+  `rc:observedAsset` observations so blocked/failed query-result evidence is
+  recoverable from the dataset seed. MCP runtime parity was sound when launched
+  from the repo cwd or with `PYTHONPATH` and an absolute capsule path. Revision
+  lineage inspection was sufficient for stale/restaged/applied chains, but
+  lineage queue items now carry `alternative_set_*` fields so choose-one source
+  and alternative rows do not require a separate list/export join. The
+  profile-systematisation trial confirmed that review bundles correctly leave
+  lanes open when a caller-authored combined value-type definition and map
+  assertion omits one of the matching `profile_route_sources`; carry both
+  `define_value_type` and `assert_map_type` route sources when one staged framing
+  intentionally closes both moves.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
