@@ -904,6 +904,8 @@ class StagedGraphRevisionRecord:
     restaged_from: str | None = None
     restage_reason: str | None = None
     current_restaged_by: str | None = None
+    framing_index: int | None = None
+    framing_label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -39057,6 +39059,11 @@ class DoxaBase:
                 review_note=framing_review_note,
                 review_recommendation=framing_review_recommendation,
                 validation_scope=framing_scope,  # type: ignore[arg-type]
+            )
+            staged = replace(
+                staged,
+                framing_index=index,
+                framing_label=label,
             )
             self._record_profile_insight_route_sources(
                 staged.revision_iri,

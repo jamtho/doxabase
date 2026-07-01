@@ -1417,6 +1417,9 @@ such as `rc:MinValue` do not become ad hoc RDF. A metric item may include
 `target` when the scalar is specifically about a resource narrower than the
 profile observation as a whole. Profile evidence entries include source strings
 and source spans when recorded.
+Pass `evidence_iri` when a dataset profile should reuse a reviewed profiler-run
+evidence resource; this mirrors `record_column_profile` and avoids switching to
+`record_profile_bundle` solely to share evidence.
 `update_map_snapshot` defaults to true, but row counts are written to
 `rc:rowCountSnapshot` only when the profile basis looks like a full scan.
 Sampled or unknown-scope row counts remain observation evidence by default; pass
@@ -1814,7 +1817,10 @@ framings to repair and ready framings to review/apply checks before writing a
 Markdown bundle. Queue items expose resolved targets and semantic-gate fields
 without requiring a grouped export first. `choose_one_groups` and
 `choose_one_group_count` expose the source/alternative comparison groups
-directly on the draft response. If later framings actually
+directly on the draft response. Rows in `staged_revisions[]` also carry
+`framing_index` and `framing_label`, so scripts can map a revision back to the
+caller-authored framing without joining against `framings[]` by position. If
+later framings actually
 default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
 `suggested_rerun_arguments={"link_alternatives": False}`; in that case

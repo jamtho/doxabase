@@ -952,7 +952,10 @@ includes both `base_ontology` and project ontology results; filter each returned
 entity's `graph` field for project-local vocabulary. A metric item may include `target`
 when the scalar is specifically about a resource narrower than the profile
 observation as a whole. Profile evidence entries include source strings and
-source spans when recorded. `update_map_snapshot` defaults to true, but row
+source spans when recorded. Pass `evidence_iri` when a dataset profile should
+reuse a reviewed profiler-run evidence resource; this mirrors
+`record_column_profile()` and avoids switching to `record_profile_bundle()`
+solely to share evidence. `update_map_snapshot` defaults to true, but row
 counts are written to `rc:rowCountSnapshot` only when the profile basis looks
 like a full scan. Sampled or unknown-scope row counts stay as profile evidence
 by default; pass `allow_sampled_row_count_snapshot=True` only when that profiled
@@ -1250,6 +1253,10 @@ The returned `SystematisationDraftRecord` carries
 staged-revision exports, so callers can separate `repair_or_replace` framings
 from `apply_after_review` framings immediately after staging. Queue items expose
 the same resolved-target and semantic-gate fields as grouped export summaries.
+Rows in `staged_revisions[]` carry `framing_index` and `framing_label` when
+they came from `stage_systematisation()` or `stage_pattern_promotion()`, which
+lets automation map revisions back to caller-authored framings without relying
+on parallel list positions.
 When later framings actually default-linked to a first framing that did not
 route to `apply_after_review`, `structured_warnings` includes
 `warning_code="first_alternative_anchor_not_ready"` and

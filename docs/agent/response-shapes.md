@@ -1384,6 +1384,12 @@ profile.map_dataset
 profile.pattern
 ```
 
+`record_dataset_profile` accepts `evidence_iri` when a dataset profile should
+reuse a reviewed profiler-run evidence resource directly. The returned
+`profile.observation.evidence_iri` is the durable seed for
+`describe_profile_run`, `draft_profile_map_updates`, profile review exports,
+and profile-observation context slices.
+
 `db.record_column_profile(...)` returns a `ColumnProfileRecord`:
 
 ```python
@@ -3899,7 +3905,14 @@ revision.alternative_to
 revision.restaged_from
 revision.restage_reason
 revision.current_restaged_by
+revision.framing_index
+revision.framing_label
 ```
+
+`framing_index` and `framing_label` are populated when the row was produced by
+`stage_systematisation` or `stage_pattern_promotion`; other staged revision
+helpers leave them `None`. They let scripts map `staged_revisions[]` rows back
+to caller-authored framings without relying on parallel list positions.
 
 Each `revision.patches[]` item has:
 

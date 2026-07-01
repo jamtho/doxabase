@@ -5517,6 +5517,17 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     revision_iris = [
         revision["revision_iri"] for revision in result["staged_revisions"]
     ]
+    assert [
+        (revision["framing_index"], revision["framing_label"])
+        for revision in result["staged_revisions"]
+    ] == [(1, "Pattern first"), (2, "Map candidate")]
+    assert [
+        (framing["revision_iri"], framing["label"])
+        for framing in result["framings"]
+    ] == [
+        (revision_iris[0], "Pattern first"),
+        (revision_iris[1], "Map candidate"),
+    ]
     assert result["next_action_queue"] == {"apply_after_review": revision_iris}
     assert result["next_action_queue_item_counts"] == {"apply_after_review": 2}
     assert result["semantic_review_required_queue_counts"] == {}
@@ -9244,11 +9255,13 @@ def test_record_observation_tool_accepts_profile_type_findings(
 def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Messages"
+    evidence = "https://example.test/project#messages_profile_evidence"
 
     result = record_dataset_profile_tool(
         db,
         dataset_iri=dataset,
         summary="MCP helper recorded a profile bundle.",
+        evidence_iri=evidence,
         evidence_summary="Synthetic profile evidence.",
         evidence_sources=["tests/test_mcp_tools.py"],
         sample_size=55,
@@ -9274,6 +9287,7 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
     )
 
     assert result["dataset_iri"] == dataset
+    assert result["observation"]["evidence_iri"] == evidence
     assert result["observation"]["observation_type"] == "profile"
     assert result["map_dataset"]["iri"] == dataset
     assert result["pattern"]["pattern_iri"].startswith(
@@ -9311,7 +9325,7 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
             str(XSD.integer),
         ),
     }
-    assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
+    assert profile["evidence"][0]["iri"] == evidence
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 

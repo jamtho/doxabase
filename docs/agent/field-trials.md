@@ -3718,6 +3718,17 @@ few useful gaps:
   and SHACL-valid in a fresh receiver. Keep using context-slice exports for
   clean resource neighborhoods instead of weakening `fail_on_sensitive` on
   broader exports.
+- Conflict/rebase/version, profile-followthrough, and storage-aware query
+  trials passed on scratch capsules. The latest small fixes are response
+  affordances: `stage_systematisation` / `stage_pattern_promotion` staged rows
+  now carry `framing_index` and `framing_label`, and
+  `record_dataset_profile` can reuse an explicit `evidence_iri` through the MCP
+  wrapper. The larger remaining storage-query design issue is durable route
+  intent: a local sample route can outrank the intended production database
+  route unless the caller overrides `candidate_index` or `storage_access_iri`.
+  Later work should add or document route-intent vocabulary such as sample,
+  canonical, production, archive, derived, and backfill before relying on
+  automatic candidate choice in ambiguous multi-route capsules.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
