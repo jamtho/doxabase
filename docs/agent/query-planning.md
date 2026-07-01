@@ -141,15 +141,17 @@ execution.
 Start with `describe_query_context(dataset_iri)`:
 
 1. `query_target_decision` chooses the candidate. Its `candidate_index` points
-   into `query_target_candidates`, and `status` routes the selected target's
-   direct state: ready, review-only, blocked, or absent. Automatic selection
+   into `query_target_candidates`, and each candidate also carries a stable
+   `candidate_selector` for reviewed follow-up calls. `status` routes the
+   selected target's direct state: ready, review-only, blocked, or absent.
+   Automatic selection
    prefers safer candidates first, then fewer required template bindings, then
    file/object scans before database relation handoffs when otherwise tied, then
    route-specific storage-access sources before broader partition or dataset
    templates within that same shape of handoff.
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
-   pass an explicit `candidate_index` when a different route is intended.
+   pass an explicit `candidate_selector` when a different route is intended.
    `query_target_decision.peer_ready_requires_intent_review` and
    `selection_caution` carry the same warning in a compact form, while
    `selection_reason_codes` records whether the selected route came from
@@ -209,14 +211,14 @@ Start with `describe_query_context(dataset_iri)`:
    # Inspect context.query_target_candidates and the suggested draft actions.
    object_plan = db.draft_query_plan(
        dataset_iri,
-       candidate_index=reviewed_object_candidate_index,
-       physical_layout_iri=reviewed_object_layout_iri,
-       allow_context_blocked_candidate=True,
+      candidate_selector=reviewed_object_candidate_selector,
+      physical_layout_iri=reviewed_object_layout_iri,
+      allow_context_blocked_candidate=True,
    )
 
    database_plan = db.draft_query_plan(
        dataset_iri,
-       candidate_index=reviewed_database_candidate_index,
+       candidate_selector=reviewed_database_candidate_selector,
        physical_layout_iri=reviewed_database_layout_iri,
        allow_context_blocked_candidate=True,
    )
@@ -397,10 +399,10 @@ Start with `describe_query_context(dataset_iri)`:
    drafting; when multiple candidate runs need review, several
    `describe_profile_run` actions can appear before the first `draft_query_plan`.
    Peer ready or context-blocked direct-clean candidates are also exposed as
-   explicit `draft_query_plan(candidate_index=...)` actions, so scripts should
-   follow actions instead of parsing peer indexes from prose or storage-selector
-   ambiguity errors. In the context-blocked direct-clean case, draft actions
-   include `allow_context_blocked_candidate=True`.
+   explicit `draft_query_plan(candidate_selector=...)` actions, so scripts
+   should follow actions instead of parsing peer indexes from prose or
+   storage-selector ambiguity errors. In the context-blocked direct-clean case,
+   draft actions include `allow_context_blocked_candidate=True`.
 
 A common non-error shape is:
 
@@ -412,7 +414,7 @@ unselected_ready_candidate_indexes = [3, 4]
 issues = ["database_relation_template_source_mismatch"]
 suggested_next_actions[0].arguments = {
     "iri": dataset_iri,
-    "candidate_index": 1,
+    "candidate_selector": "query-target:...",
     "allow_context_blocked_candidate": True,
 }
 ```
@@ -444,8 +446,8 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    for a review-gated draft with an explicit selector even while
    `ready_candidate_indexes` is empty.
    Candidate order is not an authoring-preference contract. Treat
-   `candidate_index` as a pointer into the returned list; use the selected
-   decision and peer indexes to compare materially different ready routes.
+   `candidate_index` as a response-local pointer into the returned list; use the
+   candidate's `candidate_selector` for a reviewed follow-up call.
 3. Read `source_context.selected_candidate_note` for a compact handoff summary
    of the selected candidate, route kind, and sibling/context blocker codes
    that still remain in `review_gate.all_issue_codes`.
@@ -622,7 +624,7 @@ fail the single-status/single-note SHACL constraints.
 
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
-`draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`
+`draft_query_plan(..., candidate_selector=..., allow_context_blocked_candidate=True)`
 or `draft_query_plan(..., storage_access_iri=..., allow_context_blocked_candidate=True)`.
 Do not use the allowance selectorless: the automatic selection path keeps the
 context review gate active and reports `context_blocked_candidate_allowed=True`
@@ -644,7 +646,7 @@ still needs review.
 
 When `storage_access_iri` matches multiple candidate paths, the error includes
 compact candidate snippets. Choose from those snippets and rerun with
-`candidate_index`; the storage selector must identify exactly one candidate.
+`candidate_selector`; the storage selector must identify exactly one candidate.
 This can happen even for database storage when the same storage access is linked
 to dataset or partition template review cards; use the candidate snippet for the
 storage-owned relation when you want the database relation handoff.

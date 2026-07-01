@@ -760,7 +760,7 @@ few useful gaps:
   route while preserving the sibling-blocker audit trail. A selection retest
   found automatic drafts were too quiet when multiple ready candidates existed;
   `source_context` now reports ready and unselected-ready candidate indexes so
-  agents know when to rerun with explicit `candidate_index`.
+  agents know when to rerun with explicit selectors.
 - A query storage-metadata matrix trial covered local file/object roots,
   directory roots, S3 bucket/prefix/template combinations, HTTPS roots, and
   database-backed table-like storage. It confirmed MCP/Python parity and
@@ -1707,7 +1707,7 @@ few useful gaps:
 - Storage/query handoff trials found peer ready candidates were visible through
   index lists, but scripts still had to parse prose or storage-selector
   ambiguity errors to draft them. `describe_query_context.suggested_next_actions`
-  now includes explicit `draft_query_plan(candidate_index=...)` actions for peer
+  now includes explicit `draft_query_plan(candidate_selector=...)` actions for peer
   ready and peer context-blocked direct-clean candidates, including
   `allow_context_blocked_candidate=True` where needed.
 - Follow-up staged-revision and query-planning trials found two small
@@ -2012,7 +2012,7 @@ few useful gaps:
   but left useful regression targets. Mixed local, S3, and database query
   candidates proved that automatic selection can choose a direct-clean local
   route while sibling metadata still keeps the global context review-gated; use
-  the explicit `candidate_index` and `allow_context_blocked_candidate` actions
+  the explicit `candidate_selector` and `allow_context_blocked_candidate` actions
   instead of treating automatic selection as execution-ready. Staged-revision
   handoff retests confirmed TriG-only imports should route exact diffs to
   `import_revision_snapshots` before snapshot JSON import restores exact
@@ -3728,12 +3728,17 @@ few useful gaps:
   affordances: `stage_systematisation` / `stage_pattern_promotion` staged rows
   now carry `framing_index` and `framing_label`, and
   `record_dataset_profile` can reuse an explicit `evidence_iri` through the MCP
-  wrapper. The larger remaining storage-query design issue is durable route
-  intent: a local sample route can outrank the intended production database
-  route unless the caller overrides `candidate_index` or `storage_access_iri`.
-  Later work should add or document route-intent vocabulary such as sample,
-  canonical, production, archive, derived, and backfill before relying on
-  automatic candidate choice in ambiguous multi-route capsules.
+  wrapper. A follow-up route-intent trial found `candidate_index` was too
+  brittle for unattended reruns when one storage access or dataset produced
+  several candidate paths. Query target cards and generated draft actions now
+  carry `candidate_selector`, a stable selector over the candidate's modeled
+  template/source/storage identity. The larger remaining storage-query design
+  issue is durable route intent: a local sample route can still outrank the
+  intended production database route unless the caller chooses a selector or
+  storage access deliberately. Later work should add or document route-intent
+  vocabulary such as sample, canonical, production, archive, derived, and
+  backfill before relying on automatic candidate choice in ambiguous multi-route
+  capsules.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

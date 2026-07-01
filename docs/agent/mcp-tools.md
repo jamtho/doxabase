@@ -927,22 +927,24 @@ drafting DuckDB/S3/local-file queries when you need to decide whether graph
 metadata is executable or only useful for orientation, especially when you need
 physical metadata and warnings without the full relationship/pattern handoff in
 `describe_dataset`. Read `query_target_decision` first; its zero-based
-`candidate_index` points into `query_target_candidates`. Candidate
+`candidate_index` points into `query_target_candidates`. Candidate cards also
+include `candidate_selector`, a stable response field for reviewed
+`draft_query_plan` calls. Candidate
 `review_required` includes whole-context blockers; `direct_review_required`
 ignores sibling blockers and shows which target candidates have their own
 storage/path/layout problem. `selected_candidate_direct_clean` gives the same
 cue on the selected decision row. When that selected candidate is direct-clean
 but context-blocked, the suggested `draft_query_plan` action carries
-`allow_context_blocked_candidate=true` and the explicit candidate index. For
+`allow_context_blocked_candidate=true` and the explicit candidate selector. For
 multiple direct-ready candidates, inspect `unselected_ready_candidate_indexes`
-and rerun/draft with an explicit `candidate_index` if candidate order picked the
+and rerun/draft with an explicit `candidate_selector` if candidate order picked the
 wrong route; peer suggested actions include the same allowance when sibling
 candidate metadata is the only broader blocker. In a globally blocked context,
 inspect
 `unselected_direct_clean_candidate_indexes` when strict ready indexes are empty
 but another candidate has no direct blocker. When linked physical layouts are
 ambiguous, suggested `draft_query_plan` actions include explicit
-`candidate_index` / `physical_layout_iri` pairs for the selected candidate and
+`candidate_selector` / `physical_layout_iri` pairs for the selected candidate and
 peer candidates whose only direct blocker is layout ambiguity. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
@@ -1078,18 +1080,18 @@ and stale-seed safety gates still take precedence.
 Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
 the candidate named by `query_target_decision.candidate_index` by default. Pass
-`candidate_index` or `storage_access_iri` for an explicit route selection, pass
+`candidate_selector`, `candidate_index`, or `storage_access_iri` for an explicit route selection, pass
 `physical_layout_iri` after reviewing linked physical layouts with distinct
 signatures, and use `allow_context_blocked_candidate=true` only when the
 selected candidate is
 direct-clean but sibling metadata still blocks the whole context. When the
 blocker comes only from sibling candidate metadata, pair the allowance with
-an explicit `candidate_index` or `storage_access_iri`; selectorless automatic
+an explicit `candidate_selector`, `candidate_index`, or `storage_access_iri`; selectorless automatic
 drafts keep the context review gate and report
 `context_blocked_candidate_allowed=true` /
 `context_blocked_candidate_used=false`. If `storage_access_iri` matches
 multiple candidate paths, prefer the explicit peer `draft_query_plan` actions
-returned by `describe_query_context`; otherwise rerun with `candidate_index`
+returned by `describe_query_context`; otherwise rerun with `candidate_selector`
 using the returned candidate snippets. `source_context`
 also reports `candidate_count`, `ready_candidate_indexes`, and
 `unselected_ready_candidate_indexes`, plus direct-clean peer indexes, so

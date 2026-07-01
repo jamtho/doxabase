@@ -469,12 +469,13 @@ or resolve credentials; use it to decide whether the graph has enough
 non-secret physical context for a query attempt, then review caveats before
 trusting aggregations or
 interpretations. Read `query_target_decision` first: its `candidate_index` is a
-zero-based pointer into the candidate list, and its `status` tells whether that
-candidate is ready, blocked only by sibling context, directly review-only, or
-absent. `selected_candidate_direct_clean` is true when the selected candidate
+zero-based pointer into the candidate list, and each candidate has a stable
+`candidate_selector` for reviewed follow-up calls. Its `status` tells whether
+that candidate is ready, blocked only by sibling context, directly review-only,
+or absent. `selected_candidate_direct_clean` is true when the selected candidate
 has no direct blocker of its own. When such a selected candidate is blocked by
 sibling metadata, the suggested `draft_query_plan` action includes the explicit
-`candidate_index` and `allow_context_blocked_candidate=True`; peer ready actions
+`candidate_selector` and `allow_context_blocked_candidate=True`; peer ready actions
 include the same allowance when sibling candidate metadata is the only broader
 blocker.
 When `row_count_snapshot` or profile metrics matter to the query handoff,
@@ -500,7 +501,7 @@ review checklist: replace placeholder values named in `placeholder_fields` /
 `reviewed_value_fields` and supply `required_extra_arguments` before calling the
 helper.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
-draft is requested; inspect those cards and pass an explicit `candidate_index`
+draft is requested; inspect those cards and pass an explicit `candidate_selector`
 when candidate order selected a different route than intended. These indexes
 describe candidate-local direct readiness, so they may be non-empty while
 top-level `readiness == "needs_review"` because sibling candidate metadata
@@ -511,7 +512,8 @@ When global sibling blockers leave strict ready indexes empty,
 warning/error that may still be draftable with an explicit selector and
 `allow_context_blocked_candidate=True`.
 `query_target_candidates`
-preserve template provenance and compose best-effort file/object paths from
+preserve template provenance, expose a stable `candidate_selector` for reviewed
+follow-up calls, and compose best-effort file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or
 credential references. For database-backed storage, candidates keep the relation
 as `candidate_path` and expose `relation_identifier` plus
@@ -552,13 +554,13 @@ sibling hints block the overall context.
 `draft_query_plan()` returns a non-executed, review-gated physical plan draft
 over `describe_query_context()`. It currently supports `engine="duckdb"` and
 selects the candidate identified by `query_target_decision.candidate_index` by
-default. Pass `candidate_index` or `storage_access_iri` to select an explicit
-candidate; pass `physical_layout_iri` after reviewing linked physical layouts
+default. Pass `candidate_selector`, `candidate_index`, or `storage_access_iri`
+to select an explicit candidate; pass `physical_layout_iri` after reviewing linked physical layouts
 with distinct signatures; pass `allow_context_blocked_candidate=True` only when
 that selected candidate has no direct warning/error and stale sibling metadata
 should not block this handoff. If `storage_access_iri` matches multiple
 candidate paths,
-use the returned candidate snippets to rerun with `candidate_index`.
+use the returned candidate snippets to rerun with `candidate_selector`.
 When sibling candidate-metadata blockers are the reason for the allowance, pass
 an explicit selector too; selectorless automatic drafts keep the context review
 gate and show the distinction through
@@ -572,7 +574,8 @@ the explicit selection audit fields. It also reports `candidate_count`,
 lists are non-empty, the automatic or explicit selection has peer candidates
 worth reviewing before execution. Candidate order is not an
 authoring-preference contract; use `candidate_index` as a response-local pointer
-after inspecting the returned candidate cards.
+only after inspecting the returned candidate cards, and use
+`candidate_selector` for reviewed follow-up calls.
 `source_context.selected_candidate_note` summarizes the actual selected
 candidate, route kind, and sibling/context blocker codes that remain visible in
 `review_gate.all_issue_codes`.

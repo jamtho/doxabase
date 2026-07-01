@@ -709,17 +709,20 @@ def test_project_brief_routes_ready_query_handoffs_to_draft_plan(
     assert task.source == "draft_query_plan"
     assert task.suggested_next_action is not None
     assert task.suggested_next_action.tool_name == "draft_query_plan"
-    assert task.suggested_next_action.arguments == {
-        "iri": dataset,
-        "candidate_index": 0,
-    }
+    assert task.suggested_next_action.arguments["iri"] == dataset
+    task_selector = task.suggested_next_action.arguments["candidate_selector"]
+    assert isinstance(task_selector, str)
+    assert task_selector.startswith("query-target:")
     assert task.suggested_next_call == (
         "draft_query_plan(iri='https://example.test/project#Orders', "
-        "candidate_index=0)"
+        f"candidate_selector={task_selector!r})"
     )
     assert task.query_plan_handoff_summary is not None
     assert task.query_plan_handoff_summary.handoff_kind == "execution_attempt_ready"
     assert task.query_plan_handoff_summary.selected_candidate_index == 0
+    assert task.query_plan_handoff_summary.selected_candidate_selector == (
+        task_selector
+    )
     assert task.query_plan_handoff_summary.scan_function == "read_parquet"
     assert task.query_plan_handoff_summary.ready_for_execution_attempt is True
     assert (
@@ -819,10 +822,12 @@ def test_project_brief_ready_query_handoff_uses_full_query_actions(
     assert handoff_task.source == "draft_query_plan"
     assert handoff_task.suggested_next_action is not None
     assert handoff_task.suggested_next_action.tool_name == "draft_query_plan"
-    assert handoff_task.suggested_next_action.arguments == {
-        "iri": dataset,
-        "candidate_index": 0,
-    }
+    assert handoff_task.suggested_next_action.arguments["iri"] == dataset
+    handoff_selector = handoff_task.suggested_next_action.arguments[
+        "candidate_selector"
+    ]
+    assert isinstance(handoff_selector, str)
+    assert handoff_selector.startswith("query-target:")
     assert handoff_task.query_plan_handoff_summary is not None
     assert handoff_task.query_plan_handoff_summary.ready_for_execution_attempt is True
 
@@ -865,14 +870,15 @@ def test_project_brief_query_handoff_summary_surfaces_relation_choice(
     task = brief.recommended_next_tasks[0]
     assert task.task_type == "query_plan_handoff"
     assert task.suggested_next_action is not None
-    assert task.suggested_next_action.arguments == {
-        "iri": dataset,
-        "candidate_index": 0,
-    }
+    assert task.suggested_next_action.arguments["iri"] == dataset
+    task_selector = task.suggested_next_action.arguments["candidate_selector"]
+    assert isinstance(task_selector, str)
+    assert task_selector.startswith("query-target:")
     assert task.query_plan_handoff_summary is not None
     summary = task.query_plan_handoff_summary
     assert summary.handoff_kind == "database_relation_handoff"
     assert summary.selected_candidate_index == 0
+    assert summary.selected_candidate_selector == task_selector
     assert summary.relation_identifier == "archive.orders_2025"
     assert summary.connection_reference == "warehouse-prod"
     assert summary.primary_execution_attempt_blocking_reason_code == (
@@ -19190,6 +19196,7 @@ def test_query_target_candidates_surface_global_blockers(
         if target.storage_access is not None
         and target.storage_access.iri == archive_storage.iri
     )
+    archive_target = context.query_target_candidates[archive_index]
     assert local_target.review_required is True
     assert local_target.direct_review_required is False
     assert local_target.direct_review_reasons == []
@@ -19238,13 +19245,15 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.unselected_direct_clean_candidate_indexes == [archive_index]
     assert len(context.suggested_next_actions) == 2
     query_action = context.suggested_next_actions[0]
+    local_selector = local_target.candidate_selector
+    archive_selector = archive_target.candidate_selector
     assert query_action.tool_name == "draft_query_plan"
     assert query_action.action_label == (
         "Draft direct-clean candidate with context allowance"
     )
     assert query_action.arguments == {
         "iri": dataset,
-        "candidate_index": local_index,
+        "candidate_selector": local_selector,
         "allow_context_blocked_candidate": True,
     }
     assert (
@@ -19258,7 +19267,7 @@ def test_query_target_candidates_surface_global_blockers(
     )
     assert peer_action.arguments == {
         "iri": dataset,
-        "candidate_index": archive_index,
+        "candidate_selector": archive_selector,
         "allow_context_blocked_candidate": True,
     }
     assert "peer candidate has no direct warning or error" in peer_action.reason
@@ -19456,7 +19465,7 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         context.query_target_decision.selection_reason_codes
     )
     assert context.query_target_decision.selection_caution is not None
-    assert "candidate_index" in context.query_target_decision.selection_caution
+    assert "candidate_selector" in context.query_target_decision.selection_caution
     assert "Automatic selection uses DoxaBase precedence" in (
         context.query_target_decision.selection_caution
     )
@@ -19469,9 +19478,14 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         "Draft metadata-ready query plan",
         "Draft peer metadata-ready query plan",
     ]
+    selectors = [
+        candidate.candidate_selector for candidate in context.query_target_candidates
+    ]
+    assert len(selectors) == len(set(selectors)) == 2
+    assert all(selector.startswith("query-target:") for selector in selectors)
     assert context.suggested_next_actions[1].arguments == {
         "iri": dataset,
-        "candidate_index": 1,
+        "candidate_selector": selectors[1],
     }
     assert context.suggested_next_calls == [
         action.call for action in context.suggested_next_actions
@@ -19480,6 +19494,8 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     automatic_plan = db.draft_query_plan(dataset)
 
     assert automatic_plan.source_context.selected_candidate_index == 0
+    assert automatic_plan.source_context.selected_candidate_selector == selectors[0]
+    assert automatic_plan.source_context.requested_candidate_selector is None
     assert automatic_plan.source_context.candidate_count == 2
     assert automatic_plan.source_context.ready_candidate_indexes == [0, 1]
     assert automatic_plan.source_context.unselected_ready_candidate_indexes == [1]
@@ -19491,6 +19507,7 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         automatic_plan.source_context.selection_reason_codes
     )
     assert automatic_plan.handoff_summary.peer_ready_requires_intent_review is True
+    assert automatic_plan.handoff_summary.selected_candidate_selector == selectors[0]
     assert automatic_plan.handoff_summary.selection_caution == (
         automatic_plan.source_context.selection_caution
     )
@@ -19498,6 +19515,8 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     explicit_plan = db.draft_query_plan(dataset, candidate_index=1)
 
     assert explicit_plan.source_context.selected_candidate_index == 1
+    assert explicit_plan.source_context.selected_candidate_selector == selectors[1]
+    assert explicit_plan.source_context.requested_candidate_selector is None
     assert explicit_plan.source_context.candidate_count == 2
     assert explicit_plan.source_context.ready_candidate_indexes == [0, 1]
     assert explicit_plan.source_context.unselected_ready_candidate_indexes == [0]
@@ -19521,16 +19540,44 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         explicit_plan.source_context.selection_caution
     )
 
-    with pytest.raises(DoxaBaseError, match="either candidate_index or"):
+    selector_plan = db.draft_query_plan(dataset, candidate_selector=selectors[1])
+
+    assert selector_plan.source_context.selection_mode == "candidate_selector"
+    assert selector_plan.source_context.selected_candidate_index == 1
+    assert selector_plan.source_context.selected_candidate_selector == selectors[1]
+    assert selector_plan.source_context.requested_candidate_selector == selectors[1]
+    assert selector_plan.source_context.requested_candidate_index is None
+    assert selector_plan.source_context.requested_storage_access_iri is None
+    assert "explicit_candidate_selector_selection" in (
+        selector_plan.source_context.selection_reason_codes
+    )
+    assert selector_plan.selected_candidate is not None
+    assert selector_plan.selected_candidate.candidate_selector == selectors[1]
+    assert selector_plan.selected_candidate.template == (
+        context.query_target_candidates[1].template
+    )
+    assert selector_plan.handoff_summary.selected_candidate_selector == selectors[1]
+
+    with pytest.raises(DoxaBaseError, match="Pass only one explicit"):
         db.draft_query_plan(
             dataset,
             candidate_index=0,
             storage_access_iri=storage.iri,
         )
+    with pytest.raises(DoxaBaseError, match="Pass only one explicit"):
+        db.draft_query_plan(
+            dataset,
+            candidate_index=0,
+            candidate_selector=selectors[0],
+        )
     with pytest.raises(DoxaBaseError, match="candidate_index must point"):
         db.draft_query_plan(dataset, candidate_index=2)
     with pytest.raises(DoxaBaseError, match="candidate_index must point"):
         db.draft_query_plan(dataset, candidate_index=-1)
+    with pytest.raises(DoxaBaseError, match="candidate_selector must not be empty"):
+        db.draft_query_plan(dataset, candidate_selector=" ")
+    with pytest.raises(DoxaBaseError, match="candidate_selector did not match"):
+        db.draft_query_plan(dataset, candidate_selector="query-target:missing")
     with pytest.raises(DoxaBaseError, match="did not match any"):
         db.draft_query_plan(
             dataset,
@@ -19542,11 +19589,12 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert "candidate 0" in error
     assert "candidate_path=" in error
     assert "candidate 1" in error
+    assert "candidate_selector=" in error
     assert "/warehouse/orders/current/dt={date}.parquet" in error
     assert "/warehouse/orders/archive/dt={date}.parquet" in error
     assert "template_source=storage_access" in error
     assert "storage='Orders local access'" in error
-    assert "Pass candidate_index for an exact selection." in error
+    assert "Pass candidate_selector for a stable selection" in error
     with pytest.raises(
         DoxaBaseError,
         match="physical_layout_iri was matched",
@@ -19560,7 +19608,7 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert "storage_access_iri still identifies multiple query target candidates" in (
         layout_error
     )
-    assert "candidate_index for the exact path/relation" in layout_error
+    assert "candidate_selector for the stable path/relation" in layout_error
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(
@@ -20852,7 +20900,7 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     ]
     assert context.suggested_next_actions[0].arguments == {
         "iri": dataset,
-        "candidate_index": context.query_target_decision.candidate_index,
+        "candidate_selector": root_target.candidate_selector,
         "allow_context_blocked_candidate": True,
     }
 
@@ -21049,12 +21097,12 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     assert [action.arguments for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_index": 0,
+            "candidate_selector": target.candidate_selector,
             "physical_layout_iri": csv_layout.iri,
         },
         {
             "iri": dataset,
-            "candidate_index": 0,
+            "candidate_selector": target.candidate_selector,
             "physical_layout_iri": parquet_layout.iri,
         },
     ]
@@ -21148,6 +21196,7 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
         for index, target in enumerate(context.query_target_candidates)
         if target.template == "feeds/clean/date={date}.parquet"
     )
+    clean_selector = context.query_target_candidates[clean_index].candidate_selector
 
     assert context.readiness == "needs_review"
     assert {issue.code for issue in context.issues} == {
@@ -21162,13 +21211,13 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert [action.arguments for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_index": clean_index,
+            "candidate_selector": clean_selector,
             "physical_layout_iri": csv_layout.iri,
             "allow_context_blocked_candidate": True,
         },
         {
             "iri": dataset,
-            "candidate_index": clean_index,
+            "candidate_selector": clean_selector,
             "physical_layout_iri": parquet_layout.iri,
             "allow_context_blocked_candidate": True,
         },
@@ -21346,24 +21395,25 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
 
     assert {
         (
-            action.arguments["candidate_index"],
+            action.arguments["candidate_selector"],
             action.arguments["physical_layout_iri"],
         )
         for action in selection_actions
     } == {
-        (local_index, csv_layout.iri),
-        (database_index, table_layout.iri),
+        (local_candidate.candidate_selector, csv_layout.iri),
+        (database_candidate.candidate_selector, table_layout.iri),
     }
     assert all(
         not (
-            action.arguments["candidate_index"] == local_index
+            action.arguments["candidate_selector"] == local_candidate.candidate_selector
             and action.arguments["physical_layout_iri"] == table_layout.iri
         )
         for action in selection_actions
     )
     assert all(
         not (
-            action.arguments["candidate_index"] == database_index
+            action.arguments["candidate_selector"]
+            == database_candidate.candidate_selector
             and action.arguments["physical_layout_iri"] == csv_layout.iri
         )
         for action in selection_actions
@@ -21372,7 +21422,7 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     database_action = next(
         action
         for action in selection_actions
-        if action.arguments["candidate_index"] == database_index
+        if action.arguments["candidate_selector"] == database_candidate.candidate_selector
         and action.arguments["physical_layout_iri"] == table_layout.iri
     )
     database_plan = db.draft_query_plan(**database_action.arguments)
@@ -21977,7 +22027,9 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
     assert context.suggested_next_actions[0].arguments == {
         "iri": dataset,
-        "candidate_index": context.query_target_decision.candidate_index,
+        "candidate_selector": context.query_target_candidates[
+            context.query_target_decision.candidate_index
+        ].candidate_selector,
     }
     assert {
         action.tool_name for action in context.suggested_next_actions
@@ -21990,11 +22042,13 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert [action.arguments for action in peer_actions] == [
         {
             "iri": dataset,
-            "candidate_index": local_partition_index,
+            "candidate_selector": local_partition.candidate_selector,
         },
         {
             "iri": dataset,
-            "candidate_index": database_relation_index,
+            "candidate_selector": context.query_target_candidates[
+                database_relation_index
+            ].candidate_selector,
         },
     ]
     assert all(
@@ -22901,7 +22955,9 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
     assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
     assert context.suggested_next_actions[0].arguments == {
         "iri": dataset,
-        "candidate_index": context.query_target_decision.candidate_index,
+        "candidate_selector": context.query_target_candidates[
+            context.query_target_decision.candidate_index
+        ].candidate_selector,
         "allow_context_blocked_candidate": True,
     }
 

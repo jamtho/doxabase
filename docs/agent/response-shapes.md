@@ -3033,18 +3033,18 @@ candidate's full `review_reasons` and `direct_review_reasons` for messages and
 info-only notes.
 `suggested_next_actions` gives structured routing from the context inventory
 into `draft_query_plan`. In a context-blocked but direct-clean candidate case,
-it includes `candidate_index` and `allow_context_blocked_candidate=True` so a
+it includes `candidate_selector` and `allow_context_blocked_candidate=True` so a
 script can draft the selected route while keeping the context issues visible.
 When peer ready candidates or peer context-blocked direct-clean candidates
 exist, `suggested_next_actions` also includes one explicit
-`draft_query_plan(candidate_index=...)` action for each peer. Use those actions
+`draft_query_plan(candidate_selector=...)` action for each peer. Use those actions
 instead of parsing peer indexes from prose or from
 `storage_access_iri` ambiguity errors; they carry
 `allow_context_blocked_candidate=True` when sibling candidate metadata is the
 only broader blocker.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per
-compatible linked layout signature with `candidate_index` and
+compatible linked layout signature with `candidate_selector` and
 `physical_layout_iri`; it also emits the same action shape for peer candidates
 whose only direct blocker is layout ambiguity. File/object candidates are paired
 with file layouts such as `rc:CSV` or `rc:Parquet`; database candidates are
@@ -3099,7 +3099,8 @@ review. Use it as the compact cue that the allowance route in
 
 `query.query_target_candidates` contains derived path/template planning cards
 for callers that need a safer handoff than raw `path_templates` plus
-`storage_accesses`. Each card preserves the template provenance
+`storage_accesses`. Each card includes `candidate_selector` for reviewed
+follow-up `draft_query_plan` calls and preserves the template provenance
 (`dataset`, `partition_scheme`, `storage_access`, or
 `storage_access_location`), the relevant storage access metadata, a best-effort
 `candidate_path`, a `composition` value such as `template_as_returned`,
@@ -3407,6 +3408,7 @@ for reports or handoffs:
 ```python
 handoff_summary.handoff_kind
 handoff_summary.selected_candidate_index
+handoff_summary.selected_candidate_selector
 handoff_summary.selected_candidate_note
 handoff_summary.scan_function
 handoff_summary.uri_template
@@ -3452,13 +3454,15 @@ caller-supplied runtime values; in that case
 `review_gate.ready_for_execution_attempt` is false.
 By default, `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. Callers may override it with
-`candidate_index` or `storage_access_iri`, and may select a reviewed layout
+`candidate_selector`, `candidate_index`, or `storage_access_iri`, and may select a reviewed layout
 with `physical_layout_iri`; `source_context.query_target_decision` still
 carries the automatic decision, while `selected_candidate_index`,
 `candidate_count`, `ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
-`unselected_direct_clean_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
+`unselected_direct_clean_candidate_indexes`, `selection_mode`,
+`requested_candidate_index`, `requested_candidate_selector`,
 `requested_storage_access_iri`, `requested_physical_layout_iri`,
+`selected_candidate_selector`,
 `selection_status`, `selection_note`, and `selected_candidate_note` /
 `allow_context_blocked_candidate` describe the actual draft selection.
 `selected_candidate_note` is a compact prose handoff for the selected route. In
@@ -3481,8 +3485,10 @@ source_context.direct_clean_candidate_indexes
 source_context.unselected_direct_clean_candidate_indexes
 source_context.selection_mode
 source_context.requested_candidate_index
+source_context.requested_candidate_selector
 source_context.requested_storage_access_iri
 source_context.requested_physical_layout_iri
+source_context.selected_candidate_selector
 source_context.selection_status
 source_context.selection_note
 source_context.selected_candidate_note
@@ -3540,16 +3546,17 @@ storage_environment.runtime_resolution_note
 
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
 candidate exists and agents should consider whether to rerun with explicit
-`candidate_index`. The returned list order is not an authoring-preference
+`candidate_selector`. The returned list order is not an authoring-preference
 contract; `candidate_index` is a response-local pointer, so inspect the candidate
-cards before treating one ready path or relation as intended.
+cards and pass the selected card's `candidate_selector` before treating one ready
+path or relation as intended.
 If the source context is globally blocked, use
 `unselected_direct_clean_candidate_indexes` to find peer candidates that lack
 direct blockers but still need review-gated drafting.
 `storage_access_iri` must identify exactly one query target candidate; when one
 storage access has multiple candidate paths, the error includes compact
-candidate snippets and callers should rerun with `candidate_index`. Prefer the
-explicit candidate-index actions from `describe_query_context()` when available
+candidate snippets and callers should rerun with `candidate_selector`. Prefer the
+explicit candidate-selector actions from `describe_query_context()` when available
 so automation does not have to parse those snippets. If a
 matching `physical_layout_iri` was also supplied, the error says the layout was
 matched but the storage selector still spans multiple path/relation candidates.
@@ -3675,8 +3682,8 @@ context-blocked selection changed the handoff gate. When
 warning/error, sibling-only context blockers can be excluded from the selected
 handoff while remaining visible in `issues`, the automatic decision, and
 `context_blocking_reason_codes`.
-For sibling candidate-metadata blockers, use an explicit `candidate_index` or
-`storage_access_iri` with that allowance. A selectorless automatic draft may
+For sibling candidate-metadata blockers, use an explicit `candidate_selector`,
+`candidate_index`, or `storage_access_iri` with that allowance. A selectorless automatic draft may
 still report `context_blocked_candidate_allowed=True`, but if
 `context_blocked_candidate_used=False` the context gate remains active.
 Interpret the two allowance booleans together: `allowed=false` / `used=false`

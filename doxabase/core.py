@@ -2642,6 +2642,7 @@ class QueryRepairActionGroup:
 
 @dataclass(frozen=True)
 class QueryTargetCandidate:
+    candidate_selector: str
     template: str
     template_source: str
     source_resource: ResourceSummary
@@ -2734,8 +2735,10 @@ class DraftQueryPlanSourceContext:
     )
     selection_mode: str = "automatic"
     requested_candidate_index: int | None = None
+    requested_candidate_selector: str | None = None
     requested_storage_access_iri: str | None = None
     requested_physical_layout_iri: str | None = None
+    selected_candidate_selector: str | None = None
     selection_status: str = "automatic"
     selection_note: str = ""
     selected_candidate_note: str = ""
@@ -2841,6 +2844,7 @@ class DraftQueryPlanReviewGate:
 class DraftQueryPlanHandoffSummary:
     handoff_kind: str
     selected_candidate_index: int | None
+    selected_candidate_selector: str | None
     selected_candidate_note: str
     scan_function: str | None
     uri_template: str | None
@@ -19837,7 +19841,7 @@ class DoxaBase:
         candidate = candidates[decision.candidate_index]
         arguments: dict[str, Any] = {
             "iri": dataset_iri,
-            "candidate_index": decision.candidate_index,
+            "candidate_selector": candidate.candidate_selector,
         }
         if graph is not None and graph != "map":
             arguments["graph"] = graph
@@ -19868,7 +19872,7 @@ class DoxaBase:
                 reason = (
                     f"{reason} Other direct-clean candidate indexes exist "
                     f"({peers}); inspect query_target_candidates and rerun "
-                    "with an explicit candidate_index if another route is "
+                    "with an explicit candidate_selector if another route is "
                     "intended."
                 )
         elif decision.status == "candidate_needs_review":
@@ -19892,7 +19896,7 @@ class DoxaBase:
                 reason = (
                     f"{reason} Other direct-ready candidate indexes exist "
                     f"({peers}); inspect query_target_candidates and rerun with "
-                    "an explicit candidate_index if another route is intended."
+                    "an explicit candidate_selector if another route is intended."
                 )
 
         actions.append(
@@ -19922,13 +19926,13 @@ class DoxaBase:
         for peer_index in peer_action_indexes:
             if peer_index < 0 or peer_index >= len(candidates):
                 continue
+            peer_candidate = candidates[peer_index]
             peer_arguments: dict[str, Any] = {
                 "iri": dataset_iri,
-                "candidate_index": peer_index,
+                "candidate_selector": peer_candidate.candidate_selector,
             }
             if graph is not None and graph != "map":
                 peer_arguments["graph"] = graph
-            peer_candidate = candidates[peer_index]
             if peer_action_allowance and peer_candidate.direct_review_required is False:
                 peer_arguments["allow_context_blocked_candidate"] = True
                 peer_label = "Draft peer direct-clean candidate with context allowance"
@@ -19936,14 +19940,14 @@ class DoxaBase:
                     "A peer candidate has no direct warning or error, but "
                     "sibling or broader context blockers make the whole context "
                     "review-required. Draft this reviewed peer with an explicit "
-                    "candidate_index and allow_context_blocked_candidate=True "
+                    "candidate_selector and allow_context_blocked_candidate=True "
                     "instead of parsing peer indexes from prose."
                 )
             else:
                 peer_label = "Draft peer metadata-ready query plan"
                 peer_reason = (
                     "A peer candidate is also direct-ready. Draft this explicit "
-                    "candidate_index when candidate review shows this path or "
+                    "candidate_selector when candidate review shows this path or "
                     "relation is the intended handoff."
                 )
             actions.append(
@@ -20460,7 +20464,7 @@ class DoxaBase:
                 seen_layout_iris.add(layout_iri)
                 arguments: dict[str, Any] = {
                     "iri": dataset_iri,
-                    "candidate_index": candidate_index,
+                    "candidate_selector": candidate.candidate_selector,
                     "physical_layout_iri": layout_iri,
                 }
                 if graph is not None and graph != "map":
@@ -20506,6 +20510,7 @@ class DoxaBase:
         graph: str | None = "map",
         engine: str = "duckdb",
         candidate_index: int | None = None,
+        candidate_selector: str | None = None,
         storage_access_iri: str | None = None,
         physical_layout_iri: str | None = None,
         allow_context_blocked_candidate: bool = False,
@@ -20519,6 +20524,7 @@ class DoxaBase:
                 context,
                 engine=engine_value,
                 candidate_index=candidate_index,
+                candidate_selector=candidate_selector,
                 storage_access_iri=storage_access_iri,
                 physical_layout_iri=physical_layout_iri,
                 allow_context_blocked_candidate=allow_context_blocked_candidate,
@@ -20541,9 +20547,11 @@ class DoxaBase:
             selection_status,
             selection_note,
             requested_storage_access_iri,
+            requested_candidate_selector,
         ) = self._draft_query_plan_select_candidate(
             context,
             candidate_index=candidate_index,
+            candidate_selector=candidate_selector,
             storage_access_iri=storage_access_iri,
             physical_layout_selected=physical_layout_selected,
         )
@@ -20695,8 +20703,14 @@ class DoxaBase:
             ),
             selection_mode=selection_mode,
             requested_candidate_index=candidate_index,
+            requested_candidate_selector=requested_candidate_selector,
             requested_storage_access_iri=requested_storage_access_iri,
             requested_physical_layout_iri=requested_physical_layout_iri,
+            selected_candidate_selector=(
+                selected_candidate.candidate_selector
+                if selected_candidate is not None
+                else None
+            ),
             selection_status=selection_status,
             selection_note=selection_note,
             selected_candidate_note=selected_candidate_note,
@@ -21659,6 +21673,7 @@ class DoxaBase:
         *,
         engine: str,
         candidate_index: int | None,
+        candidate_selector: str | None,
         storage_access_iri: str | None,
         physical_layout_iri: str | None,
         allow_context_blocked_candidate: bool,
@@ -21729,6 +21744,7 @@ class DoxaBase:
             ),
             selection_overridden=(
                 candidate_index is not None
+                or candidate_selector is not None
                 or storage_access_iri is not None
                 or physical_layout_iri is not None
             ),
@@ -21750,8 +21766,10 @@ class DoxaBase:
             unselected_direct_clean_candidate_indexes=[],
             selection_mode="not_applicable",
             requested_candidate_index=candidate_index,
+            requested_candidate_selector=candidate_selector,
             requested_storage_access_iri=storage_access_iri,
             requested_physical_layout_iri=physical_layout_iri,
+            selected_candidate_selector=None,
             selection_status="not_applicable_non_tabular_asset",
             selection_note=(
                 "Candidate selection is not applicable because the dataset "
@@ -21837,12 +21855,32 @@ class DoxaBase:
         context: QueryPlanningContext,
         *,
         candidate_index: int | None,
+        candidate_selector: str | None,
         storage_access_iri: str | None,
         physical_layout_selected: bool = False,
-    ) -> tuple[int | None, QueryTargetCandidate | None, str, str, str, str | None]:
-        if candidate_index is not None and storage_access_iri is not None:
+    ) -> tuple[
+        int | None,
+        QueryTargetCandidate | None,
+        str,
+        str,
+        str,
+        str | None,
+        str | None,
+    ]:
+        explicit_selectors = [
+            name
+            for name, value in (
+                ("candidate_index", candidate_index),
+                ("candidate_selector", candidate_selector),
+                ("storage_access_iri", storage_access_iri),
+            )
+            if value is not None
+        ]
+        if len(explicit_selectors) > 1:
             raise DoxaBaseError(
-                "Pass either candidate_index or storage_access_iri, not both."
+                "Pass only one explicit query target selector: "
+                + ", ".join(explicit_selectors)
+                + "."
             )
 
         if candidate_index is not None:
@@ -21861,6 +21899,60 @@ class DoxaBase:
                 "matched",
                 f"Caller selected candidate {candidate_index} by candidate_index.",
                 None,
+                None,
+            )
+
+        if candidate_selector is not None:
+            selector_value = candidate_selector.strip()
+            if not selector_value:
+                raise DoxaBaseError("candidate_selector must not be empty.")
+            matches = [
+                (index, candidate)
+                for index, candidate in enumerate(context.query_target_candidates)
+                if candidate.candidate_selector == selector_value
+            ]
+            if not matches:
+                snippets = "; ".join(
+                    self._draft_query_plan_candidate_selection_snippet(
+                        index,
+                        candidate,
+                    )
+                    for index, candidate in enumerate(
+                        context.query_target_candidates[:5]
+                    )
+                )
+                if len(context.query_target_candidates) > 5:
+                    snippets = f"{snippets}; ..."
+                raise DoxaBaseError(
+                    "candidate_selector did not match any query target "
+                    f"candidate: {selector_value}. Available candidates: "
+                    f"{snippets}"
+                )
+            if len(matches) > 1:
+                indexes = ", ".join(str(index) for index, _candidate in matches)
+                snippets = "; ".join(
+                    self._draft_query_plan_candidate_selection_snippet(
+                        index,
+                        candidate,
+                    )
+                    for index, candidate in matches
+                )
+                raise DoxaBaseError(
+                    "candidate_selector matched multiple query target "
+                    f"candidates ({indexes}): {snippets}."
+                )
+            selected_index, selected_candidate = matches[0]
+            return (
+                selected_index,
+                selected_candidate,
+                "candidate_selector",
+                "matched",
+                (
+                    "Caller selected candidate_selector "
+                    f"{selector_value}, matching candidate {selected_index}."
+                ),
+                None,
+                selector_value,
             )
 
         if storage_access_iri is not None:
@@ -21891,14 +21983,16 @@ class DoxaBase:
                 layout_note = (
                     " physical_layout_iri was matched, but storage_access_iri "
                     "still identifies multiple query target candidates; pass "
-                    "candidate_index for the exact path/relation."
+                    "candidate_selector for the stable path/relation, or "
+                    "candidate_index for a response-local fallback."
                     if physical_layout_selected
                     else ""
                 )
                 raise DoxaBaseError(
                     "storage_access_iri matched multiple query target candidates "
-                    f"({indexes}): {snippets}. Pass candidate_index for an "
-                    f"exact selection.{layout_note}"
+                    f"({indexes}): {snippets}. Pass candidate_selector for a "
+                    f"stable selection or candidate_index for an exact "
+                    f"response-local fallback.{layout_note}"
                 )
             selected_index, selected_candidate = matches[0]
             return (
@@ -21911,6 +22005,7 @@ class DoxaBase:
                     f"{storage_access_value}, matching candidate {selected_index}."
                 ),
                 storage_access_value,
+                None,
             )
 
         decision = context.query_target_decision
@@ -21928,6 +22023,7 @@ class DoxaBase:
                     f"{decision.candidate_index}."
                 ),
                 None,
+                None,
             )
         return (
             None,
@@ -21935,6 +22031,7 @@ class DoxaBase:
             "automatic",
             "automatic",
             "Automatic query_target_decision did not select a candidate.",
+            None,
             None,
         )
 
@@ -21953,6 +22050,7 @@ class DoxaBase:
             )
         parts = [
             f"candidate {index}",
+            f"candidate_selector={candidate.candidate_selector!r}",
             f"template_source={candidate.template_source}",
             f"source={source_label!r}",
             f"status={candidate.candidate_path_status}",
@@ -22271,6 +22369,7 @@ class DoxaBase:
         return DraftQueryPlanHandoffSummary(
             handoff_kind=handoff_kind,
             selected_candidate_index=source_context.selected_candidate_index,
+            selected_candidate_selector=source_context.selected_candidate_selector,
             selected_candidate_note=source_context.selected_candidate_note,
             scan_function=scan.function,
             uri_template=scan.uri_template,
@@ -23646,8 +23745,17 @@ class DoxaBase:
                 reason.severity in {"error", "warning"}
                 for reason in direct_review_reasons
             )
+            candidate_selector = self._query_target_candidate_selector(
+                template=template,
+                template_source=template_source,
+                source_resource_iri=source_resource.iri,
+                storage_access_iri=(
+                    access_resource.iri if access_resource is not None else None
+                ),
+            )
             candidates.append(
                 QueryTargetCandidate(
+                    candidate_selector=candidate_selector,
                     template=template,
                     template_source=template_source,
                     source_resource=source_resource,
@@ -23737,6 +23845,25 @@ class DoxaBase:
                 )
 
         return candidates
+
+    @staticmethod
+    def _query_target_candidate_selector(
+        *,
+        template: str,
+        template_source: str,
+        source_resource_iri: str,
+        storage_access_iri: str | None,
+    ) -> str:
+        payload = {
+            "template": template,
+            "template_source": template_source,
+            "source_resource_iri": source_resource_iri,
+            "storage_access_iri": storage_access_iri,
+        }
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
+        return f"query-target:{digest}"
 
     def _query_target_decision(
         self,
@@ -23906,7 +24033,7 @@ class DoxaBase:
         return (
             "Peer direct-ready query target candidate(s) exist. "
             f"{selection_note}; inspect "
-            f"candidate card(s) {indexes} or pass an explicit candidate_index "
+            f"candidate card(s) {indexes} or pass an explicit candidate_selector "
             "before unattended execution."
         )
 

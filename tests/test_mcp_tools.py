@@ -705,10 +705,10 @@ def test_project_brief_tool_routes_ready_query_handoffs_to_draft_plan(
     assert task["task_type"] == "query_plan_handoff"
     assert task["source"] == "draft_query_plan"
     assert task["suggested_next_action"]["tool_name"] == "draft_query_plan"
-    assert task["suggested_next_action"]["arguments"] == {
-        "iri": dataset,
-        "candidate_index": 0,
-    }
+    assert task["suggested_next_action"]["arguments"]["iri"] == dataset
+    task_selector = task["suggested_next_action"]["arguments"]["candidate_selector"]
+    assert isinstance(task_selector, str)
+    assert task_selector.startswith("query-target:")
 
 
 def test_project_brief_tool_marks_pending_staged_query_repairs(
@@ -6502,6 +6502,8 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     assert context["row_count_snapshot"] == 42
     assert context["query_target_decision"]["candidate_index"] == 0
     assert len(context["query_target_candidates"]) == 1
+    candidate_selector = context["query_target_candidates"][0]["candidate_selector"]
+    assert candidate_selector.startswith("query-target:")
     assert context["profile_summary"]["profile_run_candidates"][0][
         "evidence_iri"
     ] == shared_evidence
@@ -6539,11 +6541,23 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
 
     draft_action = context["suggested_next_actions"][1]
     assert draft_action["action_label"] == "Draft review-gated query plan"
-    assert draft_action["arguments"] == {"iri": dataset, "candidate_index": 0}
+    assert draft_action["arguments"] == {
+        "iri": dataset,
+        "candidate_selector": candidate_selector,
+    }
     draft = draft_query_plan_tool(db, **draft_action["arguments"])
     assert draft["handoff_kind"] == "metadata_review_required"
-    assert draft["source_context"]["selection_mode"] == "candidate_index"
+    assert draft["source_context"]["selection_mode"] == "candidate_selector"
     assert draft["source_context"]["selected_candidate_index"] == 0
+    assert draft["source_context"]["selected_candidate_selector"] == (
+        candidate_selector
+    )
+    assert draft["source_context"]["requested_candidate_selector"] == (
+        candidate_selector
+    )
+    assert draft["handoff_summary"]["selected_candidate_selector"] == (
+        candidate_selector
+    )
     assert draft["scan"]["uri_template"] == (
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     )
@@ -6605,13 +6619,16 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     ]
     assert context["unselected_direct_clean_candidate_indexes"] == []
     query_action = context["suggested_next_actions"][0]
+    selected_selector = context["query_target_candidates"][
+        context["query_target_decision"]["candidate_index"]
+    ]["candidate_selector"]
     assert query_action["tool_name"] == "draft_query_plan"
     assert query_action["action_label"] == (
         "Draft direct-clean candidate with context allowance"
     )
     assert query_action["arguments"] == {
         "iri": dataset,
-        "candidate_index": context["query_target_decision"]["candidate_index"],
+        "candidate_selector": selected_selector,
         "allow_context_blocked_candidate": True,
     }
     assert context["suggested_next_calls"] == [query_action["call"]]
@@ -7083,15 +7100,16 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
         for action in context["suggested_next_actions"]
         if action["action_label"] == "Select physical layout for draft"
     ]
+    candidate_selector = context["query_target_candidates"][0]["candidate_selector"]
     assert [action["arguments"] for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_index": 0,
+            "candidate_selector": candidate_selector,
             "physical_layout_iri": csv_layout["iri"],
         },
         {
             "iri": dataset,
-            "candidate_index": 0,
+            "candidate_selector": candidate_selector,
             "physical_layout_iri": parquet_layout["iri"],
         },
     ]
@@ -7232,6 +7250,12 @@ def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
         for index, target in enumerate(context["query_target_candidates"])
         if target["storage_access"]["iri"] == database_storage["iri"]
     )
+    local_selector = context["query_target_candidates"][local_index][
+        "candidate_selector"
+    ]
+    database_selector = context["query_target_candidates"][database_index][
+        "candidate_selector"
+    ]
     selection_actions = [
         action
         for action in context["suggested_next_actions"]
@@ -7240,13 +7264,13 @@ def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
 
     assert {
         (
-            action["arguments"]["candidate_index"],
+            action["arguments"]["candidate_selector"],
             action["arguments"]["physical_layout_iri"],
         )
         for action in selection_actions
     } == {
-        (local_index, csv_layout["iri"]),
-        (database_index, table_layout["iri"]),
+        (local_selector, csv_layout["iri"]),
+        (database_selector, table_layout["iri"]),
     }
 
     database_csv_plan = draft_query_plan_tool(
@@ -7322,6 +7346,12 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
         for index, candidate in enumerate(context["query_target_candidates"])
         if candidate["relation_identifier"] == "mart.orders_archive"
     )
+    relation_candidate_selector = context["query_target_candidates"][
+        relation_candidate_index
+    ]["candidate_selector"]
+    archive_candidate_selector = context["query_target_candidates"][
+        archive_candidate_index
+    ]["candidate_selector"]
 
     assert context["query_target_decision"]["status"] == "context_blocked"
     assert context["ready_candidate_indexes"] == []
@@ -7334,12 +7364,12 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     ] == [
         {
             "iri": dataset,
-            "candidate_index": relation_candidate_index,
+            "candidate_selector": relation_candidate_selector,
             "allow_context_blocked_candidate": True,
         },
         {
             "iri": dataset,
-            "candidate_index": archive_candidate_index,
+            "candidate_selector": archive_candidate_selector,
             "allow_context_blocked_candidate": True,
         },
     ]
@@ -7355,17 +7385,21 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     result = draft_query_plan_tool(
         db,
         iri=dataset,
-        candidate_index=relation_candidate_index,
+        candidate_selector=relation_candidate_selector,
         allow_context_blocked_candidate=True,
     )
 
-    assert result["source_context"]["selection_mode"] == "candidate_index"
+    assert result["source_context"]["selection_mode"] == "candidate_selector"
     assert result["source_context"]["selected_candidate_index"] == (
         relation_candidate_index
     )
-    assert result["source_context"]["requested_candidate_index"] == (
-        relation_candidate_index
+    assert result["source_context"]["selected_candidate_selector"] == (
+        relation_candidate_selector
     )
+    assert result["source_context"]["requested_candidate_selector"] == (
+        relation_candidate_selector
+    )
+    assert result["source_context"]["requested_candidate_index"] is None
     assert result["source_context"]["requested_storage_access_iri"] is None
     assert result["source_context"]["allow_context_blocked_candidate"] is True
     assert result["selected_candidate"]["storage_access"]["iri"] == (
@@ -7391,6 +7425,9 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
         "database_relation_template_missing"
     ]
     assert result["handoff_kind"] == "database_relation_handoff"
+    assert result["handoff_summary"]["selected_candidate_selector"] == (
+        relation_candidate_selector
+    )
 
     with pytest.raises(DoxaBaseError) as exc_info:
         draft_query_plan_tool(
@@ -7403,7 +7440,8 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert "storage_access_iri matched multiple query target candidates" in (
         error_message
     )
-    assert "Pass candidate_index for an exact selection" in error_message
+    assert "Pass candidate_selector for a stable selection" in error_message
+    assert f"candidate_selector='{relation_candidate_selector}'" in error_message
     assert "relation_identifier='mart.orders'" in error_message
     assert "relation_identifier='mart.orders_archive'" in error_message
 
@@ -7742,8 +7780,8 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         action
         for action in result["suggested_next_actions"]
         if action["tool_name"] == "draft_query_plan"
-        and action["arguments"].get("candidate_index")
-        == result["query_target_candidates"].index(object_candidate)
+        and action["arguments"].get("candidate_selector")
+        == object_candidate["candidate_selector"]
     ]
     assert peer_actions
 

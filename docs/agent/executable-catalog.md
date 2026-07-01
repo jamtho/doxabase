@@ -93,7 +93,9 @@ references before export.
    planning projection with readiness and an `issues` list for missing, risky,
    or informational physical metadata.
 3. Read `query_target_decision` first. Its zero-based `candidate_index` points
-   at the candidate to inspect first, while `status` tells whether that target is
+   at the candidate to inspect first, while each candidate's
+   `candidate_selector` is the stable value to pass back into
+   `draft_query_plan` after review. `status` tells whether that target is
    ready, blocked only by sibling context, directly review-only, or absent.
 4. Use `query_target_candidates` as supporting path/template cards. They preserve
    whether a template came from the dataset, a partition scheme, storage access,
@@ -147,7 +149,7 @@ references before export.
    relation handoffs, URI-template binding work, and execution-attempt-ready
    local/file/object drafts.
    If the automatic candidate is direct-clean but stale sibling storage or
-   partition metadata blocks the context, pass `candidate_index` or
+   partition metadata blocks the context, pass `candidate_selector` or
    `storage_access_iri` with `allow_context_blocked_candidate=True` to draft the
    selected route while preserving the automatic decision and context blocker
    audit fields. A selectorless automatic call with that flag records the
