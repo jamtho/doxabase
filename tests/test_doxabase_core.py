@@ -26982,6 +26982,65 @@ def test_record_query_result_preserves_database_relation_source_handle(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_dataset_context_slice_includes_query_result_observation_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    query_path = tmp_path / "orders_status_by_hour.sql"
+    query_path.write_text(
+        "select status, count(*) from orders group by status;\n",
+        encoding="utf-8",
+    )
+
+    result = db.record_query_result(
+        summary=(
+            "Orders status-by-hour aggregate was blocked because the local "
+            "partition files were not bundled."
+        ),
+        observed_asset=dataset,
+        observed_at="2026-07-01T12:00:00+00:00",
+        execution_status="blocked",
+        engine="duckdb",
+        query_source_path=str(query_path),
+        scanned_source_paths=[
+            "warehouse/orders/dt=2026-06-30/hour=12/orders.parquet"
+        ],
+        failure_summary="The reviewed Parquet path was absent from this capsule.",
+    )
+
+    context_slice = db.describe_context_slice(
+        dataset,
+        profile="deep_lore",
+        max_triples=250,
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert result.observation_iri in resources
+    assert result.evidence_iri in resources
+    assert result.source_span_iri in resources
+    assert result.scanned_source_span_iris[0] in resources
+    assert context_slice.route_counts["dataset_observation"] == 1
+    assert context_slice.route_counts["evidence"] == 1
+    assert context_slice.route_counts["source_span"] == 2
+    assert any(
+        route.route == "dataset_observation"
+        for route in resources[result.observation_iri].routes
+    )
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["dataset_observation"].meaning == (
+        "A bounded ordinary observation that names a selected dataset as its observed asset."
+    )
+    assert any(
+        triple.subject == result.evidence_iri
+        and triple.predicate == RC + "queryExecutionStatus"
+        and triple.object == "blocked"
+        for triple in context_slice.triples
+    )
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_query_result_rejects_conflicting_source_span_reuse_without_mutation(
     tmp_path: Path,
 ) -> None:

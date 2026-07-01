@@ -936,6 +936,11 @@ When `observed_asset` is supplied, the returned record includes
 `describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset
 results include `describe_query_context(iri=observed_asset)`. Use those actions
 before drafting another query plan or promoting profile-derived facts.
+Dataset-seeded `describe_context_slice(profile="dataset_brief"|"deep_lore")`
+also includes a bounded set of recent ordinary observations that name the
+dataset as `rc:observedAsset`, so blocked or failed query-result attempts remain
+discoverable from the dataset handoff. Seed the returned observation or
+`evidence_iri` directly when an export should carry only one attempt.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

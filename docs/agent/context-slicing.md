@@ -255,8 +255,11 @@ staged/privacy review, run `export_preflight(export_kind="handoff_bundle")` or
 the grouped staged/profile export with `fail_on_sensitive=True` rather than
 treating a clean slice as whole-capsule privacy clearance.
 When a broad handoff blocks on unrelated graph content but the intended artifact
-is a recorded query result or query failure, seed
-`preflight_context_slice_export` / `export_context_slice` with the
+is a recorded query result or query failure, first inspect the dataset with
+`describe_context_slice(profile="deep_lore")`; dataset slices include a bounded
+set of recent ordinary observations that name the dataset as `rc:observedAsset`,
+including blocked or failed `record_query_result` attempts. For the narrowest
+export, seed `preflight_context_slice_export` / `export_context_slice` with the
 `evidence_iri` returned by `record_query_result` and use
 `profile="resource_brief"`. That slice carries query status and source-span
 evidence without importing unrelated dirty map siblings.

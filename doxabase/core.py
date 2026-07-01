@@ -11399,6 +11399,7 @@ class DoxaBase:
         resource_brief_recovery_actions: dict[tuple[str, str], SuggestedNextAction] = {}
         resource_brief_graphs = self._context_slice_graphs(profile="resource_brief")
         resource_brief_route_limit = 25
+        dataset_observation_route_limit = 5
 
         def resource_brief_export_path(seed_iri: str, suffix: str) -> str:
             label = re.sub(r"[^A-Za-z0-9]+", "-", self._local_name(seed_iri))
@@ -12187,6 +12188,34 @@ class DoxaBase:
                     depth + 1,
                     route="unmapped_column_profile_observation",
                     route_label="unmapped column profile observation",
+                )
+            dataset_observation_iris = self._ordinary_observation_iris_for_target(
+                target_iri=dataset_iri,
+                target_predicate="rc:observedAsset",
+            )
+            selected_dataset_observation_iris = dataset_observation_iris[
+                :dataset_observation_route_limit
+            ]
+            omitted_dataset_observation_count = len(dataset_observation_iris) - len(
+                selected_dataset_observation_iris
+            )
+            if omitted_dataset_observation_count > 0:
+                warnings.append(
+                    "Dataset "
+                    f"'{dataset_iri}' has {len(dataset_observation_iris)} ordinary "
+                    "observed-asset observation(s); included "
+                    f"{len(selected_dataset_observation_iris)} and omitted "
+                    f"{omitted_dataset_observation_count}. Seed a returned "
+                    "observation or search the observations graph when older "
+                    "query-result attempts matter."
+                )
+            for observation_iri in selected_dataset_observation_iris:
+                add_observation(
+                    observation_iri,
+                    dataset_iri,
+                    depth + 1,
+                    route="dataset_observation",
+                    route_label="dataset observation",
                 )
             for layout in dataset.physical_layouts:
                 add_resource(
@@ -14062,6 +14091,7 @@ class DoxaBase:
             "reconsidered_claim": 12,
             "reconsidering_claim": 12,
             "supporting_observation": 13,
+            "dataset_observation": 13,
             "dataset_profile_observation": 13,
             "column_profile_observation": 13,
             "unmapped_column_profile_observation": 13,
@@ -14112,6 +14142,7 @@ class DoxaBase:
             "reconsidered_claim",
             "reconsidering_claim",
             "supporting_observation",
+            "dataset_observation",
             "dataset_profile_observation",
             "column_profile_observation",
             "unmapped_column_profile_observation",
@@ -14236,6 +14267,9 @@ class DoxaBase:
             "reconsidered_claim": "An earlier claim named by a reconsideration.",
             "reconsidering_claim": "A later claim that reconsiders the selected claim.",
             "supporting_observation": "An observation supporting a selected pattern or claim.",
+            "dataset_observation": (
+                "A bounded ordinary observation that names a selected dataset as its observed asset."
+            ),
             "seed_observation": "A seed resource expanded as an ordinary observation.",
             "dataset_profile_observation": (
                 "A bounded dataset-level profile observation returned by the selected dataset context."
@@ -26878,6 +26912,40 @@ class DoxaBase:
                 is None
             )
         ]
+
+    def _ordinary_observation_iris_for_target(
+        self,
+        *,
+        target_iri: str,
+        target_predicate: str,
+    ) -> list[str]:
+        observation_graphs = ["observations"]
+        observation_type = self.expand_iri("rc:Observation")
+        profile_type = self.expand_iri("rc:ProfileObservation")
+        observation_iris = [
+            observation_iri
+            for observation_iri in self._subjects(
+                observation_graphs,
+                target_predicate,
+                target_iri,
+            )
+            if observation_type
+            in self._types_from_graphs(observation_graphs, observation_iri)
+            and profile_type
+            not in self._types_from_graphs(observation_graphs, observation_iri)
+        ]
+        observation_iris.sort(key=self._ordinary_observation_sort_key, reverse=True)
+        return observation_iris
+
+    def _ordinary_observation_sort_key(self, observation_iri: str) -> tuple[str, str, str]:
+        observation_graphs = ["observations"]
+        return (
+            self._first_object(observation_graphs, observation_iri, "rc:observedAt")
+            or "",
+            self._first_object(observation_graphs, observation_iri, "rc:summary")
+            or "",
+            observation_iri,
+        )
 
     def _profile_observation_count_for_target(
         self,
