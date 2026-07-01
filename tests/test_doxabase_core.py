@@ -30033,6 +30033,16 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
         ),
     }
     assert "no separate persisted profile-run node" in profile_run.retrieval_note
+    assert [action.tool_name for action in profile_run.suggested_next_actions] == [
+        "draft_profile_map_updates"
+    ]
+    assert profile_run.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    assert profile_run.suggested_next_calls == [
+        action.call for action in profile_run.suggested_next_actions
+    ]
 
     capped = db.describe_profile_run(dataset, shared_evidence, limit=3)
 
@@ -30040,6 +30050,18 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
     assert capped.total_profile_count == 9
     assert capped.omitted_profile_count == 6
     assert len(capped.profile_observation_iris) == 3
+    assert [action.tool_name for action in capped.suggested_next_actions] == [
+        "describe_profile_run",
+        "draft_profile_map_updates",
+    ]
+    assert capped.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    assert capped.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
 
 
 def test_describe_profile_run_works_for_observation_only_dataset(
@@ -30116,6 +30138,9 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert profile_run.returned_dataset_profile_count == 1
     assert profile_run.returned_unmapped_column_profile_count == 1
     assert profile_run.returned_profile_count == 2
+    assert [action.tool_name for action in profile_run.suggested_next_actions] == [
+        "draft_profile_map_updates"
+    ]
 
 
 def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snapshot(

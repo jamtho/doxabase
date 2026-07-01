@@ -3879,6 +3879,12 @@ few useful gaps:
   the draft profile quality summary and sampled-evidence caution, so generic
   Profile Route Bridge rows warn about sampled profile scope for those repairs
   too.
+- A profile metrics trial found profile drafts and follow-through were
+  structurally routable, but a cold agent landing on `describe_profile_run`
+  alone had to know the next step from docs or bundle handoff. Profile-run
+  descriptions now expose `suggested_next_actions`: capped runs first route to
+  an uncapped profile-run read, then to `draft_profile_map_updates`; uncapped
+  runs route directly to the draft.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -3214,6 +3214,8 @@ class ProfileRunDescription:
     mapped_column_profile_observations: list[ProfileObservationSummary]
     unmapped_column_profile_observations: list[ProfileObservationSummary]
     retrieval_note: str
+    suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
+    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -15690,6 +15692,13 @@ class DoxaBase:
                 profile.row_count,
                 set(),
             ).add(self._profile_observation_basis(profile))
+        suggested_next_actions = self._describe_profile_run_suggested_actions(
+            dataset_iri=dataset_value,
+            evidence_iri=evidence_value,
+            graph=graph,
+            limit=limit,
+            omitted_profile_count=omitted_profile_count,
+        )
 
         return ProfileRunDescription(
             dataset=self._privacy_redacted_resource_summary(
@@ -15740,7 +15749,73 @@ class DoxaBase:
                 "observations for this dataset that link to the requested evidence "
                 "IRI; no separate persisted profile-run node is implied."
             ),
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
+
+    def _describe_profile_run_suggested_actions(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        graph: str | None,
+        limit: int | None,
+        omitted_profile_count: int,
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        graph_argument = graph if graph != "map" else None
+        if limit is not None and omitted_profile_count > 0:
+            arguments: dict[str, Any] = {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": evidence_iri,
+            }
+            if graph_argument is not None or graph is None:
+                arguments["graph"] = graph
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Expand full profile run",
+                    tool_name="describe_profile_run",
+                    mcp_tool_name="doxabase.describe_profile_run",
+                    arguments=arguments,
+                    reason=(
+                        "This response was capped and omitted profile "
+                        "observations. Expand the full shared-evidence run "
+                        "before drafting map updates or advisory follow-through."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_profile_run",
+                        arguments,
+                    ),
+                )
+            )
+
+        draft_arguments: dict[str, Any] = {
+            "dataset_iri": dataset_iri,
+            "evidence_iri": evidence_iri,
+        }
+        if graph_argument is not None or graph is None:
+            draft_arguments["graph"] = graph
+        actions.append(
+            SuggestedNextAction(
+                action_label="Draft profile map updates",
+                tool_name="draft_profile_map_updates",
+                mcp_tool_name="doxabase.draft_profile_map_updates",
+                arguments=draft_arguments,
+                reason=(
+                    "Compare this shared-evidence profile run with current map "
+                    "facts, then route profile map updates, scalar conflicts, "
+                    "metric vocabulary, type findings, and query-context "
+                    "review lanes before staging changes."
+                ),
+                call=self._suggested_call_string(
+                    "draft_profile_map_updates",
+                    draft_arguments,
+                ),
+            )
+        )
+        return actions
 
     def draft_profile_map_updates(
         self,

@@ -9429,6 +9429,16 @@ def test_record_observation_tool_accepts_profile_type_findings(
     assert profile["iri"] == result["observation_iri"]
     assert profile["observed_physical_type"]["iri"] == RC + "Integer"
     assert profile["observed_value_type"]["iri"] == value_type
+    assert [
+        action["tool_name"] for action in profile_run["suggested_next_actions"]
+    ] == ["draft_profile_map_updates"]
+    assert profile_run["suggested_next_actions"][0]["arguments"] == {
+        "dataset_iri": dataset,
+        "evidence_iri": result["evidence_iri"],
+    }
+    assert profile_run["suggested_next_calls"] == [
+        action["call"] for action in profile_run["suggested_next_actions"]
+    ]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

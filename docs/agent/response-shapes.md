@@ -1763,6 +1763,8 @@ profile_run.dataset_profile_observations
 profile_run.mapped_column_profile_observations
 profile_run.unmapped_column_profile_observations
 profile_run.retrieval_note
+profile_run.suggested_next_actions
+profile_run.suggested_next_calls
 ```
 
 Use `describe_profile_run` when a `profile_run_candidates[]` entry identifies
@@ -1777,6 +1779,11 @@ per-observation basis labels such as `full_scan`, `sample`, or `unknown`; use
 `row_count_snapshot_basis` to see the collapsed matching-snapshot basis, which
 may be `mixed`, and keep the profile-run step aligned with the candidate warning
 from `profile_summary.profile_run_candidates[]`.
+Follow `suggested_next_actions` from the run itself when continuing from cold
+context. Capped runs with omitted observations first suggest an uncapped
+`describe_profile_run` call, then `draft_profile_map_updates`; uncapped runs
+suggest the draft directly so profile map updates, scalar conflicts,
+metric/type advisories, and query-context review lanes stay grouped.
 
 ### Profile Map Update Drafts
 

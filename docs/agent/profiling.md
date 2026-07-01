@@ -62,7 +62,9 @@ Then call `describe_profile_run(dataset_iri, evidence_iri)` when bounded dataset
 context omitted rows or when you need the full run before drafting map changes.
 For exact response fields, read the `response_shapes` section
 "Describe Profile Run"; count fields are named `returned_profile_count` and
-`total_profile_count`.
+`total_profile_count`. Follow the run's `suggested_next_actions`: if the run was
+capped, expand it first, then call `draft_profile_map_updates`; otherwise the
+draft action is the direct next step.
 
 For route-explained handoffs, use `describe_context_slice` with
 `profile="dataset_brief"` for table/profile summaries or seed the slice with a
