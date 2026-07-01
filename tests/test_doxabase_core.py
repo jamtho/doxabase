@@ -2986,6 +2986,21 @@ def test_export_preflight_returns_scanner_clean_export_action(
     assert handoff_preflight.warnings == [handoff_preflight.scanner_note]
     handoff_action = handoff_preflight.suggested_next_actions[0]
     assert handoff_action.tool_name == "export_handoff_bundle"
+    assert handoff_action.required_extra_arguments == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert handoff_action.placeholder_fields == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert handoff_action.reviewed_value_fields == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
     assert handoff_action.arguments["manifest_path"] == "<handoff-manifest.json>"
 
 
@@ -3818,8 +3833,14 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
     ]
     handoff_action = preflight.suggested_next_actions[1]
     assert handoff_action.arguments["revision_iris"] == [staged.revision_iri]
+    assert handoff_action.arguments["manifest_path"] == "<handoff-manifest.json>"
     assert handoff_action.arguments["graphs"] == ["project"]
     assert handoff_action.arguments["fail_on_sensitive"] is True
+    assert handoff_action.placeholder_fields == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
 
     export_path = tmp_path / "revision-context.trig"
     export = db.export_context_slice(

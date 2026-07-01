@@ -1120,8 +1120,12 @@ selected triples include `history`.
 action. If the selected triples include `history`, both helpers warn that the
 slice is not a recovery-complete revision handoff. Scanner-clean responses
 include an `export_handoff_bundle` action, optionally narrowed to the revision
-IRIs visible in the slice; blocked responses route to `export_preflight` for
-the handoff bundle before any artifact write. The helper scans only the selected
+IRIs visible in the slice. That action's path arguments are placeholders and
+carry `required_extra_arguments`, `placeholder_fields`, and
+`reviewed_value_fields` for `trig_path`, `revision_snapshot_path`, and
+`manifest_path`; replace them with reviewed output paths before calling the
+export helper. Blocked responses route to `export_preflight` for the handoff
+bundle before any artifact write. The helper scans only the selected
 context-slice export triples
 and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
 imported into a fresh capsule without immutable-seed privileges. Set
@@ -5135,6 +5139,11 @@ with `fail_on_sensitive=True`; blocked preflights suggest the redacted graph sca
 and/or a snapshot-only `export_preflight(export_kind="revision_snapshots", ...)`
 for snapshot review, so low match limits cannot let graph matches hide stored
 snapshot matches.
+For clean `handoff_bundle` preflights, the `export_handoff_bundle` suggestion
+uses placeholder output paths. Its `required_extra_arguments`,
+`placeholder_fields`, and `reviewed_value_fields` all contain `trig_path`,
+`revision_snapshot_path`, and `manifest_path`; fill all three with reviewed
+output paths before writing the handoff.
 When a blocked graph or handoff preflight suggests
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`, the
 suggested action includes `required_extra_arguments=["seed_iris"]`,

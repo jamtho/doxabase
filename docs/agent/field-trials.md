@@ -4063,6 +4063,12 @@ few useful gaps:
   `mutates_project_graph=false`, `writes_history=false`, and
   `writes_files=false` so agents can route it as read-only review before the
   real restage mutation.
+- A handoff/privacy trial found clean handoff preflight and history-bearing
+  context-slice routes were safe end to end, but their
+  `export_handoff_bundle` suggestions carried placeholder paths that agents had
+  to detect by angle brackets. Those suggestions now mark `trig_path`,
+  `revision_snapshot_path`, and `manifest_path` as required placeholder
+  reviewed fields before writing the paired handoff artifacts.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

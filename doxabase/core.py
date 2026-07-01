@@ -55434,6 +55434,7 @@ class DoxaBase:
                 handoff_arguments = {
                     "trig_path": "<project-handoff.trig>",
                     "revision_snapshot_path": "<revision-snapshots.json>",
+                    "manifest_path": "<handoff-manifest.json>",
                     "graphs": ["project"],
                     "fail_on_sensitive": True,
                 }
@@ -55456,8 +55457,29 @@ class DoxaBase:
                     "handoff bundle for exact revision recovery in another "
                     "capsule."
                 )
+            placeholder_fields = [
+                field
+                for field in (
+                    "trig_path",
+                    "revision_snapshot_path",
+                    "manifest_path",
+                )
+                if field in handoff_arguments
+            ]
+            action_class = (
+                SuggestedNextAction
+                if would_block_sensitive_export
+                else TemplatedSuggestedNextAction
+            )
+            action_kwargs: dict[str, Any] = {}
+            if not would_block_sensitive_export:
+                action_kwargs = {
+                    "required_extra_arguments": placeholder_fields,
+                    "placeholder_fields": placeholder_fields,
+                    "reviewed_value_fields": placeholder_fields,
+                }
             actions.append(
-                SuggestedNextAction(
+                action_class(
                     action_label=action_label,
                     tool_name=tool_name,
                     mcp_tool_name=f"doxabase.{tool_name}",
@@ -55467,6 +55489,7 @@ class DoxaBase:
                         tool_name,
                         handoff_arguments,
                     ),
+                    **action_kwargs,
                 )
             )
         return actions
@@ -57393,14 +57416,33 @@ class DoxaBase:
                 "content changes before export."
             )
 
+        action_class = SuggestedNextAction
+        action_kwargs: dict[str, Any] = {}
+        if (
+            record.export_kind == "handoff_bundle"
+            and tool_name == "export_handoff_bundle"
+        ):
+            placeholder_fields = [
+                "trig_path",
+                "revision_snapshot_path",
+                "manifest_path",
+            ]
+            action_class = TemplatedSuggestedNextAction
+            action_kwargs = {
+                "required_extra_arguments": placeholder_fields,
+                "placeholder_fields": placeholder_fields,
+                "reviewed_value_fields": placeholder_fields,
+            }
+
         return [
-            SuggestedNextAction(
+            action_class(
                 action_label=action_label,
                 tool_name=tool_name,
                 mcp_tool_name=f"doxabase.{tool_name}",
                 arguments=arguments,
                 reason=reason,
                 call=self._suggested_call_string(tool_name, arguments),
+                **action_kwargs,
             )
         ]
 

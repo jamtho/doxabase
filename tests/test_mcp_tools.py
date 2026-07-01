@@ -1938,6 +1938,44 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     assert fake_secret not in json.dumps(result)
 
 
+def test_export_preflight_tool_marks_handoff_path_placeholders(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+    )
+
+    result = export_preflight_tool(db, export_kind="handoff_bundle")
+
+    assert result["decision"] == "clean_by_scanner_only"
+    action = result["suggested_next_actions"][0]
+    assert action["tool_name"] == "export_handoff_bundle"
+    assert action["arguments"]["trig_path"] == "<project-handoff.trig>"
+    assert action["arguments"]["revision_snapshot_path"] == (
+        "<revision-snapshots.json>"
+    )
+    assert action["arguments"]["manifest_path"] == "<handoff-manifest.json>"
+    assert action["required_extra_arguments"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert action["placeholder_fields"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert action["reviewed_value_fields"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+
+
 def test_mcp_export_tools_block_sensitive_predicate_iris(
     tmp_path: Path,
 ) -> None:
@@ -9579,6 +9617,24 @@ def test_context_slice_export_tool_warns_history_not_recovery_handoff(
     handoff_action = preflight["suggested_next_actions"][1]
     assert handoff_action["mcp_tool_name"] == "doxabase.export_handoff_bundle"
     assert handoff_action["arguments"]["revision_iris"] == [staged["revision_iri"]]
+    assert handoff_action["arguments"]["manifest_path"] == (
+        "<handoff-manifest.json>"
+    )
+    assert handoff_action["required_extra_arguments"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert handoff_action["placeholder_fields"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
+    assert handoff_action["reviewed_value_fields"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
+    ]
 
     export_path = tmp_path / "revision-context.trig"
     export = export_context_slice_tool(
@@ -9597,6 +9653,14 @@ def test_context_slice_export_tool_warns_history_not_recovery_handoff(
     ] == ["export_handoff_bundle"]
     assert export["suggested_next_actions"][0]["arguments"]["revision_iris"] == [
         staged["revision_iri"]
+    ]
+    assert export["suggested_next_actions"][0]["arguments"]["manifest_path"] == (
+        "<handoff-manifest.json>"
+    )
+    assert export["suggested_next_actions"][0]["placeholder_fields"] == [
+        "trig_path",
+        "revision_snapshot_path",
+        "manifest_path",
     ]
 
 
