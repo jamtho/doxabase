@@ -1705,6 +1705,13 @@ proposal named as review context. Older revisions may report
 `exact_changed_triples_available=False` if no snapshot rows were stored.
 Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.
+Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
+`suggested_next_actions` carry `mutation_scope`, `mutates_project_graph`,
+`writes_history`, `writes_files`, and `writes_storage`. Use these fields before
+following a compact action: `apply_staged_revision` is
+`project_graph_and_history`, staged/restage helpers are `history`,
+`import_revision_snapshots` is `snapshot_storage`, exports are `file_export`,
+and inspection/draft helpers are `none`.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
 `draft_staged_revision_rebase()` is a read-only repair/rebase planner for one

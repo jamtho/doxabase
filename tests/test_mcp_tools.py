@@ -3123,6 +3123,11 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["not_restageable_reason"] == "ready"
     assert lane["exact_drift_summary"] == []
     assert lane["next_action"]["tool_name"] == "apply_staged_revision"
+    assert lane["next_action"]["mutation_scope"] == "project_graph_and_history"
+    assert lane["next_action"]["mutates_project_graph"] is True
+    assert lane["next_action"]["writes_history"] is True
+    assert lane["next_action"]["writes_files"] is False
+    assert lane["next_action"]["writes_storage"] is False
     assert lane["next_action_queue_item"]["resolved_target_iri"] == (
         staged["revision_iri"]
     )
@@ -3136,6 +3141,11 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["first_mutation_call"] == lane["next_action"]["call"]
     review_action = result["suggested_next_actions"][0]
     assert review_action["tool_name"] == "describe_staged_revision"
+    assert review_action["mutation_scope"] == "none"
+    assert review_action["mutates_project_graph"] is False
+    assert review_action["writes_history"] is False
+    assert review_action["writes_files"] is False
+    assert review_action["writes_storage"] is False
     assert result["first_safe_review_or_mutation_action"] == review_action
     assert (
         result["first_safe_review_or_mutation_call"]
@@ -3648,6 +3658,7 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     assert batch_action["mutates_project_graph"] is False
     assert batch_action["writes_history"] is False
     assert batch_action["writes_files"] is False
+    assert batch_action["writes_storage"] is False
     assert result["first_mutation_action"] == result["mutation_frontier_items"][0][
         "action"
     ]
@@ -3769,6 +3780,11 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
     assert check["status"] == "ready"
     assert check["can_apply"] is True
     assert check["next_action"]["tool_name"] == "apply_staged_revision"
+    assert check["next_action"]["mutation_scope"] == "project_graph_and_history"
+    assert check["next_action"]["mutates_project_graph"] is True
+    assert check["next_action"]["writes_history"] is True
+    assert check["next_action"]["writes_files"] is False
+    assert check["next_action"]["writes_storage"] is False
     assert check["snapshot_evidence"]["status"] == "history_only_count_digest"
     assert check["snapshot_evidence_completeness"] == "history-only"
     assert check["mutation_allowed_after"] == (
@@ -3780,6 +3796,10 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
     assert check["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
     )
+    assert check["suggested_next_actions"][0]["mutation_scope"] == (
+        "snapshot_storage"
+    )
+    assert check["suggested_next_actions"][0]["writes_storage"] is True
     assert any(
         action["tool_name"] == "apply_staged_revision"
         for action in check["suggested_next_actions"][1:]
@@ -3789,6 +3809,8 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
         "import_revision_snapshots"
     )
     assert check["first_safe_next_action"]["queue"] == "complete_handoff_import"
+    assert check["first_safe_next_action"]["mutation_scope"] == "snapshot_storage"
+    assert check["first_safe_next_action"]["writes_storage"] is True
     assert check["first_safe_next_call"] == check["blocking_preflight_calls"][0]
 
 

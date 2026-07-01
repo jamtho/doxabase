@@ -4160,6 +4160,13 @@ few useful gaps:
   candidate is a safe single apply, blocked by named open lanes, inspect-only
   support, or a human semantic choice before following generic staged-revision
   apply queues.
+- A staged-recovery trial found ordering blocking preflight first was helpful,
+  but compact `next_action` and `first_safe_next_action` payloads still required
+  callers to infer effects from tool names. Staged-revision next actions and
+  effect-annotated suggested actions now expose `mutation_scope`,
+  `mutates_project_graph`, `writes_history`, `writes_files`, and
+  `writes_storage`, distinguishing snapshot-storage imports, file exports,
+  history-only staging/restage work, and graph-applying mutations.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

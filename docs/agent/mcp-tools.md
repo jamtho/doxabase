@@ -2172,6 +2172,10 @@ is blocking, these fields point at the first blocking import/preflight action
 and `first_mutation_action` is empty; after the preflight clears, they point at
 an earlier read-only or `mutation_scope="none"` review suggestion when present,
 otherwise at the first mutation-frontier action.
+Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
+`suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
+`writes_history`, `writes_files`, and `writes_storage`; use those fields before
+executing an unattended action.
 
 Read `lanes[]` first. Each lane names the `source_revision_iri`,
 `current_revision_iri`, `lane`, `batch_action`, status/decision before and

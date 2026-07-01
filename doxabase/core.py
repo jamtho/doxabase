@@ -285,6 +285,96 @@ STAGED_RECOVERY_MUTATING_TOOL_NAMES = frozenset(
     }
 )
 
+STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES = frozenset(
+    {
+        "apply_staged_revision",
+        "record_staged_revision_review_decision",
+        "restage_staged_revision",
+        "restage_staged_revisions",
+        "stage_graph_revision",
+        "stage_map_assertion_change",
+        "stage_pattern_promotion",
+        "stage_profile_map_updates",
+        "stage_systematisation",
+    }
+)
+STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES = frozenset(
+    {
+        "apply_staged_revision",
+        "import_trig",
+    }
+)
+STAGED_ACTION_FILE_WRITING_TOOL_NAMES = frozenset(
+    {
+        "export_staged_revision",
+        "export_staged_revisions",
+    }
+)
+STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES = frozenset(
+    {
+        "import_revision_snapshots",
+    }
+)
+
+
+def staged_action_effect_metadata(
+    tool_name: str | None,
+    arguments: MappingABC[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Classify the write effects of staged-revision workflow actions."""
+
+    if tool_name is None:
+        return {
+            "mutation_scope": "none",
+            "mutates_project_graph": False,
+            "writes_history": False,
+            "writes_files": False,
+            "writes_storage": False,
+        }
+
+    action_arguments = arguments or {}
+    if (
+        tool_name == "restage_staged_revisions"
+        and action_arguments.get("dry_run") is True
+    ):
+        return {
+            "mutation_scope": "none",
+            "mutates_project_graph": False,
+            "writes_history": False,
+            "writes_files": False,
+            "writes_storage": False,
+        }
+
+    mutates_project_graph = (
+        tool_name in STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES
+    )
+    writes_files = tool_name in STAGED_ACTION_FILE_WRITING_TOOL_NAMES
+    writes_storage = tool_name in STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES
+    writes_history = tool_name in STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES
+    if tool_name == "import_trig":
+        writes_history = True
+
+    if tool_name == "apply_staged_revision":
+        mutation_scope = "project_graph_and_history"
+    elif mutates_project_graph:
+        mutation_scope = "project_graph_import"
+    elif writes_history:
+        mutation_scope = "history"
+    elif writes_storage:
+        mutation_scope = "snapshot_storage"
+    elif writes_files:
+        mutation_scope = "file_export"
+    else:
+        mutation_scope = "none"
+
+    return {
+        "mutation_scope": mutation_scope,
+        "mutates_project_graph": mutates_project_graph,
+        "writes_history": writes_history,
+        "writes_files": writes_files,
+        "writes_storage": writes_storage,
+    }
+
 
 def to_jsonable(value: Any) -> Any:
     """Return a JSON-like plain-Python representation of DoxaBase API values."""
@@ -4022,6 +4112,7 @@ class EffectAnnotatedSuggestedNextAction(SuggestedNextAction):
     mutates_project_graph: bool
     writes_history: bool
     writes_files: bool
+    writes_storage: bool = False
 
 
 @dataclass(frozen=True)
@@ -4089,6 +4180,16 @@ class RevisionNextAction:
     reason: str
     call: str | None
     source: str
+    mutation_scope: str = field(init=False)
+    mutates_project_graph: bool = field(init=False)
+    writes_history: bool = field(init=False)
+    writes_files: bool = field(init=False)
+    writes_storage: bool = field(init=False)
+
+    def __post_init__(self) -> None:
+        effect = staged_action_effect_metadata(self.tool_name, self.arguments)
+        for key, value in effect.items():
+            object.__setattr__(self, key, value)
 
 
 @dataclass(frozen=True)
@@ -7931,13 +8032,11 @@ class DoxaBase:
             action_label: str,
         ) -> None:
             actions.append(
-                SuggestedNextAction(
+                self._effect_annotated_suggested_next_action(
                     action_label=action_label,
                     tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=arguments,
                     reason=reason,
-                    call=self._suggested_call_string(tool_name, arguments),
                 )
             )
 
@@ -9855,13 +9954,36 @@ class DoxaBase:
             or next_action.call is None
         ):
             return None
-        return SuggestedNextAction(
+        return EffectAnnotatedSuggestedNextAction(
             action_label=next_action.action_label,
             tool_name=next_action.tool_name,
             mcp_tool_name=next_action.mcp_tool_name,
             arguments=next_action.arguments,
             reason=next_action.reason,
             call=next_action.call,
+            mutation_scope=next_action.mutation_scope,
+            mutates_project_graph=next_action.mutates_project_graph,
+            writes_history=next_action.writes_history,
+            writes_files=next_action.writes_files,
+            writes_storage=next_action.writes_storage,
+        )
+
+    def _effect_annotated_suggested_next_action(
+        self,
+        *,
+        action_label: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+        reason: str,
+    ) -> EffectAnnotatedSuggestedNextAction:
+        return EffectAnnotatedSuggestedNextAction(
+            action_label=action_label,
+            tool_name=tool_name,
+            mcp_tool_name=f"doxabase.{tool_name}",
+            arguments=arguments,
+            reason=reason,
+            call=self._suggested_call_string(tool_name, arguments),
+            **staged_action_effect_metadata(tool_name, arguments),
         )
 
     @staticmethod
@@ -10536,13 +10658,11 @@ class DoxaBase:
             arguments: dict[str, Any],
             reason: str,
         ) -> SuggestedNextAction:
-            return SuggestedNextAction(
+            return self._effect_annotated_suggested_next_action(
                 action_label=action_label,
                 tool_name=tool_name,
-                mcp_tool_name=f"doxabase.{tool_name}",
                 arguments=arguments,
                 reason=reason,
-                call=self._suggested_call_string(tool_name, arguments),
             )
 
         preferred_actions = [
@@ -44717,14 +44837,12 @@ class DoxaBase:
                     "content appears before export."
                 )
             actions.append(
-                SuggestedNextAction(
+                self._effect_annotated_suggested_next_action(
                     action_label=action_label
                     or self._suggested_action_label(tool_name),
                     tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=arguments,
                     reason=reason,
-                    call=self._suggested_call_string(tool_name, arguments),
                 )
             )
 
@@ -45376,16 +45494,11 @@ class DoxaBase:
             "successor instead of a raw restage that would add a competing "
             f"{replacement_label} value."
         )
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Stage same-slot replacement",
             tool_name="stage_map_assertion_change",
-            mcp_tool_name="doxabase.stage_map_assertion_change",
             arguments=arguments,
             reason=reason,
-            call=self._suggested_call_string(
-                "stage_map_assertion_change",
-                arguments,
-            ),
         )
 
     def _staged_ambiguous_same_slot_review_action(
@@ -45525,16 +45638,11 @@ class DoxaBase:
             "stage an explicit repair or replacement instead of mechanically "
             "restaging the stale patch."
         )
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Review ambiguous same-slot conflict",
             tool_name="describe_assertion_support",
-            mcp_tool_name="doxabase.describe_assertion_support",
             arguments=arguments,
             reason=reason,
-            call=self._suggested_call_string(
-                "describe_assertion_support",
-                arguments,
-            ),
         )
 
     def _staged_same_slot_replacement_label(
@@ -45661,16 +45769,11 @@ class DoxaBase:
             exact_action = find_exact_action(action_label=action_label)
             if exact_action is not None:
                 return exact_action
-            return SuggestedNextAction(
+            return self._effect_annotated_suggested_next_action(
                 action_label=action_label,
                 tool_name="describe_staged_revision",
-                mcp_tool_name="doxabase.describe_staged_revision",
                 arguments={"iri": successor_iri},
                 reason=reason,
-                call=self._suggested_call_string(
-                    "describe_staged_revision",
-                    {"iri": successor_iri},
-                ),
             )
 
         def applied_successor_action(
@@ -45682,16 +45785,11 @@ class DoxaBase:
             exact_action = find_exact_action(action_label=action_label)
             if exact_action is not None:
                 return exact_action
-            return SuggestedNextAction(
+            return self._effect_annotated_suggested_next_action(
                 action_label=action_label,
                 tool_name="describe_graph_revision",
-                mcp_tool_name="doxabase.describe_graph_revision",
                 arguments={"iri": applied_revision_iri},
                 reason=reason,
-                call=self._suggested_call_string(
-                    "describe_graph_revision",
-                    {"iri": applied_revision_iri},
-                ),
             )
 
         action_type = "inspect_staged_revision"
@@ -45711,16 +45809,11 @@ class DoxaBase:
             queue = "inspect_already_applied"
             label = "Inspect applied event"
             reason = "Inspect the applied revision event for durable history context."
-            selected_action = SuggestedNextAction(
+            selected_action = self._effect_annotated_suggested_next_action(
                 action_label=label,
                 tool_name="describe_graph_revision",
-                mcp_tool_name="doxabase.describe_graph_revision",
                 arguments={"iri": revision_iri},
                 reason=reason,
-                call=self._suggested_call_string(
-                    "describe_graph_revision",
-                    {"iri": revision_iri},
-                ),
             )
         elif stale_resolution_state == "stale_handled_by_restage" or (
             apply_status == "conflict" and (current_restaged_by or restaged_by)

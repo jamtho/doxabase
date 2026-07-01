@@ -6599,6 +6599,11 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert direct_check.can_apply is True
     assert direct_check.next_action is not None
     assert direct_check.next_action.tool_name == "apply_staged_revision"
+    assert direct_check.next_action.mutation_scope == "project_graph_and_history"
+    assert direct_check.next_action.mutates_project_graph is True
+    assert direct_check.next_action.writes_history is True
+    assert direct_check.next_action.writes_files is False
+    assert direct_check.next_action.writes_storage is False
     assert direct_check.snapshot_evidence is not None
     assert direct_check.snapshot_evidence.status == "history_only_count_digest"
     assert direct_check.snapshot_evidence_completeness == "history-only"
@@ -6614,6 +6619,11 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
         "import_revision_snapshots"
     )
     assert direct_check.first_safe_next_action.queue == "complete_handoff_import"
+    assert direct_check.first_safe_next_action.mutation_scope == "snapshot_storage"
+    assert direct_check.first_safe_next_action.mutates_project_graph is False
+    assert direct_check.first_safe_next_action.writes_history is False
+    assert direct_check.first_safe_next_action.writes_files is False
+    assert direct_check.first_safe_next_action.writes_storage is True
 
     plan = imported.plan_staged_revision_recovery([staged.revision_iri])
 
@@ -6633,9 +6643,13 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert lane.lane == "complete_handoff_import"
     assert lane.next_action is not None
     assert lane.next_action.tool_name == "import_revision_snapshots"
+    assert lane.next_action.mutation_scope == "snapshot_storage"
+    assert lane.next_action.writes_storage is True
     assert lane.current_snapshot_evidence.status == "history_only_count_digest"
     assert lane.current_snapshot_evidence_completeness == "history-only"
     assert lane.suggested_next_actions[0].tool_name == "import_revision_snapshots"
+    assert lane.suggested_next_actions[0].mutation_scope == "snapshot_storage"
+    assert lane.suggested_next_actions[0].writes_storage is True
     assert lane.suggested_next_actions[0].arguments == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
@@ -6645,6 +6659,8 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
         for action in lane.suggested_next_actions[1:]
     )
     assert plan.suggested_next_actions[0].tool_name == "import_revision_snapshots"
+    assert plan.suggested_next_actions[0].mutation_scope == "snapshot_storage"
+    assert plan.suggested_next_actions[0].writes_storage is True
     assert (
         plan.mutation_allowed_after
         == "handoff_preflight_required_before_mutation"
@@ -6689,6 +6705,14 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert direct_check_after_snapshots.first_safe_next_action is not None
     assert direct_check_after_snapshots.first_safe_next_action.tool_name == (
         "apply_staged_revision"
+    )
+    assert (
+        direct_check_after_snapshots.first_safe_next_action.mutation_scope
+        == "project_graph_and_history"
+    )
+    assert (
+        direct_check_after_snapshots.first_safe_next_action.mutates_project_graph
+        is True
     )
 
 

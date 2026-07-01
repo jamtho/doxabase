@@ -330,16 +330,21 @@ action in this state, while `first_mutation_action` stays empty; after the gate
 clears, `first_mutation_action` points at the first actionable mutation frontier
 item and the safe first action points at any earlier read-only or
 `mutation_scope="none"` review suggestion before falling back to that mutation.
+Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
+`suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
+`writes_history`, `writes_files`, and `writes_storage`; use those fields before
+executing an unattended action.
 After those preflight actions, when
 `would_restage_revision_iris` is non-empty, top-level
 `suggested_next_actions` includes a batch
 `restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
 worklist. This dry-run action is effect-annotated with
 `mutation_scope="none"`, `mutates_project_graph=false`, `writes_history=false`,
-and `writes_files=false`, so unattended scripts can distinguish the safe review
-step from the later real restage call without parsing prose. Use it before
-creating successors; row-level `restage_staged_revision` actions remain
-available for focused single-row review.
+`writes_files=false`, and `writes_storage=false`, so unattended scripts can
+distinguish the safe review step from the later real restage call without
+parsing prose. Use it before creating successors; row-level
+`restage_staged_revision` actions remain available for focused single-row
+review.
 `project_brief` surfaces this route as `staged_frontier_review` whenever current
 staged work exists; follow it before adding new profile-map or query-repair
 staged revisions for the same frontier.

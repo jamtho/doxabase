@@ -6410,6 +6410,11 @@ action when one exists. The first safe action points at an earlier read-only or
 `mutation_scope="none"` review suggestion when the plan offers one; otherwise it
 mirrors the first mutation-frontier action with
 `first_safe_review_or_mutation_source="mutation_frontier"`.
+Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
+`suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
+`writes_history`, `writes_files`, and `writes_storage`. Use these fields rather
+than tool-name guesses when deciding whether an action only inspects, writes an
+export file, imports snapshot storage, stages history, or applies graph changes.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty even when the lane is actionable. When `include_drafts=True`, the
 planner embeds at most `repair_draft_limit` repair drafts by default; the
@@ -6458,10 +6463,11 @@ handoff evidence is complete and `would_restage_revision_iris` is non-empty,
 `arguments.revision_iris == would_restage_revision_iris` and
 `arguments.dry_run == True`. This suggestion also carries
 `mutation_scope == "none"`, `mutates_project_graph == False`,
-`writes_history == False`, and `writes_files == False`; use those structured
-effect fields rather than inferring safety from the mutating-looking tool name
-alone. Keep the row-level restage actions for focused single-row review, but
-prefer the batch dry-run before creating restage successors in unattended loops.
+`writes_history == False`, `writes_files == False`, and
+`writes_storage == False`; use those structured effect fields rather than
+inferring safety from the mutating-looking tool name alone. Keep the row-level
+restage actions for focused single-row review, but prefer the batch dry-run
+before creating restage successors in unattended loops.
 
 ### Staged Revision Rebase Draft
 
