@@ -34167,6 +34167,22 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert review.executor_decision_summary["candidate_roles"] == {
         "profile_type_candidate": 1
     }
+    candidate_guidance = review.executor_decision_summary[
+        "candidate_apply_guidance"
+    ][0]
+    assert candidate_guidance["revision_iri"] == staged.iri
+    assert candidate_guidance["apply_guidance"] == (
+        "blocked_by_specific_open_lanes"
+    )
+    assert candidate_guidance["semantic_apply_role"] == "profile_type_candidate"
+    assert candidate_guidance["blocking_open_review_lane_count"] == 1
+    assert candidate_guidance["blocking_open_review_lanes"][0]["review_lane"] == (
+        "profile_type_review"
+    )
+    assert "assert_map_type" in candidate_guidance[
+        "blocking_open_review_lanes"
+    ][0]["remaining_semantic_moves"]
+    assert status_value_type in candidate_guidance["matched_revision_anchor_iris"]
     exported = (tmp_path / "orders-profile-type-review.md").read_text(
         encoding="utf-8"
     )

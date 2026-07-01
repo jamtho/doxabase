@@ -2688,10 +2688,16 @@ already-applied source rows must remain out of
 it includes `decision`, `mutation_policy`, `recommended_next_step`,
 `must_recheck_after_mutation`, `safe_single_apply_candidate_revision_iris`,
 `safe_single_apply_candidate_rationales`, `blocked_candidate_revision_iris`,
-`open_review_lanes`, `candidate_roles`, and the underlying semantic gate
-counts/blocking reasons. Use the rationales to see sampled-evidence caution and
-basis/scope summary beside each safe-single candidate. Use it for first-pass
-executor routing, then inspect the detailed `candidates[]` and
+`candidate_apply_guidance`, `open_review_lanes`, `candidate_roles`, and the
+underlying semantic gate counts/blocking reasons. Use
+`candidate_apply_guidance[]` before generic staged-revision queues: each row
+labels the candidate as `safe_single_after_review`,
+`blocked_by_specific_open_lanes`, `requires_human_semantic_choice`, or
+`inspect_only_supporting_context`, and names blocking open lanes plus matched
+profile observations, patterns, anchors, route keys, and changed graph roles.
+Use the rationales to see sampled-evidence caution and basis/scope summary
+beside each safe-single candidate. Use it for first-pass executor routing, then
+inspect the detailed `candidates[]` and
 `open_profile_review_lanes[]` rows before mutating.
 Metric advisory route sources carry `advisory_statuses`; when a rerun reports
 only `project_metric_defined`, those inspection-only metric routes are not

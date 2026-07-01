@@ -4152,6 +4152,14 @@ few useful gaps:
   route-intent preferred and caution indexes for visible existing storage
   candidates, so scripts can choose current/production/canonical links before
   rank when match evidence is otherwise ambiguous.
+- A profile-to-map promotion trial completed meaningful scalar, unmapped-column,
+  metric-vocabulary, value-type vocabulary, and value-type assertion promotion,
+  but found the bundle-level `executor_decision_summary` stayed conservative
+  when unrelated lanes remained open. The summary now includes
+  `candidate_apply_guidance[]`, so unattended agents can see whether each
+  candidate is a safe single apply, blocked by named open lanes, inspect-only
+  support, or a human semantic choice before following generic staged-revision
+  apply queues.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

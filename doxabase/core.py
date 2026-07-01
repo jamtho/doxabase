@@ -47849,6 +47849,96 @@ class DoxaBase:
         )
 
     @staticmethod
+    def _profile_insight_candidate_apply_guidance(
+        candidates: list[ProfileInsightReviewCandidate],
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> list[dict[str, Any]]:
+        blocking_global_lanes = {
+            "profile_scalar_conflict_review",
+            "query_context_review",
+        }
+        open_lanes_by_candidate: dict[str, list[ProfileInsightOpenReviewLane]] = {}
+        for lane in open_profile_review_lanes:
+            for revision_iri in lane.matched_candidate_revision_iris:
+                open_lanes_by_candidate.setdefault(revision_iri, []).append(lane)
+        global_blocking_lanes = [
+            lane
+            for lane in open_profile_review_lanes
+            if lane.review_lane in blocking_global_lanes
+        ]
+
+        guidance_rows: list[dict[str, Any]] = []
+        for candidate in candidates:
+            matched_open_lanes = open_lanes_by_candidate.get(candidate.revision_iri, [])
+            blocking_lanes = matched_open_lanes or (
+                global_blocking_lanes
+                if (
+                    not candidate.safe_single_apply_candidate
+                    and "Open profile review lanes still include"
+                    in candidate.semantic_apply_gate_reason
+                )
+                else []
+            )
+            if candidate.safe_single_apply_candidate:
+                apply_guidance = "safe_single_after_review"
+                mutation_policy = "apply_at_most_one_then_recheck"
+            elif blocking_lanes:
+                apply_guidance = "blocked_by_specific_open_lanes"
+                mutation_policy = "close_or_stage_blocking_lanes_before_apply"
+            elif candidate.semantic_apply_role == "supporting_context":
+                apply_guidance = "inspect_only_supporting_context"
+                mutation_policy = "do_not_apply_from_profile_gate"
+            else:
+                apply_guidance = "requires_human_semantic_choice"
+                mutation_policy = "choose_one_semantic_candidate_then_recheck"
+
+            blocking_lane_rows = [
+                {
+                    "review_lane": lane.review_lane,
+                    "route_group_keys": list(lane.route_group_keys),
+                    "remaining_semantic_moves": list(lane.remaining_semantic_moves),
+                    "remaining_route_step_keys": list(lane.route_step_keys),
+                    "remaining_action_count": lane.action_count,
+                    "next_step": lane.next_step,
+                }
+                for lane in blocking_lanes
+            ]
+            guidance_rows.append(
+                {
+                    "revision_iri": candidate.revision_iri,
+                    "summary": candidate.summary,
+                    "apply_guidance": apply_guidance,
+                    "mutation_policy": mutation_policy,
+                    "semantic_apply_role": candidate.semantic_apply_role,
+                    "semantic_choice_group_key": candidate.semantic_choice_group_key,
+                    "apply_cardinality": candidate.apply_cardinality,
+                    "safe_single_apply_candidate": (
+                        candidate.safe_single_apply_candidate
+                    ),
+                    "bulk_apply_allowed": candidate.bulk_apply_allowed,
+                    "semantic_apply_gate_reason": (
+                        candidate.semantic_apply_gate_reason
+                    ),
+                    "blocking_open_review_lanes": blocking_lane_rows,
+                    "blocking_open_review_lane_count": len(blocking_lane_rows),
+                    "changed_graphs": list(candidate.changed_graphs),
+                    "profile_route_keys": list(candidate.profile_route_keys),
+                    "matched_profile_observation_iris": list(
+                        candidate.matched_profile_observation_iris
+                    ),
+                    "matched_supporting_pattern_iris": list(
+                        candidate.matched_supporting_pattern_iris
+                    ),
+                    "matched_revision_anchor_iris": list(
+                        candidate.matched_revision_anchor_iris
+                    ),
+                    "profile_quality_summary": candidate.profile_quality_summary,
+                    "sampled_evidence_caution": candidate.sampled_evidence_caution,
+                }
+            )
+        return guidance_rows
+
+    @staticmethod
     def _profile_insight_executor_decision_summary(
         *,
         candidates: list[ProfileInsightReviewCandidate],
@@ -47897,6 +47987,12 @@ class DoxaBase:
             }
             for lane in open_profile_review_lanes
         ]
+        candidate_apply_guidance = (
+            DoxaBase._profile_insight_candidate_apply_guidance(
+                candidates,
+                open_profile_review_lanes,
+            )
+        )
         if not candidates:
             decision = "nothing_to_apply"
             recommended_next_step = (
@@ -47954,6 +48050,7 @@ class DoxaBase:
             ),
             "blocked_candidate_revision_iris": blocked_candidate_revision_iris,
             "blocked_candidate_count": len(blocked_candidate_revision_iris),
+            "candidate_apply_guidance": candidate_apply_guidance,
             "open_review_lanes": open_lanes,
             "open_review_lane_count": len(open_lanes),
             "candidate_roles": candidate_roles,

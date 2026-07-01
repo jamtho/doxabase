@@ -11647,6 +11647,15 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
         "safe_single_apply_candidate_revision_iris"
     ] == result["candidate_revision_iris"]
     assert result["executor_decision_summary"]["open_review_lanes"] == []
+    assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
+        "revision_iri"
+    ] == staged["staged_revision"]["revision_iri"]
+    assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
+        "apply_guidance"
+    ] == "safe_single_after_review"
+    assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
+        "blocking_open_review_lanes"
+    ] == []
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["candidates"][0]["relation_reasons"]
