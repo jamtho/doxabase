@@ -2656,6 +2656,9 @@ class QueryTargetDecision:
     direct_review_required: bool | None
     selected_candidate_direct_clean: bool | None
     reason_codes: list[str]
+    selection_reason_codes: list[str] = field(default_factory=list)
+    peer_ready_requires_intent_review: bool = False
+    selection_caution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2717,6 +2720,9 @@ class DraftQueryPlanSourceContext:
     selection_note: str = ""
     selected_candidate_note: str = ""
     allow_context_blocked_candidate: bool = False
+    selection_reason_codes: list[str] = field(default_factory=list)
+    peer_ready_requires_intent_review: bool = False
+    selection_caution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2833,6 +2839,9 @@ class DraftQueryPlanHandoffSummary:
     caveat_count: int
     unselected_ready_candidate_indexes: list[int]
     unselected_direct_clean_candidate_indexes: list[int]
+    selection_reason_codes: list[str]
+    peer_ready_requires_intent_review: bool
+    selection_caution: str | None
     primary_repair_issue_index: int | None = None
     primary_repair_issue_code: str | None = None
     primary_repair_group_action_type: str | None = None
@@ -18299,6 +18308,7 @@ class DoxaBase:
                 direct_review_required=None,
                 selected_candidate_direct_clean=None,
                 reason_codes=[issue.code],
+                selection_reason_codes=["not_applicable_non_tabular_asset"],
             ),
             query_target_candidates=[],
             ready_candidate_indexes=[],
@@ -20142,6 +20152,27 @@ class DoxaBase:
         direct_clean_candidate_indexes = self._query_direct_clean_candidate_indexes(
             context.query_target_candidates
         )
+        unselected_ready_candidate_indexes = [
+            index
+            for index in ready_candidate_indexes
+            if index != selected_candidate_index
+        ]
+        unselected_direct_clean_candidate_indexes = [
+            index
+            for index in direct_clean_candidate_indexes
+            if index != selected_candidate_index
+        ]
+        peer_ready_requires_intent_review = bool(unselected_ready_candidate_indexes)
+        selection_reason_codes = self._query_target_selection_reason_codes(
+            selected_candidate,
+            status=selected_decision.status,
+            selection_mode=selection_mode,
+            peer_ready_requires_intent_review=peer_ready_requires_intent_review,
+        )
+        selection_caution = self._query_target_selection_caution(
+            unselected_ready_candidate_indexes,
+            selection_mode=selection_mode,
+        )
         selected_candidate_note = self._draft_query_plan_selected_candidate_note(
             selected_candidate,
             selected_candidate_index,
@@ -20157,17 +20188,11 @@ class DoxaBase:
             selected_candidate_index=selected_candidate_index,
             candidate_count=len(context.query_target_candidates),
             ready_candidate_indexes=ready_candidate_indexes,
-            unselected_ready_candidate_indexes=[
-                index
-                for index in ready_candidate_indexes
-                if index != selected_candidate_index
-            ],
+            unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
             direct_clean_candidate_indexes=direct_clean_candidate_indexes,
-            unselected_direct_clean_candidate_indexes=[
-                index
-                for index in direct_clean_candidate_indexes
-                if index != selected_candidate_index
-            ],
+            unselected_direct_clean_candidate_indexes=(
+                unselected_direct_clean_candidate_indexes
+            ),
             selection_mode=selection_mode,
             requested_candidate_index=candidate_index,
             requested_storage_access_iri=requested_storage_access_iri,
@@ -20176,6 +20201,9 @@ class DoxaBase:
             selection_note=selection_note,
             selected_candidate_note=selected_candidate_note,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
+            selection_reason_codes=selection_reason_codes,
+            peer_ready_requires_intent_review=peer_ready_requires_intent_review,
+            selection_caution=selection_caution,
         )
         required_bindings = [binding.name for binding in binding_requirements]
         handoff_summary = self._draft_query_plan_handoff_summary(
@@ -21216,6 +21244,9 @@ class DoxaBase:
                 "asset."
             ),
             allow_context_blocked_candidate=allow_context_blocked_candidate,
+            selection_reason_codes=["not_applicable_non_tabular_asset"],
+            peer_ready_requires_intent_review=False,
+            selection_caution=None,
         )
         handoff_summary = self._draft_query_plan_handoff_summary(
             handoff_kind="not_applicable_non_tabular_asset",
@@ -21595,6 +21626,14 @@ class DoxaBase:
                 "allow_context_blocked_candidate=True ignored sibling-only "
                 "context blockers"
             )
+        ready_candidate_indexes = self._query_ready_candidate_indexes(
+            context.query_target_candidates
+        )
+        unselected_ready_candidate_indexes = [
+            index
+            for index in ready_candidate_indexes
+            if index != selected_candidate_index
+        ]
         return self._query_target_decision_for_candidate(
             selected_candidate,
             index=selected_candidate_index,
@@ -21602,6 +21641,14 @@ class DoxaBase:
             summary=(
                 f"{selector_summary} chose candidate {selected_candidate_index}, "
                 f"which {state_summary}."
+            ),
+            selection_mode=selection_mode,
+            peer_ready_requires_intent_review=bool(
+                unselected_ready_candidate_indexes
+            ),
+            selection_caution=self._query_target_selection_caution(
+                unselected_ready_candidate_indexes,
+                selection_mode=selection_mode,
             ),
         )
 
@@ -21732,6 +21779,11 @@ class DoxaBase:
             unselected_direct_clean_candidate_indexes=list(
                 source_context.unselected_direct_clean_candidate_indexes
             ),
+            selection_reason_codes=list(source_context.selection_reason_codes),
+            peer_ready_requires_intent_review=(
+                source_context.peer_ready_requires_intent_review
+            ),
+            selection_caution=source_context.selection_caution,
             **primary_repair_cue,
         )
 
@@ -23199,6 +23251,12 @@ class DoxaBase:
                 ready_candidates,
                 key=self._query_target_candidate_decision_rank,
             )
+            ready_candidate_indexes = [item_index for item_index, _ in ready_candidates]
+            unselected_ready_candidate_indexes = [
+                item_index
+                for item_index in ready_candidate_indexes
+                if item_index != index
+            ]
             return self._query_target_decision_for_candidate(
                 candidate,
                 index=index,
@@ -23206,6 +23264,14 @@ class DoxaBase:
                 summary=(
                     f"Candidate {index} is ready for query planning; review "
                     "analysis_warnings and caveats before trusting results."
+                ),
+                selection_mode="automatic",
+                peer_ready_requires_intent_review=bool(
+                    unselected_ready_candidate_indexes
+                ),
+                selection_caution=self._query_target_selection_caution(
+                    unselected_ready_candidate_indexes,
+                    selection_mode="automatic",
                 ),
             )
 
@@ -23228,6 +23294,7 @@ class DoxaBase:
                     "the overall query context has blockers elsewhere; inspect "
                     "issues before executing it."
                 ),
+                selection_mode="automatic",
             )
 
         index, candidate = min(
@@ -23242,6 +23309,7 @@ class DoxaBase:
                 f"No candidate is ready; candidate {index} is the first "
                 "review target to inspect before executable query use."
             ),
+            selection_mode="automatic",
         )
 
     def _query_target_decision_for_candidate(
@@ -23251,6 +23319,9 @@ class DoxaBase:
         index: int,
         status: str,
         summary: str,
+        selection_mode: str = "automatic",
+        peer_ready_requires_intent_review: bool = False,
+        selection_caution: str | None = None,
     ) -> QueryTargetDecision:
         return QueryTargetDecision(
             status=status,
@@ -23264,6 +23335,61 @@ class DoxaBase:
                 candidate,
                 status=status,
             ),
+            selection_reason_codes=self._query_target_selection_reason_codes(
+                candidate,
+                status=status,
+                selection_mode=selection_mode,
+                peer_ready_requires_intent_review=(
+                    peer_ready_requires_intent_review
+                ),
+            ),
+            peer_ready_requires_intent_review=peer_ready_requires_intent_review,
+            selection_caution=selection_caution,
+        )
+
+    @staticmethod
+    def _query_target_selection_reason_codes(
+        candidate: QueryTargetCandidate | None,
+        *,
+        status: str,
+        selection_mode: str,
+        peer_ready_requires_intent_review: bool,
+    ) -> list[str]:
+        codes: list[str] = []
+        if selection_mode == "automatic":
+            codes.append("automatic_candidate_rank")
+        else:
+            codes.append(f"explicit_{selection_mode}_selection")
+        codes.append(f"decision_status_{status}")
+        if candidate is not None:
+            codes.append(f"template_source_{candidate.template_source}")
+            if candidate.candidate_path_status is not None:
+                codes.append(
+                    f"candidate_path_status_{candidate.candidate_path_status}"
+                )
+        if peer_ready_requires_intent_review:
+            codes.append("peer_ready_candidates_present")
+        return codes
+
+    @staticmethod
+    def _query_target_selection_caution(
+        unselected_ready_candidate_indexes: list[int],
+        *,
+        selection_mode: str,
+    ) -> str | None:
+        if not unselected_ready_candidate_indexes:
+            return None
+        indexes = ", ".join(str(index) for index in unselected_ready_candidate_indexes)
+        selection_note = (
+            "Automatic selection uses DoxaBase precedence, not project intent"
+            if selection_mode == "automatic"
+            else f"Explicit {selection_mode} selection used the caller selector"
+        )
+        return (
+            "Peer direct-ready query target candidate(s) exist. "
+            f"{selection_note}; inspect "
+            f"candidate card(s) {indexes} or pass an explicit candidate_index "
+            "before unattended execution."
         )
 
     def _query_target_candidate_decision_rank(

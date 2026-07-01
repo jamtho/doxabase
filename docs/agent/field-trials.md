@@ -3626,6 +3626,13 @@ few useful gaps:
   mutation-frontier review flag, blocked context-slice preflights should not
   suggest a doomed write action, and profile query-bridge lanes depend on some
   existing physical-query cue such as a path template or layout.
+- A storage/query trial then found a subtler candidate-selection gap: when a
+  file route has multiple direct-ready candidates, automatic ranking can choose
+  the storage-access route while a dataset or partition route is also ready.
+  Query decisions, draft source context, and handoff summaries now expose
+  `selection_reason_codes`, `peer_ready_requires_intent_review`, and
+  `selection_caution` so unattended agents can distinguish precedence from
+  project intent and pass `candidate_index` deliberately.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

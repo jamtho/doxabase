@@ -2998,6 +2998,10 @@ error even when the overall context is blocked by sibling metadata;
 candidate. Use these lists when `ready_candidate_indexes` is empty but a
 context-blocked route can be drafted with an explicit selector and
 `allow_context_blocked_candidate=True`.
+When `decision.peer_ready_requires_intent_review` is true, read
+`decision.selection_reason_codes` and `decision.selection_caution` before
+executing unattended. Automatic selection among peer ready candidates is
+DoxaBase precedence, not project intent.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:
@@ -3011,6 +3015,9 @@ decision.candidate_path_status
 decision.direct_review_required
 decision.selected_candidate_direct_clean
 decision.reason_codes
+decision.selection_reason_codes
+decision.peer_ready_requires_intent_review
+decision.selection_caution
 ```
 
 `selected_candidate_direct_clean` is `true` when the selected candidate has no
@@ -3346,6 +3353,9 @@ handoff_summary.analysis_warning_count
 handoff_summary.caveat_count
 handoff_summary.unselected_ready_candidate_indexes
 handoff_summary.unselected_direct_clean_candidate_indexes
+handoff_summary.selection_reason_codes
+handoff_summary.peer_ready_requires_intent_review
+handoff_summary.selection_caution
 handoff_summary.primary_repair_issue_index
 handoff_summary.primary_repair_issue_code
 handoff_summary.primary_repair_group_action_type
@@ -3405,6 +3415,9 @@ source_context.selection_status
 source_context.selection_note
 source_context.selected_candidate_note
 source_context.allow_context_blocked_candidate
+source_context.selection_reason_codes
+source_context.peer_ready_requires_intent_review
+source_context.selection_caution
 ```
 
 `plan.scan` is the non-executed handoff card. Do not treat a relation or URI

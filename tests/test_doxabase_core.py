@@ -19445,6 +19445,18 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     context = db.describe_query_context(dataset)
 
     assert context.query_target_decision.candidate_index == 0
+    assert context.query_target_decision.peer_ready_requires_intent_review is True
+    assert "peer_ready_candidates_present" in (
+        context.query_target_decision.selection_reason_codes
+    )
+    assert "automatic_candidate_rank" in (
+        context.query_target_decision.selection_reason_codes
+    )
+    assert context.query_target_decision.selection_caution is not None
+    assert "candidate_index" in context.query_target_decision.selection_caution
+    assert "Automatic selection uses DoxaBase precedence" in (
+        context.query_target_decision.selection_caution
+    )
     assert context.ready_candidate_indexes == [0, 1]
     assert context.unselected_ready_candidate_indexes == [1]
     assert "Other direct-ready candidate indexes exist (1)" in (
@@ -19468,6 +19480,17 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert automatic_plan.source_context.candidate_count == 2
     assert automatic_plan.source_context.ready_candidate_indexes == [0, 1]
     assert automatic_plan.source_context.unselected_ready_candidate_indexes == [1]
+    assert automatic_plan.source_context.peer_ready_requires_intent_review is True
+    assert automatic_plan.source_context.selection_caution == (
+        context.query_target_decision.selection_caution
+    )
+    assert "peer_ready_candidates_present" in (
+        automatic_plan.source_context.selection_reason_codes
+    )
+    assert automatic_plan.handoff_summary.peer_ready_requires_intent_review is True
+    assert automatic_plan.handoff_summary.selection_caution == (
+        automatic_plan.source_context.selection_caution
+    )
 
     explicit_plan = db.draft_query_plan(dataset, candidate_index=1)
 
@@ -19479,6 +19502,21 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert explicit_plan.source_context.unselected_direct_clean_candidate_indexes == [
         0
     ]
+    assert explicit_plan.source_context.peer_ready_requires_intent_review is True
+    assert "explicit_candidate_index_selection" in (
+        explicit_plan.source_context.selection_reason_codes
+    )
+    assert "peer_ready_candidates_present" in (
+        explicit_plan.source_context.selection_reason_codes
+    )
+    assert explicit_plan.source_context.selection_caution is not None
+    assert "Explicit candidate_index selection used the caller selector" in (
+        explicit_plan.source_context.selection_caution
+    )
+    assert explicit_plan.handoff_summary.peer_ready_requires_intent_review is True
+    assert explicit_plan.handoff_summary.selection_caution == (
+        explicit_plan.source_context.selection_caution
+    )
 
     with pytest.raises(DoxaBaseError, match="either candidate_index or"):
         db.draft_query_plan(

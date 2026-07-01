@@ -150,6 +150,11 @@ Start with `describe_query_context(dataset_iri)`:
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_index` when a different route is intended.
+   `query_target_decision.peer_ready_requires_intent_review` and
+   `selection_caution` carry the same warning in a compact form, while
+   `selection_reason_codes` records whether the selected route came from
+   automatic ranking or an explicit selector. Treat automatic selection among
+   peer ready candidates as precedence, not project intent.
    These indexes are candidate-local direct readiness, so they can be non-empty
    even when top-level `readiness == "needs_review"` because sibling metadata
    still blocks the whole context.
