@@ -3380,6 +3380,10 @@ def test_context_slice_export_redacts_sensitive_seed_descriptions(
     assert preflight.matches[0].redacted_snippet == (
         "[REDACTED:fake_secret_marker]"
     )
+    assert all(
+        action.tool_name != "export_context_slice"
+        for action in preflight.suggested_next_actions
+    )
     assert fake_secret not in json.dumps(to_dict(preflight))
     with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
         db.export_context_slice(
@@ -9668,6 +9672,9 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert semantic_item.row_iri == repair.staged_revision.revision_iri
     assert semantic_item.alternative_gate_status == "alternative_to_applied_source"
     assert semantic_item.alternative_semantic_review_required is True
+    frontier_item = final_plan.mutation_frontier_items[0]
+    assert frontier_item.target_iri == repair.staged_revision.revision_iri
+    assert frontier_item.requires_semantic_review_before_mutation is True
 
 
 def test_stale_column_same_slot_drift_keeps_restage_route(

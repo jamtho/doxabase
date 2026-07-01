@@ -3618,6 +3618,14 @@ few useful gaps:
   `post_import_snapshot_evidence` and promoted import-recovery actions so the
   receiver does not need to know to call `describe_revision_snapshot_evidence`
   immediately after every history import.
+- A four-trial workflow wave retested that TriG import affordance, staged
+  same-slot conflict recovery, privacy/export gates, and profile-to-query
+  follow-through. All passed, but each exposed small unattended routing gaps:
+  snapshot-missing imports need to say when to request a recovery-complete
+  handoff bundle, mechanically ready semantic alternatives need a direct
+  mutation-frontier review flag, blocked context-slice preflights should not
+  suggest a doomed write action, and profile query-bridge lanes depend on some
+  existing physical-query cue such as a path template or layout.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

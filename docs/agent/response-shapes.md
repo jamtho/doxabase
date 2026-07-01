@@ -1089,19 +1089,24 @@ export.recovery_complete
 ```
 
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
-and `bytes_written` is `0`; it includes a suggested `export_context_slice`
-action. `decision` is `block` when selected export triples have sensitive-looking
-terms and `clean_by_scanner_only` otherwise; `scanner_clean` is the matching
-boolean, while `shareability_review_required` remains true because scanner-clean
-is not proof that a resource-scoped bundle is appropriate to share.
+and `bytes_written` is `0`. It includes a suggested `export_context_slice`
+action only when the selected triples are scanner-clean; if `decision="block"`,
+resolve privacy review before writing rather than blindly following a doomed
+export. `decision` is `block` when selected export triples have
+sensitive-looking terms and `clean_by_scanner_only` otherwise; `scanner_clean`
+is the matching boolean, while `shareability_review_required` remains true
+because scanner-clean is not proof that a resource-scoped bundle is appropriate
+to share.
 `handoff_fit` is `resource_scoped_review_context` for ordinary context-slice
 exports and `resource_scoped_review_context_not_recovery_complete` when the
 selected triples include `history`.
 `export_context_slice()` writes TriG and usually returns no further export
 action. If the selected triples include `history`, both helpers warn that the
-slice is not a recovery-complete revision handoff and include an
-`export_handoff_bundle` action, optionally narrowed to the revision IRIs visible
-in the slice. The helper scans only the selected context-slice export triples
+slice is not a recovery-complete revision handoff. Scanner-clean responses
+include an `export_handoff_bundle` action, optionally narrowed to the revision
+IRIs visible in the slice; blocked responses route to `export_preflight` for
+the handoff bundle before any artifact write. The helper scans only the selected
+context-slice export triples
 and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
 imported into a fresh capsule without immutable-seed privileges. Set
 `include_seed_graphs=True` only for deliberate seed-graph review bundles.
@@ -5923,6 +5928,8 @@ apply/restage targets and repair targets only when the selected repair action is
 mutating; they preserve collapsed `source_revision_iris` and `row_iris`. Items
 with `item_kind="helper_action"` carry same-slot repair helper actions that
 create a successor and therefore have no existing target IRI.
+Each item includes `requires_semantic_review_before_mutation`; when true,
+semantic review is still required even if the target is mechanically ready.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
 apply/restage queues plus mutating repair targets; it intentionally excludes
 informational rows, already-applied inspection targets, diagnostic

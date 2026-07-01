@@ -1752,6 +1752,7 @@ class StagedRevisionMutationFrontierItem:
     row_iris: list[str]
     action: SuggestedNextAction | RevisionNextAction | None
     call: str | None
+    requires_semantic_review_before_mutation: bool
     reason: str
 
 
@@ -7655,7 +7656,10 @@ class DoxaBase:
                     f"'{revision_iri}', but exact snapshot rows are missing for "
                     "one or more graph roles. Import the companion snapshot JSON "
                     "bundle at its real handoff path before relying on exact "
-                    "applied-diff or stale-drift triple inspection."
+                    "applied-diff or stale-drift triple inspection. If the "
+                    "snapshot JSON is not available, request a "
+                    "recovery-complete export_handoff_bundle from the source "
+                    "capsule."
                 ),
                 action_label="Import snapshot bundle if available",
             )
@@ -36779,6 +36783,9 @@ class DoxaBase:
                     row_iris=list(group.row_iris),
                     action=action,
                     call=action.call if action is not None else None,
+                    requires_semantic_review_before_mutation=(
+                        group.alternative_semantic_review_required
+                    ),
                     reason=(
                         "Resolved staged-revision mutation target. Review the "
                         "row and action, then mutate this target before "
@@ -36802,6 +36809,7 @@ class DoxaBase:
                     row_iris=[],
                     action=action,
                     call=action.call,
+                    requires_semantic_review_before_mutation=False,
                     reason=(
                         "Repair helper mutation for a staged recovery lane "
                         "that does not have a concrete successor IRI yet."
@@ -50803,6 +50811,7 @@ class DoxaBase:
             fail_on_sensitive=fail_on_sensitive,
             limit=limit,
             write=write,
+            would_block_sensitive_export=sensitive_literal_count > 0,
             includes_history="history" in graph_names,
             revision_iris=history_revision_iris,
         )
@@ -50981,6 +50990,7 @@ class DoxaBase:
         fail_on_sensitive: bool,
         limit: int,
         write: bool,
+        would_block_sensitive_export: bool,
         includes_history: bool,
         revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
@@ -51014,7 +51024,7 @@ class DoxaBase:
                     ),
                 )
             )
-        if not write:
+        if not write and not would_block_sensitive_export:
             digest_source = "\n".join(seed_values)
             digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
             label_source = self._local_name(seed_values[0]) if seed_values else None
@@ -51047,28 +51057,48 @@ class DoxaBase:
                 )
             )
         if includes_history:
-            handoff_arguments: dict[str, Any] = {
-                "trig_path": "<project-handoff.trig>",
-                "revision_snapshot_path": "<revision-snapshots.json>",
-                "graphs": ["project"],
-                "fail_on_sensitive": True,
-            }
+            handoff_arguments: dict[str, Any]
+            if would_block_sensitive_export:
+                handoff_arguments = {
+                    "export_kind": "handoff_bundle",
+                    "graphs": ["project"],
+                    "limit": limit,
+                }
+            else:
+                handoff_arguments = {
+                    "trig_path": "<project-handoff.trig>",
+                    "revision_snapshot_path": "<revision-snapshots.json>",
+                    "graphs": ["project"],
+                    "fail_on_sensitive": True,
+                }
             if revision_iris:
                 handoff_arguments["revision_iris"] = revision_iris
+            if would_block_sensitive_export:
+                tool_name = "export_preflight"
+                action_label = "Preflight recovery handoff bundle"
+                reason = (
+                    "The selected history-bearing context slice contains "
+                    "sensitive-looking terms, so resolve export privacy review "
+                    "before writing recovery-complete handoff artifacts."
+                )
+            else:
+                tool_name = "export_handoff_bundle"
+                action_label = "Export recovery handoff bundle"
+                reason = (
+                    "History-bearing context slices are importable review "
+                    "context but do not carry revision snapshot rows; use a "
+                    "handoff bundle for exact revision recovery in another "
+                    "capsule."
+                )
             actions.append(
                 SuggestedNextAction(
-                    action_label="Export recovery handoff bundle",
-                    tool_name="export_handoff_bundle",
-                    mcp_tool_name="doxabase.export_handoff_bundle",
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=handoff_arguments,
-                    reason=(
-                        "History-bearing context slices are importable review "
-                        "context but do not carry revision snapshot rows; use a "
-                        "handoff bundle for exact revision recovery in another "
-                        "capsule."
-                    ),
+                    reason=reason,
                     call=self._suggested_call_string(
-                        "export_handoff_bundle",
+                        tool_name,
                         handoff_arguments,
                     ),
                 )

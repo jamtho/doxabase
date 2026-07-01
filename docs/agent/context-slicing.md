@@ -240,6 +240,11 @@ Context-slice export records include preflight-style routing fields:
 `shareability_review_status`, `would_block_sensitive_export`, and
 `handoff_fit`. Use them for unattended routing instead of inferring shareability
 from `sensitive_literal_count` alone.
+When `decision="block"`, the preflight does not suggest a direct
+`export_context_slice` write. Resolve privacy review or follow a safer preflight
+route first; history-bearing blocked slices route to
+`export_preflight(export_kind="handoff_bundle", ...)` before any
+recovery-complete artifact write.
 Scanner-clean context-slice exports only prove that the selected slice triples
 passed the scanner. History-bearing exports add the direct `rc:GraphPatch`,
 `rc:GraphSnapshot`, and validation-result triples needed for an imported review

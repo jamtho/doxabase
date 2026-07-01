@@ -288,6 +288,11 @@ the runtime. If the helper-action list is empty, fall back to
 for that reviewed repair. When a repair lane only has diagnostic inspection or a
 read-only repair draft, it is not part of `mutation_frontier_items`; follow the
 lane's inspection/export/draft actions first.
+Read `mutation_frontier_items[].requires_semantic_review_before_mutation`
+before applying from an unattended loop. A row can be mechanically ready and
+still require semantic review when it is an alternative to an already-applied
+source; inspect the row's `alternative_gate` and applied source before any
+mutation.
 When helper mutation actions are present, the planner also warns that they are
 not represented by `mutation_frontier_iris`; treat that warning as an unattended
 loop guard, not as a blocker.
@@ -459,7 +464,7 @@ Semantic same-slot repair smoke route:
 5. Replan after each apply. `mutation_frontier_iris` can contain a mechanically
    ready semantic alternative after its successor exists; read
    `semantic_review_required_queue_counts`, `mutation_frontier_items`, and
-   `alternative_semantic_review_required` before applying unattended.
+   `requires_semantic_review_before_mutation` before applying unattended.
 
 For a scratch executable version, run:
 

@@ -125,6 +125,10 @@ caller-authored systematisation repairs. A systematisation draft returns
 with `describe_staged_revision().profile_route_sources` if needed. The profile
 update lanes remain available for explicit review; the query lane is an
 ordering cue, not a rejection of the profile evidence.
+The draft may not add this bridge when the dataset has no physical-query cue at
+all, for example when the query blocker is only `missing_path_template`. In that
+case use `describe_query_context` directly, add reviewed storage/path/layout
+metadata, and rerun the profile draft once a physical-query cue exists.
 `source_query_context.route_anchor_iris` names the dataset, so a staged
 dataset-anchored query repair can still bridge back to the query-context route
 inside a later profile insight review bundle.

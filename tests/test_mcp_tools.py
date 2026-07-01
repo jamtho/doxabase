@@ -2785,6 +2785,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
             "row_iris": [staged["revision_iri"]],
             "action": lane["next_action"],
             "call": lane["next_action"]["call"],
+            "requires_semantic_review_before_mutation": False,
             "reason": (
                 "Resolved staged-revision mutation target. Review the row and "
                 "action, then mutate this target before replanning if required."
@@ -5110,6 +5111,9 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         "path_is_placeholder": True,
     }
     assert "real handoff path" in snapshot_status_before_import[
+        "suggested_next_actions"
+    ][0]["reason"]
+    assert "export_handoff_bundle" in snapshot_status_before_import[
         "suggested_next_actions"
     ][0]["reason"]
     imported_detail_before_snapshots = describe_graph_revision_tool(
@@ -8629,6 +8633,10 @@ def test_describe_context_slice_tool_reports_sensitive_selected_triples(
     assert preflight["shareability_review_status"] == "required_not_completed"
     assert preflight["would_block_sensitive_export"] is True
     assert preflight["handoff_fit"] == "resource_scoped_review_context"
+    assert all(
+        action["tool_name"] != "export_context_slice"
+        for action in preflight["suggested_next_actions"]
+    )
     assert fake_secret not in json.dumps(preflight["matches"])
 
 
