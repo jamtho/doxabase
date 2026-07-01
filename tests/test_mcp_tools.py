@@ -12212,6 +12212,10 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["would_block_sensitive_export"] == (
         result["export"]["would_block_sensitive_export"]
     )
+    assert result["sensitive_literal_count"] == (
+        result["export"]["sensitive_literal_count"]
+    )
+    assert result["privacy_warnings"] == result["export"]["privacy_warnings"]
     assert result["shareability_hints"] == result["export"]["shareability_hints"]
     assert result["artifact_disposition"] == result["export"]["artifact_disposition"]
     assert result["git_safe"] is False

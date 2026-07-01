@@ -272,7 +272,11 @@ when a handoff only has a staged review bundle or one staged row.
 Profile insight review bundles carry the nested staged export record, including
 `shareability_review_required=True` and
 `shareability_review_status="required_not_completed"`; scanner-clean review
-Markdown still needs explicit shareability review.
+Markdown still needs explicit shareability review. The bundle also mirrors
+`decision`, `scanner_clean`, `would_block_sensitive_export`,
+`sensitive_literal_count`, `privacy_warnings`, `shareability_hints`,
+`artifact_disposition`, and `git_safe` at top level so unattended agents can
+check privacy/export state without first drilling into `export`.
 When several route groups map to the same lane, match strength, and support
 kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key

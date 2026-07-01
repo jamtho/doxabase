@@ -911,9 +911,9 @@ handoff signal. The nested `export` includes
 `shareability_review_required` and `shareability_review_status`; treat
 scanner-clean profile Markdown as requiring explicit shareability review. It
 also includes `decision`, `scanner_clean`, `would_block_sensitive_export`,
-`shareability_hints`, `artifact_disposition`, and `git_safe`; the profile
-bundle lifts those fields to the top-level response when a Markdown export is
-written. It also includes
+`sensitive_literal_count`, `privacy_warnings`, `shareability_hints`,
+`artifact_disposition`, and `git_safe`; the profile bundle lifts those fields
+to the top-level response when a Markdown export is written. It also includes
 `open_profile_review_lanes`: live draft route groups that still lack a
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a

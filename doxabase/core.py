@@ -1814,6 +1814,8 @@ class ProfileInsightReviewBundleRecord:
     decision: str = "clean_by_scanner_only"
     scanner_clean: bool = True
     would_block_sensitive_export: bool = False
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
     shareability_hints: list[str] = field(default_factory=list)
@@ -47739,6 +47741,12 @@ class DoxaBase:
             scanner_clean=export.scanner_clean if export is not None else True,
             would_block_sensitive_export=(
                 export.would_block_sensitive_export if export is not None else False
+            ),
+            sensitive_literal_count=(
+                export.sensitive_literal_count if export is not None else 0
+            ),
+            privacy_warnings=(
+                export.privacy_warnings if export is not None else []
             ),
             shareability_hints=(
                 export.shareability_hints if export is not None else []
