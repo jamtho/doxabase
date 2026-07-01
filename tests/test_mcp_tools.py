@@ -11764,6 +11764,8 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     }
     assert mixed_group["metric_advisory_indexes"] == [0]
     assert mixed_group["type_advisory_indexes"] == [0]
+    assert mixed_group["action_count"] == len(mixed_group["route_step_keys"])
+    assert mixed_group["action_count"] == len(mixed_group["action_labels"])
     assert "Compare the grouped actions" in mixed_group["note"]
 
     followthrough = plan_profile_followthrough_tool(

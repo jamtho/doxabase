@@ -4232,6 +4232,26 @@ few useful gaps:
   work exists. No runtime patch was needed; the agent-doc smoke test now pins
   `plan_staged_revision_recovery` response-shape recall for
   `next_action_queue_items` and `revision_summaries`.
+- A staged handoff receiver trial confirmed a cold receiver can choose the next
+  staged action from imported history plus snapshot rows without source-local
+  state. `import_handoff_bundle` pointed to receiver-local recovery,
+  `project_brief` pointed to current staged recovery, and
+  `plan_staged_revision_recovery` preserved apply/restage/applied/no-op context.
+  No runtime patch was needed.
+- A privacy scoped-handoff trial confirmed broad handoff preflight blocks on
+  unrelated sensitive-looking graph/history content while still offering a
+  structured `preflight_context_slice_export` fallback. Clean scoped slices
+  stayed scanner-clean, carried shareability-review warnings, exported with
+  `fail_on_sensitive=true`, imported, and validated. No runtime patch was
+  needed.
+- A profile semantic-bundle trial confirmed profile review bundles prevent
+  mechanical bulk apply across metric, type, fallback, and scalar-conflict
+  alternatives: the profile gate reported `bulk_apply_allowed=false`, no safe
+  single apply candidates, and `mutation_policy=do_not_bulk_apply` even when
+  staged rows were mechanically ready. The concrete gap was a count mismatch in
+  `mixed_support_review_groups`: `action_count` now counts represented route
+  steps so it matches `route_step_keys` and `action_labels` even when suggested
+  calls are de-duplicated.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

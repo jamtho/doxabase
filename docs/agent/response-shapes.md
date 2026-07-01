@@ -2167,7 +2167,9 @@ pattern is also used by a metric advisory, `mixed_support_patterns`,
 `mixed_support_review_groups[]` collects grouped metric/type actions that share
 support patterns, including review lanes, semantic moves, suggested calls, and
 represented advisory indexes; read it before applying or exporting one lane
-independently. Use
+independently. `action_count` counts represented route steps, so it matches
+`len(route_step_keys)` even when two route steps share a de-duplicated
+`suggested_next_calls` entry. Use
 `type_advisory_count` and `type_advisory_status_counts` for queue routing before
 reading full advisory rows. For `type_finding_unmapped_column`,
 `related_recommendation_indexes` points at the matching

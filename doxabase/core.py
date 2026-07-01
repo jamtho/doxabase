@@ -17348,7 +17348,11 @@ class DoxaBase:
             route_step_keys=list(item["route_step_keys"]),
             route_anchor_iris=list(item["route_anchor_iris"]),
             route_pattern_iris=list(item["route_pattern_iris"]),
-            action_count=len(item["suggested_next_calls"]),
+            action_count=(
+                len(item["route_step_keys"])
+                or len(item["action_labels"])
+                or len(item["suggested_next_calls"])
+            ),
             tool_names=list(item["tool_names"]),
             action_labels=list(item["action_labels"]),
             suggested_next_calls=list(item["suggested_next_calls"]),

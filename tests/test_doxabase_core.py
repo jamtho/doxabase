@@ -34815,6 +34815,8 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
     }
     assert mixed_group.metric_advisory_indexes == [0]
     assert mixed_group.type_advisory_indexes == [0]
+    assert mixed_group.action_count == len(mixed_group.route_step_keys)
+    assert mixed_group.action_count == len(mixed_group.action_labels)
     assert "Compare the grouped actions" in mixed_group.note
 
     followthrough = db.plan_profile_followthrough(dataset, evidence)
@@ -34833,6 +34835,41 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
         pattern_iri
     ]
     assert value_type_resolution.action.unattended_choice_role == "primary"
+
+
+def test_mixed_support_review_group_counts_route_steps_when_calls_repeat() -> None:
+    group = DoxaBase._profile_mixed_support_review_group(
+        group_index=0,
+        item={
+            "pattern_iris": ["https://example.test/project#shared_pattern"],
+            "review_lanes": ["metric_vocabulary_review", "profile_type_review"],
+            "semantic_moves": ["define_metric", "define_value_type"],
+            "route_group_keys": ["metric:one", "type:one"],
+            "route_step_keys": ["step:metric-context", "step:type-context"],
+            "route_anchor_iris": [],
+            "route_pattern_iris": [],
+            "tool_names": ["describe_context_slice"],
+            "action_labels": [
+                "Inspect metric context",
+                "Inspect type context",
+            ],
+            "suggested_next_calls": [
+                "describe_context_slice("
+                "seed_iris=['https://example.test/project#col'])"
+            ],
+            "metric_advisory_indexes": [0],
+            "type_advisory_indexes": [0],
+            "duplicate_group_keys": [],
+            "duplicate_advisory_indexes": [],
+            "duplicate_profile_observation_iris": [],
+            "source_profile_advisories": [],
+        },
+    )
+
+    assert group.action_count == 2
+    assert len(group.suggested_next_calls) == 1
+    assert group.action_count == len(group.route_step_keys)
+    assert group.action_count == len(group.action_labels)
 
 
 def test_stage_profile_map_updates_keeps_mixed_advisory_vocabulary_out_of_map_patch(
