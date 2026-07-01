@@ -234,7 +234,11 @@ evidence IRI with the work item even when the first suggested action is a shared
 dataset-level blocker review such as `describe_query_context`. Pending staged
 profile-map updates only lower the priority of pure map-update reruns; open
 scalar conflict, metric vocabulary, or type advisory lanes keep the profile task
-visible at normal priority.
+visible at normal priority. When a `profile_review` task is selected as the
+top-level `frontier_first_action` / `first_unattended_action`, the brief uses
+the read-only `inspection_next_action` (`draft_profile_map_updates`) rather than
+the task's stage action. The task-level `suggested_next_action` remains the
+primary route to use after inspecting and accepting the draft lane.
 
 `doxabase.list_entities`
 

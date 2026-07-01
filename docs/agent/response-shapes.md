@@ -392,7 +392,10 @@ orientation hops. For `profile_review`, they point at
 `suggested_next_action` is a mutating `stage_profile_map_updates` action or a
 shared blocker. Use the inspection action when auditing or reviewing before
 choosing a lane; use `suggested_next_action` when ready to follow the task's
-chosen primary route.
+chosen primary route. If the selected top-level frontier task is
+`profile_review`, `frontier_first_action` and `first_unattended_action` use the
+read-only inspection hop so unattended scripts do not stage profile-map updates
+before inspecting the draft.
 `profile_candidate_limit` is applied before profile drafts become
 `profile_review` tasks. Each dataset profile summary reports
 `draft_candidate_count`, `profile_candidate_omitted_count`, and

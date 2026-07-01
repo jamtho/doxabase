@@ -303,6 +303,79 @@ def test_project_brief_surfaces_singleton_profile_draft(
     )
 
 
+def test_project_brief_uses_profile_inspection_for_unattended_route(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#OrdersStorage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#OrdersParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled with one full-table aggregate.",
+        evidence_summary="Synthetic singleton profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=1)
+
+    assert brief.datasets[0].query.readiness == "ready_for_query_planning"
+    assert brief.queue_counts["profile_review"] == 1
+    assert brief.queue_counts["query_plan_handoff"] == 1
+    profile_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+    assert profile_task.suggested_next_action is not None
+    assert profile_task.suggested_next_action.tool_name == "stage_profile_map_updates"
+    assert profile_task.inspection_next_action is not None
+    assert profile_task.inspection_next_action.tool_name == "draft_profile_map_updates"
+    assert (
+        brief.frontier_first_source
+        == "recommended_next_tasks:profile_review:inspection"
+    )
+    assert brief.frontier_first_action == profile_task.inspection_next_action
+    assert brief.frontier_first_call == profile_task.inspection_next_call
+    assert brief.first_unattended_source == brief.frontier_first_source
+    assert brief.first_unattended_action == profile_task.inspection_next_action
+    assert brief.first_unattended_call == profile_task.inspection_next_call
+    assert brief.frontier_status.first_unattended_call == (
+        profile_task.inspection_next_call
+    )
+    assert (
+        brief.frontier_status.mutation_allowed_after
+        == "current_frontier_task_available"
+    )
+
+
 def test_project_brief_reports_profile_candidates_hidden_by_limit(
     tmp_path: Path,
 ) -> None:

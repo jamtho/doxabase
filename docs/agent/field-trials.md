@@ -63,6 +63,13 @@ in about 330 seconds, while `uv run pytest -q -n auto --maxprocesses=8` passed
 in about 51 seconds. The container exposed 24 CPUs, no cgroup CPU quota, and no
 memory cap, so future loop slowdowns should first check whether pytest was run
 serially before changing container resources.
+A later July 1 runtime trial with 644 collected tests measured collection at
+about 4.5 seconds and found the slow tail spread across staged-revision,
+profile, query, project-brief, and example coverage rather than one runaway
+test. On this container, `uv run pytest -q -n 12` passed in about 52 seconds,
+beating the 8-worker cap at about 76 seconds; `-n 16` regressed to about
+58 seconds. Use 12 workers when fastest local completion matters, and keep the
+8-worker cap only when preserving CPU headroom for concurrent agents.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
@@ -4346,6 +4353,13 @@ few useful gaps:
   review records now expose `shareability_hints`, `artifact_disposition`, and
   `git_safe` so agents can keep scanner-clean-but-unreviewed artifacts local
   without inferring from `sensitive_literal_count` alone.
+- A profile/frontier routing pass found `profile_review` tasks had a safe
+  `inspection_next_action`, but top-level `frontier_first_action` /
+  `first_unattended_action` could still point at the mutating
+  `stage_profile_map_updates` route. Project briefs now lift the read-only
+  `draft_profile_map_updates` inspection hop to the top-level route when
+  `profile_review` is the selected frontier task, while keeping the task-level
+  stage action available for after draft review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

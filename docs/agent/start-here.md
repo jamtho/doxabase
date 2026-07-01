@@ -63,7 +63,10 @@ When arriving cold, use this route before reading every reference doc.
    with your notes; multiple profile drafts on one dataset may first route to
    the same dataset-level blocker action. For read-only review, follow
    `inspection_next_action` when present; `suggested_next_action` may be the
-   mutating lane to take after inspection.
+   mutating lane to take after inspection. Top-level
+   `frontier_first_action` / `first_unattended_action` now use that inspection
+   hop for `profile_review` tasks, so scripts can follow the top-level route
+   without staging profile-map updates before seeing the full draft.
    If it reports incomplete revision handoff import, read
    `doxabase.get_doc(doc_id="revisions", section="Staged Handoff Recovery Cookbook")`
    and prefer `import_handoff_bundle(manifest_path)` when a manifest is
@@ -257,6 +260,14 @@ about 330 seconds, while `uv run pytest -q -n auto --maxprocesses=8` passed in
 about 51 seconds. Use the capped parallel form when leaving CPU headroom matters;
 raising container CPU or memory limits is unlikely to help unless cgroup files
 show an actual quota.
+A later July 1 runtime trial with 644 collected tests again found no CPU or
+memory cap. Collection was about 4.5 seconds; the bottleneck was broad
+integration-heavy execution, not one runaway test. In that trial
+`uv run pytest -q -n auto --maxprocesses=8` took about 76 seconds,
+`uv run pytest -q -n 12` took about 52 seconds, and `-n 16` regressed to about
+58 seconds. Use 12 workers when fastest local completion matters on this
+container; keep the 8-worker cap only when intentionally leaving CPU headroom
+for concurrent agents.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

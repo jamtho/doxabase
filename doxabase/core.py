@@ -5480,6 +5480,14 @@ class DoxaBase:
         ):
             return "next_best_expansion", next_best_expansion.suggested_next_action
         for task in recommended_tasks:
+            if (
+                task.task_type == "profile_review"
+                and task.inspection_next_action is not None
+            ):
+                return (
+                    f"recommended_next_tasks:{task.task_type}:inspection",
+                    task.inspection_next_action,
+                )
             if task.suggested_next_action is not None:
                 return (
                     f"recommended_next_tasks:{task.task_type}",
