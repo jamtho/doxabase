@@ -21459,6 +21459,8 @@ class DoxaBase:
         )
         removals = self._query_evidence_storage_overlay_removals(
             dataset_iri=dataset_value,
+            storage_access_iri=storage_access_value,
+            physical_layout_iri=physical_layout_value,
             layout_verification_status=layout_verification_status_ref,
             layout_verification_note=layout_verification_note,
         )
@@ -21524,6 +21526,27 @@ class DoxaBase:
                 stage_arguments,
             ),
         )
+        dataset_replaced_layout_values = (
+            self._query_evidence_overlay_replaced_layout_verification_values(
+                dataset_value,
+                layout_verification_status=layout_verification_status_ref,
+                layout_verification_note=layout_verification_note,
+            )
+        )
+        storage_replaced_layout_values = (
+            self._query_evidence_overlay_replaced_layout_verification_values(
+                storage_access_value,
+                layout_verification_status=layout_verification_status_ref,
+                layout_verification_note=layout_verification_note,
+            )
+        )
+        physical_layout_replaced_layout_values = (
+            self._query_evidence_overlay_replaced_layout_verification_values(
+                physical_layout_value,
+                layout_verification_status=layout_verification_status_ref,
+                layout_verification_note=layout_verification_note,
+            )
+        )
         reviewed_overlay = {
             "storage_access_iri": storage_access_value,
             "physical_layout_iri": physical_layout_value,
@@ -21552,20 +21575,26 @@ class DoxaBase:
             "layout_verification_status": str(layout_verification_status_ref),
             "layout_verification_note": layout_verification_note,
             "replaced_dataset_layout_verification_statuses": (
-                self._query_evidence_overlay_existing_values_replaced(
-                    dataset_value,
-                    "rc:layoutVerificationStatus",
-                    str(layout_verification_status_ref),
-                )
+                dataset_replaced_layout_values["layout_verification_statuses"]
             ),
             "replaced_dataset_layout_verification_notes": (
-                self._query_evidence_overlay_existing_values_replaced(
-                    dataset_value,
-                    "rc:layoutVerificationNote",
-                    layout_verification_note,
-                )
-                if layout_verification_note is not None
-                else []
+                dataset_replaced_layout_values["layout_verification_notes"]
+            ),
+            "replaced_storage_access_layout_verification_statuses": (
+                storage_replaced_layout_values["layout_verification_statuses"]
+            ),
+            "replaced_storage_access_layout_verification_notes": (
+                storage_replaced_layout_values["layout_verification_notes"]
+            ),
+            "replaced_physical_layout_verification_statuses": (
+                physical_layout_replaced_layout_values[
+                    "layout_verification_statuses"
+                ]
+            ),
+            "replaced_physical_layout_verification_notes": (
+                physical_layout_replaced_layout_values[
+                    "layout_verification_notes"
+                ]
             ),
         }
         return QueryEvidenceStorageOverlayDraft(
@@ -22157,39 +22186,38 @@ class DoxaBase:
         self,
         *,
         dataset_iri: str,
+        storage_access_iri: str,
+        physical_layout_iri: str,
         layout_verification_status: URIRef,
         layout_verification_note: str | None,
     ) -> list[dict[str, str]] | None:
         removal_graph = Graph()
         self._bind_prefixes(removal_graph)
-        dataset = URIRef(dataset_iri)
         status_predicate = URIRef(self.expand_iri("rc:layoutVerificationStatus"))
         note_predicate = URIRef(self.expand_iri("rc:layoutVerificationNote"))
-        for existing_status in self._query_evidence_overlay_existing_values_replaced(
+        for subject_iri in (
             dataset_iri,
-            "rc:layoutVerificationStatus",
-            str(layout_verification_status),
+            storage_access_iri,
+            physical_layout_iri,
         ):
-            removal_graph.add(
-                (
-                    dataset,
-                    status_predicate,
-                    URIRef(existing_status),
+            subject = URIRef(subject_iri)
+            replaced_values = (
+                self._query_evidence_overlay_replaced_layout_verification_values(
+                    subject_iri,
+                    layout_verification_status=layout_verification_status,
+                    layout_verification_note=layout_verification_note,
                 )
             )
-        if layout_verification_note is not None:
-            for existing_note in self._query_evidence_overlay_existing_values_replaced(
-                dataset_iri,
-                "rc:layoutVerificationNote",
-                layout_verification_note,
-            ):
+            for existing_status in replaced_values["layout_verification_statuses"]:
                 removal_graph.add(
                     (
-                        dataset,
-                        note_predicate,
-                        Literal(existing_note),
+                        subject,
+                        status_predicate,
+                        URIRef(existing_status),
                     )
                 )
+            for existing_note in replaced_values["layout_verification_notes"]:
+                removal_graph.add((subject, note_predicate, Literal(existing_note)))
         if len(removal_graph) == 0:
             return None
         return [
@@ -22199,6 +22227,32 @@ class DoxaBase:
                 "content": removal_graph.serialize(format="turtle"),
             }
         ]
+
+    def _query_evidence_overlay_replaced_layout_verification_values(
+        self,
+        subject_iri: str,
+        *,
+        layout_verification_status: URIRef,
+        layout_verification_note: str | None,
+    ) -> dict[str, list[str]]:
+        return {
+            "layout_verification_statuses": (
+                self._query_evidence_overlay_existing_values_replaced(
+                    subject_iri,
+                    "rc:layoutVerificationStatus",
+                    str(layout_verification_status),
+                )
+            ),
+            "layout_verification_notes": (
+                self._query_evidence_overlay_existing_values_replaced(
+                    subject_iri,
+                    "rc:layoutVerificationNote",
+                    layout_verification_note,
+                )
+                if layout_verification_note is not None
+                else []
+            ),
+        }
 
     def _query_evidence_overlay_existing_values_replaced(
         self,

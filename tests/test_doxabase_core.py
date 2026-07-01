@@ -21166,6 +21166,118 @@ def test_query_evidence_storage_overlay_replaces_dataset_layout_status(
     assert plan.scan.uri_template == str(csv_path)
 
 
+def test_query_evidence_storage_overlay_replaces_reused_resource_verification(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n2,pending\n", encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_iri = "https://example.test/project#orders_reviewed_storage"
+    layout_iri = "https://example.test/project#orders_reviewed_layout"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_storage_access(
+        storage_iri,
+        label="Orders reviewed storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        datasets=[dataset],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Storage metadata imported before query review.",
+    )
+    db.record_map_physical_layout(
+        layout_iri,
+        label="Orders reviewed CSV layout",
+        file_format="rc:CSV",
+        datasets=[dataset],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Layout metadata imported before query review.",
+    )
+    result = db.record_query_result(
+        summary="Orders query scanned a reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_hash="sha256:orders-reused-overlay",
+        result_sources=[str(tmp_path / "orders.result.json")],
+        scanned_source_paths=[str(csv_path)],
+        sample_size=2,
+        sample_scope="All rows in the reviewed Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=2,
+    )
+    before_counts = _mutable_graph_counts(db)
+
+    draft = db.draft_query_evidence_storage_overlay(
+        dataset,
+        result.evidence_iri,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        storage_access_iri=storage_iri,
+        physical_layout_iri=layout_iri,
+        storage_label="Orders reviewed storage",
+        physical_layout_label="Orders reviewed CSV layout",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_note="Reviewed query evidence scanned orders.csv.",
+    )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert draft.validation_conforms is True
+    assert draft.reviewed_overlay[
+        "replaced_storage_access_layout_verification_statuses"
+    ] == [RC + "CandidateLayout"]
+    assert draft.reviewed_overlay[
+        "replaced_storage_access_layout_verification_notes"
+    ] == ["Storage metadata imported before query review."]
+    assert draft.reviewed_overlay[
+        "replaced_physical_layout_verification_statuses"
+    ] == [RC + "CandidateLayout"]
+    assert draft.reviewed_overlay[
+        "replaced_physical_layout_verification_notes"
+    ] == ["Layout metadata imported before query review."]
+    assert "removals" in draft.stage_arguments
+    removal_content = draft.stage_arguments["removals"][0]["content"]
+    assert "Storage metadata imported before query review" in removal_content
+    assert "Layout metadata imported before query review" in removal_content
+
+    staged = db.stage_graph_revision(**draft.stage_arguments)
+    assert staged.validation_conforms is True
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.status == "ready"
+    applied = db.apply_staged_revision(staged.revision_iri)
+    assert applied.patches_applied == 2
+
+    assert db.validate_graph(scope="all").conforms
+    context = db.describe_query_context(dataset)
+    assert context.readiness == "ready_for_query_planning"
+    storage = next(
+        access
+        for access in context.storage_accesses
+        if access.iri == storage_iri
+    )
+    layout = next(
+        physical_layout
+        for physical_layout in context.physical_layouts
+        if physical_layout.iri == layout_iri
+    )
+    assert storage.layout_verification_status is not None
+    assert storage.layout_verification_status.iri == RC + "VerifiedByQueryLayout"
+    assert storage.layout_verification_note == (
+        "Reviewed query evidence scanned orders.csv."
+    )
+    assert layout.layout_verification_status is not None
+    assert layout.layout_verification_status.iri == RC + "VerifiedByQueryLayout"
+    assert layout.layout_verification_note == (
+        "Reviewed query evidence scanned orders.csv."
+    )
+
+
 def test_object_root_candidate_stays_visible_with_partition_templates(
     tmp_path: Path,
 ) -> None:

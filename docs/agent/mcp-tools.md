@@ -1240,9 +1240,9 @@ endpoint/credential hints, compression, and a layout verification note. The
 response echoes those reviewed values in `reviewed_overlay`, including generated
 or caller-supplied storage/layout IRIs, labels, access mode,
 endpoint/bucket/prefix/region/path-style fields, credential reference,
-compression, and replaced dataset verification values. It also reports the
-source query context and source profile/query evidence, previews validation for
-the Turtle addition, and returns `stage_arguments` plus a
+compression, and replaced dataset/storage/layout verification values. It also
+reports the source query context and source profile/query evidence, previews
+validation for the Turtle addition, and returns `stage_arguments` plus a
 `stage_graph_revision` suggested action. Treat
 `source_query_evidence.scanned_source_handles` /
 `source_query_evidence.scanned_source_paths` as reviewed provenance context for
@@ -1253,8 +1253,10 @@ Call that staged-revision helper, check/apply the staged row, then rerun
 `describe_query_context` before drafting a query plan. When the dataset already
 has a different
 `rc:layoutVerificationStatus` or note, `stage_arguments` includes removal
-patches for those old dataset-level values alongside the reviewed overlay;
-those removals are part of making the staged preview validation-clean.
+patches for old dataset-level values. When the caller reuses existing
+`storage_access_iri` or `physical_layout_iri`, the same removal graph also
+replaces stale verification status/note triples on those resources so max-count
+SHACL validation stays clean after staging and apply.
 This route preserves graph-revision rationale and keeps the draft step
 side-effect free.
 

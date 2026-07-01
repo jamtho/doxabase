@@ -3857,8 +3857,16 @@ few useful gaps:
   required bindings, and illustrative partition binding examples; layout
   selection actions mirror the reviewed `physical_layout_iri` in the same card.
   Use those fields instead of parsing action prose when choosing production,
-  sample, archive, peer, or layout-specific routes. The query-evidence storage
-  overlay validation behavior remains a lower-priority affordance to retest.
+  sample, archive, peer, or layout-specific routes. A direct overlay validation
+  trial then confirmed that reusing existing `storage_access_iri` or
+  `physical_layout_iri` could leave old verification status/note triples in
+  place and fail max-count SHACL checks. `draft_query_evidence_storage_overlay`
+  now removes replaced verification status/note values from reused dataset,
+  storage access, and physical layout resources before staging. Remaining
+  non-blocking affordances for later waves: generic `export_staged_revisions`
+  should repeat sampled-profile cautions in the profile route bridge, and batch
+  restage responses could make the dry-run-to-real-run continuation easier for
+  top-level-action-only executors.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

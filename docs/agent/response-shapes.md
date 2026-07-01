@@ -1363,6 +1363,10 @@ result; `source_profile_evidence` is retained as a compatibility alias for the
 same payload. Use `reviewed_overlay` to audit the supplied storage metadata, and
 `stage_arguments` only after confirming the overlay describes the queried source
 data rather than query text, logs, or result output.
+When the overlay replaces existing dataset, storage-access, or physical-layout
+verification status/note values, `reviewed_overlay` lists the replaced values
+and `stage_arguments.removals` carries the removal graph needed to avoid
+max-count validation failures.
 `reviewed_overlay` echoes the generated or caller-supplied storage/layout IRIs,
 labels, protocol, root, access mode, location kind, path templates, file format,
 compression, endpoint/bucket/prefix/region/path-style fields, credential
