@@ -2902,6 +2902,8 @@ query.partition_schemes
 query.caveats
 query.upstream_caveats
 query.suggested_next_actions
+query.unattended_recommended_action_indexes
+query.first_unattended_action_index
 query.suggested_next_calls
 ```
 
@@ -3145,8 +3147,6 @@ action.unattended_review_reason_codes
 ```
 
 Prefer the route card over parsing `reason` text when choosing peer routes.
-When route-intent peer review is required, use `unattended_recommended` before
-taking the first draft action.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per
 compatible linked layout signature with `candidate_selector` and

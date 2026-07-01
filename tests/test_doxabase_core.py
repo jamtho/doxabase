@@ -20493,6 +20493,8 @@ def test_query_target_candidates_surface_global_blockers(
     assert peer_action.unattended_review_reason_codes == [
         "route_intent_review_candidates_present"
     ]
+    assert context.unattended_recommended_action_indexes == [1]
+    assert context.first_unattended_action_index == 1
     assert context.suggested_next_calls == [
         action.call for action in context.suggested_next_actions
     ]
@@ -23737,6 +23739,17 @@ def test_query_target_candidates_expose_storage_route_roles(
     assert "route_intent_review_candidates_present" in (
         context.query_target_decision.selection_reason_codes
     )
+    production_action_index = next(
+        index
+        for index, action in enumerate(context.suggested_next_actions)
+        if action.tool_name == "draft_query_plan"
+        and action.route_card["candidate_index"]
+        == context.query_target_candidates.index(production_candidate)
+    )
+    assert context.unattended_recommended_action_indexes == [
+        production_action_index
+    ]
+    assert context.first_unattended_action_index == production_action_index
 
     production_plan = db.draft_query_plan(
         dataset,
@@ -23823,6 +23836,21 @@ def test_review_gated_query_target_decision_flags_unselected_route_intent(
     )
     assert "route_intent_review_candidates_present" in (
         context.query_target_decision.selection_reason_codes
+    )
+    assert context.unattended_recommended_action_indexes
+    assert context.first_unattended_action_index == (
+        context.unattended_recommended_action_indexes[0]
+    )
+    for action_index in context.unattended_recommended_action_indexes:
+        action = context.suggested_next_actions[action_index]
+        assert action.tool_name == "draft_query_plan"
+        assert action.route_card["candidate_index"] == production_index
+        assert action.unattended_recommended is True
+    assert all(
+        action.unattended_recommended is False
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_plan"
+        and action.route_card["candidate_index"] != production_index
     )
 
 

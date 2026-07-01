@@ -4069,6 +4069,13 @@ few useful gaps:
   to detect by angle brackets. Those suggestions now mark `trig_path`,
   `revision_snapshot_path`, and `manifest_path` as required placeholder
   reviewed fields before writing the paired handoff artifacts.
+- A storage-aware query-planning trial found route-intent peer actions were
+  correctly flagged, but the first `draft_query_plan` suggestion could still be
+  a non-recommended sample route. `describe_query_context()` now exposes
+  `unattended_recommended_action_indexes` and
+  `first_unattended_action_index` as top-level indexes into
+  `suggested_next_actions[]`, so unattended scripts can choose the reviewed
+  production/current peer without reordering legacy actions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

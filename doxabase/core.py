@@ -2772,6 +2772,8 @@ class QueryPlanningContext:
     caveats: list[CaveatDescription]
     upstream_caveats: list[CaveatDescription]
     suggested_next_actions: list[SuggestedNextAction]
+    unattended_recommended_action_indexes: list[int]
+    first_unattended_action_index: int | None
     suggested_next_calls: list[str]
 
 
@@ -19510,6 +19512,9 @@ class DoxaBase:
                 unselected_direct_clean_candidate_indexes
             ),
         )
+        unattended_recommended_action_indexes = (
+            self._unattended_recommended_action_indexes(suggested_next_actions)
+        )
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -19554,6 +19559,14 @@ class DoxaBase:
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
             suggested_next_actions=suggested_next_actions,
+            unattended_recommended_action_indexes=(
+                unattended_recommended_action_indexes
+            ),
+            first_unattended_action_index=(
+                unattended_recommended_action_indexes[0]
+                if unattended_recommended_action_indexes
+                else None
+            ),
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
@@ -19636,10 +19649,22 @@ class DoxaBase:
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
             suggested_next_actions=suggested_next_actions,
+            unattended_recommended_action_indexes=[],
+            first_unattended_action_index=None,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
         )
+
+    @staticmethod
+    def _unattended_recommended_action_indexes(
+        actions: Iterable[SuggestedNextAction],
+    ) -> list[int]:
+        return [
+            index
+            for index, action in enumerate(actions)
+            if getattr(action, "unattended_recommended", False) is True
+        ]
 
     def _query_repair_action_groups(
         self,
@@ -20894,6 +20919,10 @@ class DoxaBase:
                             issues=issues,
                         )
                     ),
+                    route_intent_review_candidate_indexes=(
+                        selected_route_intent_peer_indexes
+                    ),
+                    route_intent_caution=decision.route_intent_caution,
                 )
         )
         return actions
@@ -21500,6 +21529,8 @@ class DoxaBase:
         columns: list[ColumnDescription],
         partition_schemes: list[PartitionDescription],
         allow_context_blocked_candidate: bool,
+        route_intent_review_candidate_indexes: Iterable[int] = (),
+        route_intent_caution: str | None = None,
     ) -> list[SuggestedNextAction]:
         issue = next(
             (
@@ -21517,6 +21548,19 @@ class DoxaBase:
             return []
         actions: list[SuggestedNextAction] = []
         seen_layout_iris: set[str] = set()
+        route_intent_peer_indexes = set(route_intent_review_candidate_indexes)
+        unattended_recommended = (
+            not route_intent_peer_indexes
+            or candidate_index in route_intent_peer_indexes
+        )
+        unattended_caution = (
+            route_intent_caution if route_intent_peer_indexes else None
+        )
+        unattended_reason_codes = (
+            ["route_intent_review_candidates_present"]
+            if route_intent_peer_indexes
+            else []
+        )
         for signature in signatures:
             if not isinstance(signature, Mapping):
                 continue
@@ -21605,6 +21649,9 @@ class DoxaBase:
                             partition_schemes=partition_schemes,
                             physical_layout_iri=layout_iri,
                         ),
+                        unattended_recommended=unattended_recommended,
+                        unattended_caution=unattended_caution,
+                        unattended_review_reason_codes=unattended_reason_codes,
                     )
                 )
         return actions
