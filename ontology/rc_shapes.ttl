@@ -667,6 +667,11 @@ rc:StorageAccessShape a sh:NodeShape ;
         sh:message "storageRoot must be a string if declared." ;
     ] ;
     sh:property [
+        sh:path rc:routeRole ;
+        sh:class rc:RouteRole ;
+        sh:message "routeRole values must be rc:RouteRole resources if declared." ;
+    ] ;
+    sh:property [
         sh:path rc:locationKind ;
         sh:maxCount 1 ;
         sh:in (

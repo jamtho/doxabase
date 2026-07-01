@@ -3756,10 +3756,9 @@ few useful gaps:
   template/source/storage identity. The larger remaining storage-query design
   issue is durable route intent: a local sample route can still outrank the
   intended production database route unless the caller chooses a selector or
-  storage access deliberately. Later work should add or document route-intent
-  vocabulary such as sample, canonical, production, archive, derived, and
-  backfill before relying on automatic candidate choice in ambiguous multi-route
-  capsules.
+  storage access deliberately. A later route-intent pass added storage-access
+  `route_roles`, so agents should now inspect those reviewed roles and pass an
+  explicit `candidate_selector` in ambiguous multi-route capsules.
 - A broad query-result, MCP-parity, lineage, and profile-systematisation wave
   passed on scratch capsules. Polymarket query planning could reach a reviewed
   DuckDB handoff and correctly record a blocked result when fixture data was not
@@ -3775,6 +3774,18 @@ few useful gaps:
   assertion omits one of the matching `profile_route_sources`; carry both
   `define_value_type` and `assert_map_type` route sources when one staged framing
   intentionally closes both moves.
+- A cold handoff receiver and project-brief frontier wave passed without code
+  changes: recovery-complete handoff import, stale/restaged/applied lineage,
+  grouped choose-one exports, safety-first `project_brief`, low-limit broadening,
+  privacy preflight blocks, staged recovery, query repair, and profile advisory
+  lanes all routed a cold unattended agent to safe next actions. The route-intent
+  pressure trial exposed the concrete remaining storage-query gap: mechanically
+  ready candidates could not tell a cold agent which route was production-current
+  versus sample/archive/backfill. Storage access records now accept `route_roles`
+  such as `rc:ProductionRoute`, `rc:CurrentRoute`, `rc:SampleRoute`,
+  `rc:ArchiveRoute`, `rc:BackfillRoute`, and `rc:CanonicalRoute`; query target
+  candidates inherit those role summaries for reviewed `candidate_selector`
+  selection without changing automatic precedence.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

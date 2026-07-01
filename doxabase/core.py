@@ -2577,6 +2577,7 @@ class StorageAccessDescription:
     iri: str
     label: str | None
     description: str | None
+    route_roles: list[ResourceSummary]
     storage_protocol: ResourceSummary | None
     access_mode: ResourceSummary | None
     location_kind: str | None
@@ -2647,6 +2648,7 @@ class QueryTargetCandidate:
     template_source: str
     source_resource: ResourceSummary
     storage_access: ResourceSummary | None
+    route_roles: list[ResourceSummary]
     storage_protocol: ResourceSummary | None
     location_kind: str | None
     storage_root: str | None
@@ -20865,6 +20867,7 @@ class DoxaBase:
         physical_layout_iri: str | None = None,
         storage_label: str | None = None,
         physical_layout_label: str | None = None,
+        route_roles: Iterable[str] | str | None = None,
         access_mode: str | None = "rc:ReadOnlyAccess",
         endpoint_profile: str | None = None,
         bucket_name: str | None = None,
@@ -20958,6 +20961,7 @@ class DoxaBase:
             LAYOUT_VERIFICATION_STATUSES,
         )
 
+        route_role_values = self._string_values("route_roles", route_roles)
         path_template_values = self._string_values(
             "path_templates",
             path_templates,
@@ -20991,6 +20995,7 @@ class DoxaBase:
             physical_layout_iri=physical_layout_value,
             storage_label=storage_label,
             physical_layout_label=physical_layout_label,
+            route_roles=route_role_values,
             storage_protocol=storage_protocol_ref,
             access_mode=access_mode_ref,
             location_kind=location_kind_value,
@@ -21079,6 +21084,9 @@ class DoxaBase:
             "physical_layout_iri": physical_layout_value,
             "storage_label": storage_label,
             "physical_layout_label": physical_layout_label,
+            "route_roles": [
+                self.expand_iri(route_role) for route_role in route_role_values
+            ],
             "storage_protocol": str(storage_protocol_ref),
             "storage_root": storage_root_value,
             "access_mode": str(access_mode_ref) if access_mode_ref is not None else None,
@@ -21283,6 +21291,7 @@ class DoxaBase:
         rationale: str,
         label: str | None = None,
         description: str | None = None,
+        route_roles: Iterable[str] | str | None = None,
         access_mode: str | None = None,
         location_kind: str | None = None,
         endpoint_profile: str | None = None,
@@ -21329,6 +21338,7 @@ class DoxaBase:
         rationale_value = rationale.strip()
         if not rationale_value:
             raise DoxaBaseError("rationale must not be empty")
+        route_role_values = self._string_values("route_roles", route_roles)
         path_template_values = self._string_values("path_templates", path_templates)
         location_kind_value = self._storage_location_kind(location_kind)
         storage_protocol_ref = self._resource_ref(
@@ -21363,6 +21373,7 @@ class DoxaBase:
             storage_access_iri=access_value,
             label=label,
             description=description,
+            route_roles=route_role_values,
             storage_protocol=storage_protocol_ref,
             access_mode=access_mode_ref,
             location_kind=location_kind_value,
@@ -21432,6 +21443,7 @@ class DoxaBase:
         storage_access_iri: str,
         label: str | None,
         description: str | None,
+        route_roles: list[str],
         storage_protocol: URIRef,
         access_mode: URIRef | None,
         location_kind: str | None,
@@ -21454,6 +21466,14 @@ class DoxaBase:
         graph.add((access, RDF.type, URIRef(self.expand_iri("rc:StorageAccess"))))
         self._add_optional_literal(graph, access, str(RDFS.label), label)
         self._add_optional_literal(graph, access, str(RDFS.comment), description)
+        for route_role in route_roles:
+            graph.add(
+                (
+                    access,
+                    URIRef(self.expand_iri("rc:routeRole")),
+                    self._resource_ref("route_roles", route_role),
+                )
+            )
         graph.add(
             (
                 access,
@@ -21558,6 +21578,7 @@ class DoxaBase:
         physical_layout_iri: str,
         storage_label: str | None,
         physical_layout_label: str | None,
+        route_roles: list[str],
         storage_protocol: URIRef,
         access_mode: URIRef | None,
         location_kind: str,
@@ -21597,6 +21618,14 @@ class DoxaBase:
 
         graph.add((storage, RDF.type, URIRef(self.expand_iri("rc:StorageAccess"))))
         self._add_optional_literal(graph, storage, str(RDFS.label), storage_label)
+        for route_role in route_roles:
+            graph.add(
+                (
+                    storage,
+                    URIRef(self.expand_iri("rc:routeRole")),
+                    self._resource_ref("route_roles", route_role),
+                )
+            )
         graph.add(
             (
                 storage,
@@ -22145,6 +22174,11 @@ class DoxaBase:
             parts.append(f"connection_reference={candidate.connection_reference!r}")
         if candidate.template is not None:
             parts.append(f"template={candidate.template!r}")
+        if candidate.route_roles:
+            route_roles = ", ".join(
+                role.label or self._local_name(role.iri) for role in candidate.route_roles
+            )
+            parts.append(f"route_roles={route_roles!r}")
         if storage_label is not None:
             parts.append(f"storage={storage_label!r}")
         return " ".join(parts)
@@ -23858,6 +23892,11 @@ class DoxaBase:
                     template_source=template_source,
                     source_resource=source_resource,
                     storage_access=access_resource,
+                    route_roles=(
+                        list(storage_access.route_roles)
+                        if storage_access is not None
+                        else []
+                    ),
                     storage_protocol=(
                         storage_access.storage_protocol
                         if storage_access is not None
@@ -32914,6 +32953,7 @@ class DoxaBase:
         *,
         label: str | None = None,
         description: str | None = None,
+        route_roles: Iterable[str] | str | None = None,
         storage_protocol: str | None = None,
         access_mode: str | None = None,
         location_kind: str | None = None,
@@ -32930,6 +32970,7 @@ class DoxaBase:
         datasets: Iterable[str] | str | None = None,
     ) -> MapResourceRecord:
         access_iri = self._required_iri("iri", iri)
+        route_role_values = self._string_values("route_roles", route_roles)
         path_template_values = self._string_values("path_templates", path_templates)
         dataset_values = self._string_values("datasets", datasets)
         location_kind_value = self._storage_location_kind(location_kind)
@@ -32959,6 +33000,14 @@ class DoxaBase:
         graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:StorageAccess"))))
         self._add_optional_literal(graph, subject, str(RDFS.label), label)
         self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        for route_role in route_role_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:routeRole")),
+                    self._resource_ref("route_roles", route_role),
+                )
+            )
         if storage_protocol is not None:
             graph.add(
                 (
@@ -33021,6 +33070,8 @@ class DoxaBase:
             predicates.append(str(RDFS.label))
         if description is not None:
             predicates.append(str(RDFS.comment))
+        if route_roles is not None:
+            predicates.append(self.expand_iri("rc:routeRole"))
         if storage_protocol is not None:
             predicates.append(self.expand_iri("rc:storageProtocol"))
         if access_mode is not None:
@@ -57040,6 +57091,14 @@ class DoxaBase:
             iri=access_iri,
             label=self._label_from_graphs(lookup_graphs, access_iri),
             description=self._description_from_graphs(lookup_graphs, access_iri),
+            route_roles=[
+                self._resource_summary(lookup_graphs, route_role)
+                for route_role in self._objects(
+                    data_graphs,
+                    access_iri,
+                    "rc:routeRole",
+                )
+            ],
             storage_protocol=(
                 self._resource_summary(lookup_graphs, storage_protocol)
                 if storage_protocol is not None

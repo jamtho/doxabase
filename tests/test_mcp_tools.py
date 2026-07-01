@@ -1531,6 +1531,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root=str(warehouse),
         location_kind="directory",
+        route_roles=["rc:CurrentRoute"],
         path_templates=["orders.csv"],
         file_format="rc:CSV",
         layout_verification_note="Reviewed query evidence scanned orders.csv.",
@@ -1551,6 +1552,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
     assert draft["source_query_evidence"] == draft["source_profile_evidence"]
     assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
+    assert draft["reviewed_overlay"]["route_roles"] == [RC + "CurrentRoute"]
     assert draft["reviewed_overlay"]["path_templates"] == ["orders.csv"]
     assert draft["reviewed_overlay"]["file_format"] == RC + "CSV"
     assert draft["validation_conforms"] is True
@@ -7704,6 +7706,7 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         db,
         iri="https://example.test/project#mixed_events_s3_storage",
         label="Mixed events S3 access",
+        route_roles=["rc:ArchiveRoute"],
         storage_protocol="rc:S3CompatibleStorage",
         bucket_name="ops-data-lake",
         key_prefix="curated",
@@ -7715,6 +7718,7 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         db,
         iri="https://example.test/project#mixed_events_database_storage",
         label="Mixed events warehouse relation",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
         storage_protocol="rc:DatabaseStorage",
         storage_root="warehouse-prod",
         path_templates=["mart.events"],
@@ -7757,6 +7761,9 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
     assert object_candidate["candidate_path"] == (
         "s3://ops-data-lake/curated/events/date={date}/*.parquet"
     )
+    assert [role["label"] for role in object_candidate["route_roles"]] == [
+        "archive route"
+    ]
     assert object_candidate["direct_review_required"] is False
     database_candidates = [
         candidate
@@ -7767,6 +7774,19 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
         "storage_access"
     ]
     assert database_candidates[0]["relation_identifier"] == "mart.events"
+    assert [role["iri"] for role in database_candidates[0]["route_roles"]] == [
+        RC + "CurrentRoute",
+        RC + "ProductionRoute",
+    ]
+    serialized_database_storage = next(
+        access
+        for access in result["storage_accesses"]
+        if access["iri"] == database_storage["iri"]
+    )
+    assert [role["label"] for role in serialized_database_storage["route_roles"]] == [
+        "current route",
+        "production route",
+    ]
     assert set(result["ready_candidate_indexes"]) == {
         result["query_target_candidates"].index(object_candidate),
         result["query_target_candidates"].index(database_candidates[0]),
@@ -8099,6 +8119,7 @@ def test_stage_query_storage_access_repair_tool_stages_new_storage_link(
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root=str(tmp_path / "warehouse"),
         rationale="Reviewed the local warehouse route for Messages.",
+        route_roles=["rc:CurrentRoute"],
         location_kind="directory",
         path_templates=["messages/current/*.jsonl"],
         layout_verification_status="rc:VerifiedByListingLayout",
@@ -8115,6 +8136,9 @@ def test_stage_query_storage_access_repair_tool_stages_new_storage_link(
         issue["code"] for issue in repaired["issues"]
     }
     assert repaired["storage_accesses"][0]["iri"] == storage_access
+    assert [role["iri"] for role in repaired["storage_accesses"][0]["route_roles"]] == [
+        RC + "CurrentRoute"
+    ]
     assert repaired["storage_accesses"][0]["storage_root"] == str(
         tmp_path / "warehouse"
     )

@@ -454,7 +454,9 @@ mutation. The direct record-new-storage template remains available for
 intentional current-best writes. In both routes, optional `path_templates` should
 be omitted when the dataset or partition already owns the reviewed file/object
 path template; duplicating it can produce equivalent ready query candidates. Use
-storage-access-owned templates for database relation identifiers. If this repair
+storage-access-owned templates for database relation identifiers. Include
+`route_roles` when the reviewed storage route is production/current/canonical,
+sample, archive, or backfill. If this repair
 comes from a profile draft's `query_context_review` lane, pass
 `profile_route_sources=[query_action.source_query_context]` so profile insight
 review can mark the staged storage repair as the direct query-context action.
@@ -498,7 +500,8 @@ and short profile summaries.
 If physical metadata blockers remain, the same context can also include a
 `draft_query_evidence_storage_overlay` skeleton action. Treat the skeleton as a
 review checklist: replace placeholder values named in `placeholder_fields` /
-`reviewed_value_fields` and supply `required_extra_arguments` before calling the
+`reviewed_value_fields`, include `route_roles` when the reviewed source route
+has known intent, and supply `required_extra_arguments` before calling the
 helper.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_selector`
@@ -513,7 +516,8 @@ warning/error that may still be draftable with an explicit selector and
 `allow_context_blocked_candidate=True`.
 `query_target_candidates`
 preserve template provenance, expose a stable `candidate_selector` for reviewed
-follow-up calls, and compose best-effort file/object paths from
+follow-up calls, carry storage-access `route_roles`, and compose best-effort
+file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or
 credential references. For database-backed storage, candidates keep the relation
 as `candidate_path` and expose `relation_identifier` plus
@@ -1109,6 +1113,10 @@ notes, observations, or patterns. Common base file-format terms include
 `rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`, `rc:TIFF`,
 `rc:GeoTIFF`, and `rc:PDF`; define a project-local `rc:FileFormat` only when
 the base vocabulary lacks the reviewed format.
+For storage access `route_roles`, use built-ins such as `rc:ProductionRoute`,
+`rc:CurrentRoute`, `rc:CanonicalRoute`, `rc:SampleRoute`, `rc:ArchiveRoute`, or
+`rc:BackfillRoute`, or define project-local `rc:RouteRole` terms. Query target
+candidates inherit these roles for reviewed route selection.
 For `record_map_partition_scheme`, `redundant_partition_key` is one of those
 resource-valued fields, usually the partition column IRI/CURIE. Keep literal
 placeholder names such as `date` or `event_date` in `path_template`.

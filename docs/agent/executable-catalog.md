@@ -100,7 +100,9 @@ references before export.
 4. Use `query_target_candidates` as supporting path/template cards. They preserve
    whether a template came from the dataset, a partition scheme, storage access,
    or a storage-root-only location, and they compose best-effort paths without
-   resolving endpoint profiles or credentials.
+   resolving endpoint profiles or credentials. They also expose storage-access
+   `route_roles`, which are the reviewed route-intent facts to use when deciding
+   between production/current/canonical, sample, archive, or backfill routes.
    `template_source="storage_access_location"` means no path template was
    recorded, but the storage root itself is the candidate location; treat it as
    executable only when `location_kind="object"` confirms the root names the
@@ -194,6 +196,7 @@ db.record_map_column(event_date, column_name="event_date", table_iri=table)
 db.record_map_storage_access(
     storage,
     label="retail events local storage",
+    route_roles=["rc:SampleRoute"],
     storage_protocol="rc:LocalFilesystemStorage",
     access_mode="rc:ReadOnlyAccess",
     location_kind="directory",

@@ -235,6 +235,7 @@ storage = "https://example.test/enron#local_parquet_access"
 db.record_map_storage_access(
     iri=storage,
     label="local parquet access",
+    route_roles=["rc:SampleRoute"],
     storage_protocol="rc:LocalFilesystemStorage",
     access_mode="rc:ReadOnlyAccess",
     location_kind="directory",
@@ -273,6 +274,13 @@ db.record_map_column(
     nullable=False,
 )
 ```
+
+Use `route_roles` on storage access records when a dataset has multiple viable
+routes. Built-in reviewed roles include `rc:ProductionRoute`, `rc:CurrentRoute`,
+`rc:CanonicalRoute`, `rc:SampleRoute`, `rc:ArchiveRoute`, and
+`rc:BackfillRoute`; define project-local `rc:RouteRole` terms when those are too
+coarse. Query target candidates inherit these roles so agents can choose reviewed
+production/current routes without parsing labels or path names.
 
 ## Relationships
 

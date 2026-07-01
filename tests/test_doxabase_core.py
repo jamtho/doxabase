@@ -128,9 +128,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1396
+    assert graphs["base_ontology"].triple_count == 1420
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1394
+    assert graphs["base_shapes"].triple_count == 1398
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -18358,6 +18358,7 @@ def test_stage_query_storage_access_repair_unblocks_missing_storage(
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root=str(tmp_path / "warehouse"),
         rationale="Reviewed the local warehouse route for Messages.",
+        route_roles=["rc:CurrentRoute"],
         location_kind="directory",
         path_templates=["messages/current/*.jsonl"],
         layout_verification_status="rc:VerifiedByListingLayout",
@@ -18372,6 +18373,9 @@ def test_stage_query_storage_access_repair_unblocks_missing_storage(
     assert "missing_storage_access" not in {issue.code for issue in repaired.issues}
     assert repaired.storage_accesses[0].iri == storage_access
     assert repaired.storage_accesses[0].storage_root == str(tmp_path / "warehouse")
+    assert [role.iri for role in repaired.storage_accesses[0].route_roles] == [
+        RC + "CurrentRoute"
+    ]
 
 
 def test_stage_query_storage_access_repair_rejects_existing_storage_by_default(
@@ -20685,6 +20689,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         location_kind="directory",
         storage_label="Reviewed Orders storage route",
         physical_layout_label="Reviewed Orders CSV layout",
+        route_roles=["rc:CurrentRoute"],
         path_templates=["orders.csv"],
         file_format="rc:CSV",
         layout_verification_note=(
@@ -20712,6 +20717,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         "Reviewed Orders CSV layout"
     )
     assert draft.reviewed_overlay["storage_root"] == str(warehouse)
+    assert draft.reviewed_overlay["route_roles"] == [RC + "CurrentRoute"]
     assert draft.reviewed_overlay["access_mode"] == RC + "ReadOnlyAccess"
     assert draft.reviewed_overlay["location_kind"] == "directory"
     assert draft.reviewed_overlay["endpoint_profile"] is None
@@ -22298,6 +22304,89 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert "likely partition column event_date" in date_binding.derivation_note
     assert "partition scheme granularity" in date_binding.derivation_note
     assert allowed_plan.handoff_kind == "binding_values_required"
+
+
+def test_query_target_candidates_expose_storage_route_roles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    sample_storage = db.record_map_storage_access(
+        "https://example.test/project#aaa_orders_sample_storage",
+        label="Orders sample relation",
+        route_roles=["rc:SampleRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-dev",
+        path_templates=["scratch.orders_sample"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    production_storage = db.record_map_storage_access(
+        "https://example.test/project#zzz_orders_production_storage",
+        label="Orders production relation",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders_current"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    table_layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[sample_storage.iri, production_storage.iri],
+        physical_layouts=[table_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    sample_candidate = next(
+        candidate
+        for candidate in context.query_target_candidates
+        if candidate.storage_access is not None
+        and candidate.storage_access.iri == sample_storage.iri
+    )
+    production_candidate = next(
+        candidate
+        for candidate in context.query_target_candidates
+        if candidate.storage_access is not None
+        and candidate.storage_access.iri == production_storage.iri
+    )
+    sample_access = next(
+        access for access in context.storage_accesses if access.iri == sample_storage.iri
+    )
+    assert [role.iri for role in sample_access.route_roles] == [
+        RC + "SampleRoute"
+    ]
+    assert [role.label for role in sample_candidate.route_roles] == ["sample route"]
+    assert [role.iri for role in production_candidate.route_roles] == [
+        RC + "CurrentRoute",
+        RC + "ProductionRoute",
+    ]
+    assert context.query_target_decision.candidate_index is not None
+    automatic_candidate = context.query_target_candidates[
+        context.query_target_decision.candidate_index
+    ]
+    assert automatic_candidate.storage_access is not None
+    assert automatic_candidate.storage_access.iri == sample_storage.iri
+    assert context.query_target_decision.peer_ready_requires_intent_review is True
+
+    production_plan = db.draft_query_plan(
+        dataset,
+        candidate_selector=production_candidate.candidate_selector,
+    )
+
+    assert production_plan.handoff_kind == "database_relation_handoff"
+    assert production_plan.selected_candidate is not None
+    assert production_plan.selected_candidate.route_roles == production_candidate.route_roles
+    assert production_plan.source_context.selection_mode == "candidate_selector"
 
 
 def test_database_storage_does_not_treat_dataset_template_as_relation(

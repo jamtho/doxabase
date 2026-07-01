@@ -152,6 +152,10 @@ Start with `describe_query_context(dataset_iri)`:
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_selector` when a different route is intended.
+   Candidate cards inherit storage-access `route_roles`, so prefer reviewed roles
+   such as `rc:ProductionRoute`, `rc:CurrentRoute`, `rc:SampleRoute`,
+   `rc:ArchiveRoute`, `rc:BackfillRoute`, and `rc:CanonicalRoute` over labels or
+   path names when choosing among otherwise-ready routes.
    `query_target_decision.peer_ready_requires_intent_review` and
    `selection_caution` carry the same warning in a compact form, while
    `selection_reason_codes` records whether the selected route came from
@@ -191,11 +195,14 @@ Start with `describe_query_context(dataset_iri)`:
    supply `required_extra_arguments` after reviewing the actual source; the
    helper does not infer storage values from query artifacts. After the draft,
    use `reviewed_overlay` to audit the supplied non-secret storage/layout IRIs,
-   labels, access mode, endpoint/bucket/prefix/region/path-style fields,
-   credential reference, compression, and verification fields without parsing
-   Turtle patch content.
+   labels, route roles, access mode, endpoint/bucket/prefix/region/path-style
+   fields, credential reference, compression, and verification fields without
+   parsing Turtle patch content.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
+   They also carry storage-access `route_roles`; use those reviewed route intent
+   facts to distinguish production/current/canonical routes from sample, archive,
+   or backfill routes before unattended execution.
    For non-database storage with `location_kind="object"`, prefer the exact
    `storage_access_location` candidate; candidates that append dataset or
    partition templates to that object root are review-only with
@@ -244,7 +251,9 @@ Start with `describe_query_context(dataset_iri)`:
    new non-secret storage access and dataset link, use
    `record_map_storage_access` only when a direct current-best map write is
    intentional, or stage a reviewed `rc:hasStorageAccess` link to an existing
-   access resource. The repair hint includes
+   access resource. Include `route_roles` on staged or direct storage repairs
+   when the reviewed route is production/current/canonical, sample, archive, or
+   backfill. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
    use those ranked candidates for review only. A candidate can carry
    `pending_staged_repair_iris` and `candidate_status="already_pending"` when

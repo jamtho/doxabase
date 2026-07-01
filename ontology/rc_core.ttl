@@ -656,6 +656,9 @@ rc:TemporalGranularity a rdfs:Class ;
 rc:StorageAccess a rdfs:Class ;
     rdfs:comment "A non-secret description of how to access a data asset's physical storage." .
 
+rc:RouteRole a rdfs:Class ;
+    rdfs:comment "Reviewed semantic role for a storage route, such as production, sample, archive, backfill, current, or canonical." .
+
 rc:StorageProtocol a rdfs:Class ;
     rdfs:comment "A storage or access protocol such as local filesystem, S3-compatible object storage, HTTPS, or database access." .
 
@@ -754,6 +757,11 @@ rc:hasStorageAccess a rdf:Property ;
     rdfs:domain rc:DataAsset ;
     rdfs:range rc:StorageAccess ;
     rdfs:comment "Links a data asset to a non-secret storage access description." .
+
+rc:routeRole a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range rc:RouteRole ;
+    rdfs:comment "Reviewed semantic role or intent of this storage route, used to distinguish candidates such as production, sample, archive, backfill, current, or canonical routes." .
 
 rc:storageProtocol a rdf:Property ;
     rdfs:domain rc:StorageAccess ;
@@ -867,6 +875,30 @@ rc:VerifiedByQueryLayout a rc:LayoutVerificationStatus ;
 rc:ContradictedLayout a rc:LayoutVerificationStatus ;
     rdfs:label "contradicted layout" ;
     rdfs:comment "The layout/path metadata conflicts with source evidence and should not be used without review." .
+
+rc:ProductionRoute a rc:RouteRole ;
+    rdfs:label "production route" ;
+    rdfs:comment "Route intended to read production or production-like system data." .
+
+rc:SampleRoute a rc:RouteRole ;
+    rdfs:label "sample route" ;
+    rdfs:comment "Route intended to read a sample, fixture, extract, or other reduced data slice." .
+
+rc:ArchiveRoute a rc:RouteRole ;
+    rdfs:label "archive route" ;
+    rdfs:comment "Route intended to read archived, historical, retained, or cold-storage data." .
+
+rc:BackfillRoute a rc:RouteRole ;
+    rdfs:label "backfill route" ;
+    rdfs:comment "Route intended for backfill, replay, or repair-oriented data access rather than ordinary current reads." .
+
+rc:CurrentRoute a rc:RouteRole ;
+    rdfs:label "current route" ;
+    rdfs:comment "Route intended to read the current active dataset representation." .
+
+rc:CanonicalRoute a rc:RouteRole ;
+    rdfs:label "canonical route" ;
+    rdfs:comment "Route intended to read the canonical or source-of-truth representation for a dataset." .
 
 rc:Ascending a rc:SortDirection ; rdfs:label "ascending" .
 rc:Descending a rc:SortDirection ; rdfs:label "descending" .

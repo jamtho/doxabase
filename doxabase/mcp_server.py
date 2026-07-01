@@ -346,6 +346,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         physical_layout_iri: str | None = None,
         storage_label: str | None = None,
         physical_layout_label: str | None = None,
+        route_roles: list[str] | None = None,
         access_mode: str | None = "rc:ReadOnlyAccess",
         endpoint_profile: str | None = None,
         bucket_name: str | None = None,
@@ -359,7 +360,11 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         layout_verification_note: str | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
-        """Draft stage_graph_revision args from reviewed query evidence storage values."""
+        """Draft stage_graph_revision args from reviewed query evidence storage values.
+
+        route_roles are optional reviewed route-intent IRIs/CURIEs carried onto
+        the staged storage access.
+        """
 
         return draft_query_evidence_storage_overlay_tool(
             db,
@@ -374,6 +379,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             physical_layout_iri=physical_layout_iri,
             storage_label=storage_label,
             physical_layout_label=physical_layout_label,
+            route_roles=route_roles,
             access_mode=access_mode,
             endpoint_profile=endpoint_profile,
             bucket_name=bucket_name,
@@ -436,6 +442,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         rationale: str,
         label: str | None = None,
         description: str | None = None,
+        route_roles: list[str] | None = None,
         access_mode: str | None = None,
         location_kind: str | None = None,
         endpoint_profile: str | None = None,
@@ -454,7 +461,11 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         profile_route_sources: list[dict[str, Any]] | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
-        """Stage reviewed storage access metadata for a query repair."""
+        """Stage reviewed storage access metadata for a query repair.
+
+        route_roles are optional reviewed route-intent IRIs/CURIEs carried onto
+        the staged storage access.
+        """
 
         return stage_query_storage_access_repair_tool(
             db,
@@ -465,6 +476,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             rationale=rationale,
             label=label,
             description=description,
+            route_roles=route_roles,
             access_mode=access_mode,
             location_kind=location_kind,
             endpoint_profile=endpoint_profile,
@@ -1500,6 +1512,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         iri: str,
         label: str | None = None,
         description: str | None = None,
+        route_roles: list[str] | None = None,
         storage_protocol: str | None = None,
         access_mode: str | None = None,
         location_kind: str | None = None,
@@ -1520,6 +1533,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         location_kind is one of object, directory, prefix, or connection. Use
         storage_protocol="rc:LocalFilesystemStorage" for local paths; do not use
         location_kind="local_path".
+        route_roles are optional reviewed route-intent IRIs/CURIEs such as
+        rc:ProductionRoute, rc:CurrentRoute, rc:SampleRoute, rc:ArchiveRoute, or
+        project-local rc:RouteRole terms.
 
         For storage_protocol="rc:DatabaseStorage", path_templates are
         storage-access-owned database relation identifiers such as schema.table;
@@ -1532,6 +1548,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             iri=iri,
             label=label,
             description=description,
+            route_roles=route_roles,
             storage_protocol=storage_protocol,
             access_mode=access_mode,
             location_kind=location_kind,
