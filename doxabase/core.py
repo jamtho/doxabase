@@ -3949,6 +3949,11 @@ class QueryEvidenceOverlaySuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class QueryPlanSuggestedNextAction(SuggestedNextAction):
+    route_card: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
     source_query_context: dict[str, Any]
 
@@ -20361,13 +20366,19 @@ class DoxaBase:
                 )
 
         actions.append(
-            SuggestedNextAction(
+            QueryPlanSuggestedNextAction(
                 action_label=action_label,
                 tool_name="draft_query_plan",
                 mcp_tool_name="doxabase.draft_query_plan",
                 arguments=arguments,
                 reason=reason,
                 call=self._suggested_call_string("draft_query_plan", arguments),
+                route_card=self._query_plan_action_route_card(
+                    candidate_index=decision.candidate_index,
+                    candidate=candidate,
+                    columns=dataset.columns,
+                    partition_schemes=dataset.partition_schemes,
+                ),
             )
         )
         peer_action_indexes: list[int] = []
@@ -20412,7 +20423,7 @@ class DoxaBase:
                     "relation is the intended handoff."
                 )
             actions.append(
-                SuggestedNextAction(
+                QueryPlanSuggestedNextAction(
                     action_label=peer_label,
                     tool_name="draft_query_plan",
                     mcp_tool_name="doxabase.draft_query_plan",
@@ -20421,6 +20432,12 @@ class DoxaBase:
                     call=self._suggested_call_string(
                         "draft_query_plan",
                         peer_arguments,
+                    ),
+                    route_card=self._query_plan_action_route_card(
+                        candidate_index=peer_index,
+                        candidate=peer_candidate,
+                        columns=dataset.columns,
+                        partition_schemes=dataset.partition_schemes,
                     ),
                 )
             )
@@ -20443,6 +20460,8 @@ class DoxaBase:
                     graph=graph,
                     candidate_index=layout_action_index,
                     candidate=layout_candidate,
+                    columns=dataset.columns,
+                    partition_schemes=dataset.partition_schemes,
                     allow_context_blocked_candidate=(
                         self._query_context_layout_selection_needs_context_allowance(
                             candidate=layout_candidate,
@@ -20867,6 +20886,8 @@ class DoxaBase:
         graph: str | None,
         candidate_index: int,
         candidate: QueryTargetCandidate,
+        columns: list[ColumnDescription],
+        partition_schemes: list[PartitionDescription],
         allow_context_blocked_candidate: bool,
     ) -> list[SuggestedNextAction]:
         issue = next(
@@ -20948,7 +20969,7 @@ class DoxaBase:
                         "context audit fields visible."
                     )
                 actions.append(
-                    SuggestedNextAction(
+                    QueryPlanSuggestedNextAction(
                         action_label="Select physical layout for draft",
                         tool_name="draft_query_plan",
                         mcp_tool_name="doxabase.draft_query_plan",
@@ -20965,6 +20986,13 @@ class DoxaBase:
                         call=self._suggested_call_string(
                             "draft_query_plan",
                             arguments,
+                        ),
+                        route_card=self._query_plan_action_route_card(
+                            candidate_index=candidate_index,
+                            candidate=candidate,
+                            columns=columns,
+                            partition_schemes=partition_schemes,
+                            physical_layout_iri=layout_iri,
                         ),
                     )
                 )
@@ -24046,6 +24074,188 @@ class DoxaBase:
             seen.add(issue.code)
             codes.append(issue.code)
         return codes
+
+    def _query_plan_action_route_card(
+        self,
+        *,
+        candidate_index: int,
+        candidate: QueryTargetCandidate,
+        columns: list[ColumnDescription],
+        partition_schemes: list[PartitionDescription],
+        physical_layout_iri: str | None = None,
+    ) -> dict[str, Any]:
+        binding_requirements = self._draft_query_plan_binding_requirements(
+            candidate,
+            columns=columns,
+            partition_schemes=partition_schemes,
+        )
+        binding_examples = self._query_plan_action_binding_examples(
+            candidate,
+            binding_requirements,
+        )
+        route_role_labels = [
+            role.label or self._local_name(role.iri) or role.iri
+            for role in candidate.route_roles
+        ]
+        card: dict[str, Any] = {
+            "candidate_index": candidate_index,
+            "candidate_selector": candidate.candidate_selector,
+            "template": candidate.template,
+            "template_source": candidate.template_source,
+            "source_resource": candidate.source_resource,
+            "storage_access": candidate.storage_access,
+            "storage_label": self._draft_query_plan_resource_label(
+                candidate.storage_access
+            ),
+            "storage_protocol": candidate.storage_protocol,
+            "location_kind": candidate.location_kind,
+            "route_roles": candidate.route_roles,
+            "route_role_labels": route_role_labels,
+            "candidate_path": candidate.candidate_path,
+            "relation_identifier": candidate.relation_identifier,
+            "connection_reference": candidate.connection_reference,
+            "composition": candidate.composition,
+            "candidate_path_status": candidate.candidate_path_status,
+            "direct_review_required": candidate.direct_review_required,
+            "review_required": candidate.review_required,
+            "direct_issue_codes": self._query_issue_codes(
+                candidate.direct_review_reasons
+            ),
+            "issue_codes": self._query_issue_codes(candidate.review_reasons),
+            "required_bindings": [
+                binding.name
+                for binding in binding_requirements
+                if binding.required
+            ],
+            "required_binding_details": [
+                {
+                    "name": binding.name,
+                    "binding_kind": binding.binding_kind,
+                    "partition_scheme": binding.partition_scheme,
+                    "partition_column": binding.partition_column,
+                    "partition_granularity": binding.partition_granularity,
+                    "candidate_column_match_status": (
+                        binding.candidate_column_match_status
+                    ),
+                }
+                for binding in binding_requirements
+                if binding.required
+            ],
+            "binding_example": (
+                self._query_plan_action_binding_example_summary(binding_examples)
+            ),
+            "binding_examples": binding_examples,
+        }
+        if physical_layout_iri is not None:
+            card["physical_layout_iri"] = physical_layout_iri
+        return card
+
+    def _query_plan_action_binding_examples(
+        self,
+        candidate: QueryTargetCandidate,
+        binding_requirements: list[DraftQueryPlanBinding],
+    ) -> list[dict[str, Any]]:
+        partition_bindings = [
+            binding
+            for binding in binding_requirements
+            if binding.required
+            and binding.binding_kind == "partition_template_placeholder"
+        ]
+        if not partition_bindings:
+            return []
+        example_values = {
+            binding.name: self._query_plan_action_binding_example_value(binding)
+            for binding in partition_bindings
+        }
+        rendered_template = self._query_plan_action_render_binding_example(
+            self._draft_query_plan_binding_source_text(candidate),
+            example_values,
+        )
+        examples: list[dict[str, Any]] = []
+        for binding in partition_bindings:
+            example = {
+                "binding": binding.name,
+                "binding_kind": binding.binding_kind,
+                "example_value": example_values[binding.name],
+                "rendered_template": rendered_template,
+            }
+            if rendered_template is not None:
+                example["example"] = (
+                    f"{binding.name}={example_values[binding.name]!r} -> "
+                    f"{rendered_template}"
+                )
+            else:
+                example["example"] = (
+                    f"{binding.name}={example_values[binding.name]!r}"
+                )
+            examples.append(example)
+        return examples
+
+    @staticmethod
+    def _query_plan_action_binding_example_summary(
+        binding_examples: list[dict[str, Any]],
+    ) -> str | None:
+        if not binding_examples:
+            return None
+        assignments = ", ".join(
+            f"{example['binding']}={example['example_value']!r}"
+            for example in binding_examples
+        )
+        rendered_template = binding_examples[0].get("rendered_template")
+        if isinstance(rendered_template, str) and rendered_template:
+            return f"{assignments} -> {rendered_template}"
+        return assignments
+
+    def _query_plan_action_binding_example_value(
+        self,
+        binding: DraftQueryPlanBinding,
+    ) -> str:
+        hints = [binding.name]
+        if binding.partition_column is not None:
+            hints.extend(
+                value
+                for value in (
+                    binding.partition_column.column_name,
+                    binding.partition_column.label,
+                    self._local_name(binding.partition_column.iri),
+                )
+                if value
+            )
+        if binding.partition_granularity is not None:
+            hints.extend(
+                value
+                for value in (
+                    binding.partition_granularity.label,
+                    self._local_name(binding.partition_granularity.iri),
+                )
+                if value
+            )
+        normalized = self._normalized_binding_name(" ".join(hints))
+        tokens = set(normalized.split("_"))
+        if {"date", "dt"} & tokens or normalized.endswith("_date"):
+            return "2026-06-30"
+        if "year" in tokens or normalized.endswith("_year"):
+            return "2026"
+        if "month" in tokens or normalized.endswith("_month"):
+            return "06"
+        if "day" in tokens or normalized.endswith("_day"):
+            return "30"
+        if "hour" in tokens or normalized.endswith("_hour"):
+            return "13"
+        placeholder = self._normalized_binding_name(binding.name).upper()
+        return f"REVIEWED_{placeholder or 'VALUE'}"
+
+    @staticmethod
+    def _query_plan_action_render_binding_example(
+        source_text: str | None,
+        example_values: Mapping[str, str],
+    ) -> str | None:
+        if source_text is None:
+            return None
+        rendered = source_text
+        for name, value in example_values.items():
+            rendered = rendered.replace("{" + name + "}", value)
+        return rendered
 
     def _query_target_candidates(
         self,

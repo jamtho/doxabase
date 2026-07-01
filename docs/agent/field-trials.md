@@ -3850,6 +3850,15 @@ few useful gaps:
   cards on query-planning peer actions, partition binding examples, and clearer
   validation behavior when query-evidence storage overlays reuse existing
   storage/layout IRIs.
+- The storage-metadata query-planning follow-up addressed the route-card and
+  partition-binding affordances from that wave. `describe_query_context`
+  `draft_query_plan` actions now carry `route_card` with the candidate selector,
+  storage label, route roles, path/relation handles, direct issue codes,
+  required bindings, and illustrative partition binding examples; layout
+  selection actions mirror the reviewed `physical_layout_iri` in the same card.
+  Use those fields instead of parsing action prose when choosing production,
+  sample, archive, peer, or layout-specific routes. The query-evidence storage
+  overlay validation behavior remains a lower-priority affordance to retest.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

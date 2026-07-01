@@ -6301,6 +6301,22 @@ def test_describe_query_context_tool_returns_planning_projection(
         "layout_needs_verification",
         "verification_status_not_recorded",
     }
+    draft_action = next(
+        action
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+    )
+    route_card = draft_action["route_card"]
+    assert route_card["candidate_index"] == 0
+    assert route_card["candidate_selector"] == (
+        result["query_target_candidates"][0]["candidate_selector"]
+    )
+    assert route_card["storage_label"] == "AIS local object-store access profile"
+    assert route_card["required_bindings"] == ["year", "date"]
+    assert route_card["binding_example"] == (
+        "year='2026', date='2026-06-30' -> "
+        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+    )
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert any(
         issue["code"] == "layout_needs_verification"
@@ -7126,6 +7142,10 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
             "physical_layout_iri": parquet_layout["iri"],
         },
     ]
+    route_card = selection_actions[0]["route_card"]
+    assert route_card["candidate_selector"] == candidate_selector
+    assert route_card["physical_layout_iri"] == parquet_layout["iri"]
+    assert "ambiguous_physical_layout" in route_card["direct_issue_codes"]
     assert selection_actions[0]["call"].startswith("draft_query_plan(")
     assert automatic["scan"]["function"] is None
     assert automatic["review_gate"]["blocking_reason_codes"] == [

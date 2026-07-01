@@ -3066,6 +3066,24 @@ instead of parsing peer indexes from prose or from
 `storage_access_iri` ambiguity errors; they carry
 `allow_context_blocked_candidate=True` when sibling candidate metadata is the
 only broader blocker.
+Each `draft_query_plan` suggested action also carries `route_card`, a compact
+candidate handoff for scripts and unattended agents:
+
+```python
+action.route_card["candidate_index"]
+action.route_card["candidate_selector"]
+action.route_card["storage_label"]
+action.route_card["route_roles"]
+action.route_card["route_role_labels"]
+action.route_card["candidate_path"]
+action.route_card["relation_identifier"]
+action.route_card["direct_issue_codes"]
+action.route_card["required_bindings"]
+action.route_card["binding_example"]
+```
+
+Prefer the route card over parsing `reason` text when choosing peer,
+production/current, sample, archive, backfill, or layout-selection routes.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per
 compatible linked layout signature with `candidate_selector` and
@@ -3078,7 +3096,8 @@ relying on `scan.function`. When resolving that layout would leave a
 direct-clean selected route and the remaining blockers are candidate metadata on
 sibling routes, the layout-selection action also includes
 `allow_context_blocked_candidate=True` so scripts can reach the next execution
-gate without an extra retry while preserving context audit fields.
+gate without an extra retry while preserving context audit fields. The action's
+`route_card.physical_layout_iri` mirrors the reviewed layout argument.
 `ready_candidate_indexes` lists direct-ready candidates at the context stage;
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready
@@ -3660,6 +3679,10 @@ matching placeholders may carry `partition_column` and
 `partition_granularity`. The granularity describes the partition scheme rather
 than necessarily the individual placeholder. These fields are planning hints for
 parameter handoff;
+the corresponding pre-draft action route card may include a one-line
+`binding_example`, such as `event_date='2026-06-30' -> ...`, plus structured
+`binding_examples[]`. Treat those values as illustrative reviewed placeholders,
+not runtime values inferred from the graph.
 partition placeholders that do not match a declared partition column, and
 ordinary dataset/storage placeholders, may carry `candidate_column_matches` when
 a placeholder matches dataset column names, labels, or local IRIs exactly or by

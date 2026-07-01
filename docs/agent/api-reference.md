@@ -482,6 +482,11 @@ sibling metadata, the suggested `draft_query_plan` action includes the explicit
 `candidate_selector` and `allow_context_blocked_candidate=True`; peer ready actions
 include the same allowance when sibling candidate metadata is the only broader
 blocker.
+Every suggested `draft_query_plan` action also carries `route_card` with the
+candidate selector, storage label, route roles, path or relation handle, direct
+issue codes, required bindings, and any partition binding examples. Use that
+structured card instead of parsing action prose when choosing peer,
+production/current, sample/archive, or layout-selection routes.
 When `row_count_snapshot` or profile metrics matter to the query handoff,
 `profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
 `describe_profile_run()` without first switching to `describe_dataset()`.
@@ -614,6 +619,9 @@ runtime values. Partition placeholders that do not match a declared partition
 column, and ordinary dataset/storage placeholders, may include
 `candidate_column_matches` when placeholder names match dataset columns; these
 are best-effort handoff hints, not inferred runtime values.
+The pre-draft `route_card.binding_example` and `binding_examples[]` fields use
+illustrative reviewed placeholder values, such as `event_date='2026-06-30'`,
+only to show where runtime bindings land in the template.
 `candidate_column_match_status` flags absent, singular, or ambiguous hint sets;
 ambiguous rows need review before choosing any source column.
 Binding rows identify the placeholder source text and explicitly report when

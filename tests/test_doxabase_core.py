@@ -17251,6 +17251,25 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
         "mmsi",
         "timestamp",
     }
+    query_action = next(
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_plan"
+    )
+    route_card = query_action.route_card
+    assert route_card["candidate_index"] == 0
+    assert route_card["candidate_selector"] == target.candidate_selector
+    assert route_card["storage_label"] == "AIS local object-store access profile"
+    assert route_card["candidate_path"] == target.candidate_path
+    assert route_card["direct_issue_codes"] == [
+        "layout_needs_verification",
+        "verification_status_not_recorded",
+    ]
+    assert route_card["required_bindings"] == ["year", "date"]
+    assert route_card["binding_example"] == (
+        "year='2026', date='2026-06-30' -> "
+        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+    )
     assert any(
         issue.code == "layout_needs_verification"
         and issue.domain == "query_planning"
@@ -17627,7 +17646,24 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
         column_name="ship_region",
     )
 
+    context = db.describe_query_context(dataset)
     plan = db.draft_query_plan(dataset)
+
+    query_action = next(
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_plan"
+    )
+    route_card = query_action.route_card
+    assert route_card["required_bindings"] == ["year", "region", "date"]
+    assert route_card["binding_example"] == (
+        "year='2026', region='REVIEWED_REGION', date='2026-06-30' -> "
+        "/warehouse/events/year=2026/region=REVIEWED_REGION/"
+        "dt=2026-06-30/*.parquet"
+    )
+    assert route_card["required_binding_details"][2]["partition_column"].iri == (
+        event_date
+    )
 
     assert plan.selected_candidate is not None
     assert plan.selected_candidate.template_source == "partition_scheme"
@@ -19364,6 +19400,14 @@ def test_distinct_physical_layout_signatures_require_explicit_review(
     assert {
         action.arguments["physical_layout_iri"] for action in layout_selection_actions
     } == {parquet_layout.iri}
+    layout_action = layout_selection_actions[0]
+    assert layout_action.route_card["physical_layout_iri"] == parquet_layout.iri
+    assert layout_action.route_card["candidate_selector"] == (
+        context.query_target_candidates[0].candidate_selector
+    )
+    assert "ambiguous_physical_layout" in (
+        layout_action.route_card["direct_issue_codes"]
+    )
 
     selected_layout_plan = db.draft_query_plan(
         dataset,
@@ -19521,6 +19565,16 @@ def test_query_target_candidates_surface_global_blockers(
         f"Other direct-clean candidate indexes exist ({archive_index})"
         in query_action.reason
     )
+    assert query_action.route_card["candidate_index"] == local_index
+    assert query_action.route_card["candidate_selector"] == local_selector
+    assert query_action.route_card["storage_label"] == "Orders local access"
+    assert [role.iri for role in query_action.route_card["route_roles"]] == [
+        RC + "SampleRoute"
+    ]
+    assert query_action.route_card["direct_issue_codes"] == []
+    assert "query_context_has_other_blockers" in (
+        query_action.route_card["issue_codes"]
+    )
     peer_action = context.suggested_next_actions[1]
     assert peer_action.tool_name == "draft_query_plan"
     assert peer_action.action_label == (
@@ -19532,6 +19586,15 @@ def test_query_target_candidates_surface_global_blockers(
         "allow_context_blocked_candidate": True,
     }
     assert "peer candidate has no direct warning or error" in peer_action.reason
+    assert peer_action.route_card["candidate_index"] == archive_index
+    assert peer_action.route_card["candidate_selector"] == archive_selector
+    assert peer_action.route_card["storage_label"] == (
+        "Orders archive local access"
+    )
+    assert {role.iri for role in peer_action.route_card["route_roles"]} == {
+        RC + "ProductionRoute",
+        RC + "CurrentRoute",
+    }
     assert context.suggested_next_calls == [
         action.call for action in context.suggested_next_actions
     ]

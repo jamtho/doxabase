@@ -952,6 +952,12 @@ multiple direct-ready candidates, inspect `unselected_ready_candidate_indexes`
 and rerun/draft with an explicit `candidate_selector` if candidate order picked the
 wrong route; peer suggested actions include the same allowance when sibling
 candidate metadata is the only broader blocker.
+Every `describe_query_context` action whose `tool_name` is `draft_query_plan`
+also carries `route_card`: a compact copy of the selected candidate's selector,
+template source, storage label, route role summaries, path or relation handle,
+direct issue codes, required bindings, and partition binding examples. Prefer
+`action.route_card` over parsing `reason` text when choosing between peer,
+layout-selection, production/current, sample, archive, or backfill routes.
 `query_target_decision.route_intent_review_candidate_indexes` points at ready
 or direct-clean peer cards with production/current/canonical route-role intent
 that the selected candidate lacks; review those cards before unattended
@@ -960,7 +966,8 @@ execution. In a globally blocked context, inspect
 but another candidate has no direct blocker. When linked physical layouts are
 ambiguous, suggested `draft_query_plan` actions include explicit
 `candidate_selector` / `physical_layout_iri` pairs for the selected candidate and
-peer candidates whose only direct blocker is layout ambiguity. For
+peer candidates whose only direct blocker is layout ambiguity; their
+`route_card.physical_layout_iri` mirrors the reviewed layout choice. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are ignored for the
@@ -1145,6 +1152,11 @@ the individual placeholder. Placeholders that do not match a declared partition
 column, and ordinary dataset/storage placeholders, may include
 `candidate_column_matches` when placeholder names match dataset columns; use them
 as best-effort handoff hints, not runtime binding values.
+For the shorter pre-draft handoff, `describe_query_context.suggested_next_actions`
+adds `route_card.binding_example` and `route_card.binding_examples` to partition
+template actions, for example `event_date='2026-06-30' -> ...`. These examples
+are illustrative reviewed-value placeholders, not DoxaBase inference of runtime
+parameters.
 `candidate_column_match_status` marks the hint set as `none`, `single`, or
 `ambiguous`; review ambiguous rows before choosing any source column, even when
 individual matches have `confidence="high"`. Confidence is per match, while the
