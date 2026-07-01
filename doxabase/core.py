@@ -2233,6 +2233,24 @@ class GraphVersionList:
 
 
 @dataclass(frozen=True)
+class GraphVersionRevisionContext:
+    revision_iri: str
+    record_kind: str
+    snapshot_semantics: str
+    summary: str | None
+    application_status: str | None
+    application_decision: str | None
+    staged_validation_status: str
+    is_current_staged_work: bool
+    applies_staged_revision: str | None
+    applied_by: str | None
+    restaged_from: str | None
+    restaged_by: str | None
+    current_restaged_by: str | None
+    related_revision_iris: list[str]
+
+
+@dataclass(frozen=True)
 class GraphVersionDiffDescription:
     graph_role: str
     graph: str | None
@@ -2240,6 +2258,9 @@ class GraphVersionDiffDescription:
     after_revision_iri: str | None
     compare_to_current: bool
     after_target_kind: str
+    before_revision_context: GraphVersionRevisionContext | None
+    after_revision_context: GraphVersionRevisionContext | None
+    related_revision_iris: list[str]
     before_snapshot: RevisionGraphSnapshotDescription
     after_snapshot: RevisionGraphSnapshotDescription | None
     current_graph: GraphSnapshotDescription | None
@@ -8740,6 +8761,27 @@ class DoxaBase:
             and before_snapshot.content_digest is not None
             else None
         )
+        revision_items = self.list_graph_revisions(
+            graph=graph,
+            include_apply_checks=True,
+            drift_detail="summary",
+            limit=1_000_000,
+        ).revisions
+        revision_by_iri = {item.iri: item for item in revision_items}
+        before_revision_context = self._graph_version_revision_context(
+            revision_by_iri.get(before_snapshot.revision_iri)
+        )
+        after_revision_context = (
+            self._graph_version_revision_context(
+                revision_by_iri.get(after_snapshot.revision_iri)
+            )
+            if after_snapshot is not None
+            else None
+        )
+        related_revision_iris = self._graph_version_diff_related_revision_iris(
+            before_revision_context,
+            after_revision_context,
+        )
         suggested_next_actions = self._with_revision_snapshot_evidence_actions(
             self._graph_version_diff_suggested_actions(
                 graph_role=graph_role,
@@ -8753,6 +8795,8 @@ class DoxaBase:
                 exact_available=exact_available,
                 include_triples=include_triples,
                 has_changes=bool(triples_added_count or triples_removed_count),
+                before_revision_context=before_revision_context,
+                after_revision_context=after_revision_context,
             ),
             before_snapshot.snapshot_evidence,
             after_snapshot.snapshot_evidence if after_snapshot is not None else None,
@@ -8766,6 +8810,9 @@ class DoxaBase:
             ),
             compare_to_current=effective_compare_to_current,
             after_target_kind=after_target_kind,
+            before_revision_context=before_revision_context,
+            after_revision_context=after_revision_context,
+            related_revision_iris=related_revision_iris,
             before_snapshot=before_snapshot,
             after_snapshot=after_snapshot,
             current_graph=current_graph,
@@ -8923,6 +8970,54 @@ class DoxaBase:
             counts[status] = counts.get(status, 0) + 1
         return counts
 
+    def _graph_version_revision_context(
+        self,
+        revision: GraphRevisionListItem | None,
+    ) -> GraphVersionRevisionContext | None:
+        if revision is None:
+            return None
+        related_revision_iris = list(
+            dict.fromkeys(
+                iri
+                for iri in (
+                    revision.applies_staged_revision,
+                    revision.applied_by,
+                    revision.restaged_from,
+                    revision.restaged_by,
+                    revision.current_restaged_by,
+                )
+                if iri is not None
+            )
+        )
+        return GraphVersionRevisionContext(
+            revision_iri=revision.iri,
+            record_kind=revision.record_kind,
+            snapshot_semantics=self._graph_version_snapshot_semantics(revision),
+            summary=revision.summary,
+            application_status=revision.application_status,
+            application_decision=revision.application_decision,
+            staged_validation_status=revision.staged_validation_status,
+            is_current_staged_work=revision.is_current_staged_work,
+            applies_staged_revision=revision.applies_staged_revision,
+            applied_by=revision.applied_by,
+            restaged_from=revision.restaged_from,
+            restaged_by=revision.restaged_by,
+            current_restaged_by=revision.current_restaged_by,
+            related_revision_iris=related_revision_iris,
+        )
+
+    @staticmethod
+    def _graph_version_diff_related_revision_iris(
+        before_revision_context: GraphVersionRevisionContext | None,
+        after_revision_context: GraphVersionRevisionContext | None,
+    ) -> list[str]:
+        values: list[str] = []
+        for context in (before_revision_context, after_revision_context):
+            if context is None:
+                continue
+            values.extend(context.related_revision_iris)
+        return list(dict.fromkeys(values))
+
     def _graph_version_diff_suggested_actions(
         self,
         *,
@@ -8933,6 +9028,8 @@ class DoxaBase:
         exact_available: bool,
         include_triples: bool,
         has_changes: bool,
+        before_revision_context: GraphVersionRevisionContext | None,
+        after_revision_context: GraphVersionRevisionContext | None,
     ) -> list[SuggestedNextAction]:
         actions = [
             SuggestedNextAction(
@@ -8976,6 +9073,57 @@ class DoxaBase:
                             "iri": after_revision_iri,
                             "graph_role": graph_role,
                         },
+                    ),
+                )
+            )
+        contexts = [
+            ("before", before_revision_context),
+            ("after", after_revision_context),
+        ]
+        seen_lineage_iris: set[str] = set()
+        for label, context in contexts:
+            if context is None or context.revision_iri in seen_lineage_iris:
+                continue
+            seen_lineage_iris.add(context.revision_iri)
+            actions.append(
+                SuggestedNextAction(
+                    action_label=f"Trace {label} revision lineage",
+                    tool_name="describe_revision_lineage",
+                    mcp_tool_name="doxabase.describe_revision_lineage",
+                    arguments={"iri": context.revision_iri},
+                    reason=(
+                        "Inspect staged/applied/restaged lineage before "
+                        "using this graph-version diff as recovery context."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_revision_lineage",
+                        {"iri": context.revision_iri},
+                    ),
+                )
+            )
+        seen_applied_diff_iris: set[str] = set()
+        for label, context in contexts:
+            if (
+                context is None
+                or context.record_kind != "applied_event"
+                or context.revision_iri in seen_applied_diff_iris
+            ):
+                continue
+            seen_applied_diff_iris.add(context.revision_iri)
+            actions.append(
+                SuggestedNextAction(
+                    action_label=f"Inspect {label} applied diff",
+                    tool_name="describe_applied_revision_diff",
+                    mcp_tool_name="doxabase.describe_applied_revision_diff",
+                    arguments={"iri": context.revision_iri},
+                    reason=(
+                        "This comparison point is an applied revision event; "
+                        "inspect its stored before/after diff to recover the "
+                        "revision story behind the graph-version delta."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_applied_revision_diff",
+                        {"iri": context.revision_iri},
                     ),
                 )
             )

@@ -3835,6 +3835,18 @@ few useful gaps:
   `scanned_source_handles` alias, returns both names, and exposes the alias in
   downstream query-context evidence previews. Docs now state that post-safety
   frontier resumption is read-only until `mutation_allowed_after` clears.
+- A follow-up profile/version/query/privacy wave kept the same broad workflows
+  under pressure. Privacy/frontier routing and `scanned_source_handles`
+  downstream previews held. The highest-priority gap was staged-version
+  navigation: `describe_graph_version_diff` explained count/triple deltas but
+  not the staged/applied/restaged lineage, so a zero staged-before/current diff
+  could hide a ready or semantically gated staged row. Graph-version diffs now
+  include compact before/after revision contexts, `related_revision_iris`, and
+  suggested lineage/applied-diff follow-ups. Remaining useful affordances for
+  later waves: top-level sampled profile caution/safe-single rationale, route
+  cards on query-planning peer actions, partition binding examples, and clearer
+  validation behavior when query-evidence storage overlays reuse existing
+  storage/layout IRIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -13416,6 +13416,26 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert stored_diff.after_revision_iri == first_applied.applied_revision_iri
     assert stored_diff.compare_to_current is False
     assert stored_diff.after_target_kind == "stored_revision_snapshot"
+    assert stored_diff.before_revision_context is not None
+    assert stored_diff.before_revision_context.record_kind == "staged_patch"
+    assert stored_diff.before_revision_context.snapshot_semantics == (
+        "staged_before_graph"
+    )
+    assert stored_diff.before_revision_context.applied_by == (
+        first_applied.applied_revision_iri
+    )
+    assert stored_diff.after_revision_context is not None
+    assert stored_diff.after_revision_context.record_kind == "applied_event"
+    assert stored_diff.after_revision_context.snapshot_semantics == (
+        "applied_after_graph"
+    )
+    assert stored_diff.after_revision_context.applies_staged_revision == (
+        first_staged.revision_iri
+    )
+    assert stored_diff.related_revision_iris == [
+        first_applied.applied_revision_iri,
+        first_staged.revision_iri,
+    ]
     assert stored_diff.before_snapshot.triple_count == 0
     assert stored_diff.after_snapshot is not None
     assert stored_diff.after_snapshot.triple_count == 1
@@ -13434,8 +13454,17 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert [action.tool_name for action in stored_diff.suggested_next_actions] == [
         "describe_revision_graph_snapshot",
         "describe_revision_graph_snapshot",
+        "describe_revision_lineage",
+        "describe_revision_lineage",
+        "describe_applied_revision_diff",
         "describe_graph_version_diff",
     ]
+    assert stored_diff.suggested_next_actions[2].arguments == {
+        "iri": first_staged.revision_iri,
+    }
+    assert stored_diff.suggested_next_actions[4].arguments == {
+        "iri": first_applied.applied_revision_iri,
+    }
 
     current_diff = db.describe_graph_version_diff(
         "map",
@@ -13479,7 +13508,48 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert same_current_diff.triples_removed_count == 0
     assert [
         action.tool_name for action in same_current_diff.suggested_next_actions
-    ] == ["describe_revision_graph_snapshot"]
+    ] == [
+        "describe_revision_graph_snapshot",
+        "describe_revision_lineage",
+        "describe_applied_revision_diff",
+    ]
+
+    third_staged = db.stage_graph_revision(
+        summary="Stage tickets table",
+        rationale=(
+            "A staged row can need recovery inspection even when its before "
+            "snapshot is identical to the current graph."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Tickets a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:04:00Z",
+    )
+    staged_to_current = db.describe_graph_version_diff(
+        "map",
+        third_staged.revision_iri,
+    )
+    assert staged_to_current.count_delta == 0
+    assert staged_to_current.digest_changed is False
+    assert staged_to_current.before_revision_context is not None
+    assert staged_to_current.before_revision_context.record_kind == "staged_patch"
+    assert staged_to_current.before_revision_context.application_status == "ready"
+    assert staged_to_current.before_revision_context.is_current_staged_work is True
+    assert staged_to_current.before_revision_context.related_revision_iris == []
+    assert [
+        action.tool_name for action in staged_to_current.suggested_next_actions
+    ] == [
+        "describe_revision_graph_snapshot",
+        "describe_revision_lineage",
+    ]
 
     with pytest.raises(DoxaBaseError, match="after_revision_iri is required"):
         db.describe_graph_version_diff(

@@ -407,6 +407,11 @@ version?" rather than merely inspect count/digest metadata. Pass
 `before_revision_iri` snapshot with the current graph. Exact added/removed
 triple counts are reported when stored rows are available, and
 `include_triples=true` includes bounded changed-triple arrays.
+The response also carries compact before/after revision context and
+`related_revision_iris`, plus follow-up actions to `describe_revision_lineage`
+and, for applied-event comparison points, `describe_applied_revision_diff`.
+Use those actions when a graph-version diff is being used as recovery context;
+the graph delta alone does not explain staged/applied/restaged lineage.
 
 `doxabase.describe_revision_lineage`
 

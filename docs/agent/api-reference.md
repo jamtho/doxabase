@@ -1752,6 +1752,10 @@ counts when stored rows are available. Changed-triple arrays are omitted by
 default; pass `include_triples=True` to include them, capped by `max_triples`.
 When one side is incomplete after a handoff import, snapshot-evidence import
 actions are promoted into top-level `suggested_next_actions`.
+The diff also includes compact before/after revision context and
+`related_revision_iris`; follow its `describe_revision_lineage` and
+`describe_applied_revision_diff` actions when the graph delta is being used to
+understand staged, applied, or restaged recovery state.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
 or missing project/history RDF. Those actions mark placeholder paths with

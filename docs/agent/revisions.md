@@ -780,8 +780,10 @@ source gives the full intended patch. The diff helper compares the staged
 source's before snapshots with the applied event's after snapshots for changed
 graphs. Use `describe_graph_version_diff(graph_role, before_revision_iri)` for
 arbitrary stored-version-to-current comparison, or pass `after_revision_iri` to
-compare two stored versions. `list_graph_versions` still does not provide
-checkout/replay.
+compare two stored versions. `describe_graph_version_diff` also carries compact
+before/after revision context plus lineage/applied-diff follow-up actions; use
+those when a zero or small graph delta might hide staged/applied/restaged
+recovery state. `list_graph_versions` still does not provide checkout/replay.
 
 ## Limits
 

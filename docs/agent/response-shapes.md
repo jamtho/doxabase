@@ -4176,6 +4176,9 @@ diff.before_revision_iri
 diff.after_revision_iri
 diff.compare_to_current
 diff.after_target_kind
+diff.before_revision_context
+diff.after_revision_context
+diff.related_revision_iris
 diff.before_snapshot
 diff.after_snapshot
 diff.current_graph
@@ -4212,6 +4215,16 @@ only when those triples are safe and useful to inspect. Snapshot-evidence
 import actions from the before/after snapshots are promoted into
 `diff.suggested_next_actions`, so RDF-only or snapshot-only handoff imports can
 self-route to `import_revision_snapshots` or `import_trig`.
+The revision-context fields are compact lineage pointers for the comparison
+points. They include `record_kind`, `snapshot_semantics`, `application_status`,
+`staged_validation_status`, `is_current_staged_work`, `applies_staged_revision`,
+`applied_by`, `restaged_from`, `restaged_by`, `current_restaged_by`, and
+per-context `related_revision_iris`. Use them when a graph delta is zero or
+small but the revision may still be staged, applied, restaged, or semantically
+gated. Graph-version diffs now suggest `describe_revision_lineage(...)` for the
+comparison points and `describe_applied_revision_diff(...)` for applied-event
+comparison points, so follow those before treating a version diff as the whole
+revision story.
 
 First-read triage fields:
 
