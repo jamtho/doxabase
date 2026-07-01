@@ -2709,7 +2709,11 @@ def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapsh
     assert plan.mutation_allowed_after == (
         "handoff_preflight_required_before_mutation"
     )
-    assert plan.mutation_frontier_iris == [restaged.revision_iri]
+    assert plan.lane_counts == {"complete_handoff_import": 1}
+    assert plan.next_action_queue == {
+        "complete_handoff_import": [restaged.revision_iri]
+    }
+    assert plan.mutation_frontier_iris == []
     assert plan.blocking_preflight_actions
     assert plan.blocking_preflight_actions[0].tool_name == (
         "import_revision_snapshots"
@@ -2737,7 +2741,7 @@ def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapsh
         "history_plus_snapshot_rows": 1,
     }
     assert summary.incomplete_snapshot_revision_iris == [restaged.revision_iri]
-    assert summary.mutation_frontier_iris == [restaged.revision_iri]
+    assert summary.mutation_frontier_iris == []
     assert summary.first_mutation_frontier_item is None
     assert summary.first_mutation_action is None
     assert (
@@ -6561,8 +6565,10 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
 
     plan = imported.plan_staged_revision_recovery([staged.revision_iri])
 
-    assert plan.lane_counts == {"apply_after_review": 1}
-    assert plan.next_action_queue == {"apply_after_review": [staged.revision_iri]}
+    assert plan.lane_counts == {"complete_handoff_import": 1}
+    assert plan.next_action_queue == {
+        "complete_handoff_import": [staged.revision_iri]
+    }
     assert plan.bundle_summary is not None
     assert plan.bundle_summary.snapshot_evidence.complete is False
     assert plan.bundle_summary.snapshot_evidence.incomplete_revision_iris == [
@@ -6572,9 +6578,9 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert "Snapshot evidence is incomplete" in plan.warnings[0]
     assert "post-preflight mutation routes" in plan.warnings[0]
     lane = plan.lanes[0]
-    assert lane.lane == "apply_after_review"
+    assert lane.lane == "complete_handoff_import"
     assert lane.next_action is not None
-    assert lane.next_action.tool_name == "apply_staged_revision"
+    assert lane.next_action.tool_name == "import_revision_snapshots"
     assert lane.current_snapshot_evidence.status == "history_only_count_digest"
     assert lane.current_snapshot_evidence_completeness == "history-only"
     assert lane.suggested_next_actions[0].tool_name == "import_revision_snapshots"
@@ -6582,6 +6588,10 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
+    assert any(
+        action.tool_name == "apply_staged_revision"
+        for action in lane.suggested_next_actions[1:]
+    )
     assert plan.suggested_next_actions[0].tool_name == "import_revision_snapshots"
     assert (
         plan.mutation_allowed_after
@@ -6892,15 +6902,15 @@ def test_stale_project_import_suggests_snapshot_json_before_restaging(
     assert check.snapshot_drifts
     assert check.snapshot_drifts[0].exact_changed_triples_available is False
     assert [action.tool_name for action in check.suggested_next_actions] == [
+        "import_revision_snapshots",
         "describe_staged_revision",
         "export_staged_revision",
-        "import_revision_snapshots",
         "restage_staged_revision",
     ]
-    assert check.suggested_next_actions[2].action_label == (
+    assert check.suggested_next_actions[0].action_label == (
         "Import snapshot bundle if available"
     )
-    assert check.suggested_next_actions[2].arguments == {
+    assert check.suggested_next_actions[0].arguments == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
@@ -26017,6 +26027,15 @@ def test_map_helpers_reject_prose_for_resource_fields(
             lambda db: db.record_map_dataset(
                 "https://example.test/project#messages",
                 label="Messages",
+                row_semantics="rc:PingRow",
+            ),
+            "row_semantics must be one of: .*rc:DimensionRow",
+            id="dataset-row-semantics",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
                 schema_stability="rc:EvolvingSchema",
             ),
             "schema_stability must be one of: .*rc:VariableSchema",
@@ -26046,6 +26065,14 @@ def test_map_helpers_reject_prose_for_resource_fields(
             ),
             "layout_verification_status must be one of: .*rc:ContradictedLayout",
             id="physical-layout-status",
+        ),
+        pytest.param(
+            lambda db: db.record_map_partition_scheme(
+                "https://example.test/project#messages_partitioning",
+                granularity="rc:FiscalQuarter",
+            ),
+            "granularity must be one of: .*rc:ByValue",
+            id="partition-granularity",
         ),
         pytest.param(
             lambda db: db.record_map_partition_scheme(
@@ -27178,6 +27205,100 @@ def test_resource_brief_evidence_seed_routes_observed_asset_to_query_context(
     assert len(query_actions) == 1
     assert query_actions[0].arguments == {"iri": dataset}
     assert "missing_physical_layout" in query_actions[0].reason
+
+
+def test_resource_brief_profile_evidence_seed_suggests_profile_run(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    db.record_map_dataset(dataset, label="Warehouse orders", is_table=True)
+    profile = db.record_dataset_profile(
+        dataset,
+        summary="Warehouse orders were profiled.",
+        evidence_summary="Warehouse orders profiler output.",
+        evidence_sources=["test://warehouse-orders-profile"],
+        row_count=42,
+        update_map_snapshot=False,
+    )
+
+    context_slice = db.describe_context_slice(
+        profile.observation.evidence_iri,
+        profile="resource_brief",
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert profile.observation.observation_iri in resources
+    assert dataset in resources
+    profile_run_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_profile_run"
+    ]
+    assert len(profile_run_actions) == 1
+    assert profile_run_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": profile.observation.evidence_iri,
+    }
+    assert context_slice.suggested_next_calls == [
+        action.call for action in context_slice.suggested_next_actions
+    ]
+
+
+def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    db.record_map_dataset(dataset, label="Warehouse orders", is_table=True)
+    profile = db.record_dataset_profile(
+        dataset,
+        summary="Warehouse orders were profiled.",
+        evidence_summary="Warehouse orders profiler output.",
+        evidence_sources=["test://warehouse-orders-profile"],
+        row_count=42,
+        update_map_snapshot=False,
+    )
+
+    context_slice = db.describe_context_slice(
+        profile.observation.evidence_iri,
+        profile="dataset_brief",
+    )
+
+    assert context_slice.route_counts == {"seed": 1}
+    assert any(
+        "Seed is an rc:Evidence; rerun with profile='resource_brief'"
+        in warning
+        for warning in context_slice.warnings
+    )
+    assert context_slice.suggested_next_actions[0].tool_name == (
+        "describe_context_slice"
+    )
+    assert context_slice.suggested_next_actions[0].arguments == {
+        "seed_iris": [profile.observation.evidence_iri],
+        "profile": "resource_brief",
+        "max_triples": 500,
+    }
+
+    preflight = db.preflight_context_slice_export(
+        profile.observation.evidence_iri,
+        profile="dataset_brief",
+    )
+
+    assert preflight.suggested_next_actions[0].tool_name == (
+        "preflight_context_slice_export"
+    )
+    assert preflight.suggested_next_actions[0].arguments == {
+        "seed_iris": [profile.observation.evidence_iri],
+        "profile": "resource_brief",
+        "max_triples": 500,
+        "include_seed_graphs": False,
+        "limit": 20,
+    }
+    assert any(
+        action.tool_name == "export_context_slice"
+        for action in preflight.suggested_next_actions[1:]
+    )
 
 
 def test_describe_context_slice_includes_profile_observations_and_metrics(

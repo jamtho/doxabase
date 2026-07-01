@@ -4120,6 +4120,25 @@ few useful gaps:
   `route_roles` and `route_role_labels`, including in lifted repair-group
   contexts, so agents can choose among existing storage accesses before staging
   the dataset link.
+- A revision-snapshot handoff trial found direct apply checks exposed
+  `first_safe_next_action=import_revision_snapshots` when exact snapshot rows
+  were missing, but `suggested_next_actions` still led simple executors toward
+  post-import mutation. Single-row apply checks now order blocking handoff
+  preflight actions first while preserving mechanical `status`, `can_apply`, and
+  `next_action` fields for patch-readiness inspection.
+- A context-slice handoff trial found evidence seeds with a generic
+  `dataset_brief` profile produced an under-broad seed-only slice and export
+  preflight could still offer `export_context_slice` first. Evidence profile
+  mismatches now point to `resource_brief`; export preflight retries that profile
+  before writing; evidence-seeded resource briefs suggest
+  `describe_profile_run(dataset_iri, evidence_iri)` when incoming
+  `rc:ProfileObservation` rows identify a shared-evidence profile run.
+- A map-authoring trial found `row_semantics="rc:PingRow"` and partition
+  `granularity="rc:FiscalQuarter"` were accepted by recording helpers and only
+  failed later during graph validation. `record_map_dataset` and
+  `record_map_partition_scheme` now reject those controlled values before
+  writing, matching the existing early checks for schema stability, caveat
+  severity, and layout verification status.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -3532,9 +3532,9 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
         revision_iris=[staged["revision_iri"]],
     )
 
-    assert result["lane_counts"] == {"apply_after_review": 1}
+    assert result["lane_counts"] == {"complete_handoff_import": 1}
     assert result["next_action_queue"] == {
-        "apply_after_review": [staged["revision_iri"]]
+        "complete_handoff_import": [staged["revision_iri"]]
     }
     assert result["bundle_summary"]["snapshot_evidence"]["complete"] is False
     assert result["suggested_next_actions"][0]["tool_name"] == (
@@ -3560,8 +3560,16 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
         == result["blocking_preflight_calls"][0]
     )
     assert result["first_safe_review_or_mutation_source"] == "blocking_preflight"
+    assert result["lanes"][0]["lane"] == "complete_handoff_import"
+    assert result["lanes"][0]["next_action"]["tool_name"] == (
+        "import_revision_snapshots"
+    )
     assert result["lanes"][0]["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
+    )
+    assert any(
+        action["tool_name"] == "apply_staged_revision"
+        for action in result["lanes"][0]["suggested_next_actions"][1:]
     )
     assert "Snapshot evidence is incomplete" in result["warnings"][0]
 
@@ -3769,6 +3777,13 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
     assert [action["tool_name"] for action in check["blocking_preflight_actions"]] == [
         "import_revision_snapshots"
     ]
+    assert check["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert any(
+        action["tool_name"] == "apply_staged_revision"
+        for action in check["suggested_next_actions"][1:]
+    )
     assert check["blocking_preflight_calls"]
     assert check["first_safe_next_action"]["tool_name"] == (
         "import_revision_snapshots"

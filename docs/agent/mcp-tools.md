@@ -1399,6 +1399,11 @@ that are not stored in `dataset_contexts[].operational_warnings`. For
 storage/layout/partition metadata seeds, clean queryable owner tables are also
 surfaced as bounded `describe_query_context` actions, including the common case
 where a shared storage access owns multiple ready tables.
+For evidence seeds, prefer `profile="resource_brief"` unless you already have a
+dataset, pattern, claim, observation, or revision seed. Resource briefs follow
+incoming observations and profile observations. When incoming
+`rc:ProfileObservation` rows link the evidence to an observed dataset/table,
+the response suggests `describe_profile_run(dataset_iri, evidence_iri)`.
 
 `doxabase.preflight_context_slice_export`
 
@@ -1426,6 +1431,11 @@ the capped raw triples selected for export, not every structured resource role.
 Read the truncation warning for selected surface roles and omitted graph roles;
 the first suggested action reruns `preflight_context_slice_export` with the full
 candidate triple cap before the normal write action.
+If the described slice says an evidence seed did not match the requested
+profile, the preflight suggested actions first retry
+`preflight_context_slice_export(..., profile="resource_brief")` before offering
+`export_context_slice`, so an unattended handoff does not write an under-broad
+evidence-only artifact.
 Returned `seeds[]` are response summaries: label/description display text is
 redacted when it matches the sensitive-term scanner. The selected export triples
 are not redacted; use `fail_on_sensitive=true` to block writes when they contain
@@ -1669,6 +1679,8 @@ typing. Resource-valued links and controls such as `columns`, `caveats`,
 `row_semantics`, `schema_stability`, and `layout_verification_status` expect
 IRIs or CURIEs like `rc:EventRow`, not descriptive prose. `schema_stability`
 accepts `rc:FixedSchema`, `rc:InferredSchema`, or `rc:VariableSchema`.
+`row_semantics` accepts `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
+`rc:DimensionRow`.
 Layout verification status accepts `rc:UnverifiedLayout`,
 `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
 `rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
@@ -1739,10 +1751,11 @@ granularity, path template, redundant partition key, and layout verification
 status/notes. Use it when uncertainty belongs to a partition/path template
 rather than to the whole dataset. Use IRIs or CURIEs for partition columns,
 granularity, redundant partition keys, layout verification status, and linked
-datasets. `redundant_partition_key` is usually the partition column IRI/CURIE,
-not the literal placeholder token from `path_template`. Dataset descriptions
-expose all partition columns as `partition_columns`; the older singular
-`partition_column` field is retained as a first-column compatibility shortcut.
+datasets. `granularity` accepts `rc:Daily`, `rc:Hourly`, `rc:Monthly`, or
+`rc:ByValue`. `redundant_partition_key` is usually the partition column
+IRI/CURIE, not the literal placeholder token from `path_template`. Dataset
+descriptions expose all partition columns as `partition_columns`; the older
+singular `partition_column` field is retained as a first-column compatibility shortcut.
 Treat `partition_columns` as unordered
 unless a future response explicitly carries ordering metadata.
 

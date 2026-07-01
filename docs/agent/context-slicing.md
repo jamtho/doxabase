@@ -26,9 +26,13 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   stays seed-centered rather than crawling recursively. When an evidence seed is
   referenced by an observation, resource brief also includes that observation's
   observed asset and can suggest `describe_query_context` for an observed table
-  with query-planning warnings or repair groups. Storage access, physical-layout,
-  and partition-scheme seeds also suggest `describe_query_context` when they
-  reach exactly one queryable owner table, even if that owner is already ready.
+  with query-planning warnings or repair groups. When an evidence seed is
+  referenced by profile observations for a dataset/table, resource brief
+  suggests `describe_profile_run(dataset_iri, evidence_iri)` so profile evidence
+  handoffs do not stop at a generic evidence card. Storage access,
+  physical-layout, and partition-scheme seeds also suggest
+  `describe_query_context` when they reach exactly one queryable owner table,
+  even if that owner is already ready.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds

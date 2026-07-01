@@ -63,12 +63,13 @@ observations, or patterns.
 `rc:ContradictedLayout`. Caveat `severity` accepts `rc:Minor`,
 `rc:Moderate`, or `rc:Severe`; do not use confidence terms such as
 `rc:HighConfidence` or ad hoc values such as `rc:High`.
-For partition schemes, `granularity` is SHACL-checked against
-`rc:Daily`, `rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; use a project term
-only after extending the project shapes accordingly. `redundant_partition_key`
-is also a resource-valued field, usually the partition column IRI or CURIE. Do
-not pass the literal template placeholder such as `"event_date"` or `"date"`;
-keep that token in `path_template`.
+`row_semantics` accepts `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
+`rc:DimensionRow`. For partition schemes, `granularity` accepts `rc:Daily`,
+`rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; the helper rejects other values
+before graph validation. `redundant_partition_key` is also a resource-valued
+field, usually the partition column IRI or CURIE. Do not pass the literal
+template placeholder such as `"event_date"` or `"date"`; keep that token in
+`path_template`.
 
 Map helpers are not only for tables. For an API endpoint, document collection,
 message stream, model artifact, or other non-tabular asset, call

@@ -149,6 +149,13 @@ SCHEMA_STABILITY_LEVELS = (
     "rc:VariableSchema",
 )
 
+ROW_SEMANTICS_TYPES = (
+    "rc:EventRow",
+    "rc:SnapshotRow",
+    "rc:AggregateRow",
+    "rc:DimensionRow",
+)
+
 LAYOUT_VERIFICATION_STATUSES = (
     "rc:UnverifiedLayout",
     "rc:GeneratedFromManifestLayout",
@@ -162,6 +169,13 @@ CAVEAT_SEVERITY_LEVELS = (
     "rc:Minor",
     "rc:Moderate",
     "rc:Severe",
+)
+
+PARTITION_GRANULARITIES = (
+    "rc:Daily",
+    "rc:Hourly",
+    "rc:Monthly",
+    "rc:ByValue",
 )
 
 DERIVATION_PROPERTIES = (
@@ -11835,6 +11849,10 @@ class DoxaBase:
         described_revisions: set[str] = set()
         warnings: list[str] = []
         resource_brief_recovery_actions: dict[tuple[str, str], SuggestedNextAction] = {}
+        resource_brief_profile_run_actions: dict[
+            tuple[str, str],
+            SuggestedNextAction,
+        ] = {}
         resource_brief_graphs = self._context_slice_graphs(profile="resource_brief")
         resource_brief_route_limit = 25
         dataset_observation_route_limit = 5
@@ -11862,6 +11880,33 @@ class DoxaBase:
                 arguments=arguments,
                 reason=reason,
                 call=self._suggested_call_string(tool_name, arguments),
+            )
+
+        def add_resource_brief_profile_run_action(
+            dataset_iri: str,
+            evidence_iri: str,
+            *,
+            profile_observation_iri: str,
+        ) -> None:
+            key = (dataset_iri, evidence_iri)
+            if key in resource_brief_profile_run_actions:
+                return
+            arguments = {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": evidence_iri,
+            }
+            resource_brief_profile_run_actions[key] = SuggestedNextAction(
+                action_label="Inspect profile run",
+                tool_name="describe_profile_run",
+                mcp_tool_name="doxabase.describe_profile_run",
+                arguments=arguments,
+                reason=(
+                    "The evidence seed is linked from profile observation "
+                    f"'{profile_observation_iri}' for this dataset. "
+                    "describe_profile_run returns the shared-evidence profile "
+                    "run before drafting map updates or exporting a handoff."
+                ),
+                call=self._suggested_call_string("describe_profile_run", arguments),
             )
 
         def add_resource(
@@ -12988,6 +13033,18 @@ class DoxaBase:
                     self.expand_iri("rc:Observation"),
                     self.expand_iri("rc:ProfileObservation"),
                 }:
+                    is_profile_observation = (
+                        self.expand_iri("rc:ProfileObservation") in resource_types
+                    )
+                    evidence_seeded_profile_observation = (
+                        is_profile_observation
+                        and seed_iri
+                        in self._objects(
+                            resource_brief_graphs,
+                            resource_iri,
+                            "rc:evidence",
+                        )
+                    )
                     for observed_asset_iri in self._objects(
                         resource_brief_graphs,
                         resource_iri,
@@ -13000,6 +13057,23 @@ class DoxaBase:
                             source_iri=resource_iri,
                             depth=2,
                         )
+                        if not evidence_seeded_profile_observation:
+                            continue
+                        observed_asset_types = set(
+                            self._types_from_graphs(
+                                resource_brief_graphs,
+                                observed_asset_iri,
+                            )
+                        )
+                        if observed_asset_types & {
+                            self.expand_iri("rc:Dataset"),
+                            self.expand_iri("rc:Table"),
+                        }:
+                            add_resource_brief_profile_run_action(
+                                observed_asset_iri,
+                                seed_iri,
+                                profile_observation_iri=resource_iri,
+                            )
             if incoming_total > len(incoming_refs):
                 warnings.append(
                     "resource_brief omitted "
@@ -13372,12 +13446,13 @@ class DoxaBase:
                     )
                 )
                 resource_brief_seed_types = {
+                    self.expand_iri("rc:Evidence"),
                     self.expand_iri("rc:StorageAccess"),
                     self.expand_iri("rc:PhysicalLayout"),
                     self.expand_iri("rc:PartitionScheme"),
                 }
                 if (
-                    profile == "deep_lore"
+                    profile != "resource_brief"
                     and set(seed_types) & resource_brief_seed_types
                 ):
                     arguments: dict[str, Any] = {
@@ -13387,18 +13462,31 @@ class DoxaBase:
                     }
                     if include_trig:
                         arguments["include_trig"] = True
-                    add_resource_brief_recovery_action(
-                        ("deep_lore_resource_brief_retry", seed),
-                        action_label="Retry with resource brief",
-                        tool_name="describe_context_slice",
-                        arguments=arguments,
-                        reason=(
+                    if self.expand_iri("rc:Evidence") in seed_types:
+                        action_label = "Retry evidence resource brief"
+                        reason = (
+                            "The seed is evidence rather than a dataset, "
+                            "pattern, claim, observation, or revision. "
+                            "resource_brief follows incoming observation and "
+                            "profile-observation routes, then can suggest "
+                            "describe_profile_run or describe_query_context "
+                            "when the evidence belongs to a broader workflow."
+                        )
+                    else:
+                        action_label = "Retry with resource brief"
+                        reason = (
                             "The seed is physical/query metadata rather than a "
                             "dataset, pattern, claim, observation, or revision. "
                             "resource_brief follows incoming owner-table routes "
                             "and can then suggest describe_query_context when "
                             "query-planning repair context exists."
-                        ),
+                        )
+                    add_resource_brief_recovery_action(
+                        ("resource_brief_retry", seed),
+                        action_label=action_label,
+                        tool_name="describe_context_slice",
+                        arguments=arguments,
+                        reason=reason,
                     )
 
         if profile == "deep_lore":
@@ -13474,6 +13562,7 @@ class DoxaBase:
                 truncated=truncated,
             ),
             *resource_brief_recovery_actions.values(),
+            *resource_brief_profile_run_actions.values(),
             *self._context_slice_next_actions(
                 seed_iris=seeds,
                 profile=profile,
@@ -13983,6 +14072,12 @@ class DoxaBase:
             return (
                 f"{base} Seed is an rc:ObservedProfileMetric; rerun with "
                 f"{dataset_profiles}."
+            )
+        if self.expand_iri("rc:Evidence") in seed_types:
+            return (
+                f"{base} Seed is an rc:Evidence; rerun with "
+                "profile='resource_brief' to recover incoming observation, "
+                "profile-run, and source-span routes."
             )
         if self.expand_iri("rc:StorageAccess") in seed_types:
             return (
@@ -34384,7 +34479,11 @@ class DoxaBase:
             for type_value in extra_type_values
         ]
         row_semantics_ref = (
-            self._resource_ref("row_semantics", row_semantics)
+            self._controlled_resource_ref(
+                "row_semantics",
+                row_semantics,
+                ROW_SEMANTICS_TYPES,
+            )
             if row_semantics is not None
             else None
         )
@@ -35042,7 +35141,11 @@ class DoxaBase:
         )
         dataset_values = self._string_values("datasets", datasets)
         granularity_ref = (
-            self._resource_ref("granularity", granularity)
+            self._controlled_resource_ref(
+                "granularity",
+                granularity,
+                PARTITION_GRANULARITIES,
+            )
             if granularity is not None
             else None
         )
@@ -42352,6 +42455,18 @@ class DoxaBase:
             return snapshot_next_action
         return next_action
 
+    def _staged_apply_check_ordered_suggested_next_actions(
+        self,
+        *,
+        blocking_preflight_actions: list[SuggestedNextAction],
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> list[SuggestedNextAction]:
+        if not blocking_preflight_actions:
+            return suggested_next_actions
+        return self._dedupe_suggested_next_actions(
+            [*blocking_preflight_actions, *suggested_next_actions]
+        )
+
     def apply_staged_revision(
         self,
         iri: str,
@@ -43042,6 +43157,12 @@ class DoxaBase:
                     blocking_preflight_actions=blocking_preflight_actions,
                 )
             )
+            suggested_next_actions = (
+                self._staged_apply_check_ordered_suggested_next_actions(
+                    blocking_preflight_actions=blocking_preflight_actions,
+                    suggested_next_actions=suggested_next_actions,
+                )
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 revision_iri=staged.iri,
@@ -43416,6 +43537,12 @@ class DoxaBase:
         first_safe_next_action = self._staged_apply_check_first_safe_next_action(
             next_action,
             blocking_preflight_actions=blocking_preflight_actions,
+        )
+        suggested_next_actions = (
+            self._staged_apply_check_ordered_suggested_next_actions(
+                blocking_preflight_actions=blocking_preflight_actions,
+                suggested_next_actions=suggested_next_actions,
+            )
         )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
@@ -55613,6 +55740,7 @@ class DoxaBase:
             max_triples=max_triples,
             candidate_triple_count=context.candidate_triple_count,
             truncated=context.truncated,
+            context_suggested_next_actions=context.suggested_next_actions,
             include_seed_graphs=include_seed_graphs,
             fail_on_sensitive=fail_on_sensitive,
             limit=limit,
@@ -55792,6 +55920,7 @@ class DoxaBase:
         max_triples: int,
         candidate_triple_count: int,
         truncated: bool,
+        context_suggested_next_actions: Iterable[SuggestedNextAction],
         include_seed_graphs: bool,
         fail_on_sensitive: bool,
         limit: int,
@@ -55802,6 +55931,51 @@ class DoxaBase:
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         seed_values = self._string_values("seed_iris", seed_iris, required=True)
+        resource_brief_retry_keys: set[tuple[tuple[str, ...], int]] = set()
+        if not write:
+            for context_action in context_suggested_next_actions:
+                if context_action.tool_name != "describe_context_slice":
+                    continue
+                retry_profile = context_action.arguments.get("profile")
+                if retry_profile != "resource_brief":
+                    continue
+                retry_seed_values = self._string_values(
+                    "seed_iris",
+                    context_action.arguments.get("seed_iris", seed_values),
+                    required=True,
+                )
+                retry_max_triples = int(
+                    context_action.arguments.get("max_triples", max_triples)
+                )
+                retry_key = (tuple(retry_seed_values), retry_max_triples)
+                if retry_key in resource_brief_retry_keys:
+                    continue
+                resource_brief_retry_keys.add(retry_key)
+                arguments = {
+                    "seed_iris": retry_seed_values,
+                    "profile": "resource_brief",
+                    "max_triples": retry_max_triples,
+                    "include_seed_graphs": include_seed_graphs,
+                    "limit": limit,
+                }
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Preflight resource brief retry",
+                        tool_name="preflight_context_slice_export",
+                        mcp_tool_name="doxabase.preflight_context_slice_export",
+                        arguments=arguments,
+                        reason=(
+                            "The described slice reported that profile-specific "
+                            "expansion did not apply. Rerun export preflight "
+                            "with resource_brief before writing an under-broad "
+                            "context-slice artifact."
+                        ),
+                        call=self._suggested_call_string(
+                            "preflight_context_slice_export",
+                            arguments,
+                        ),
+                    )
+                )
         if truncated:
             full_triple_cap = max(candidate_triple_count, max_triples)
             arguments = {

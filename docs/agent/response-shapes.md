@@ -1205,6 +1205,15 @@ warnings. Storage access, physical-layout, and partition-scheme
 exactly one queryable owner table, even if that owner has no repair groups. This
 includes mapped column, storage access, physical-layout, and partition-scheme
 seeds that expand to an owning table through direct incoming/reference routes.
+Evidence-seeded `resource_brief` slices can also include
+`describe_profile_run(dataset_iri, evidence_iri)` when incoming
+`rc:ProfileObservation` rows link the evidence to an observed dataset/table.
+If an evidence seed is described with `dataset_brief`, `pattern_brief`, or
+`deep_lore` and profile-specific expansion does not apply, follow the
+resource-brief retry action before treating the slice as a complete handoff.
+Context-slice export preflight surfaces that retry as a
+`preflight_context_slice_export(..., profile="resource_brief")` action before
+the write action.
 If `profile="deep_lore"` starts directly from storage access, physical layout,
 or partition scheme metadata and reports that profile-specific expansion did
 not apply, follow the `Retry with resource brief` action. That rerun is the
@@ -5780,6 +5789,9 @@ follow the mechanical `next_action` directly. Follow
 `first_safe_next_action` / `blocking_preflight_actions[0]`, usually
 `import_revision_snapshots` or `import_trig`, then rerun
 `check_staged_revision_apply()` before applying, restaging, or repairing.
+In this state, `suggested_next_actions` is ordered with those blocking
+preflight actions first; the mechanical apply/restage/repair action may still
+appear later as the post-import route to recheck.
 `status` and `can_apply` still describe patch replay and validation readiness;
 they are not a handoff snapshot-completeness approval.
 Use `check.status` on the direct apply-check object. Revision list rows, grouped
