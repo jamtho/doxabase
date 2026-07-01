@@ -3064,6 +3064,10 @@ class DraftQueryPlanHandoffSummary:
     binding_values_required: bool
     required_bindings: list[str]
     all_issue_codes: list[str]
+    context_blocked_candidate_allowed: bool
+    context_blocked_candidate_used: bool
+    direct_blocking_reason_codes: list[str]
+    context_blocking_reason_codes: list[str]
     analysis_warning_count: int
     caveat_count: int
     unselected_ready_candidate_indexes: list[int]
@@ -19830,6 +19834,11 @@ class DoxaBase:
             issues=issues,
             decision=query_target_decision,
             candidates=query_target_candidates,
+            pending_repair_groups_present=(
+                self._query_repair_groups_have_pending_options(
+                    suggested_repair_action_groups
+                )
+            ),
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
             unselected_direct_clean_candidate_indexes=(
                 unselected_direct_clean_candidate_indexes
@@ -20015,6 +20024,12 @@ class DoxaBase:
             for index, action in enumerate(actions)
             if action.tool_name in safe_inspection_tools
         ]
+
+    @staticmethod
+    def _query_repair_groups_have_pending_options(
+        groups: Iterable[QueryRepairActionGroup],
+    ) -> bool:
+        return any(group.pending_action_options for group in groups)
 
     def _query_repair_action_groups(
         self,
@@ -20981,6 +20996,30 @@ class DoxaBase:
             pending_action_options,
         )
 
+    @staticmethod
+    def _query_plan_action_unattended_fields(
+        *,
+        recommended: bool,
+        caution: str | None,
+        review_reason_codes: list[str],
+        pending_repair_groups_present: bool,
+    ) -> tuple[bool, str | None, list[str]]:
+        if not pending_repair_groups_present:
+            return recommended, caution, list(review_reason_codes)
+        repair_caution = (
+            "Pending query repair groups have non-skippable options; review "
+            "suggested_repair_action_groups before treating draft_query_plan "
+            "actions as unattended."
+        )
+        reason_codes = list(review_reason_codes)
+        if "query_repair_groups_present" not in reason_codes:
+            reason_codes.append("query_repair_groups_present")
+        return (
+            False,
+            f"{caution} {repair_caution}" if caution else repair_caution,
+            reason_codes,
+        )
+
     def _query_context_next_actions(
         self,
         *,
@@ -20990,6 +21029,7 @@ class DoxaBase:
         issues: list[QueryPlanningIssue],
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
+        pending_repair_groups_present: bool,
         unselected_ready_candidate_indexes: list[int],
         unselected_direct_clean_candidate_indexes: list[int],
     ) -> list[SuggestedNextAction]:
@@ -21146,6 +21186,16 @@ class DoxaBase:
             selected_unattended_review_reason_codes = [
                 "route_intent_review_candidates_present"
             ]
+        (
+            selected_unattended_recommended,
+            selected_unattended_caution,
+            selected_unattended_review_reason_codes,
+        ) = self._query_plan_action_unattended_fields(
+            recommended=selected_unattended_recommended,
+            caution=selected_unattended_caution,
+            review_reason_codes=selected_unattended_review_reason_codes,
+            pending_repair_groups_present=pending_repair_groups_present,
+        )
 
         actions.append(
             QueryPlanSuggestedNextAction(
@@ -21209,6 +21259,30 @@ class DoxaBase:
                     "candidate_selector when candidate review shows this path or "
                     "relation is the intended handoff."
                 )
+            peer_unattended_recommended = (
+                not selected_route_intent_peer_indexes
+                or peer_index in selected_route_intent_peer_indexes
+            )
+            peer_unattended_caution = (
+                decision.route_intent_caution
+                if peer_index in selected_route_intent_peer_indexes
+                else None
+            )
+            peer_unattended_review_reason_codes = (
+                ["route_intent_review_candidates_present"]
+                if peer_index in selected_route_intent_peer_indexes
+                else []
+            )
+            (
+                peer_unattended_recommended,
+                peer_unattended_caution,
+                peer_unattended_review_reason_codes,
+            ) = self._query_plan_action_unattended_fields(
+                recommended=peer_unattended_recommended,
+                caution=peer_unattended_caution,
+                review_reason_codes=peer_unattended_review_reason_codes,
+                pending_repair_groups_present=pending_repair_groups_present,
+            )
             actions.append(
                 QueryPlanSuggestedNextAction(
                     action_label=peer_label,
@@ -21226,19 +21300,10 @@ class DoxaBase:
                         columns=dataset.columns,
                         partition_schemes=dataset.partition_schemes,
                     ),
-                    unattended_recommended=(
-                        not selected_route_intent_peer_indexes
-                        or peer_index in selected_route_intent_peer_indexes
-                    ),
-                    unattended_caution=(
-                        decision.route_intent_caution
-                        if peer_index in selected_route_intent_peer_indexes
-                        else None
-                    ),
+                    unattended_recommended=peer_unattended_recommended,
+                    unattended_caution=peer_unattended_caution,
                     unattended_review_reason_codes=(
-                        ["route_intent_review_candidates_present"]
-                        if peer_index in selected_route_intent_peer_indexes
-                        else []
+                        peer_unattended_review_reason_codes
                     ),
                 )
             )
@@ -21269,6 +21334,7 @@ class DoxaBase:
                             issues=issues,
                         )
                     ),
+                    pending_repair_groups_present=pending_repair_groups_present,
                     route_intent_review_candidate_indexes=(
                         selected_route_intent_peer_indexes
                     ),
@@ -21879,6 +21945,7 @@ class DoxaBase:
         columns: list[ColumnDescription],
         partition_schemes: list[PartitionDescription],
         allow_context_blocked_candidate: bool,
+        pending_repair_groups_present: bool,
         route_intent_review_candidate_indexes: Iterable[int] = (),
         route_intent_caution: str | None = None,
     ) -> list[SuggestedNextAction]:
@@ -21910,6 +21977,16 @@ class DoxaBase:
             ["route_intent_review_candidates_present"]
             if route_intent_peer_indexes
             else []
+        )
+        (
+            unattended_recommended,
+            unattended_caution,
+            unattended_reason_codes,
+        ) = self._query_plan_action_unattended_fields(
+            recommended=unattended_recommended,
+            caution=unattended_caution,
+            review_reason_codes=unattended_reason_codes,
+            pending_repair_groups_present=pending_repair_groups_present,
         )
         for signature in signatures:
             if not isinstance(signature, Mapping):
@@ -24094,6 +24171,18 @@ class DoxaBase:
             binding_values_required=review_gate.binding_values_required,
             required_bindings=list(required_bindings),
             all_issue_codes=list(review_gate.all_issue_codes),
+            context_blocked_candidate_allowed=(
+                review_gate.context_blocked_candidate_allowed
+            ),
+            context_blocked_candidate_used=(
+                review_gate.context_blocked_candidate_used
+            ),
+            direct_blocking_reason_codes=list(
+                review_gate.direct_blocking_reason_codes
+            ),
+            context_blocking_reason_codes=list(
+                review_gate.context_blocking_reason_codes
+            ),
             analysis_warning_count=len(analysis_warnings),
             caveat_count=len(caveats),
             unselected_ready_candidate_indexes=list(

@@ -18589,6 +18589,17 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
         "rc:layoutVerificationStatus"
     )
     assert listing_action["arguments"]["change_kind"] == "replace"
+    assert context.suggested_next_actions
+    draft_action = context.suggested_next_actions[0]
+    assert draft_action.tool_name == "draft_query_plan"
+    assert draft_action.unattended_recommended is False
+    assert "query_repair_groups_present" in (
+        draft_action.unattended_review_reason_codes
+    )
+    assert draft_action.unattended_caution is not None
+    assert "suggested_repair_action_groups" in draft_action.unattended_caution
+    assert context.unattended_recommended_action_indexes == []
+    assert context.first_unattended_action_index is None
 
     arguments = dict(listing_action["arguments"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -19351,6 +19362,17 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert "record_map_physical_layout writes current-best map facts directly" in (
         layout_option["review_rationale_guidance"]
     )
+    assert context.suggested_next_actions
+    draft_action = context.suggested_next_actions[0]
+    assert draft_action.tool_name == "draft_query_plan"
+    assert draft_action.unattended_recommended is False
+    assert "query_repair_groups_present" in (
+        draft_action.unattended_review_reason_codes
+    )
+    assert draft_action.unattended_caution is not None
+    assert "suggested_repair_action_groups" in draft_action.unattended_caution
+    assert context.unattended_recommended_action_indexes == []
+    assert context.first_unattended_action_index is None
     action = repair_group.actions[0]
     assert action["tool_name"] == "stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset
@@ -20757,11 +20779,15 @@ def test_query_target_candidates_surface_global_blockers(
         query_action.route_card["issue_codes"]
     )
     assert query_action.unattended_recommended is False
-    assert query_action.unattended_caution == (
-        context.query_target_decision.route_intent_caution
+    assert context.query_target_decision.route_intent_caution in (
+        query_action.unattended_caution or ""
+    )
+    assert "suggested_repair_action_groups" in (
+        query_action.unattended_caution or ""
     )
     assert query_action.unattended_review_reason_codes == [
-        "route_intent_review_candidates_present"
+        "route_intent_review_candidates_present",
+        "query_repair_groups_present",
     ]
     peer_action = context.suggested_next_actions[1]
     assert peer_action.tool_name == "draft_query_plan"
@@ -20783,15 +20809,19 @@ def test_query_target_candidates_surface_global_blockers(
         RC + "ProductionRoute",
         RC + "CurrentRoute",
     }
-    assert peer_action.unattended_recommended is True
-    assert peer_action.unattended_caution == (
-        context.query_target_decision.route_intent_caution
+    assert peer_action.unattended_recommended is False
+    assert context.query_target_decision.route_intent_caution in (
+        peer_action.unattended_caution or ""
+    )
+    assert "suggested_repair_action_groups" in (
+        peer_action.unattended_caution or ""
     )
     assert peer_action.unattended_review_reason_codes == [
-        "route_intent_review_candidates_present"
+        "route_intent_review_candidates_present",
+        "query_repair_groups_present",
     ]
-    assert context.unattended_recommended_action_indexes == [1]
-    assert context.first_unattended_action_index == 1
+    assert context.unattended_recommended_action_indexes == []
+    assert context.first_unattended_action_index is None
     assert context.suggested_next_calls == [
         action.call for action in context.suggested_next_actions
     ]
@@ -22739,6 +22769,16 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     assert plan.scan.uri_template == storage_root
     assert plan.review_gate.context_blocked_candidate_used is True
     assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.handoff_summary.ready_for_execution_attempt is True
+    assert plan.handoff_summary.context_blocked_candidate_allowed is True
+    assert plan.handoff_summary.context_blocked_candidate_used is True
+    assert plan.handoff_summary.direct_blocking_reason_codes == []
+    assert plan.handoff_summary.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert plan.handoff_summary.all_issue_codes == [
+        "storage_object_location_has_path_template"
+    ]
     assert plan.handoff_kind == "execution_attempt_ready"
 
 

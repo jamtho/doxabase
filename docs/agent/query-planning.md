@@ -679,6 +679,14 @@ drafted stage arguments may include removal patches for those old dataset-level
 values. Keep them with the addition patch; otherwise the reviewed overlay can
 fail the single-status/single-note SHACL constraints.
 
+When `describe_query_context` returns non-empty
+`suggested_repair_action_groups` with pending non-skippable options, treat that
+repair lane as the unattended route. Any `draft_query_plan` actions are still
+useful diagnostics or review handoffs, but their
+`unattended_recommended=false` and `unattended_review_reason_codes` includes
+`query_repair_groups_present`; `first_unattended_action_index` stays null until
+the repair group is resolved or another action is independently safe to follow.
+
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
 `draft_query_plan(..., candidate_selector=..., allow_context_blocked_candidate=True)`
@@ -690,9 +698,11 @@ candidate. When peer ready candidates are present, prefer the suggested
 `draft_query_plan` actions; they include `allow_context_blocked_candidate=True`
 when sibling candidate metadata is the only broader blocker.
 The source context keeps the automatic `query_target_decision` plus the explicit
-selection mode, and the review gate reports whether a context-blocked candidate
-was used. Only use this switch when `direct_review_required` is false for the
-selected candidate; direct blockers still keep the plan review-gated.
+selection mode. The review gate and compact `handoff_summary` both report
+whether a context-blocked candidate was used, plus the direct and sibling
+blocking reason-code lists. Only use this switch when `direct_review_required`
+is false for the selected candidate; direct blockers still keep the plan
+review-gated.
 Interpret the allowance fields together: `allowed=false/used=false` means no
 override was requested; `allowed=true/used=true` means sibling-only context
 blockers were excluded for this selected candidate; `allowed=true/used=false`

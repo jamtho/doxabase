@@ -4212,6 +4212,26 @@ few useful gaps:
   bucket/key setters for currently S3-compatible storage; non-S3 storage keeps
   protocol/root review, path-template repair actions, and removal actions for
   already-recorded conflicting bucket/key facts.
+- A query repair ordering trial found that storage/layout repair groups were
+  separated correctly from `suggested_next_actions`, but review-gated
+  `draft_query_plan` actions could still be marked as the first unattended
+  action while pending non-skippable repair options existed. Query contexts now
+  keep draft actions available for diagnostics but suppress their unattended
+  recommendation with `query_repair_groups_present` until the repair group is
+  handled and `describe_query_context` is rerun.
+- A context-blocked draft-plan trial confirmed a selected direct-clean route can
+  legitimately report `ready_for_execution_attempt=true` while sibling issue
+  codes remain in the broader issue audit. The compact
+  `handoff_summary` now mirrors the review gate's context-blocked allowance
+  booleans and direct/context blocker code lists so summary-only consumers can
+  distinguish the selected route from sibling metadata blockers.
+- A mixed-frontier project-brief trial found the brief still makes sufficiently
+  ambitious moves: tight limits point to `full_frontier_expansion`, expanded
+  briefs expose staged, query, profile, and non-tabular queues together, and the
+  first unattended action remains staged-frontier recovery when current staged
+  work exists. No runtime patch was needed; the agent-doc smoke test now pins
+  `plan_staged_revision_recovery` response-shape recall for
+  `next_action_queue_items` and `revision_summaries`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

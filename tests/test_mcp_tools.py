@@ -7239,6 +7239,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert result["review_gate"]["execution_attempt_blocking_reason_codes"] == [
         "binding_values_required"
     ]
+    assert result["handoff_summary"]["context_blocked_candidate_allowed"] is True
+    assert result["handoff_summary"]["context_blocked_candidate_used"] is True
+    assert result["handoff_summary"]["direct_blocking_reason_codes"] == []
+    assert result["handoff_summary"]["context_blocking_reason_codes"] == [
+        "query_context_has_other_blockers"
+    ]
     assert result["handoff_kind"] == "binding_values_required"
     date_binding = result["binding_requirements"][0]
     assert date_binding["name"] == "date"
@@ -7468,6 +7474,16 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
     assert action["arguments"]["object_kind"] == "iri"
     assert action["arguments"]["change_kind"] == "replace"
     assert action["arguments"]["validation_scope"] == "all"
+    assert result["suggested_next_actions"]
+    draft_action = result["suggested_next_actions"][0]
+    assert draft_action["tool_name"] == "draft_query_plan"
+    assert draft_action["unattended_recommended"] is False
+    assert "query_repair_groups_present" in (
+        draft_action["unattended_review_reason_codes"]
+    )
+    assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
+    assert result["unattended_recommended_action_indexes"] == []
+    assert result["first_unattended_action_index"] is None
 
     arguments = dict(action["arguments"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -7574,6 +7590,16 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     assert "record_map_physical_layout writes current-best map facts directly" in (
         layout_option["review_rationale_guidance"]
     )
+    assert result["suggested_next_actions"]
+    draft_action = result["suggested_next_actions"][0]
+    assert draft_action["tool_name"] == "draft_query_plan"
+    assert draft_action["unattended_recommended"] is False
+    assert "query_repair_groups_present" in (
+        draft_action["unattended_review_reason_codes"]
+    )
+    assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
+    assert result["unattended_recommended_action_indexes"] == []
+    assert result["first_unattended_action_index"] is None
     action = repair_group["actions"][0]
     assert action["tool_name"] == "stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset

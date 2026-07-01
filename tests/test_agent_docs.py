@@ -229,6 +229,8 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
         "Staged Revision Recovery Plan"
     )
     assert "plan.lanes" in str(recovery_response_doc["content"])
+    assert "plan.next_action_queue_items" in str(recovery_response_doc["content"])
+    assert "plan.revision_summaries" in str(recovery_response_doc["content"])
 
     profile_run_response_doc = get_agent_doc(
         "response_shapes",

@@ -3071,6 +3071,14 @@ repair template currently exists. Its top-level task action points to
 `describe_query_context`; the bounded dataset query summary may still keep a
 review-gated `draft_query_plan` action for agents that need plan-specific scan,
 runtime, and blocker fields after the context review.
+When any repair group has non-skippable `pending_action_options`,
+`draft_query_plan` actions stay in `suggested_next_actions` as diagnostic or
+review handoffs, but they are not unattended recommendations:
+`unattended_recommended=false`,
+`unattended_review_reason_codes=["query_repair_groups_present"]`, and
+`unattended_recommended_action_indexes` is empty unless another non-draft action
+is independently marked unattended. Review or stage the repair group first,
+then rerun `describe_query_context`.
 Do not concatenate this lane into `suggested_next_actions` or call
 `repair_group.actions[]` unchanged.
 
@@ -3633,6 +3641,10 @@ handoff_summary.runtime_resolution_required
 handoff_summary.binding_values_required
 handoff_summary.required_bindings
 handoff_summary.all_issue_codes
+handoff_summary.context_blocked_candidate_allowed
+handoff_summary.context_blocked_candidate_used
+handoff_summary.direct_blocking_reason_codes
+handoff_summary.context_blocking_reason_codes
 handoff_summary.analysis_warning_count
 handoff_summary.caveat_count
 handoff_summary.unselected_ready_candidate_indexes
@@ -3656,6 +3668,10 @@ handoff_summary.primary_repair_required_extra_arguments
 Use it to decide and report the first handoff state, then inspect `scan`,
 `storage_environment`, `review_gate`, `issues`, and caveats for the supporting
 detail.
+When a context-blocked candidate allowance is used, `handoff_summary` mirrors
+the key `review_gate` booleans and direct/context blocker-code lists so a
+summary-only handoff can distinguish a direct-clean selected route from sibling
+metadata that still appears in `all_issue_codes`.
 When a query-planning issue carries structured repair actions,
 `primary_repair_*` copies the first non-skippable pending action option into the
 summary. Use it as a compact next repair cue, then read
