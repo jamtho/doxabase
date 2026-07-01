@@ -5361,6 +5361,11 @@ sets `recommended_next_step="review_handoff_privacy_before_recovery"`, makes the
 top-level `first_suggested_next_action` and
 `first_safe_review_or_mutation_action` an `export_preflight` privacy review, and
 suppresses `first_mutation_action` until that review is explicit. If the
+nested `recovery_plan` is present, it carries the same privacy review as
+`first_safe_review_or_mutation_action`, sets
+`first_safe_review_or_mutation_source="handoff_import_privacy_review"`, and
+clears `first_mutation_action` / `mutation_frontier_items` while the gate is
+active. If the
 recovery plan resolves a manifest revision to a current successor whose exact
 snapshot rows are missing, summary snapshot completeness is computed over both
 manifest revisions and resolved recovery targets. In that case
@@ -6016,6 +6021,11 @@ plan.mutation_frontier_items
 plan.helper_mutation_frontier_actions
 plan.helper_mutation_frontier_calls
 plan.mutation_allowed_after
+plan.first_mutation_action
+plan.first_mutation_call
+plan.first_safe_review_or_mutation_action
+plan.first_safe_review_or_mutation_call
+plan.first_safe_review_or_mutation_source
 plan.blocking_preflight_actions
 plan.blocking_preflight_calls
 plan.requires_recheck_after_each_apply
@@ -6323,6 +6333,15 @@ current mutation frontier, but the lane review semantics still apply. When it is
 current route is diagnostic inspection or a read-only repair draft rather than
 an executable mutation. When it is `no_mutation_frontier`, the plan has no
 mutation worklist.
+For scripts that need one canonical next hop, use
+`first_safe_review_or_mutation_action` / `first_safe_review_or_mutation_call`.
+When handoff preflight blocks mutation, this points at the first blocking import
+or preflight action and `first_mutation_action` stays empty. Once preflight is
+clear, `first_mutation_action` points at the first `mutation_frontier_items[]`
+action when one exists. The first safe action points at an earlier read-only or
+`mutation_scope="none"` review suggestion when the plan offers one; otherwise it
+mirrors the first mutation-frontier action with
+`first_safe_review_or_mutation_source="mutation_frontier"`.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty even when the lane is actionable. When `include_drafts=True`, the
 planner embeds at most `repair_draft_limit` repair drafts by default; the

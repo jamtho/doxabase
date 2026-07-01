@@ -1841,6 +1841,13 @@ class StagedRevisionRecoveryPlan:
     helper_mutation_frontier_actions: list[SuggestedNextAction]
     helper_mutation_frontier_calls: list[str]
     mutation_allowed_after: str
+    first_mutation_action: SuggestedNextAction | RevisionNextAction | None
+    first_mutation_call: str | None
+    first_safe_review_or_mutation_action: (
+        SuggestedNextAction | RevisionNextAction | None
+    )
+    first_safe_review_or_mutation_call: str | None
+    first_safe_review_or_mutation_source: str | None
     blocking_preflight_actions: list[SuggestedNextAction]
     blocking_preflight_calls: list[str]
     requires_recheck_after_each_apply: bool
@@ -38822,6 +38829,16 @@ class DoxaBase:
                 repair_inspection_required=repair_inspection_required,
             )
         )
+        (
+            first_mutation_action,
+            first_safe_review_or_mutation_action,
+            first_safe_review_or_mutation_source,
+        ) = self._staged_recovery_first_actions(
+            mutation_allowed_after=mutation_allowed_after,
+            blocking_preflight_actions=blocking_preflight_actions,
+            mutation_frontier_items=mutation_frontier_items,
+            suggested_next_actions=suggested_next_actions,
+        )
         processed_revision_iris = list(dict.fromkeys(selected_revision_iris))
         current_revision_by_source = {
             **batch.current_revision_by_source,
@@ -38914,6 +38931,23 @@ class DoxaBase:
                 if action.call
             ],
             mutation_allowed_after=mutation_allowed_after,
+            first_mutation_action=first_mutation_action,
+            first_mutation_call=(
+                first_mutation_action.call
+                if first_mutation_action is not None
+                else None
+            ),
+            first_safe_review_or_mutation_action=(
+                first_safe_review_or_mutation_action
+            ),
+            first_safe_review_or_mutation_call=(
+                first_safe_review_or_mutation_action.call
+                if first_safe_review_or_mutation_action is not None
+                else None
+            ),
+            first_safe_review_or_mutation_source=(
+                first_safe_review_or_mutation_source
+            ),
             blocking_preflight_actions=blocking_preflight_actions,
             blocking_preflight_calls=[
                 action.call for action in blocking_preflight_actions if action.call
@@ -40087,6 +40121,11 @@ class DoxaBase:
             helper_mutation_frontier_actions=[],
             helper_mutation_frontier_calls=[],
             mutation_allowed_after="no_mutation_frontier",
+            first_mutation_action=None,
+            first_mutation_call=None,
+            first_safe_review_or_mutation_action=None,
+            first_safe_review_or_mutation_call=None,
+            first_safe_review_or_mutation_source=None,
             blocking_preflight_actions=[],
             blocking_preflight_calls=[],
             requires_recheck_after_each_apply=False,
@@ -41023,6 +41062,57 @@ class DoxaBase:
         if repair_inspection_required:
             return "repair_inspection_required_before_mutation"
         return "no_mutation_frontier"
+
+    @staticmethod
+    def _staged_recovery_first_actions(
+        *,
+        mutation_allowed_after: str,
+        blocking_preflight_actions: list[SuggestedNextAction],
+        mutation_frontier_items: list[StagedRevisionMutationFrontierItem],
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> tuple[
+        SuggestedNextAction | RevisionNextAction | None,
+        SuggestedNextAction | RevisionNextAction | None,
+        str | None,
+    ]:
+        first_mutation_action = None
+        first_safe_action: SuggestedNextAction | RevisionNextAction | None = None
+        first_safe_source: str | None = None
+        if mutation_allowed_after == "handoff_preflight_required_before_mutation":
+            if blocking_preflight_actions:
+                first_safe_action = blocking_preflight_actions[0]
+                first_safe_source = "blocking_preflight"
+            elif suggested_next_actions:
+                first_safe_action = suggested_next_actions[0]
+                first_safe_source = "suggested_next_action"
+            return first_mutation_action, first_safe_action, first_safe_source
+        review_action = next(
+            (
+                action
+                for action in suggested_next_actions
+                if (
+                    not DoxaBase._staged_recovery_action_is_mutating(action)
+                    or (
+                        isinstance(action, EffectAnnotatedSuggestedNextAction)
+                        and action.mutation_scope == "none"
+                    )
+                )
+            ),
+            None,
+        )
+        if review_action is not None:
+            first_safe_action = review_action
+            first_safe_source = "suggested_review_action"
+        if mutation_frontier_items:
+            first_mutation_action = mutation_frontier_items[0].action
+            if first_safe_action is None:
+                first_safe_action = first_mutation_action
+                first_safe_source = "mutation_frontier"
+        elif suggested_next_actions:
+            if first_safe_action is None:
+                first_safe_action = suggested_next_actions[0]
+                first_safe_source = "suggested_next_action"
+        return first_mutation_action, first_safe_action, first_safe_source
 
     @staticmethod
     def _staged_recovery_order_lanes(
@@ -56736,12 +56826,39 @@ class DoxaBase:
             recovery_plan.blocking_preflight_actions
         )
         suggested_next_actions = replace_actions(recovery_plan.suggested_next_actions)
+        (
+            first_mutation_action,
+            first_safe_review_or_mutation_action,
+            first_safe_review_or_mutation_source,
+        ) = self._staged_recovery_first_actions(
+            mutation_allowed_after=recovery_plan.mutation_allowed_after,
+            blocking_preflight_actions=blocking_preflight_actions,
+            mutation_frontier_items=recovery_plan.mutation_frontier_items,
+            suggested_next_actions=suggested_next_actions,
+        )
         return replace(
             recovery_plan,
             blocking_preflight_actions=blocking_preflight_actions,
             blocking_preflight_calls=[
                 action.call for action in blocking_preflight_actions if action.call
             ],
+            first_mutation_action=first_mutation_action,
+            first_mutation_call=(
+                first_mutation_action.call
+                if first_mutation_action is not None
+                else None
+            ),
+            first_safe_review_or_mutation_action=(
+                first_safe_review_or_mutation_action
+            ),
+            first_safe_review_or_mutation_call=(
+                first_safe_review_or_mutation_action.call
+                if first_safe_review_or_mutation_action is not None
+                else None
+            ),
+            first_safe_review_or_mutation_source=(
+                first_safe_review_or_mutation_source
+            ),
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions if action.call
@@ -56820,7 +56937,13 @@ class DoxaBase:
             next_action_queue={},
             next_action_queue_items=[],
             next_action_queue_item_counts={},
+            mutation_frontier_iris=[],
             mutation_frontier_items=[],
+            first_mutation_action=None,
+            first_mutation_call=None,
+            first_safe_review_or_mutation_action=privacy_action,
+            first_safe_review_or_mutation_call=privacy_action.call,
+            first_safe_review_or_mutation_source="handoff_import_privacy_review",
             helper_mutation_frontier_actions=[],
             helper_mutation_frontier_calls=[],
             mutation_allowed_after=(

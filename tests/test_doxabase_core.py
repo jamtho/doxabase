@@ -2612,6 +2612,21 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     )
     assert imported.recovery_plan.suggested_next_actions == [privacy_action]
     assert imported.recovery_plan.blocking_preflight_actions == [privacy_action]
+    assert imported.recovery_plan.first_mutation_action is None
+    assert imported.recovery_plan.first_mutation_call is None
+    assert (
+        imported.recovery_plan.first_safe_review_or_mutation_action
+        == privacy_action
+    )
+    assert (
+        imported.recovery_plan.first_safe_review_or_mutation_call
+        == privacy_action.call
+    )
+    assert (
+        imported.recovery_plan.first_safe_review_or_mutation_source
+        == "handoff_import_privacy_review"
+    )
+    assert imported.recovery_plan.mutation_frontier_iris == []
     assert imported.recovery_plan.mutation_frontier_items == []
     assert imported.recovery_plan.next_action_queue_items == []
     assert all(
@@ -28120,6 +28135,20 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
         action.tool_name
         for action in snapshot_first_plan.blocking_preflight_actions
     ] == ["import_trig"]
+    assert snapshot_first_plan.first_mutation_action is None
+    assert snapshot_first_plan.first_mutation_call is None
+    assert (
+        snapshot_first_plan.first_safe_review_or_mutation_action
+        == snapshot_first_plan.blocking_preflight_actions[0]
+    )
+    assert (
+        snapshot_first_plan.first_safe_review_or_mutation_call
+        == snapshot_first_plan.blocking_preflight_actions[0].call
+    )
+    assert (
+        snapshot_first_plan.first_safe_review_or_mutation_source
+        == "blocking_preflight"
+    )
     snapshot_first_lane = snapshot_first_plan.lanes[0]
     assert snapshot_first_lane.lane == "complete_handoff_import"
     assert snapshot_first_lane.batch_action == "skipped_snapshot_rows_without_history"

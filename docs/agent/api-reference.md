@@ -1857,6 +1857,14 @@ still apply. `repair_inspection_required_before_mutation` means repair lanes
 exist, but their current route is diagnostic inspection or a read-only repair
 draft rather than an executable mutation. `no_mutation_frontier` means there is
 no mutation worklist.
+For a single executable-or-review next hop, read
+`first_safe_review_or_mutation_action` and
+`first_safe_review_or_mutation_call`. Handoff preflight keeps
+`first_mutation_action` empty and points the safe first action at the blocking
+import/preflight step. Once preflight is clear, `first_mutation_action` points
+at the first mutation-frontier action, while the safe first action prefers any
+earlier read-only or `mutation_scope="none"` review suggestion before falling
+back to that mutation.
 For multi-step or imported recovery work without a matching imported source
 session, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,

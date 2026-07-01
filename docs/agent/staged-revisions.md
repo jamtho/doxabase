@@ -324,8 +324,14 @@ preflight before apply/restage actions. The same imports appear in
 `blocking_preflight_actions`, and `mutation_allowed_after` is
 `handoff_preflight_required_before_mutation`. Do not drive
 `mutation_frontier_items` until those preflight imports are complete and a fresh
-plan no longer reports blocking preflight actions. After those preflight
-actions, when `would_restage_revision_iris` is non-empty, top-level
+plan no longer reports blocking preflight actions.
+`first_safe_review_or_mutation_action` repeats the first blocking preflight
+action in this state, while `first_mutation_action` stays empty; after the gate
+clears, `first_mutation_action` points at the first actionable mutation frontier
+item and the safe first action points at any earlier read-only or
+`mutation_scope="none"` review suggestion before falling back to that mutation.
+After those preflight actions, when
+`would_restage_revision_iris` is non-empty, top-level
 `suggested_next_actions` includes a batch
 `restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
 worklist. This dry-run action is effect-annotated with

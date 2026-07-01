@@ -4088,6 +4088,12 @@ few useful gaps:
   `RevisionNextActionQueueItem` now carries the nullable
   `requires_semantic_review_before_mutation` field so cold recovery scripts can
   avoid unattended mutation from any queue-item surface.
+- A project-brief frontier-selection trial found that after a safety-first
+  handoff/import gate, `plan_staged_revision_recovery` exposed blocking
+  preflight lists and post-preflight mutation queues but no single first-hop
+  field like `project_brief.first_unattended_action`. Recovery plans now expose
+  `first_safe_review_or_mutation_action` / call / source and keep
+  `first_mutation_action` empty while handoff preflight blocks mutation.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

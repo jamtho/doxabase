@@ -2140,6 +2140,12 @@ same draft call again.
 When lane snapshot evidence is incomplete, the lane and top-level
 `suggested_next_actions` promote `import_revision_snapshots` or `import_trig`
 before apply/restage actions. The lane queue remains the post-preflight route.
+Use `first_safe_review_or_mutation_action` / `first_safe_review_or_mutation_call`
+when an unattended caller needs one canonical first hop: while handoff preflight
+is blocking, these fields point at the first blocking import/preflight action
+and `first_mutation_action` is empty; after the preflight clears, they point at
+an earlier read-only or `mutation_scope="none"` review suggestion when present,
+otherwise at the first mutation-frontier action.
 
 Read `lanes[]` first. Each lane names the `source_revision_iri`,
 `current_revision_iri`, `lane`, `batch_action`, status/decision before and

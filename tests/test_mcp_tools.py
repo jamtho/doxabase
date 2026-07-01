@@ -3033,6 +3033,19 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
         ]
         is False
     )
+    assert result["first_mutation_action"] == lane["next_action"]
+    assert result["first_mutation_call"] == lane["next_action"]["call"]
+    review_action = result["suggested_next_actions"][0]
+    assert review_action["tool_name"] == "describe_staged_revision"
+    assert result["first_safe_review_or_mutation_action"] == review_action
+    assert (
+        result["first_safe_review_or_mutation_call"]
+        == review_action["call"]
+    )
+    assert (
+        result["first_safe_review_or_mutation_source"]
+        == "suggested_review_action"
+    )
     assert result["mutation_frontier_items"] == [
         {
             "item_kind": "revision_target",
@@ -3437,6 +3450,17 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
     assert result["blocking_preflight_calls"] == [
         result["suggested_next_actions"][0]["call"]
     ]
+    assert result["first_mutation_action"] is None
+    assert result["first_mutation_call"] is None
+    assert (
+        result["first_safe_review_or_mutation_action"]
+        == result["blocking_preflight_actions"][0]
+    )
+    assert (
+        result["first_safe_review_or_mutation_call"]
+        == result["blocking_preflight_calls"][0]
+    )
+    assert result["first_safe_review_or_mutation_source"] == "blocking_preflight"
     assert result["lanes"][0]["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
     )
@@ -3517,6 +3541,18 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     assert batch_action["mutates_project_graph"] is False
     assert batch_action["writes_history"] is False
     assert batch_action["writes_files"] is False
+    assert result["first_mutation_action"] == result["mutation_frontier_items"][0][
+        "action"
+    ]
+    assert result["first_mutation_call"] == result["mutation_frontier_items"][0][
+        "call"
+    ]
+    assert result["first_safe_review_or_mutation_action"] == batch_action
+    assert result["first_safe_review_or_mutation_call"] == batch_action["call"]
+    assert (
+        result["first_safe_review_or_mutation_source"]
+        == "suggested_review_action"
+    )
     assert any(
         action["tool_name"] == "restage_staged_revision"
         and action["arguments"] == {"iri": staged["revision_iri"]}
