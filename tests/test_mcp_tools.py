@@ -5066,7 +5066,35 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     ]
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
-    round_trip.import_trig(project_path)
+    trig_import = import_trig_tool(round_trip, path=str(project_path))
+    assert trig_import["imported_history_revision_count"] == 3
+    assert trig_import["post_import_snapshot_evidence_complete"] is False
+    assert trig_import["post_import_snapshot_evidence_truncated"] is False
+    assert trig_import["post_import_snapshot_evidence_status_counts"] == {
+        "history_only_count_digest": 3
+    }
+    assert set(trig_import["incomplete_snapshot_revision_iris"]) == {
+        result["applied_revision_iri"],
+        sibling["revision_iri"],
+        staged["revision_iri"],
+    }
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in trig_import["post_import_snapshot_evidence"]
+    } == {
+        result["applied_revision_iri"]: "history_only_count_digest",
+        sibling["revision_iri"]: "history_only_count_digest",
+        staged["revision_iri"]: "history_only_count_digest",
+    }
+    assert trig_import["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert trig_import["suggested_next_calls"] == [
+        (
+            "import_revision_snapshots("
+            "path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+        )
+    ]
     snapshot_status_before_import = describe_revision_snapshot_evidence_tool(
         round_trip,
         result["applied_revision_iri"],

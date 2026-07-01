@@ -43,6 +43,11 @@ When arriving cold, use this route before reading every reference doc.
    Treat `frontier_status.is_complete` as only the hidden-frontier audit: if
    `first_unattended_action` or `mutation_allowed_after` still points to safety
    review, do that before any mutation.
+   If a stale-seed `export_preflight(export_kind="handoff_bundle")` is clean but
+   the current agent is read-only or cannot write the handoff/import artifacts,
+   stop and report that recovery-complete handoff is required. Repeating the
+   same stateless preflight or polishing visible query/profile queues will not
+   clear the seed gate in that capsule.
    In autonomous repo-improvement loops, read
    `doxabase.get_doc(doc_id="project_strategy")` after local safety/frontier
    handling so the next trial wave is chosen from broader build priorities, not

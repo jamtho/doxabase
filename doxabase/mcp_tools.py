@@ -1,17 +1,26 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from rdflib import Dataset
+from rdflib import Dataset, URIRef
+from rdflib.namespace import RDF
 
 from doxabase.agent_docs import get_agent_doc, list_agent_docs
-from doxabase.core import DoxaBase, RCG_PREFIX, ROOT, to_dict
+from doxabase.core import (
+    DoxaBase,
+    RCG_PREFIX,
+    ROOT,
+    SuggestedNextAction,
+    to_dict,
+)
 
 EXAMPLE_FIXTURES = (
     ROOT / "examples" / "manifest-prototype-rc" / "ais.trig",
     ROOT / "examples" / "manifest-prototype-rc" / "polymarket.trig",
 )
+POST_IMPORT_SNAPSHOT_EVIDENCE_LIMIT = 20
 
 
 def list_docs_tool() -> dict[str, Any]:
@@ -1557,12 +1566,53 @@ def import_trig_tool(
     replace: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
+    revision_iris, total_history_revision_count = _history_revision_iris_in_trig(
+        db,
+        resolved_path,
+        limit=POST_IMPORT_SNAPSHOT_EVIDENCE_LIMIT,
+    )
     imported = db.import_trig(resolved_path, replace=replace)
+    post_import_snapshot_evidence = [
+        db.describe_revision_snapshot_evidence(revision_iri)
+        for revision_iri in revision_iris
+    ]
+    suggested_next_actions = _dedupe_suggested_next_actions(
+        action
+        for evidence in post_import_snapshot_evidence
+        for action in evidence.suggested_next_actions
+    )
+    snapshot_status_counts: dict[str, int] = {}
+    incomplete_snapshot_revision_iris: list[str] = []
+    for evidence in post_import_snapshot_evidence:
+        snapshot_status_counts[evidence.status] = (
+            snapshot_status_counts.get(evidence.status, 0) + 1
+        )
+        if evidence.suggested_next_actions:
+            incomplete_snapshot_revision_iris.append(evidence.revision_iri)
+    snapshot_evidence_truncated = (
+        total_history_revision_count > len(post_import_snapshot_evidence)
+    )
+
     return {
         "path": str(resolved_path),
         "replace": replace,
         "imported": imported,
         "total_imported": sum(imported.values()),
+        "imported_history_revision_count": total_history_revision_count,
+        "post_import_snapshot_evidence_limit": POST_IMPORT_SNAPSHOT_EVIDENCE_LIMIT,
+        "post_import_snapshot_evidence_truncated": snapshot_evidence_truncated,
+        "post_import_snapshot_evidence_complete": (
+            not snapshot_evidence_truncated and not incomplete_snapshot_revision_iris
+        ),
+        "post_import_snapshot_evidence_status_counts": snapshot_status_counts,
+        "incomplete_snapshot_revision_iris": incomplete_snapshot_revision_iris,
+        "post_import_snapshot_evidence": [
+            to_dict(evidence) for evidence in post_import_snapshot_evidence
+        ],
+        "suggested_next_actions": [
+            to_dict(action) for action in suggested_next_actions
+        ],
+        "suggested_next_calls": [action.call for action in suggested_next_actions],
     }
 
 
@@ -2239,6 +2289,57 @@ def _resolve_path(path: str) -> Path:
     if candidate.is_absolute():
         return candidate.resolve(strict=False)
     return (ROOT / candidate).resolve(strict=False)
+
+
+def _history_revision_iris_in_trig(
+    db: DoxaBase,
+    path: Path,
+    *,
+    limit: int,
+) -> tuple[list[str], int]:
+    # Use the core parser so wrapper parse errors match import_trig failures.
+    dataset = db._parse_rdf_dataset(  # noqa: SLF001
+        path,
+        format="trig",
+        parser_context="import_trig",
+    )
+    graph_revision_type = URIRef(db.expand_iri("rc:GraphRevision"))
+    revision_iris: list[str] = []
+    seen: set[str] = set()
+    for context in dataset.graphs():
+        if len(context) == 0:
+            continue
+        identifier = str(context.identifier)
+        graph_name = (
+            identifier.removeprefix(RCG_PREFIX)
+            if identifier.startswith(RCG_PREFIX)
+            else identifier
+        )
+        if graph_name != "history":
+            continue
+        for subject in context.subjects(RDF.type, graph_revision_type):
+            if not isinstance(subject, URIRef):
+                continue
+            revision_iri = str(subject)
+            if revision_iri in seen:
+                continue
+            seen.add(revision_iri)
+            revision_iris.append(revision_iri)
+    return revision_iris[:limit], len(revision_iris)
+
+
+def _dedupe_suggested_next_actions(
+    actions: Iterable[SuggestedNextAction],
+) -> list[SuggestedNextAction]:
+    deduped: list[SuggestedNextAction] = []
+    seen: set[tuple[str, str]] = set()
+    for action in actions:
+        key = (action.tool_name, action.call)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(action)
+    return deduped
 
 
 def _fixture_graph_roles(fixtures: tuple[Path, ...]) -> list[str]:

@@ -5076,6 +5076,33 @@ the raw fields when a count is surprising or incomplete. When
 mutation-frontier item so a receiver can see the next reviewed mutation without
 opening the nested plan first.
 
+`doxabase.import_trig(path, replace=False)` returns:
+
+```python
+import_result.path
+import_result.replace
+import_result.imported
+import_result.total_imported
+import_result.imported_history_revision_count
+import_result.post_import_snapshot_evidence_limit
+import_result.post_import_snapshot_evidence_truncated
+import_result.post_import_snapshot_evidence_complete
+import_result.post_import_snapshot_evidence_status_counts
+import_result.incomplete_snapshot_revision_iris
+import_result.post_import_snapshot_evidence
+import_result.suggested_next_actions
+import_result.suggested_next_calls
+```
+
+`imported` remains graph-role triple counts. When the TriG includes history
+graph revisions, `post_import_snapshot_evidence[]` has the same row shape as
+`describe_revision_snapshot_evidence()`, bounded by
+`post_import_snapshot_evidence_limit`. `suggested_next_actions` promotes import
+recovery actions from those rows, usually `import_revision_snapshots` for
+history-only count/digest metadata. `post_import_snapshot_evidence_complete` is
+false when evidence rows are truncated, because later imported revisions remain
+unchecked by this response.
+
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:
 

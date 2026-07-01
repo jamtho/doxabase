@@ -3607,6 +3607,17 @@ few useful gaps:
   compact smoke-check fields first: snapshot completeness, matching sessions,
   lane/queue counts, mutation frontier, preserved profile route keys, and the
   first suggested next action.
+- A project-brief frontier trial confirmed `first_unattended_action` correctly
+  routes stale-seed capsules to handoff preflight before hidden frontier or
+  query/profile work. Because `export_preflight` is stateless, read-only agents
+  should report recovery-complete handoff required after a clean stale-seed
+  preflight instead of rerunning it or polishing visible queues. A paired
+  context-slice import trial showed history-bearing slices validate in fresh
+  receivers but still lack exact SQLite snapshot rows until the companion JSON
+  is imported; `import_trig` now surfaces bounded
+  `post_import_snapshot_evidence` and promoted import-recovery actions so the
+  receiver does not need to know to call `describe_revision_snapshot_evidence`
+  immediately after every history import.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

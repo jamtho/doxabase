@@ -2349,6 +2349,12 @@ Imports a TriG file into graph roles. Fixture graph IRIs such as
 import preflights every non-empty named graph before mutating storage; normal
 imports that encounter immutable seed roles such as `base_ontology` or
 `base_shapes`, or an unknown Rich Canopy role, fail without partial graph writes.
+When the incoming TriG includes `history` graph `rc:GraphRevision` rows, the
+response includes bounded `post_import_snapshot_evidence` rows plus
+`post_import_snapshot_evidence_complete`, status counts, incomplete revision
+IRIs, and promoted `suggested_next_actions`. If those rows say
+`history_only_count_digest`, import the companion revision snapshot JSON before
+relying on exact applied-diff, stale-drift, or mutation-recovery triples.
 
 `doxabase.import_revision_snapshots`
 

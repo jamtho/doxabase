@@ -55,7 +55,10 @@ db.import_revision_snapshots("path/to/revision-snapshots.json")
 named graphs before writing, so an import that later hits an immutable seed graph
 or unknown Rich Canopy role leaves the target capsule unchanged. Normal imports
 still reject `base_ontology` and `base_shapes`; import all-with-seeds bundles
-only with deliberate seed-handling.
+only with deliberate seed-handling. The MCP `doxabase.import_trig` wrapper also
+reports bounded `post_import_snapshot_evidence` for imported history revisions;
+follow its `import_revision_snapshots` action when a context-slice import
+validated but still has only RDF count/digest snapshot metadata.
 
 `import_revision_snapshots()` restores an opt-in JSON bundle of SQLite-side
 revision snapshot rows. Use it after an RDF project/history import when exact
