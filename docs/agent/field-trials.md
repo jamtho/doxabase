@@ -3969,8 +3969,17 @@ few useful gaps:
   map updates were correctly gated by `draft_profile_map_updates` and
   `stage_profile_map_updates`, but `plan_profile_followthrough` still exposed
   the duplicate staging action as a call-ready independent mutation. The
-  coordinator now keeps that row in `pending_profile_map_update_review` for
-  diagnostics and leaves the recovery-plan action as the runnable next step.
+  coordinator was changed to keep that row in
+  `pending_profile_map_update_review` for diagnostics while leaving the
+  recovery-plan action as the runnable next step.
+- A later profile-promotion trial showed the coordinator fix was not enough:
+  `draft_profile_map_updates` itself still exposed the duplicate
+  `stage_profile_map_updates` row after same dataset/evidence work was already
+  staged. Pending profile-map drafts now expose only
+  `plan_staged_revision_recovery` in the default `profile_map_updates` route;
+  callers must invoke `stage_profile_map_updates(...,
+  allow_pending_profile_updates=True)` explicitly after review when another
+  staged update is intentional.
 - A query-planning scout found database relation and partition handoffs could
   be recorded as query evidence correctly, but the returned follow-up sent
   agents back to dataset query context without a direct route to the evidence

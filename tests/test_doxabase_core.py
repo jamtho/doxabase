@@ -33165,7 +33165,6 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     ]
     assert [action.tool_name for action in rerun_profile_map_actions] == [
         "plan_staged_revision_recovery",
-        "stage_profile_map_updates",
     ]
     pending_action = rerun_profile_map_actions[0]
     assert pending_action.arguments == {
@@ -33177,23 +33176,19 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         staged_from_suggestion.staged_revision.revision_iri
     ]
     assert pending_source["pending_staged_profile_update_count"] == 1
-    duplicate_stage_action = rerun_profile_map_actions[1]
-    assert "Pending staged profile map update" in duplicate_stage_action.reason
-    duplicate_stage_source = duplicate_stage_action.source_profile_map_update
-    assert duplicate_stage_source["action_status"] == (
-        "available_after_pending_review"
-    )
-    assert duplicate_stage_source["pending_staged_profile_update_iris"] == [
-        staged_from_suggestion.staged_revision.revision_iri
+    assert pending_source["recommendation_indexes"] == [0, 1, 2]
+    assert pending_source["duplicate_group_keys"] == [
+        draft.recommendations[index].duplicate_group_key for index in [0, 1, 2]
     ]
+    assert pending_source["route_pattern_iris"] == [profile_pattern.pattern_iri]
     assert rerun_draft.suggested_next_actions[0] == pending_action
+    assert "stage_profile_map_updates" not in {
+        action.tool_name for action in rerun_draft.suggested_next_actions
+    }
     followthrough = db.plan_profile_followthrough(dataset, evidence)
-    assert [
-        resolution.tool_name
-        for resolution in followthrough.action_resolution_groups[
-            "pending_profile_map_update_review"
-        ]
-    ] == ["stage_profile_map_updates"]
+    assert "pending_profile_map_update_review" not in (
+        followthrough.action_resolution_groups
+    )
     assert "pending_profile_map_update_review" not in (
         followthrough.suggested_next_action_groups
     )
@@ -33203,10 +33198,18 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert "stage_profile_map_updates" not in {
         action.tool_name for action in followthrough.suggested_next_actions
     }
+    duplicate_stage_arguments = {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": (
+            draft.representative_recommendation_indexes
+        ),
+        "supporting_patterns": [profile_pattern.pattern_iri],
+    }
     with pytest.raises(DoxaBaseError, match="pending staged profile map update"):
-        db.stage_profile_map_updates(**duplicate_stage_action.arguments)
+        db.stage_profile_map_updates(**duplicate_stage_arguments)
     forced_duplicate = db.stage_profile_map_updates(
-        **duplicate_stage_action.arguments,
+        **duplicate_stage_arguments,
         allow_pending_profile_updates=True,
     )
     assert forced_duplicate.staged_revision is not None

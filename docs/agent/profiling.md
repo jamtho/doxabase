@@ -120,9 +120,9 @@ Use `primary_action_kind` to choose the route you intend:
 direct record helpers, and `inspect_context` for non-mutating review.
 If same dataset/evidence profile map updates are already staged, the draft sets
 `pending_staged_profile_update_iris` and puts a
-`plan_staged_revision_recovery` action first in `profile_map_updates`. Review
-that staged frontier before using any following `stage_profile_map_updates`
-action for a deliberate alternative or duplicate. Direct
+`plan_staged_revision_recovery` action in `profile_map_updates`. It does not
+emit a default fresh `stage_profile_map_updates` action for that same
+dataset/evidence pair. Direct
 `stage_profile_map_updates` calls reject this pending same dataset/evidence case
 by default; pass `allow_pending_profile_updates=true` only after review confirms
 another staged update is intentional.
@@ -437,10 +437,9 @@ staged rows stale; `restage_stale_revisions=True` can mechanically refresh
 rows whose next action is `restage_staged_revision`, but the helper does not
 apply profile-generated map or ontology changes.
 When a same dataset/evidence profile map update is already pending,
-`plan_profile_followthrough` keeps duplicate `stage_profile_map_updates` rows in
-`action_resolution_groups.pending_profile_map_update_review` but omits them from
-call-ready `suggested_next_actions`. Follow the paired
-`plan_staged_revision_recovery` action first, and pass
+`plan_profile_followthrough` follows the draft and exposes the paired
+`plan_staged_revision_recovery` action, not a default duplicate staging action.
+Pass
 `allow_pending_profile_updates=true` only after review confirms another staged
 profile map update is intentional.
 If the first follow-through pass reports `missing_binding_keys`, run or inspect

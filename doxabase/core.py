@@ -18889,12 +18889,18 @@ class DoxaBase:
                 self._profile_map_update_pending_staged_action(
                     dataset_iri=dataset_iri,
                     evidence_iri=evidence_iri,
+                    recommendations=recommendations,
+                    recommendation_indexes=default_stageable_representative_indexes,
+                    supporting_patterns=supporting_patterns,
                     pending_staged_profile_update_iris=(
                         pending_staged_profile_update_iris
                     ),
                 )
             )
-        if default_stageable_representative_indexes:
+        if (
+            default_stageable_representative_indexes
+            and not pending_staged_profile_update_iris
+        ):
             action = self._profile_map_update_stage_action(
                 dataset_iri=dataset_iri,
                 evidence_iri=evidence_iri,
@@ -18934,6 +18940,9 @@ class DoxaBase:
         *,
         dataset_iri: str,
         evidence_iri: str,
+        recommendations: list[ProfileMapUpdateRecommendation],
+        recommendation_indexes: list[int],
+        supporting_patterns: list[str],
         pending_staged_profile_update_iris: list[str],
     ) -> ProfileMapUpdateSuggestedNextAction:
         arguments = {
@@ -18955,38 +18964,52 @@ class DoxaBase:
                 arguments,
             ),
         )
-        route_group_key = self._profile_route_group_key(
-            "profile_map_updates",
-            {
-                "dataset_iri": dataset_iri,
-                "evidence_iri": evidence_iri,
-                "pending_staged_profile_update_iris": (
+        if recommendation_indexes:
+            source_profile_map_update = self._profile_map_update_route_source(
+                dataset_iri=dataset_iri,
+                evidence_iri=evidence_iri,
+                recommendations=recommendations,
+                recommendation_indexes=recommendation_indexes,
+                supporting_patterns=supporting_patterns,
+                action=action,
+                pending_staged_profile_update_iris=(
                     pending_staged_profile_update_iris
                 ),
-            },
-        )
-        source_profile_map_update = self._with_profile_route_step_key(
-            {
-                "review_lane": "profile_map_updates",
-                "route_group_key": route_group_key,
-                "evidence_iri": evidence_iri,
-                "profile_evidence_iri": evidence_iri,
-                "action_status": "already_pending",
-                "recommendation_indexes": [],
-                "duplicate_group_keys": [],
-                "duplicate_recommendation_indexes": [],
-                "duplicate_profile_observation_iris": [],
-                "pending_staged_profile_update_iris": (
-                    list(pending_staged_profile_update_iris)
-                ),
-                "pending_staged_profile_update_count": len(
-                    pending_staged_profile_update_iris
-                ),
-                "route_anchor_iris": [dataset_iri],
-                "route_pattern_iris": [],
-            },
-            action,
-        )
+            )
+            source_profile_map_update["action_status"] = "already_pending"
+        else:
+            route_group_key = self._profile_route_group_key(
+                "profile_map_updates",
+                {
+                    "dataset_iri": dataset_iri,
+                    "evidence_iri": evidence_iri,
+                    "pending_staged_profile_update_iris": (
+                        pending_staged_profile_update_iris
+                    ),
+                },
+            )
+            source_profile_map_update = self._with_profile_route_step_key(
+                {
+                    "review_lane": "profile_map_updates",
+                    "route_group_key": route_group_key,
+                    "evidence_iri": evidence_iri,
+                    "profile_evidence_iri": evidence_iri,
+                    "action_status": "already_pending",
+                    "recommendation_indexes": [],
+                    "duplicate_group_keys": [],
+                    "duplicate_recommendation_indexes": [],
+                    "duplicate_profile_observation_iris": [],
+                    "pending_staged_profile_update_iris": (
+                        list(pending_staged_profile_update_iris)
+                    ),
+                    "pending_staged_profile_update_count": len(
+                        pending_staged_profile_update_iris
+                    ),
+                    "route_anchor_iris": [dataset_iri],
+                    "route_pattern_iris": [],
+                },
+                action,
+            )
         return ProfileMapUpdateSuggestedNextAction(
             action_label=action.action_label,
             tool_name=action.tool_name,
@@ -47556,7 +47579,11 @@ class DoxaBase:
                         break
                 if source is None:
                     continue
-                if source.get("action_status") == "already_pending":
+                if (
+                    source.get("action_status") == "already_pending"
+                    and not source.get("recommendation_indexes")
+                    and not source.get("duplicate_profile_observation_iris")
+                ):
                     continue
                 route_step_key = source.get("route_step_key")
                 if not isinstance(route_step_key, str):

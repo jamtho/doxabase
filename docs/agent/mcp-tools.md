@@ -707,9 +707,9 @@ routing; non-empty lanes are grouped as `query_context_review`,
 `metric_vocabulary_review`, and `profile_type_review`.
 When same dataset/evidence profile map updates are already staged, the draft
 sets `pending_staged_profile_update_iris` and the `profile_map_updates` group
-starts with `plan_staged_revision_recovery` for those staged rows. Treat any
-following `stage_profile_map_updates` action as available only after reviewing
-the pending staged work; direct staging rejects another same dataset/evidence
+contains only `plan_staged_revision_recovery` for those staged rows. The default
+draft no longer emits a fresh `stage_profile_map_updates` action for the same
+dataset/evidence pair; direct staging also rejects another same dataset/evidence
 profile-map update by default, so pass
 `allow_pending_profile_updates=true` only when another staged profile update is
 intentional.

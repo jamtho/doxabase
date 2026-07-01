@@ -1961,12 +1961,12 @@ include non-callable `missing_binding_prerequisites`; suggested-action groups
 only include call-ready actions and use buckets such as
 `ready_resolved_mutations`, `binding_producers`, `independent_mutation_reviews`,
 `inspection`, `export_review_artifacts`, and `staged_revision_recheck`.
-`pending_profile_map_update_review` is intentionally present only in
-`action_resolution_groups`: it marks a duplicate
-`stage_profile_map_updates` action that the staging helper would reject until
-the existing same dataset/evidence staged update has been reviewed. Follow the
-paired `plan_staged_revision_recovery` action instead of passing
-`allow_pending_profile_updates=True` by default.
+When the draft has a pending same dataset/evidence profile-map update,
+followthrough exposes the paired `plan_staged_revision_recovery` action instead
+of a duplicate `stage_profile_map_updates` action. Call
+`stage_profile_map_updates(..., allow_pending_profile_updates=True)` explicitly
+only after reviewing the pending staged row and deciding another staged update is
+intentional.
 When serializing a nested field directly, such as
 `draft.advisory_followthrough_plan` or `plan.action_resolutions`, use
 `to_jsonable(...)` rather than `to_dict(...)`; `to_dict(...)` is for a single
@@ -2029,10 +2029,10 @@ column shell while preserving all supporting profile observations.
 When current staged work already contains a profile map update for the same
 dataset/evidence pair, `pending_staged_profile_update_iris` names those staged
 rows and `pending_staged_profile_update_count` gives the count. In that case the
-`profile_map_updates` action group starts with a read-only
-`plan_staged_revision_recovery(revision_iris=[...])` action before any fresh
-`stage_profile_map_updates` action, and `review_note` warns the caller to review
-the staged frontier before staging another copy.
+`profile_map_updates` action group contains the read-only
+`plan_staged_revision_recovery(revision_iris=[...])` action and no default fresh
+`stage_profile_map_updates` action. `review_note` warns the caller to review the
+staged frontier before intentionally staging another copy.
 
 `scalar_conflict_groups[]` gives a structured choose-one route for those
 non-default-stageable scalar conflicts:
@@ -2294,9 +2294,9 @@ action.source_profile_map_update["pending_staged_profile_update_count"]
 
 `action_status` is usually `available`. It is `already_pending` on the
 read-only staged-frontier review action inserted for same dataset/evidence
-pending work, and `available_after_pending_review` on a fresh staging action
-that remains available for deliberate alternative or duplicate review after the
-pending staged rows have been inspected.
+pending work. Older draft payloads may contain
+`available_after_pending_review` on a fresh duplicate staging action, but current
+drafts suppress that action from default route surfaces.
 
 Grouped metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and
 carry source metadata:
