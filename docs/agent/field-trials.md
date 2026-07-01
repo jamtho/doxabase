@@ -4049,6 +4049,13 @@ few useful gaps:
   `unattended_recommended`, `unattended_caution`, and
   `unattended_review_reason_codes` so route-intent peer actions can be selected
   without parsing prose or reordering the underlying automatic decision.
+- A profile metrics trial found routine full-scan map updates staged cleanly,
+  while metric/type semantic findings stayed in review lanes, but advisory
+  action rows required scripts to descend into `source_profile_advisory` to
+  distinguish fallback, primary vocabulary/assertion, inspect, and
+  binding-dependent moves. Profile advisory suggested actions now hoist
+  `review_lane`, `route_group_key`, `route_step_key`, `semantic_move`,
+  `unattended_choice_role`, and `unattended_recommended` for first-pass routing.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

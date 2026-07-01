@@ -31681,10 +31681,26 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     metric_fallback_action = draft.suggested_next_action_groups[
         "metric_vocabulary_review"
     ][2]
+    assert metric_fallback_action.review_lane == "metric_vocabulary_review"
+    assert metric_fallback_action.route_group_key == (
+        metric_fallback_action.source_profile_advisory["route_group_key"]
+    )
+    assert metric_fallback_action.route_step_key == (
+        metric_fallback_action.source_profile_advisory["route_step_key"]
+    )
+    assert metric_fallback_action.semantic_move == "caveat_fallback"
+    assert metric_fallback_action.unattended_choice_role == "fallback"
+    assert metric_fallback_action.unattended_recommended is False
     assert metric_fallback_action.arguments["profile_route_sources"] == [
         metric_fallback_action.source_profile_advisory
     ]
     assert metric_fallback_action.arguments["framings"][0]["graph"] == "patterns"
+    metric_skeleton_action = draft.suggested_next_action_groups[
+        "metric_vocabulary_review"
+    ][4]
+    assert metric_skeleton_action.semantic_move == "define_metric"
+    assert metric_skeleton_action.unattended_choice_role == "primary"
+    assert metric_skeleton_action.unattended_recommended is True
     metric_action_sources = [
         action.source_profile_advisory
         for action in draft.suggested_next_action_groups[

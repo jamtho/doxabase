@@ -2223,6 +2223,12 @@ action.source_profile_advisory["observed_metric_iris"]
 action.source_profile_advisory["mixed_support"]
 action.source_profile_advisory["produces_result_bindings"]
 action.source_profile_advisory["consumes_result_bindings"]
+action.review_lane
+action.route_group_key
+action.route_step_key
+action.semantic_move
+action.unattended_choice_role
+action.unattended_recommended
 ```
 
 Use `route_group_key` to connect grouped draft actions to later profile insight
@@ -2238,6 +2244,10 @@ For profile type-review actions, `record_pattern` may carry
 carry `consumes_result_bindings[]`. Match the shared `binding_key`, read the
 source result field such as `pattern_iri`, and append it to the target argument
 such as `supporting_patterns` before calling the staged assertion helper.
+The top-level advisory action fields mirror the route source so scripts do not
+need to descend into `source_profile_advisory` for first-pass routing.
+`unattended_choice_role` is `primary`, `fallback`, `inspect`, or
+`requires_binding`; only primary actions are unattended-recommended.
 Scripts that need per-metric or per-column follow-through can still iterate
 `metric_advisories[]` or `type_advisories[]` by the representative advisory
 indexes first, then use each representative advisory's row-local index,

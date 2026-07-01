@@ -3956,6 +3956,12 @@ class TemplatedSuggestedNextAction(SuggestedNextAction):
 @dataclass(frozen=True)
 class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
     source_profile_advisory: dict[str, Any]
+    review_lane: str | None = None
+    route_group_key: str | None = None
+    route_step_key: str | None = None
+    semantic_move: str | None = None
+    unattended_choice_role: str | None = None
+    unattended_recommended: bool = False
 
 
 @dataclass(frozen=True)
@@ -30458,6 +30464,12 @@ class DoxaBase:
             action.tool_name,
             arguments,
         )
+        unattended_choice_role = (
+            DoxaBase._profile_advisory_action_unattended_choice_role(
+                action,
+                source_profile_advisory,
+            )
+        )
         return ProfileAdvisorySuggestedNextAction(
             action_label=action.action_label,
             tool_name=action.tool_name,
@@ -30466,7 +30478,52 @@ class DoxaBase:
             reason=action.reason,
             call=call,
             source_profile_advisory=source_profile_advisory,
+            review_lane=DoxaBase._optional_string_field(
+                source_profile_advisory,
+                "review_lane",
+            ),
+            route_group_key=DoxaBase._optional_string_field(
+                source_profile_advisory,
+                "route_group_key",
+            ),
+            route_step_key=DoxaBase._optional_string_field(
+                source_profile_advisory,
+                "route_step_key",
+            ),
+            semantic_move=DoxaBase._optional_string_field(
+                source_profile_advisory,
+                "semantic_move",
+            ),
+            unattended_choice_role=unattended_choice_role,
+            unattended_recommended=unattended_choice_role == "primary",
         )
+
+    @staticmethod
+    def _optional_string_field(
+        values: MappingABC[str, Any],
+        field_name: str,
+    ) -> str | None:
+        value = values.get(field_name)
+        return value if isinstance(value, str) else None
+
+    @staticmethod
+    def _profile_advisory_action_unattended_choice_role(
+        action: SuggestedNextAction,
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> str:
+        if source_profile_advisory.get("consumes_result_bindings"):
+            return "requires_binding"
+        semantic_move = source_profile_advisory.get("semantic_move")
+        if semantic_move == "caveat_fallback":
+            return "fallback"
+        action_kind = DoxaBase._profile_followthrough_primary_action_kind(
+            action.tool_name
+        )
+        if action_kind in {"stage_reviewable_change", "direct_graph_write"}:
+            return "primary"
+        if action_kind in {"inspect_context", "export_artifact"}:
+            return "inspect"
+        return "inspect"
 
     @staticmethod
     def _suggested_call_string_for_arguments(

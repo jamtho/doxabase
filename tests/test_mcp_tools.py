@@ -10168,9 +10168,28 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
             "metric_vocabulary_review"
         ]
     ] == ["describe_context_slice", "list_entities", "stage_systematisation"]
+    metric_context_action = result["suggested_next_action_groups"][
+        "metric_vocabulary_review"
+    ][0]
     metric_action_source = result["suggested_next_action_groups"][
         "metric_vocabulary_review"
     ][0]["source_profile_advisory"]
+    assert metric_context_action["review_lane"] == "metric_vocabulary_review"
+    assert metric_context_action["route_group_key"] == (
+        metric_action_source["route_group_key"]
+    )
+    assert metric_context_action["route_step_key"] == (
+        metric_action_source["route_step_key"]
+    )
+    assert metric_context_action["semantic_move"] == "define_metric"
+    assert metric_context_action["unattended_choice_role"] == "inspect"
+    assert metric_context_action["unattended_recommended"] is False
+    metric_fallback_action = result["suggested_next_action_groups"][
+        "metric_vocabulary_review"
+    ][2]
+    assert metric_fallback_action["semantic_move"] == "caveat_fallback"
+    assert metric_fallback_action["unattended_choice_role"] == "fallback"
+    assert metric_fallback_action["unattended_recommended"] is False
     assert metric_action_source["advisory_kind"] == "metric_vocabulary_review"
     assert metric_action_source["index_field"] == "metric_advisory_index"
     assert metric_action_source["advisory_indexes"] == [0]
@@ -10194,6 +10213,10 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     type_action = result["suggested_next_action_groups"]["profile_type_review"][3]
     type_action_source = type_action["source_profile_advisory"]
     assert type_action["tool_name"] == "stage_map_assertion_change"
+    assert type_action["review_lane"] == "profile_type_review"
+    assert type_action["semantic_move"] == "assert_map_type"
+    assert type_action["unattended_choice_role"] == "requires_binding"
+    assert type_action["unattended_recommended"] is False
     assert type_action[
         "arguments"
     ]["profile_route_sources"] == [type_action_source]

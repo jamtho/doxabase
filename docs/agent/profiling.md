@@ -123,6 +123,11 @@ Grouped action source blocks expose stable `route_group_key` and
 `route_step_key` fields. Use the group key to connect a draft lane, such as a
 profile map-update duplicate group or metric/type advisory group, to later
 `export_profile_insight_review_bundle().candidates[].profile_route_keys`.
+Metric/type advisory actions also hoist `review_lane`, `route_group_key`,
+`route_step_key`, `semantic_move`, `unattended_choice_role`, and
+`unattended_recommended` onto the action itself. Prefer those top-level fields
+for first-pass unattended routing; descend into `source_profile_advisory` for
+the full duplicate/support/binding context.
 Use the step key when several actions belong to the same group.
 When the dataset already has physical-query metadata such as a path template or
 layout but `describe_query_context` reports blocking metadata issues, the draft
