@@ -356,6 +356,12 @@ Start with `describe_query_context(dataset_iri)`:
    stale/reduced-capsule cue: inspect the representative query context or load
    fresh fixtures into scratch before staging a series of missing-storage
    repairs.
+   In a fresh scratch capsule loaded with current fixtures, this staleness
+   warning should disappear once storage access metadata exists. Polymarket
+   tables such as `pm:Trades` can reach a reviewed query-plan handoff from
+   fixture metadata, while AIS `DailyIndex` may still be `needs_review` because
+   its inherited broadcast partition/layout gap is intentional. Do not interpret
+   fresh-but-review-gated AIS as a failed fixture refresh.
    Exact matching actions in `describe_query_context.suggested_repair_action_groups`
    are marked `already_pending`; unrelated same-dataset caveat/profile work
    remains only in the staged-review lanes.

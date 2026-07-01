@@ -238,6 +238,10 @@ visible cgroup CPU or memory cap (`cpu.max=max`, 24 visible CPUs,
 `memory.max=max`): serial `uv run pytest -q --durations=40` took 278 seconds,
 while `uv run pytest -q -n auto --durations=20` took 35 seconds. If pytest feels
 slow, first confirm you are not running the serial full suite.
+On July 1, 2026, the rebuilt YOLO container still exposed no CPU or memory cap;
+`uv run pytest -q -n auto --durations=25` took about 41 seconds and remained
+faster wall-clock than `-n 12`. Use `-n 12` only when reducing aggregate CPU
+load matters more than local completion time.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket

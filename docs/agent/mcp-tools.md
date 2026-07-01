@@ -2502,6 +2502,11 @@ has no stored revision snapshots, the snapshot JSON is empty and the import
 returns an empty recovery plan plus a structured `project_brief()` follow-up for
 the fresh capsule. When staged rows exist, follow the staged recovery plan
 returned by the import.
+For strictly non-mutating active-capsule recovery trials, use Python with
+`DoxaBase.open_readonly(path)` for `project_brief`, `export_preflight`, and the
+handoff export itself. The normal MCP server opens its configured capsule with
+regular initialization semantics, which may update SQLite maintenance metadata
+even for read-oriented calls.
 
 `doxabase.export_handoff_bundle`
 

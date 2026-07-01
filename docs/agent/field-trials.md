@@ -47,6 +47,11 @@ the full DoxaBase suite is integration-heavy enough that serial runs materially
 slow the autonomous loop. On the June 2026 development container, `-n auto`
 completed the full suite in about 37 seconds after parsed seed RDF caching,
 versus about 46 seconds with `-n 8`.
+On July 1, 2026, the rebuilt YOLO container exposed 24 CPUs, no cgroup CPU
+quota, and no memory cap; `uv run pytest -q -n auto --durations=25` completed
+the full suite in about 41 seconds, while serial `tests/test_mcp_tools.py` alone
+took about 63 seconds. Keep `-n auto` as the local full-gate default unless a
+shared runner needs lower aggregate CPU use.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the
@@ -3689,6 +3694,15 @@ few useful gaps:
   without profile rows. `draft_query_evidence_storage_overlay` now accepts
   linked ordinary query evidence and exposes `source_query_evidence` while
   retaining `source_profile_evidence` as a compatibility alias.
+- Active-frontier trials confirmed the stale-seed handoff and fixture-staleness
+  guards are working. A scanner-clean recovery-complete handoff from the active
+  capsule imported into a fresh receiver, cleared `seed_recovery_review`, and
+  routed to query/profile frontier work. A fresh fixture load removed
+  `query_fixture_staleness_review` once storage metadata existed; Polymarket
+  reached query-plan handoff, while AIS DailyIndex still stayed
+  `needs_review` for its intentional inherited broadcast-layout gap. A timing
+  trial found no container CPU/memory cap and no test-performance code change
+  worth making: `-n auto` remained the fastest local full-suite gate.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
