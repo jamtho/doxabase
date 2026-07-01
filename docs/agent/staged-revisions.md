@@ -792,7 +792,11 @@ alternatives. Use `revision_summaries`, `review_recommendation`,
 `alternative_to`, and `current_alternative_to` to understand alternative
 meaning and review order. Use `next_action_queue_items` when a script needs the
 resolved target IRI, row-vs-target flag, or semantic alternative gate state
-without first exporting the grouped review.
+without first exporting the grouped review. Use `choose_one_groups` and
+`choose_one_group_count` for the compact source/alternative grouping directly
+from `stage_systematisation` or `stage_pattern_promotion`; those fields mirror
+the grouped staged-revision export summary and avoid reconstructing comparison
+sets from queue items.
 The suggested actions include a grouped `export_staged_revisions` call and one
 `check_staged_revision_apply` call per staged revision; re-run those checks
 before applying, repairing, or restaging if any graph changes may have happened

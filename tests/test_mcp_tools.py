@@ -2972,6 +2972,14 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         revision["revision_iri"] for revision in draft["staged_revisions"]
     ]
     assert draft["next_action_queue_item_counts"] == {"apply_after_review": 2}
+    assert draft["choose_one_group_count"] == 1
+    assert draft["choose_one_groups"][0]["revision_iris"] == revision_iris
+    assert draft["choose_one_groups"][0]["row_indexes"] == [1, 2]
+    assert draft["choose_one_groups"][0]["source_row_index"] == 1
+    assert draft["choose_one_groups"][0]["alternative_set_roles"] == [
+        "source",
+        "alternative",
+    ]
 
     replace_graph_triples_tool(
         db,
@@ -4721,6 +4729,57 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
     )
     assert db.triple_count("map") == before_map_count
     assert db.triple_count("history") == before_history_count
+
+
+def test_describe_assertion_support_marks_generic_value_only_routes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#DailyAccountStatus"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Daily account status",
+        is_table=True,
+        row_semantics="rc:EventRow",
+    )
+    stage_graph_revision_tool(
+        db,
+        summary="Other snapshot row proposal",
+        rationale=(
+            "An unrelated staged row-semantics proposal should not become strong "
+            "support just because it shares rc:SnapshotRow."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OtherTable rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=["rc:SnapshotRow"],
+        validation_scope="all",
+    )
+
+    result = describe_assertion_support_tool(
+        db,
+        subject=dataset,
+        predicate="rc:rowSemantics",
+        object="rc:SnapshotRow",
+        object_kind="iri",
+    )
+
+    summary = result["related_route_summaries"][0]
+    assert summary["resource_kind"] == "revision"
+    assert summary["route_types"] == ["revision_anchor"]
+    assert summary["matched_resources"][0]["iri"] == RC + "SnapshotRow"
+    assert summary["generic_value_only"] is True
+    assert summary["relevance_tier"] == "generic_value_only"
+    assert "Relevance tier: generic_value_only." in summary["route_note"]
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(
@@ -8814,6 +8873,142 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["recovery_complete"] is False
     assert export["suggested_next_actions"] == []
     assert export_path.exists()
+
+
+def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_SCOPED_CONTEXT_EXPORT"
+    record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#unrelated_dirty_storage",
+        label="Unrelated dirty storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/unrelated",
+    )
+    clean_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        label="Orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/tmp/shareable/orders.parquet",
+        location_kind="object",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#Orders"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[clean_storage["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    observation = record_observation_tool(
+        db,
+        summary="Orders profile reviewed clean storage context.",
+        observation_type="profile",
+        observed_asset=dataset,
+        evidence_summary="Synthetic scoped export regression evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+        sample_size=12,
+        row_count=12,
+    )
+    record_pattern_tool(
+        db,
+        summary="Orders clean slice has linked context.",
+        pattern_text="The orders handoff can carry map, observation, pattern, and evidence context without unrelated graph siblings.",
+        rationale="The linked clean resources target the Orders dataset while the dirty storage node is unlinked.",
+        pattern_targets=[dataset],
+        supporting_observations=[observation["observation_iri"]],
+        source_path="tests/test_mcp_tools.py",
+        source_kind="rc:DocumentationSource",
+    )
+
+    broad_preflight = export_preflight_tool(
+        db,
+        export_kind="graph",
+        graphs=["map"],
+    )
+
+    assert broad_preflight["decision"] == "block"
+    assert broad_preflight["scanner_clean"] is False
+    assert broad_preflight["would_block_sensitive_export"] is True
+    assert broad_preflight["sensitive_literal_count"] >= 1
+    assert all(
+        action["tool_name"]
+        not in {"export_graph", "export_trig", "export_handoff_bundle"}
+        for action in broad_preflight["suggested_next_actions"]
+    )
+    assert [
+        action["tool_name"]
+        for action in broad_preflight["suggested_next_actions"]
+    ] == ["scan_sensitive_literals", "preflight_context_slice_export"]
+
+    blocked_path = tmp_path / "blocked-map.ttl"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        export_graph_tool(
+            db,
+            path=str(blocked_path),
+            graphs=["map"],
+            fail_on_sensitive=True,
+        )
+    assert not blocked_path.exists()
+
+    scoped_preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=200,
+    )
+
+    assert scoped_preflight["decision"] == "clean_by_scanner_only"
+    assert scoped_preflight["scanner_clean"] is True
+    assert scoped_preflight["shareability_review_required"] is True
+    assert scoped_preflight["shareability_review_status"] == (
+        "required_not_completed"
+    )
+    assert scoped_preflight["would_block_sensitive_export"] is False
+    assert scoped_preflight["sensitive_literal_count"] == 0
+    assert scoped_preflight["matches"] == []
+    assert scoped_preflight["handoff_fit"] == "resource_scoped_review_context"
+    assert set(scoped_preflight["graphs"]) >= {
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+    }
+    assert [
+        action["tool_name"]
+        for action in scoped_preflight["suggested_next_actions"]
+    ] == ["export_context_slice"]
+    assert fake_secret not in json.dumps(scoped_preflight)
+
+    slice_path = tmp_path / "orders-clean-slice.trig"
+    scoped_export = export_context_slice_tool(
+        db,
+        path=str(slice_path),
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=200,
+        fail_on_sensitive=True,
+    )
+    assert scoped_export["scanner_clean"] is True
+    assert scoped_export["sensitive_literal_count"] == 0
+    assert slice_path.exists()
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = import_trig_tool(receiver, path=str(slice_path))
+    assert imported["total_imported"] == scoped_export["triples"]
+    assert set(imported["imported"]) >= {
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+    }
+    assert validate_graph_tool(receiver, scope="all")["conforms"] is True
 
 
 def test_context_slice_export_tools_redact_sensitive_seed_descriptions(

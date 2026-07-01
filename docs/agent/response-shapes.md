@@ -716,8 +716,17 @@ summary.route_labels
 summary.matched_resources
 summary.strongest_route_type
 summary.strongest_route_label
+summary.relevance_tier
+summary.generic_value_only
 summary.route_note
 ```
+
+`relevance_tier` is `direct`, `target_support`, `linked_support`, or
+`generic_value_only`. Treat `generic_value_only=true` routes as weak context:
+they only matched shared controlled values such as `rc:Varchar` or
+`rc:SnapshotRow`, not the assertion subject or owning dataset. They are still
+useful retrieval hints, but do not use them as positive support without another
+route tying the lore to the specific resource.
 
 `related_routes` explains why related lore entered the payload. Each route has:
 
@@ -3792,6 +3801,8 @@ draft.staged_revisions
 draft.next_action_queue
 draft.next_action_queue_items
 draft.next_action_queue_item_counts
+draft.choose_one_groups
+draft.choose_one_group_count
 draft.semantic_review_required_queue_counts
 draft.suggested_next_actions
 draft.suggested_next_calls
@@ -3807,7 +3818,11 @@ mechanically ready framings land in `apply_after_review`.
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
 fields, semantic-risk fields when populated, row-local alternative-gate fields,
 and `alternative_set_iris` / `alternative_set_source_iri` /
-`alternative_set_role` when sibling framings in the response compete. The suggested
+`alternative_set_role` when sibling framings in the response compete.
+`choose_one_groups` and `choose_one_group_count` expose the same compact
+alternative-set summary used by grouped staged-revision exports, so automation
+can identify linked source/alternative rows without reconstructing the group
+from queue items or Markdown review output. The suggested
 actions normally include a grouped `export_staged_revisions` call plus
 per-revision `check_staged_revision_apply` calls for fresh live routing. When
 `first_alternative_anchor_not_ready` fires, the first suggested action is a

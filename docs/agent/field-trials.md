@@ -3703,6 +3703,21 @@ few useful gaps:
   `needs_review` for its intentional inherited broadcast-layout gap. A timing
   trial found no container CPU/memory cap and no test-performance code change
   worth making: `-n auto` remained the fastest local full-suite gate.
+- Awkward systematisation/pattern-promotion and assertion-cleanup trials passed
+  end to end on scratch capsules, including cold readonly reopen, grouped
+  review export, apply checks, and stale same-slot replacement repair. The
+  useful product signal was response-shape affordance, not broken mechanics:
+  systematisation drafts now expose top-level `choose_one_groups`, and
+  assertion route summaries expose `relevance_tier` / `generic_value_only` so
+  generic controlled values such as `rc:SnapshotRow` do not look like strong
+  resource-specific support.
+- A scoped privacy/export trial confirmed broad graph and recovery-complete
+  exports still block on unrelated sensitive-looking graph siblings while a
+  clean resource-scoped `preflight_context_slice_export` /
+  `export_context_slice` path can stay scanner-clean, review-gated, importable,
+  and SHACL-valid in a fresh receiver. Keep using context-slice exports for
+  clean resource neighborhoods instead of weakening `fail_on_sensitive` on
+  broader exports.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

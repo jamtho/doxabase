@@ -266,7 +266,10 @@ the assertion as executable planning context. Use `related_route_summaries` to
 find the most directly related lore resources, and `related_routes` when you
 need to know whether an observation, claim, pattern, evidence item, or revision
 matched the subject, requested object, current same-slot object, or another
-nearby lore item. Prefer `suggested_next_actions` over parsing
+nearby lore item. Route summaries include `relevance_tier` and
+`generic_value_only`; treat generic-value-only routes as weak context because
+they only matched shared controlled values, not the specific assertion subject.
+Prefer `suggested_next_actions` over parsing
 `suggested_next_calls`; each action has `tool_name`, `mcp_tool_name`,
 `arguments`, `reason`, `call`, and an `action_label` that names its role. Use
 `mcp_tool_name` for MCP dispatch. Check
@@ -1772,8 +1775,9 @@ for exact matching and for the Turtle it authors. For exact removals,
 language-tag context. Remove-all changes still put the removed assertions in
 `current_values` and the removal patch.
 Routes marked `generic_value_only` matched only shared values such as
-`rc:Varchar`; treat them as weak context. Drill into `assertion_support` and
-`describe_staged_revision` when the change needs more thought.
+`rc:Varchar` or `rc:SnapshotRow`; treat them as weak context. Drill into
+`assertion_support` and `describe_staged_revision` when the change needs more
+thought.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order. If the requested value is
@@ -1808,7 +1812,9 @@ decide the ontology design for the agent. The result has
 actions, and suggested next calls, so automation can route validation-failed
 framings to repair and ready framings to review/apply checks before writing a
 Markdown bundle. Queue items expose resolved targets and semantic-gate fields
-without requiring a grouped export first. If later framings actually
+without requiring a grouped export first. `choose_one_groups` and
+`choose_one_group_count` expose the source/alternative comparison groups
+directly on the draft response. If later framings actually
 default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
 `suggested_rerun_arguments={"link_alternatives": False}`; in that case

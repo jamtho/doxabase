@@ -1285,6 +1285,8 @@ class SystematisationDraftRecord:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    choose_one_groups: list["StagedGraphRevisionChooseOneGroup"]
+    choose_one_group_count: int
     semantic_review_required_queue_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -3822,6 +3824,8 @@ class AssertionSupportRouteSummary:
     matched_resources: list[ResourceSummary]
     strongest_route_type: str
     strongest_route_label: str
+    relevance_tier: str
+    generic_value_only: bool
     route_note: str
 
 
@@ -6449,7 +6453,8 @@ class DoxaBase:
         related = self._staged_revision_related_lore(target_iris)
         related_routes = self._assertion_related_lore_routes(target_iris)
         related_route_summaries = self._assertion_related_route_summaries(
-            related_routes
+            related_routes,
+            subject_iri=subject_iri,
         )
         nearby_caveat_links = self._assertion_nearby_caveat_links(
             target_iris,
@@ -39256,6 +39261,8 @@ class DoxaBase:
             next_action_queue_item_counts=(
                 bundle_summary.next_action_queue_item_counts
             ),
+            choose_one_groups=bundle_summary.choose_one_groups,
+            choose_one_group_count=len(bundle_summary.choose_one_groups),
             semantic_review_required_queue_counts=(
                 bundle_summary.semantic_review_required_queue_counts
             ),
@@ -47391,8 +47398,8 @@ class DoxaBase:
             generic_value_only=generic_value_only,
             relevance_note=(
                 "This route only matched a generic shared value such as a physical "
-                "type; treat it as weak context unless other routes tie it to the "
-                "subject or owning dataset."
+                "type or row semantics; treat it as weak context unless other "
+                "routes tie it to the subject or owning dataset."
                 if generic_value_only
                 else None
             ),
@@ -47415,6 +47422,8 @@ class DoxaBase:
         support: AssertionSupportDescription,
         summary: AssertionSupportRouteSummary,
     ) -> bool:
+        if summary.generic_value_only:
+            return True
         if not summary.matched_resources:
             return False
         if any(match.iri == support.subject.iri for match in summary.matched_resources):
@@ -47434,6 +47443,7 @@ class DoxaBase:
         generic_types = {
             self.expand_iri("rc:PhysicalType"),
             self.expand_iri("rc:ValueType"),
+            self.expand_iri("rc:RowSemanticsType"),
             self.expand_iri("rc:ConfidenceLevel"),
             self.expand_iri("rc:ObservationStatus"),
             self.expand_iri("rc:PatternStability"),
@@ -48554,6 +48564,8 @@ class DoxaBase:
     def _assertion_related_route_summaries(
         self,
         routes: Iterable[AssertionSupportRoute],
+        *,
+        subject_iri: str,
     ) -> list[AssertionSupportRouteSummary]:
         route_groups: dict[tuple[str, str], list[AssertionSupportRoute]] = {}
         for route in routes:
@@ -48621,6 +48633,7 @@ class DoxaBase:
             labels: list[str],
             matches: list[ResourceSummary],
             strongest_route: AssertionSupportRoute,
+            relevance_tier: str,
         ) -> str:
             resource_label = resource.label or resource.iri
             label_text = ", ".join(labels)
@@ -48632,8 +48645,51 @@ class DoxaBase:
             return (
                 f"{resource_label} ({resource_kind}): "
                 f"{strongest_route.route_label}; "
-                f"{len(labels)} route(s): {label_text}{match_text}."
+                f"{len(labels)} route(s): {label_text}{match_text}. "
+                f"Relevance tier: {relevance_tier}."
             )
+
+        def generic_value_only(
+            group_routes: list[AssertionSupportRoute],
+            matches: list[ResourceSummary],
+        ) -> bool:
+            if not matches:
+                return False
+            if any(match.iri == subject_iri for match in matches):
+                return False
+            if not all(
+                self._is_generic_shared_value_resource(match.iri)
+                for match in matches
+            ):
+                return False
+            route_types = {route.route_type for route in group_routes}
+            resource_kinds = {route.resource_kind for route in group_routes}
+            return resource_kinds == {"revision"} or route_types <= {
+                "revision_anchor",
+            }
+
+        def route_relevance_tier(
+            group_routes: list[AssertionSupportRoute],
+            matches: list[ResourceSummary],
+        ) -> str:
+            if generic_value_only(group_routes, matches):
+                return "generic_value_only"
+            route_types = {route.route_type for route in group_routes}
+            if "target_resource" in route_types or any(
+                match.iri == subject_iri for match in matches
+            ):
+                return "direct"
+            if route_types & {
+                "claim_target",
+                "pattern_target",
+                "map_implication",
+                "observed_column",
+                "observed_asset",
+                "revision_anchor",
+                "target_evidence",
+            }:
+                return "target_support"
+            return "linked_support"
 
         ranked_groups = sorted(
             route_groups.values(),
@@ -48658,6 +48714,8 @@ class DoxaBase:
             )
             labels = unique_labels(group)
             matches = unique_matches(group)
+            relevance_tier = route_relevance_tier(group, matches)
+            is_generic_value_only = generic_value_only(group, matches)
             summaries.append(
                 AssertionSupportRouteSummary(
                     rank=rank,
@@ -48669,12 +48727,15 @@ class DoxaBase:
                     matched_resources=matches,
                     strongest_route_type=strongest_route.route_type,
                     strongest_route_label=strongest_route.route_label,
+                    relevance_tier=relevance_tier,
+                    generic_value_only=is_generic_value_only,
                     route_note=route_note(
                         resource=group[0].resource,
                         resource_kind=group[0].resource_kind,
                         labels=labels,
                         matches=matches,
                         strongest_route=strongest_route,
+                        relevance_tier=relevance_tier,
                     ),
                 )
             )
@@ -50448,7 +50509,8 @@ class DoxaBase:
             )
         ]
         filtered_route_summaries = self._assertion_related_route_summaries(
-            filtered_routes
+            filtered_routes,
+            subject_iri=support.subject.iri,
         )
         return replace(
             support,

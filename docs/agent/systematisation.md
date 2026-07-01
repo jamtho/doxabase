@@ -116,7 +116,10 @@ preference order among alternatives. Use `revision_summaries`,
 understand comparison meaning. When linked alternatives are returned together,
 `next_action_queue_items` carries `alternative_set_iris`,
 `alternative_set_source_iri`, and `alternative_set_role` on every member,
-including the first/source framing.
+including the first/source framing. `choose_one_groups` and
+`choose_one_group_count` expose the same comparison set directly on the draft
+response, which is simpler for cold automation than reconstructing it from
+queue items or exporting Markdown first.
 
 Before applying, repairing, or restaging a candidate, rerun
 `check_staged_revision_apply` if any graph changes may have happened since the
