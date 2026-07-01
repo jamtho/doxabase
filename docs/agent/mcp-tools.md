@@ -623,6 +623,11 @@ matching current staged metric vocabulary skeleton already exists, it also
 suggests a reviewable `stage_pattern_promotion` skeleton for an ontology
 `rc:ProfileMetricKind`; otherwise it routes to `describe_staged_revision` and
 `export_staged_revisions` for the pending staged skeleton.
+When a metric or type advisory already has a staged `caveat_fallback` for the
+same route group, fallback mutation actions route to inspect/export the pending
+staged fallback and carry `source_profile_advisory.pending_staged_fallback_iris`
+instead of proposing another `record_pattern` or `stage_systematisation`
+fallback.
 The first metric context action seeds `describe_context_slice` with
 `observed_metric_iri` so the initial handoff stays on the profiled dataset; use
 nearby metric-vocabulary actions when you intentionally want broader same-metric

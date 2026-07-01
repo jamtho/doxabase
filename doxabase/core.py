@@ -17683,6 +17683,9 @@ class DoxaBase:
         action: SuggestedNextAction,
         source_profile_advisory: MappingABC[str, Any],
     ) -> str | None:
+        explicit_move = source_profile_advisory.get("semantic_move")
+        if isinstance(explicit_move, str):
+            return explicit_move
         review_lane = source_profile_advisory.get("review_lane")
         action_label = action.action_label.lower()
         if action.tool_name == "stage_systematisation":
@@ -19642,23 +19645,23 @@ class DoxaBase:
         ).hexdigest()[:12]
         return f"profile-map-update:{digest}"
 
-    @staticmethod
     def _profile_metric_advisory_suggested_actions(
+        self,
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
     ) -> list[SuggestedNextAction]:
-        return DoxaBase._profile_advisory_suggested_actions(
+        return self._profile_advisory_suggested_actions(
             metric_advisories,
             advisory_kind="metric_vocabulary_review",
             index_field="metric_advisory_index",
         )
 
-    @staticmethod
     def _profile_metric_advisories_with_source_actions(
+        self,
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
     ) -> list[ProfileMetricVocabularyAdvisory]:
         updated: list[ProfileMetricVocabularyAdvisory] = []
         for advisory in metric_advisories:
-            actions = DoxaBase._profile_advisory_row_suggested_actions(
+            actions = self._profile_advisory_row_suggested_actions(
                 advisory,
                 advisory_kind="metric_vocabulary_review",
                 index_field="metric_advisory_index",
@@ -30141,23 +30144,23 @@ class DoxaBase:
         ).hexdigest()[:12]
         return f"profile-type-advisory:{digest}"
 
-    @staticmethod
     def _profile_type_advisory_suggested_actions(
+        self,
         advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[SuggestedNextAction]:
-        return DoxaBase._profile_advisory_suggested_actions(
+        return self._profile_advisory_suggested_actions(
             advisories,
             advisory_kind="profile_type_review",
             index_field="type_advisory_index",
         )
 
-    @staticmethod
     def _profile_type_advisories_with_source_actions(
+        self,
         type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[ProfileTypeFindingAdvisory]:
         updated: list[ProfileTypeFindingAdvisory] = []
         for advisory in type_advisories:
-            actions = DoxaBase._profile_advisory_row_suggested_actions(
+            actions = self._profile_advisory_row_suggested_actions(
                 advisory,
                 advisory_kind="profile_type_review",
                 index_field="type_advisory_index",
@@ -31092,8 +31095,8 @@ class DoxaBase:
             f"{mixed_support_note}"
         ).strip()
 
-    @staticmethod
     def _profile_advisory_suggested_actions(
+        self,
         advisories: Iterable[
             ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory
         ],
@@ -31219,21 +31222,23 @@ class DoxaBase:
                         pending_values
                     )
 
-        return [
-            DoxaBase._profile_advisory_suggested_action(
-                actions_by_key[key],
-                source_profile_advisory=(
-                    DoxaBase._profile_advisory_source_with_route_keys(
-                        source_by_key[key],
-                        actions_by_key[key],
-                    )
-                ),
+        actions: list[SuggestedNextAction] = []
+        for key in action_order:
+            action = actions_by_key[key]
+            source = DoxaBase._profile_advisory_source_with_route_keys(
+                source_by_key[key],
+                action,
             )
-            for key in action_order
-        ]
+            actions.extend(
+                self._profile_advisory_pending_aware_suggested_actions(
+                    action,
+                    source_profile_advisory=source,
+                )
+            )
+        return self._dedupe_suggested_next_actions(actions)
 
-    @staticmethod
     def _profile_advisory_row_suggested_actions(
+        self,
         advisory: ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory,
         *,
         advisory_kind: str,
@@ -31246,8 +31251,8 @@ class DoxaBase:
                 advisory_kind=advisory_kind,
                 index_field=index_field,
             )
-            actions.append(
-                DoxaBase._profile_advisory_suggested_action(
+            actions.extend(
+                self._profile_advisory_pending_aware_suggested_actions(
                     action,
                     source_profile_advisory=(
                         DoxaBase._profile_advisory_source_with_route_keys(
@@ -31257,7 +31262,155 @@ class DoxaBase:
                     ),
                 )
             )
+        return self._dedupe_suggested_next_actions(actions)
+
+    def _profile_advisory_pending_aware_suggested_actions(
+        self,
+        action: SuggestedNextAction,
+        *,
+        source_profile_advisory: dict[str, Any],
+    ) -> list[ProfileAdvisorySuggestedNextAction]:
+        pending_fallback_iris = self._pending_staged_profile_fallback_iris(
+            source_profile_advisory
+        )
+        if (
+            action.tool_name in {"record_pattern", "stage_systematisation"}
+            and source_profile_advisory.get("semantic_move") == "caveat_fallback"
+            and pending_fallback_iris
+        ):
+            source = dict(source_profile_advisory)
+            source["action_status"] = "already_pending"
+            source["pending_staged_fallback_iris"] = list(pending_fallback_iris)
+            source["pending_staged_fallback_count"] = len(pending_fallback_iris)
+            return [
+                DoxaBase._profile_advisory_suggested_action(
+                    pending_action,
+                    source_profile_advisory=source,
+                )
+                for pending_action in self._profile_pending_fallback_review_actions(
+                    pending_fallback_iris
+                )
+            ]
+        return [
+            DoxaBase._profile_advisory_suggested_action(
+                action,
+                source_profile_advisory=source_profile_advisory,
+            )
+        ]
+
+    def _profile_pending_fallback_review_actions(
+        self,
+        pending_staged_fallback_iris: list[str],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        for staged_iri in pending_staged_fallback_iris[:3]:
+            arguments = {
+                "iri": staged_iri,
+                "include_current_apply_check": True,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect pending profile fallback",
+                    tool_name="describe_staged_revision",
+                    mcp_tool_name="doxabase.describe_staged_revision",
+                    arguments=arguments,
+                    reason=(
+                        "A current staged profile fallback already covers this "
+                        "route. Inspect it before drafting another fallback for "
+                        "the same advisory."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_staged_revision",
+                        arguments,
+                    ),
+                )
+            )
+        arguments = {
+            "revision_iris": list(pending_staged_fallback_iris),
+            "path": self._suggested_review_export_path(
+                "profile-fallback-pending",
+                pending_staged_fallback_iris,
+            ),
+            "fail_on_sensitive": True,
+        }
+        actions.append(
+            SuggestedNextAction(
+                action_label="Export pending profile fallbacks",
+                tool_name="export_staged_revisions",
+                mcp_tool_name="doxabase.export_staged_revisions",
+                arguments=arguments,
+                reason=(
+                    "Write a grouped review bundle for the pending staged "
+                    "profile fallback(s) before deciding whether more fallback "
+                    "work is needed. The export blocks if scanner-matching "
+                    "content appears before export."
+                ),
+                call=self._suggested_call_string(
+                    "export_staged_revisions",
+                    arguments,
+                ),
+            )
+        )
         return actions
+
+    def _pending_staged_profile_fallback_iris(
+        self,
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> list[str]:
+        if source_profile_advisory.get("semantic_move") != "caveat_fallback":
+            return []
+        review_lane = source_profile_advisory.get("review_lane")
+        route_group_key = source_profile_advisory.get("route_group_key")
+        if not isinstance(review_lane, str) or not isinstance(
+            route_group_key,
+            str,
+        ):
+            return []
+        listing = self.list_graph_revisions(
+            current_staged_work_only=True,
+            include_apply_checks=True,
+            limit=200,
+        )
+        if listing.count > listing.returned_count:
+            listing = self.list_graph_revisions(
+                current_staged_work_only=True,
+                include_apply_checks=True,
+                limit=listing.count,
+            )
+        queue_by_row = {
+            item.row_iri: item for item in listing.next_action_queue_items
+        }
+        ignored_queues = {
+            None,
+            "informational",
+            "inspect_already_applied",
+        }
+        pending: list[str] = []
+        for revision in listing.revisions:
+            queue_item = queue_by_row.get(revision.iri)
+            queue = (
+                queue_item.queue
+                if queue_item is not None
+                else revision.next_action.queue
+                if revision.next_action is not None
+                else None
+            )
+            if queue in ignored_queues:
+                continue
+            if not revision.suggested_next_actions and queue_item is None:
+                continue
+            for stored_source in self._stored_profile_insight_route_sources(
+                revision.iri
+            ):
+                if stored_source.get("semantic_move") != "caveat_fallback":
+                    continue
+                if stored_source.get("review_lane") != review_lane:
+                    continue
+                if stored_source.get("route_group_key") != route_group_key:
+                    continue
+                DoxaBase._append_unique(pending, revision.iri)
+                break
+        return pending
 
     @staticmethod
     def _profile_advisory_source_for_advisory(

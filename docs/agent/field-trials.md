@@ -4309,6 +4309,13 @@ few useful gaps:
   shareability gate as handoff/context exports; staged and profile Markdown
   export records now carry `shareability_review_required` and
   `shareability_review_status`.
+- A profile joint-writes trial found profile metric/type fallback routes could
+  be staged once with `profile_route_sources`, then rerun drafts would still
+  suggest duplicate fallback mutations for the same route group. Metric and
+  type advisories now detect current staged `caveat_fallback` rows and replace
+  `record_pattern` / `stage_systematisation` fallback mutations with
+  `describe_staged_revision` and `export_staged_revisions` actions carrying
+  `source_profile_advisory.pending_staged_fallback_iris`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

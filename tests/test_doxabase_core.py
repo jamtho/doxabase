@@ -33703,6 +33703,49 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert "rc:supportingObservation" in (
         fallback_action.arguments["framings"][0]["content"]
     )
+    staged_fallback = db.stage_systematisation(**fallback_action.arguments)
+    assert staged_fallback.profile_route_source_count == 1
+    fallback_staged_iri = staged_fallback.staged_revisions[0].revision_iri
+    rerun_after_fallback = db.draft_profile_map_updates(dataset, evidence)
+    rerun_advisory = rerun_after_fallback.type_advisories[0]
+    assert [
+        action.tool_name for action in rerun_advisory.suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "describe_staged_revision",
+        "export_staged_revisions",
+        "stage_map_assertion_change",
+        "stage_map_assertion_change",
+    ]
+    assert not any(
+        action.tool_name == "stage_systematisation"
+        for action in rerun_advisory.suggested_next_actions
+    )
+    pending_fallback_action = rerun_advisory.suggested_next_actions[1]
+    assert pending_fallback_action.semantic_move == "caveat_fallback"
+    assert pending_fallback_action.arguments == {
+        "iri": fallback_staged_iri,
+        "include_current_apply_check": True,
+    }
+    assert pending_fallback_action.source_profile_advisory[
+        "pending_staged_fallback_iris"
+    ] == [fallback_staged_iri]
+    rerun_plan_by_move = {
+        item.semantic_move: item
+        for item in rerun_after_fallback.advisory_followthrough_plan
+    }
+    assert set(rerun_plan_by_move) == {"assert_map_type", "caveat_fallback"}
+    assert (
+        rerun_plan_by_move["caveat_fallback"].primary_action_writes_graph
+        is False
+    )
+    followthrough_after_fallback = db.plan_profile_followthrough(
+        dataset,
+        evidence,
+    )
+    assert "stage_systematisation" not in {
+        action.tool_name for action in followthrough_after_fallback.suggested_next_actions
+    }
     staged_type_actions = [
         action
         for action in advisory.suggested_next_actions
@@ -36797,6 +36840,9 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert "rc:supportingObservation" in (
         fallback_action.arguments["framings"][0]["content"]
     )
+    staged_fallback = db.stage_systematisation(**fallback_action.arguments)
+    assert staged_fallback.profile_route_source_count == 1
+    fallback_staged_iri = staged_fallback.staged_revisions[0].revision_iri
     assert advisory.suggested_next_actions[3].arguments == {
         "iri": pattern.pattern_iri
     }
@@ -36882,21 +36928,43 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert [action.tool_name for action in rerun_advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
-        "stage_systematisation",
+        "describe_staged_revision",
+        "export_staged_revisions",
         "describe_pattern",
         "describe_staged_revision",
         "export_staged_revisions",
     ]
     assert not any(
+        action.tool_name == "stage_systematisation"
+        for action in rerun_advisory.suggested_next_actions
+    )
+    assert not any(
         action.tool_name == "stage_pattern_promotion"
         for action in rerun_advisory.suggested_next_actions
     )
-    inspect_action = rerun_advisory.suggested_next_actions[4]
+    fallback_inspect_action = rerun_advisory.suggested_next_actions[2]
+    assert fallback_inspect_action.semantic_move == "caveat_fallback"
+    assert fallback_inspect_action.arguments == {
+        "iri": fallback_staged_iri,
+        "include_current_apply_check": True,
+    }
+    assert fallback_inspect_action.source_profile_advisory[
+        "action_status"
+    ] == "already_pending"
+    assert fallback_inspect_action.source_profile_advisory[
+        "pending_staged_fallback_iris"
+    ] == [fallback_staged_iri]
+    fallback_export_action = rerun_advisory.suggested_next_actions[3]
+    assert fallback_export_action.semantic_move == "caveat_fallback"
+    assert fallback_export_action.arguments["revision_iris"] == [
+        fallback_staged_iri
+    ]
+    inspect_action = rerun_advisory.suggested_next_actions[5]
     assert inspect_action.arguments == {
         "iri": staged.iri,
         "include_current_apply_check": True,
     }
-    export_action = rerun_advisory.suggested_next_actions[5]
+    export_action = rerun_advisory.suggested_next_actions[6]
     assert export_action.arguments["revision_iris"] == [staged.iri]
     grouped_export_action = next(
         action
@@ -36912,6 +36980,14 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         ]
         == 1
     )
+    rerun_plan_by_move = {
+        item.semantic_move: item for item in rerun.advisory_followthrough_plan
+    }
+    assert set(rerun_plan_by_move) == {"caveat_fallback", "define_metric"}
+    assert rerun_plan_by_move["caveat_fallback"].primary_action_writes_graph is False
+    assert rerun_plan_by_move["caveat_fallback"].source_profile_advisories[0][
+        "pending_staged_fallback_iris"
+    ] == [fallback_staged_iri]
     export_path = tmp_path / "metric-promotion-review.md"
     db.export_staged_revision(staged.iri, export_path)
     export_text = export_path.read_text()

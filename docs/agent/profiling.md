@@ -451,6 +451,12 @@ same-evidence support pattern may need the `pattern_iri` produced by
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.
+If a metric or type advisory already has a staged `caveat_fallback` route,
+`draft_profile_map_updates` sets
+`source_profile_advisory.pending_staged_fallback_iris` on the pending-review
+actions and routes fallback mutation choices such as `record_pattern` and
+`stage_systematisation` to inspect/export the staged fallback instead of
+drafting another fallback for the same route group.
 After a metric promotion applies, a rerun should report
 `project_metric_defined` and stop suggesting another promotion skeleton. Use the
 observed-metric context action for the local dataset handoff, and use a

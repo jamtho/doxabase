@@ -2117,6 +2117,12 @@ the advisory routes to `describe_staged_revision` plus
 `export_staged_revisions` instead of proposing another duplicate
 `stage_pattern_promotion` skeleton. Otherwise it adds a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
+If a metric or type advisory already has a current staged `caveat_fallback`
+route for the same route group, fallback mutation actions are replaced with
+`describe_staged_revision` and `export_staged_revisions` actions. Those actions
+carry `source_profile_advisory.pending_staged_fallback_iris` and
+`pending_staged_fallback_count`; inspect or export the pending staged fallback
+before drafting another pattern/systematisation fallback.
 When a rerun reports `project_metric_defined`, do not stage duplicate
 vocabulary; use the observed-metric context action for the dataset handoff and a
 `deep_lore` slice from the metric, promotion pattern, or revision when you need
@@ -2300,6 +2306,8 @@ action.source_profile_advisory["route_anchor_iris"]
 action.source_profile_advisory["route_pattern_iris"]
 action.source_profile_advisory["observed_metric_iris"]
 action.source_profile_advisory["mixed_support"]
+action.source_profile_advisory["pending_staged_fallback_iris"]
+action.source_profile_advisory["pending_staged_fallback_count"]
 action.source_profile_advisory["produces_result_bindings"]
 action.source_profile_advisory["consumes_result_bindings"]
 action.review_lane
