@@ -3659,6 +3659,17 @@ few useful gaps:
   condition, output formula/function, tuple grain, `describe_dataset`, context
   slicing, and SHACL validation; the only observed friction was response-shape
   convention clarity, now noted in `response-shapes.md`.
+- Three broad staged-revision trials passed for conflict/drift recovery,
+  cold version browsing after apply, and recovery-complete handoff import/apply.
+  The mechanics were sound: recovery planning routed stale rows to restage,
+  handoff bundles preserved exact snapshot evidence, and revision/version
+  helpers reconstructed applied diffs and resource lineage. The remaining
+  friction was cold-agent affordance: scripts guessed mutation-frontier keys,
+  direct Python callers needed `to_jsonable()` guidance, and handoff imports
+  put recovery-session suggestions ahead of the simple apply action. Response
+  docs now show a serialized `mutation_frontier_items[]` example, revision docs
+  include a cold version-browsing recipe, and handoff import summaries expose
+  `first_safe_review_or_mutation_action` separately from session suggestions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

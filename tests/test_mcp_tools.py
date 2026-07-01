@@ -2066,6 +2066,12 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     }
     assert dry_run["recovery_summary"]["recovery_plan_available"] is False
     assert dry_run["recovery_summary"]["first_mutation_action"] is None
+    assert (
+        dry_run["recovery_summary"]["first_safe_review_or_mutation_action"]
+        is None
+    )
+    assert dry_run["recovery_summary"]["first_safe_review_or_mutation_call"] is None
+    assert dry_run["recovery_summary"]["first_safe_review_or_mutation_source"] is None
     assert dry_run["recovery_summary"]["recommended_next_step"] == (
         "run_import_handoff_bundle"
     )
@@ -2135,6 +2141,20 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"]["first_mutation_action"][
         "arguments"
     ] == {"iri": staged["revision_iri"]}
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["tool_name"] == "apply_staged_revision"
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["arguments"] == {"iri": staged["revision_iri"]}
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_call"
+    ] == manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["call"]
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_source"
+    ] == "mutation_frontier"
     assert manifest_import["recovery_summary"]["first_mutation_frontier_item"][
         "target_iri"
     ] == staged["revision_iri"]
@@ -2274,6 +2294,15 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     assert imported["recovery_summary"]["first_mutation_action"]["tool_name"] == (
         "apply_staged_revision"
     )
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["tool_name"] == "apply_staged_revision"
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["arguments"] == {"iri": staged["revision_iri"]}
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_source"
+    ] == "mutation_frontier"
     assert imported["recovery_summary"]["first_suggested_next_action"][
         "tool_name"
     ] == "start_staged_revision_recovery_session"

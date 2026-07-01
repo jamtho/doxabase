@@ -811,6 +811,11 @@ class HandoffBundleRecoverySummary:
     mutation_frontier_count: int
     first_mutation_frontier_item: StagedRevisionMutationFrontierItem | None
     first_mutation_action: SuggestedNextAction | RevisionNextAction | None
+    first_safe_review_or_mutation_action: (
+        SuggestedNextAction | RevisionNextAction | None
+    )
+    first_safe_review_or_mutation_call: str | None
+    first_safe_review_or_mutation_source: str | None
     profile_route_revision_count: int
     profile_route_group_count: int
     profile_route_keys: list[str]
@@ -53265,6 +53270,22 @@ class DoxaBase:
             if first_mutation_frontier_item is not None
             else None
         )
+        first_safe_action: SuggestedNextAction | RevisionNextAction | None = None
+        first_safe_action_source: str | None = None
+        if (
+            recovery_plan is not None
+            and recovery_plan.mutation_allowed_after
+            != "handoff_preflight_required_before_mutation"
+        ):
+            if first_mutation_action is not None:
+                first_safe_action = first_mutation_action
+                first_safe_action_source = "mutation_frontier"
+            elif recovery_plan.helper_mutation_frontier_actions:
+                first_safe_action = recovery_plan.helper_mutation_frontier_actions[0]
+                first_safe_action_source = "helper_mutation_frontier"
+            elif recovery_plan.suggested_next_actions:
+                first_safe_action = recovery_plan.suggested_next_actions[0]
+                first_safe_action_source = "recovery_plan_suggested_next_action"
         if recovery_plan is not None:
             for summary in recovery_plan.revision_summaries:
                 if summary.profile_route_groups:
@@ -53336,6 +53357,11 @@ class DoxaBase:
             ),
             first_mutation_frontier_item=first_mutation_frontier_item,
             first_mutation_action=first_mutation_action,
+            first_safe_review_or_mutation_action=first_safe_action,
+            first_safe_review_or_mutation_call=(
+                first_safe_action.call if first_safe_action is not None else None
+            ),
+            first_safe_review_or_mutation_source=first_safe_action_source,
             profile_route_revision_count=profile_route_revision_count,
             profile_route_group_count=profile_route_group_count,
             profile_route_keys=profile_route_keys,

@@ -93,6 +93,34 @@ the tool with that action's structured `arguments`; do not parse `action.call`.
 This gives a clean same-slot successor for supported slots such as
 `rc:rowSemantics` without checking out a historical graph or hand-editing patch
 Turtle.
+
+For a cold version-browsing pass after apply, use this sequence:
+
+1. `list_graph_revisions(include_apply_checks=True)` to find staged sources,
+   applied events, application status, and preserved rationale.
+2. `list_graph_versions(graph_role="map", exact_only=True)` to see the available
+   before/after snapshots, `snapshot_semantics`, count, and digest.
+3. `describe_graph_version_diff(graph_role="map", before_revision_iri=...)` when
+   comparing a stored version to the current graph, or
+   `describe_applied_revision_diff(iri=applied_event_iri, include_triples=True)`
+   when reviewing one applied event's exact delta.
+4. `list_resource_revisions(resource_iri=...)` for resource-scoped change
+   discovery, then `describe_resource_revision_lineage(...)` or
+   `describe_revision_lineage(...)` when you need staged/applied pairing,
+   restage chains, current/latest pointers, and next actions.
+
+When scripting this route directly in Python, use `to_jsonable()` for arbitrary
+DoxaBase return values such as lists or nullable fields, and `to_dict()` only
+when you know the value is one dataclass-like object or mapping:
+
+```python
+from doxabase.core import DoxaBase, to_jsonable
+
+db = DoxaBase.open_readonly("/tmp/project.sqlite")
+timeline = db.list_graph_versions(graph_role="map", exact_only=True)
+print(to_jsonable(timeline.versions))
+```
+
 Use `describe_revision_lineage(revision_iri)` when you already have any staged
 source, restaged successor, or applied event IRI and need the graph-level
 restage/apply chain, current/latest pointers, alternatives, and next route

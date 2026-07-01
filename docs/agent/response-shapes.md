@@ -1545,7 +1545,11 @@ Shape convention note: top-level class/type fields such as `dataset.types` are
 plain strings, while nested resource references are usually resource-summary
 objects with `iri`, `label`, and related context. Map helper return values such
 as `triples` are count-like integers, not lists of triples. Query-context
-readiness is exposed as `readiness`, not `query_readiness`.
+readiness is exposed as `readiness`, not `query_readiness`. Handoff imports also
+surface `recovery_summary.first_safe_review_or_mutation_action` as the first
+plan-derived review/mutation action when import preflight is complete; it is
+separate from `first_suggested_next_action`, which may intentionally point to a
+recovery-session inspection first.
 
 ### Dataset Storage And Layout
 
@@ -5965,6 +5969,29 @@ with `item_kind="helper_action"` carry same-slot repair helper actions that
 create a successor and therefore have no existing target IRI.
 Each item includes `requires_semantic_review_before_mutation`; when true,
 semantic review is still required even if the target is mechanically ready.
+Serialized items look like this:
+
+```python
+{
+    "item_kind": "revision_target",
+    "queue": "apply_after_review",
+    "target_iri": "https://example.test/project#staged-revision",
+    "target_record_kind": "staged_patch",
+    "source_revision_iris": ["https://example.test/project#staged-revision"],
+    "row_iris": ["https://example.test/project#staged-revision"],
+    "action": {
+        "tool_name": "apply_staged_revision",
+        "arguments": {"iri": "https://example.test/project#staged-revision"},
+    },
+    "call": "apply_staged_revision(iri='https://example.test/project#staged-revision')",
+    "requires_semantic_review_before_mutation": False,
+    "reason": "Resolved staged-revision mutation target...",
+}
+```
+
+Do not assume `mutation_frontier_items[]` has top-level `revision_iri` or
+`tool_name` fields; use `target_iri` for an existing target and
+`action.tool_name` / `action.arguments` for the executable call.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
 apply/restage queues plus mutating repair targets; it intentionally excludes
 informational rows, already-applied inspection targets, diagnostic
