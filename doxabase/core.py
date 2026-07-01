@@ -3511,6 +3511,7 @@ class ProfileMapUpdateStagingRecord:
     type_review_required: bool
     type_advisory_suggested_next_actions: list[SuggestedNextAction]
     type_advisory_suggested_next_calls: list[str]
+    revision_iri: str | None
     staged_revision: StagedGraphRevisionRecord | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -17395,6 +17396,11 @@ class DoxaBase:
             type_advisory_suggested_next_calls=[
                 action.call for action in type_advisory_suggested_next_actions
             ],
+            revision_iri=(
+                staged_revision.revision_iri
+                if staged_revision is not None
+                else None
+            ),
             staged_revision=staged_revision,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[

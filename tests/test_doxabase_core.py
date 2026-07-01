@@ -35750,6 +35750,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert staged.not_selected_recommendation_indexes == [1]
     assert staged.status_counts == {"staged": 0, "skipped": 1, "not_selected": 1}
     assert staged.staged_revision is None
+    assert staged.revision_iri is None
     assert staged.suggested_next_actions == []
     assert staged.suggested_next_calls == []
     assert staged.items[0].status == "skipped"
@@ -35769,6 +35770,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert mixed.not_selected_recommendation_indexes == []
     assert mixed.status_counts == {"staged": 1, "skipped": 1, "not_selected": 0}
     assert mixed.staged_revision is not None
+    assert mixed.revision_iri == mixed.staged_revision.revision_iri
     assert mixed.suggested_next_actions[0].tool_name == (
         "check_staged_revision_apply"
     )
@@ -35783,6 +35785,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert override.staged_recommendation_indexes == [0]
     assert override.status_counts == {"staged": 1, "skipped": 0, "not_selected": 1}
     assert override.staged_revision is not None
+    assert override.revision_iri == override.staged_revision.revision_iri
     assert override.staged_revision.validation_conforms is True
 
 

@@ -3794,9 +3794,9 @@ few useful gaps:
   choose-one context on `mutation_frontier_items`, not only
   `next_action_queue_items`; frontier revision-target items now copy grouped
   semantic-risk and alternative-set fields. The profile-followthrough trial
-  completed full-scan/sample/advisory lanes and safe map apply, but left a
-  response-shape affordance gap: direct Python calls and MCP JSON wrappers still
-  differ for a few convenience aliases such as staged revision IRIs.
+  completed full-scan/sample/advisory lanes and safe map apply; direct
+  `stage_profile_map_updates` results now expose the same top-level
+  `revision_iri` alias as the MCP wrapper for staged and all-skipped outcomes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
