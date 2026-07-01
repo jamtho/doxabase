@@ -4003,6 +4003,12 @@ few useful gaps:
   contexts now only suppress ordinary overlay duplicates that were already
   produced by singleton profile evidence, so profile-run inspection and ordinary
   query-evidence storage overlays can appear together.
+- A project-brief/handoff privacy trial found the top-level safety route was
+  correct but nested orientation payloads could still expose scanner-matching
+  text or mutation calls. `project_brief()` now recursively redacts nested
+  dataset/query/staged/task payloads, and dirty `import_handoff_bundle()`
+  results privacy-gate detailed recovery-plan action surfaces to the same
+  `export_preflight` review before exposing recovery or mutation actions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

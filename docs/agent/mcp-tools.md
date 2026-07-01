@@ -135,13 +135,14 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
-Dataset/task resource summary display text and profile/evidence orientation
-summaries are redacted when they match the sensitive-term scanner, but the brief
-remains an orientation payload, not a shareability proof.
-Profile draft actions embedded in `project_brief` are also recursively redacted
-in their `arguments`, `call`, and `source_*` route metadata. Call
-`draft_profile_map_updates` directly when you need the executable raw action
-payload for a local mutation decision.
+Dataset/task resource summary display text, staged-review summaries, and
+profile/query orientation summaries are redacted when they match the
+sensitive-term scanner, but the brief remains an orientation payload, not a
+shareability proof. Suggested actions embedded in `project_brief` are also
+recursively redacted in their `arguments`, `call`, route cards, and `source_*`
+metadata. Call the underlying helper directly, such as `draft_query_plan` or
+`draft_profile_map_updates`, when you need the executable raw action payload for
+a local mutation decision after privacy review.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
 In unattended loops, run `full_frontier_expansion` when it is non-null before
@@ -2548,8 +2549,11 @@ value such as `run_import_handoff_bundle`,
 When the manifest records nonzero `sensitive_literal_count`, the import can
 still be useful locally, but its top-level next action is a redacted
 `doxabase.export_preflight(export_kind="handoff_bundle", ...)` privacy review
-and recovery/mutation actions are not promoted as top-level continuations until
-that review is explicit.
+and recovery/mutation actions are not promoted as continuations until that
+review is explicit. Detailed nested `recovery_plan` action surfaces are also
+privacy-gated in that case: lane actions, revision-summary actions, mutation
+frontier items, and plan suggested actions point back to the same preflight
+instead of exposing apply/restage calls.
 When a manifest revision resolves to a current staged successor that lacks exact
 snapshot rows, the import promotes the blocking `import_revision_snapshots` or
 preflight action ahead of recovery-session setup and suppresses

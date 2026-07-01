@@ -4737,7 +4737,7 @@ class DoxaBase:
             first_unattended_action=first_unattended_action,
         )
 
-        return ProjectBrief(
+        brief = ProjectBrief(
             key_counts=overview.key_counts,
             dataset_count=max(
                 overview.key_counts.get("datasets", 0),
@@ -4785,6 +4785,7 @@ class DoxaBase:
             limit=limit,
             profile_candidate_limit=profile_candidate_limit,
         )
+        return self._privacy_redacted_api_value(brief)
 
     def _project_brief_dataset_entities(self, limit: int) -> list[EntityRow]:
         entities_by_iri: dict[str, EntityRow] = {}
@@ -55710,7 +55711,7 @@ class DoxaBase:
                 ]
             )
             if privacy_review_required_before_recovery:
-                suggested_next_actions = [
+                privacy_review_action = (
                     self._import_handoff_bundle_privacy_review_action(
                         graph_roles=graph_roles,
                         revision_iris=revision_iris,
@@ -55719,6 +55720,15 @@ class DoxaBase:
                             self._handoff_manifest_sensitive_literal_count(payload)
                         ),
                     )
+                )
+                recovery_plan = (
+                    self._import_handoff_bundle_privacy_gated_recovery_plan(
+                        recovery_plan,
+                        privacy_review_action,
+                    )
+                )
+                suggested_next_actions = [
+                    privacy_review_action
                 ]
             elif (
                 recovery_plan.mutation_allowed_after
@@ -56065,6 +56075,100 @@ class DoxaBase:
             suggested_next_calls=[
                 action.call for action in suggested_next_actions if action.call
             ],
+        )
+
+    def _import_handoff_bundle_privacy_gated_recovery_plan(
+        self,
+        recovery_plan: StagedRevisionRecoveryPlan,
+        privacy_action: SuggestedNextAction,
+    ) -> StagedRevisionRecoveryPlan:
+        redacted_plan = self._privacy_redacted_api_value(recovery_plan)
+        privacy_calls = [privacy_action.call] if privacy_action.call else []
+        privacy_note = (
+            "Imported handoff privacy review is required before following "
+            "nested recovery or mutation actions."
+        )
+
+        def gated_note(note: str) -> str:
+            return f"{privacy_note} {note}"
+
+        def gated_batch_item(
+            item: StagedGraphRevisionBatchRestageItem,
+        ) -> StagedGraphRevisionBatchRestageItem:
+            return replace(
+                item,
+                next_action_after=None,
+                next_action_queue_item_after=None,
+                suggested_next_actions_after=[privacy_action],
+                note=gated_note(item.note),
+            )
+
+        def gated_lane(
+            lane: StagedRevisionRecoveryLane,
+        ) -> StagedRevisionRecoveryLane:
+            return replace(
+                lane,
+                next_action=None,
+                next_action_queue_item=None,
+                repair_draft=None,
+                repair_draft_deferred_reason="handoff_import_privacy_review_required",
+                suggested_next_actions=[privacy_action],
+                suggested_next_calls=privacy_calls,
+                batch_item=gated_batch_item(lane.batch_item),
+                note=gated_note(lane.note),
+            )
+
+        def gated_summary(
+            summary: StagedGraphRevisionExportSummary,
+        ) -> StagedGraphRevisionExportSummary:
+            return replace(
+                summary,
+                next_action=None,
+                suggested_next_actions=[privacy_action],
+                suggested_next_calls=privacy_calls,
+            )
+
+        bundle_summary = redacted_plan.bundle_summary
+        if bundle_summary is not None:
+            bundle_summary = replace(
+                bundle_summary,
+                review_sequence=[],
+                next_action_queue={},
+                next_action_queue_items=[],
+                next_action_queue_item_counts={},
+                mutation_frontier_iris=[],
+                warnings=[
+                    privacy_note,
+                    *bundle_summary.warnings,
+                ],
+            )
+
+        return replace(
+            redacted_plan,
+            lanes=[gated_lane(lane) for lane in redacted_plan.lanes],
+            next_action_queue={},
+            next_action_queue_items=[],
+            next_action_queue_item_counts={},
+            mutation_frontier_items=[],
+            helper_mutation_frontier_actions=[],
+            helper_mutation_frontier_calls=[],
+            mutation_allowed_after=(
+                "handoff_import_privacy_review_required_before_recovery"
+            ),
+            blocking_preflight_actions=[privacy_action],
+            blocking_preflight_calls=privacy_calls,
+            revision_summaries=[
+                gated_summary(summary)
+                for summary in redacted_plan.revision_summaries
+            ],
+            bundle_summary=bundle_summary,
+            suggested_next_actions=[privacy_action],
+            suggested_next_calls=privacy_calls,
+            warnings=[
+                privacy_note,
+                *redacted_plan.warnings,
+            ],
+            note=gated_note(redacted_plan.note),
         )
 
     @staticmethod
@@ -57353,6 +57457,29 @@ class DoxaBase:
                 )
                 for field in fields(value)
             }
+        return value
+
+    def _privacy_redacted_api_value(self, value: Any) -> Any:
+        if isinstance(value, str):
+            return self._redact_sensitive_context_value(value)
+        if isinstance(value, MappingABC):
+            return {
+                str(key): self._privacy_redacted_api_value(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, tuple):
+            return tuple(self._privacy_redacted_api_value(item) for item in value)
+        if isinstance(value, list):
+            return [self._privacy_redacted_api_value(item) for item in value]
+        if is_dataclass(value) and not isinstance(value, type):
+            updates = {
+                field.name: self._privacy_redacted_api_value(
+                    getattr(value, field.name)
+                )
+                for field in fields(value)
+                if field.init
+            }
+            return replace(value, **updates)
         return value
 
     def _privacy_redacted_suggested_next_action(

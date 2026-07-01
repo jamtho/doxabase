@@ -1437,6 +1437,66 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
     assert fake_secret not in json.dumps(to_dict(brief))
 
 
+def test_project_brief_redacts_nested_query_and_staged_payloads(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_PROJECT_BRIEF_NESTED_PAYLOAD"
+    base = "https://example.test/project#"
+    dataset = f"{base}Orders"
+    storage = db.record_map_storage_access(
+        f"{base}OrdersLocalStorage",
+        label=f"Orders local storage {fake_secret}",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / fake_secret / "orders.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}OrdersParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label=f"Orders {fake_secret}",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.stage_graph_revision(
+        summary=f"Stage {fake_secret} staged review summary",
+        rationale="Exercise project_brief staged review redaction.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersBriefNestedProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    brief = db.project_brief(limit=5)
+    payload = json.dumps(to_jsonable(brief), sort_keys=True)
+
+    assert fake_secret not in payload
+    assert "FAKE_SECRET" not in payload
+    assert "[REDACTED:fake_secret_marker]" in payload
+    query_action = brief.datasets[0].query.suggested_next_actions[0]
+    assert query_action.tool_name == "draft_query_plan"
+    assert fake_secret not in json.dumps(to_jsonable(query_action), sort_keys=True)
+    assert brief.staged_review.items[0].summary == "[REDACTED:fake_secret_marker]"
+    assert brief.recommended_next_tasks[1].resource is not None
+    assert brief.recommended_next_tasks[1].resource.label == (
+        "[REDACTED:fake_secret_marker]"
+    )
+
+
 def test_project_brief_privacy_health_uses_handoff_preflight_scope(
     tmp_path: Path,
 ) -> None:
@@ -2484,7 +2544,7 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
         storage_root=f"/tmp/{fake_secret}/orders",
     )
     staged = source.stage_graph_revision(
-        summary="Stage dirty handoff receiver probe",
+        summary=f"Stage dirty handoff receiver probe {fake_secret}",
         rationale="Create a recoverable staged row in a privacy-dirty handoff.",
         additions=[
             {
@@ -2547,6 +2607,24 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     )
     assert imported.recovery_summary.first_mutation_action is None
     assert imported.recovery_summary.first_mutation_frontier_item is None
+    assert imported.recovery_plan.mutation_allowed_after == (
+        "handoff_import_privacy_review_required_before_recovery"
+    )
+    assert imported.recovery_plan.suggested_next_actions == [privacy_action]
+    assert imported.recovery_plan.blocking_preflight_actions == [privacy_action]
+    assert imported.recovery_plan.mutation_frontier_items == []
+    assert imported.recovery_plan.next_action_queue_items == []
+    assert all(
+        lane.next_action is None
+        and lane.next_action_queue_item is None
+        and lane.suggested_next_actions == [privacy_action]
+        for lane in imported.recovery_plan.lanes
+    )
+    assert all(
+        summary.next_action is None
+        and summary.suggested_next_actions == [privacy_action]
+        for summary in imported.recovery_plan.revision_summaries
+    )
     assert "start_staged_revision_recovery_session" not in [
         action.tool_name for action in imported.suggested_next_actions
     ]
@@ -2556,6 +2634,10 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert any(
         "potential sensitive terms" in warning
         for warning in imported.warnings
+    )
+    assert "apply_staged_revision" not in json.dumps(
+        to_jsonable(imported.recovery_plan),
+        sort_keys=True,
     )
     assert fake_secret not in json.dumps(to_dict(imported))
 
