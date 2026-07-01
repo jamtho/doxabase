@@ -462,6 +462,48 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert rerun.first_unattended_action == rerun.frontier_first_action
 
 
+def test_project_brief_reuses_staged_apply_checks_during_frontier_expansion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged_revision_iris = []
+    for index in range(3):
+        staged = db.stage_graph_revision(
+            summary=f"Stage frontier cache item {index}",
+            rationale="Create staged review pressure for low-limit brief expansion.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <https://example.test/frontier-cache#ReviewNote{index}>
+                        rdfs:comment "Review note {index}." .
+                    """,
+                }
+            ],
+        )
+        staged_revision_iris.append(staged.revision_iri)
+
+    validate_preview_call_count = 0
+    original_validate_graph_preview = db._validate_graph_preview
+
+    def counted_validate_graph_preview(*args: object, **kwargs: object) -> object:
+        nonlocal validate_preview_call_count
+        validate_preview_call_count += 1
+        return original_validate_graph_preview(*args, **kwargs)
+
+    monkeypatch.setattr(db, "_validate_graph_preview", counted_validate_graph_preview)
+
+    brief = db.project_brief(limit=1, profile_candidate_limit=0)
+
+    assert brief.staged_review.count == len(staged_revision_iris)
+    assert brief.staged_review.returned_count == 1
+    assert brief.staged_review.omitted_count == 2
+    assert validate_preview_call_count == len(staged_revision_iris)
+
+
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     tmp_path: Path,
 ) -> None:

@@ -3928,6 +3928,13 @@ few useful gaps:
   now applies record-kind, current-work, and stored validation filters before
   `check_staged_revision_apply()`, while status-dependent filters still run
   after live checks.
+- A follow-up pytest runtime check found the active container was not cgroup
+  constrained: CPUs, memory, and throttling were not the bottleneck. The
+  remaining `project_brief()` hot spot was low-limit staged frontier expansion
+  recomputing live apply checks inside one brief call. `project_brief()` now
+  uses the scoped staged apply-check cache for each call, so expanded staged
+  review summaries reuse already-computed live checks without caching across
+  separate calls.
 - A staged rebase/version scout found same-slot repaired alternatives carried
   the correct semantic-review gate in apply checks and recovery plans, but
   graph-version browsing could still show a ready staged-before snapshot with

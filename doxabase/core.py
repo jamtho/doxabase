@@ -4559,6 +4559,12 @@ class DoxaBase:
             raise DoxaBaseError("limit must be at least 1")
         if profile_candidate_limit < 0:
             raise DoxaBaseError("profile_candidate_limit must be non-negative")
+        if self._staged_apply_check_cache is None:
+            with self._scoped_staged_apply_check_cache():
+                return self.project_brief(
+                    limit=limit,
+                    profile_candidate_limit=profile_candidate_limit,
+                )
 
         overview = self.graph_overview(limit=limit)
         entity_scan_limit = max(
