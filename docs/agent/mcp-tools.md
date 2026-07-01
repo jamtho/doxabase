@@ -92,7 +92,9 @@ When a broader graph or handoff preflight blocks but the intended handoff only
 needs clean context around known resources, the blocked response suggests
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`. Use that
 route for importable resource-scoped review context; do not treat it as a
-recovery-complete revision handoff.
+recovery-complete revision handoff. The action marks `seed_iris` in
+`required_extra_arguments`, `placeholder_fields`, and `reviewed_value_fields`;
+replace the placeholder with reviewed target resource IRIs before calling it.
 For a query result or query failure recorded with `record_query_result`, use the
 returned `evidence_iri` as that seed and `profile="resource_brief"` when the
 broad handoff is blocked by unrelated graph content. This preserves query

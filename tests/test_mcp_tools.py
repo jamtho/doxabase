@@ -1926,6 +1926,15 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     assert result["suggested_next_actions"][-1]["arguments"]["seed_iris"] == [
         "<target-resource-iri>"
     ]
+    assert result["suggested_next_actions"][-1]["required_extra_arguments"] == [
+        "seed_iris"
+    ]
+    assert result["suggested_next_actions"][-1]["placeholder_fields"] == [
+        "seed_iris"
+    ]
+    assert result["suggested_next_actions"][-1]["reviewed_value_fields"] == [
+        "seed_iris"
+    ]
     assert fake_secret not in json.dumps(result)
 
 

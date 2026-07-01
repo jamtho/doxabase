@@ -5121,6 +5121,12 @@ with `fail_on_sensitive=True`; blocked preflights suggest the redacted graph sca
 and/or a snapshot-only `export_preflight(export_kind="revision_snapshots", ...)`
 for snapshot review, so low match limits cannot let graph matches hide stored
 snapshot matches.
+When a blocked graph or handoff preflight suggests
+`preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`, the
+suggested action includes `required_extra_arguments=["seed_iris"]`,
+`placeholder_fields=["seed_iris"]`, and
+`reviewed_value_fields=["seed_iris"]`. Replace that placeholder with reviewed
+resource IRIs before preflighting the narrower context slice.
 
 `db.export_graph(...)` and `db.export_trig(...)` return `GraphExportRecord`:
 

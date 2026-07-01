@@ -4038,8 +4038,10 @@ few useful gaps:
 - A storage/query privacy trial found export privacy gates correctly block
   synthetic sensitive literals without overblocking ordinary local paths, but a
   dirty `export_preflight` context-slice follow-up still uses placeholder
-  `seed_iris` without structured `placeholder_fields`. That response-shape
-  cleanup remains a useful future loop.
+  `seed_iris` without structured `placeholder_fields`. The blocked
+  preflight's context-slice action now marks `seed_iris` as a required,
+  placeholder, reviewed value field before the caller substitutes target
+  resource IRIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

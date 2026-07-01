@@ -2822,6 +2822,9 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
         "max_triples": 500,
         "limit": 20,
     }
+    assert slice_action.required_extra_arguments == ["seed_iris"]
+    assert slice_action.placeholder_fields == ["seed_iris"]
+    assert slice_action.reviewed_value_fields == ["seed_iris"]
     assert "review context" in slice_action.reason
     assert "not recovery-complete" in slice_action.reason
     assert fake_secret not in json.dumps(to_dict(preflight))

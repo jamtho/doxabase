@@ -3947,6 +3947,13 @@ class SuggestedNextAction:
 
 
 @dataclass(frozen=True)
+class TemplatedSuggestedNextAction(SuggestedNextAction):
+    required_extra_arguments: list[str]
+    placeholder_fields: list[str]
+    reviewed_value_fields: list[str]
+
+
+@dataclass(frozen=True)
 class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
     source_profile_advisory: dict[str, Any]
 
@@ -57193,7 +57200,7 @@ class DoxaBase:
                     "limit": max(record.limit, 20),
                 }
                 actions.append(
-                    SuggestedNextAction(
+                    TemplatedSuggestedNextAction(
                         action_label="Preflight resource-scoped context slice",
                         tool_name="preflight_context_slice_export",
                         mcp_tool_name="doxabase.preflight_context_slice_export",
@@ -57210,6 +57217,9 @@ class DoxaBase:
                             "preflight_context_slice_export",
                             arguments,
                         ),
+                        required_extra_arguments=["seed_iris"],
+                        placeholder_fields=["seed_iris"],
+                        reviewed_value_fields=["seed_iris"],
                     )
                 )
             return actions
