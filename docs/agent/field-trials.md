@@ -3917,6 +3917,12 @@ few useful gaps:
   `rc:scannedSourceHandle` evidence metadata, while query-context and storage
   overlay previews expose `scanned_source_handles` separately from
   `scanned_source_paths`.
+- A pytest runtime scout found `list_graph_revisions(current_staged_work_only=True)`
+  was paying live apply-check cost for stale, applied, review-resolved, or
+  non-staged rows that cheap history links could already exclude. The list path
+  now applies record-kind, current-work, and stored validation filters before
+  `check_staged_revision_apply()`, while status-dependent filters still run
+  after live checks.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

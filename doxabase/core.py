@@ -8225,59 +8225,16 @@ class DoxaBase:
                 revision_iri,
                 "rc:revisionStance",
             )
-            application_status: str | None = None
-            application_decision: str | None = None
-            application_can_apply: bool | None = None
-            application_summary: str | None = None
-            application_recommended_resolution: str | None = None
-            application_validation_skipped_reason: str | None = None
-            application_blocking_reasons: list[str] = []
-            application_count_drifts: list[StagedGraphCountDrift] = []
-            application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
-            application_semantic_risk_level: str | None = None
-            application_semantic_risk_reasons: list[str] = []
-            suggested_next_actions: list[SuggestedNextAction] = []
             patch_iris = self._objects(
                 data_graphs,
                 revision_iri,
                 "rc:hasGraphPatch",
             )
-            if include_apply_checks and patch_iris:
-                try:
-                    check = self.check_staged_revision_apply(revision_iri)
-                except DoxaBaseError:
-                    application_status = "not_available"
-                    application_decision = "inspect_staged_revision"
-                    application_can_apply = None
-                else:
-                    application_status = check.status
-                    application_decision = check.decision
-                    application_can_apply = check.can_apply
-                    application_summary = check.summary
-                    application_recommended_resolution = check.recommended_resolution
-                    application_validation_skipped_reason = (
-                        check.validation_skipped_reason
-                    )
-                    application_blocking_reasons = check.blocking_reasons
-                    application_count_drifts = check.count_drifts
-                    application_semantic_risk_level = check.semantic_risk_level
-                    application_semantic_risk_reasons = check.semantic_risk_reasons
-                    if drift_detail == "exact":
-                        application_snapshot_drifts = check.snapshot_drifts
-                    else:
-                        application_snapshot_drifts = (
-                            self._summary_snapshot_drifts(check.snapshot_drifts)
-                        )
-                    suggested_next_actions = check.suggested_next_actions
-
             applies_staged_revision = self._first_object(
                 data_graphs,
                 revision_iri,
                 "rc:appliesStagedRevision",
             )
-            if application_status is None and applies_staged_revision is not None:
-                application_status = "applied_event"
-
             alternative_to = self._first_object(
                 data_graphs,
                 revision_iri,
@@ -8311,10 +8268,6 @@ class DoxaBase:
                 has_patch_payload=bool(patch_iris),
                 applies_staged_revision=applies_staged_revision,
             )
-            if item_record_kind == "applied_event":
-                suggested_next_actions = (
-                    self._applied_revision_event_suggested_actions(revision_iri)
-                )
             applied_by = self._first_subject(
                 data_graphs,
                 "rc:appliesStagedRevision",
@@ -8336,21 +8289,12 @@ class DoxaBase:
                 if not is_current_staged_work
                 else None
             )
-            item_stale_resolution_state = self._stale_resolution_state(
-                status=application_status,
-                has_patch_payload=bool(patch_iris),
-                restaged_from=restaged_from,
-                restaged_by=restaged_by,
-            )
             if (
                 record_kind_filter is not None
                 and item_record_kind != record_kind_filter
             ):
                 continue
-            if (
-                application_status_filter is not None
-                and application_status != application_status_filter
-            ):
+            if current_staged_work_only and not is_current_staged_work:
                 continue
             staged_validation_conforms = self._bool_object(
                 data_graphs,
@@ -8371,12 +8315,68 @@ class DoxaBase:
                 and item_staged_validation_status != staged_validation_status_filter
             ):
                 continue
+
+            application_status: str | None = None
+            application_decision: str | None = None
+            application_can_apply: bool | None = None
+            application_summary: str | None = None
+            application_recommended_resolution: str | None = None
+            application_validation_skipped_reason: str | None = None
+            application_blocking_reasons: list[str] = []
+            application_count_drifts: list[StagedGraphCountDrift] = []
+            application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
+            application_semantic_risk_level: str | None = None
+            application_semantic_risk_reasons: list[str] = []
+            suggested_next_actions: list[SuggestedNextAction] = []
+            if include_apply_checks and patch_iris:
+                try:
+                    check = self.check_staged_revision_apply(revision_iri)
+                except DoxaBaseError:
+                    application_status = "not_available"
+                    application_decision = "inspect_staged_revision"
+                    application_can_apply = None
+                else:
+                    application_status = check.status
+                    application_decision = check.decision
+                    application_can_apply = check.can_apply
+                    application_summary = check.summary
+                    application_recommended_resolution = check.recommended_resolution
+                    application_validation_skipped_reason = (
+                        check.validation_skipped_reason
+                    )
+                    application_blocking_reasons = check.blocking_reasons
+                    application_count_drifts = check.count_drifts
+                    application_semantic_risk_level = check.semantic_risk_level
+                    application_semantic_risk_reasons = check.semantic_risk_reasons
+                    if drift_detail == "exact":
+                        application_snapshot_drifts = check.snapshot_drifts
+                    else:
+                        application_snapshot_drifts = (
+                            self._summary_snapshot_drifts(check.snapshot_drifts)
+                        )
+                    suggested_next_actions = check.suggested_next_actions
+
+            if application_status is None and applies_staged_revision is not None:
+                application_status = "applied_event"
+            if item_record_kind == "applied_event":
+                suggested_next_actions = (
+                    self._applied_revision_event_suggested_actions(revision_iri)
+                )
+            if (
+                application_status_filter is not None
+                and application_status != application_status_filter
+            ):
+                continue
+            item_stale_resolution_state = self._stale_resolution_state(
+                status=application_status,
+                has_patch_payload=bool(patch_iris),
+                restaged_from=restaged_from,
+                restaged_by=restaged_by,
+            )
             if (
                 stale_resolution_state_filter is not None
                 and item_stale_resolution_state != stale_resolution_state_filter
             ):
-                continue
-            if current_staged_work_only and not is_current_staged_work:
                 continue
 
             snapshot_evidence = self._revision_snapshot_evidence_status(

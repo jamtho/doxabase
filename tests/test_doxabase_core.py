@@ -13464,6 +13464,83 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert first_page.next_action_queue != full_page.next_action_queue
 
 
+def test_list_graph_revisions_filters_current_work_before_apply_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    applied_source = db.stage_graph_revision(
+        summary="Add applied messages table",
+        rationale="Creates a staged source that should be skipped by live filters.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:AppliedMessages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.apply_staged_revision(
+        applied_source.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    stale = db.stage_graph_revision(
+        summary="Add other messages table",
+        rationale="Creates a stale staged source with a current restaged successor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OtherMessages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftMaker",
+        label="Drift maker",
+    )
+    restaged = db.restage_staged_revision(
+        stale.revision_iri,
+        created_at="2026-06-01T10:03:00Z",
+    )
+    db.record_graph_revision(
+        summary="Manual history note",
+        rationale="Non-staged history should not need apply preview validation.",
+        changed_graphs=["map"],
+        created_at="2026-06-01T10:04:00Z",
+    )
+
+    checked_revision_iris: list[str] = []
+    original_check = db.check_staged_revision_apply
+
+    def counted_check(revision_iri: str):
+        checked_revision_iris.append(revision_iri)
+        return original_check(revision_iri)
+
+    monkeypatch.setattr(db, "check_staged_revision_apply", counted_check)
+
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+
+    assert [item.iri for item in current_work.revisions] == [restaged.revision_iri]
+    assert checked_revision_iris == [restaged.revision_iri]
+    assert current_work.count == 1
+    assert current_work.returned_count == 1
+    assert current_work.revisions[0].application_status == "ready"
+
+
 def test_list_graph_versions_lists_stored_graph_timeline(
     tmp_path: Path,
 ) -> None:
