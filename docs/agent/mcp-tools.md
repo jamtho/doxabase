@@ -941,10 +941,9 @@ and rerun/draft with an explicit `candidate_selector` if candidate order picked 
 wrong route; peer suggested actions include the same allowance when sibling
 candidate metadata is the only broader blocker.
 `query_target_decision.route_intent_review_candidate_indexes` points at ready
-peer cards with production/current/canonical route-role intent that the selected
-candidate lacks; review those cards before unattended execution. In a globally
-blocked context,
-inspect
+or direct-clean peer cards with production/current/canonical route-role intent
+that the selected candidate lacks; review those cards before unattended
+execution. In a globally blocked context, inspect
 `unselected_direct_clean_candidate_indexes` when strict ready indexes are empty
 but another candidate has no direct blocker. When linked physical layouts are
 ambiguous, suggested `draft_query_plan` actions include explicit

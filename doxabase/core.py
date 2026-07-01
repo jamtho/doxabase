@@ -20783,7 +20783,7 @@ class DoxaBase:
             self._query_target_route_intent_review_candidate_indexes(
                 selected_candidate,
                 context.query_target_candidates,
-                unselected_ready_candidate_indexes,
+                unselected_direct_clean_candidate_indexes,
             )
         )
         selection_reason_codes = self._query_target_selection_reason_codes(
@@ -22404,16 +22404,24 @@ class DoxaBase:
         ready_candidate_indexes = self._query_ready_candidate_indexes(
             context.query_target_candidates
         )
+        direct_clean_candidate_indexes = self._query_direct_clean_candidate_indexes(
+            context.query_target_candidates
+        )
         unselected_ready_candidate_indexes = [
             index
             for index in ready_candidate_indexes
+            if index != selected_candidate_index
+        ]
+        unselected_direct_clean_candidate_indexes = [
+            index
+            for index in direct_clean_candidate_indexes
             if index != selected_candidate_index
         ]
         route_intent_review_candidate_indexes = (
             self._query_target_route_intent_review_candidate_indexes(
                 selected_candidate,
                 context.query_target_candidates,
-                unselected_ready_candidate_indexes,
+                unselected_direct_clean_candidate_indexes,
             )
         )
         return self._query_target_decision_for_candidate(
@@ -24138,6 +24146,21 @@ class DoxaBase:
                 context_blocked_candidates,
                 key=self._query_target_candidate_decision_rank,
             )
+            direct_clean_candidate_indexes = (
+                self._query_direct_clean_candidate_indexes(candidates)
+            )
+            unselected_direct_clean_candidate_indexes = [
+                item_index
+                for item_index in direct_clean_candidate_indexes
+                if item_index != index
+            ]
+            route_intent_review_candidate_indexes = (
+                self._query_target_route_intent_review_candidate_indexes(
+                    candidate,
+                    candidates,
+                    unselected_direct_clean_candidate_indexes,
+                )
+            )
             return self._query_target_decision_for_candidate(
                 candidate,
                 index=index,
@@ -24148,6 +24171,16 @@ class DoxaBase:
                     "issues before executing it."
                 ),
                 selection_mode="automatic",
+                selection_caution=self._query_target_selection_caution(
+                    [],
+                    selection_mode="automatic",
+                    route_intent_review_candidate_indexes=(
+                        route_intent_review_candidate_indexes
+                    ),
+                ),
+                route_intent_review_candidate_indexes=(
+                    route_intent_review_candidate_indexes
+                ),
             )
 
         index, candidate = min(
@@ -24241,8 +24274,11 @@ class DoxaBase:
         selection_mode: str,
         route_intent_review_candidate_indexes: list[int] | None = None,
     ) -> str | None:
+        route_intent_caution = self._query_target_route_intent_caution(
+            route_intent_review_candidate_indexes or []
+        )
         if not unselected_ready_candidate_indexes:
-            return None
+            return route_intent_caution
         indexes = ", ".join(str(index) for index in unselected_ready_candidate_indexes)
         selection_note = (
             "Automatic selection uses DoxaBase precedence, not project intent"
@@ -24254,9 +24290,6 @@ class DoxaBase:
             f"{selection_note}; inspect "
             f"candidate card(s) {indexes} or pass an explicit candidate_selector "
             "before unattended execution."
-        )
-        route_intent_caution = self._query_target_route_intent_caution(
-            route_intent_review_candidate_indexes or []
         )
         if route_intent_caution is not None:
             caution = f"{caution} {route_intent_caution}"
@@ -38717,6 +38750,73 @@ class DoxaBase:
         return counts
 
     @staticmethod
+    def _staged_recovery_helper_frontier_context(
+        lane: StagedRevisionRecoveryLane | None,
+    ) -> dict[str, Any]:
+        context: dict[str, Any] = {
+            "row_iris": [],
+            "semantic_risk_level": None,
+            "semantic_risk_reasons": [],
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": None,
+            "alternative_set_roles": [],
+            "alternative_gate_statuses": [],
+            "alternative_applied_source_iris": [],
+            "alternative_applied_revision_iris": [],
+            "requires_semantic_review_before_mutation": False,
+        }
+        if lane is None:
+            return context
+
+        def add_unique(key: str, value: str | None) -> None:
+            if value is not None:
+                DoxaBase._append_unique(context[key], value)
+
+        add_unique("row_iris", lane.row_iri)
+        item = lane.next_action_queue_item
+        if item is not None:
+            context["semantic_risk_level"] = item.semantic_risk_level
+            context["semantic_risk_reasons"] = list(item.semantic_risk_reasons)
+            context["alternative_set_iris"] = list(item.alternative_set_iris)
+            context["alternative_set_source_iri"] = item.alternative_set_source_iri
+            add_unique("alternative_set_roles", item.alternative_set_role)
+            add_unique("alternative_gate_statuses", item.alternative_gate_status)
+            add_unique(
+                "alternative_applied_source_iris",
+                item.alternative_applied_source_iri,
+            )
+            add_unique(
+                "alternative_applied_revision_iris",
+                item.alternative_applied_revision_iri,
+            )
+            context["requires_semantic_review_before_mutation"] = (
+                item.alternative_semantic_review_required
+            )
+
+        if lane.alternative_gate is not None:
+            gate = lane.alternative_gate
+            add_unique("alternative_gate_statuses", gate.status)
+            add_unique("alternative_applied_source_iris", gate.applied_source_iri)
+            add_unique(
+                "alternative_applied_revision_iris",
+                gate.applied_revision_iri,
+            )
+            if gate.status != "not_applicable":
+                add_unique("alternative_set_iris", gate.current_alternative_to)
+                add_unique("alternative_set_iris", lane.row_iri)
+                if context["alternative_set_source_iri"] is None:
+                    context["alternative_set_source_iri"] = (
+                        gate.current_alternative_to
+                    )
+                add_unique("alternative_set_roles", "alternative")
+            context["requires_semantic_review_before_mutation"] = (
+                context["requires_semantic_review_before_mutation"]
+                or gate.semantic_review_required
+            )
+
+        return context
+
+    @staticmethod
     def _staged_recovery_mutation_frontier_items(
         groups: Iterable[StagedRevisionResolvedTargetGroup],
         *,
@@ -38729,7 +38829,8 @@ class DoxaBase:
             "repair_or_replace",
         }
         action_by_target: dict[tuple[str, str], RevisionNextAction] = {}
-        for lane in lanes:
+        lane_list = list(lanes)
+        for lane in lane_list:
             item = lane.next_action_queue_item
             queue = item.queue if item is not None else lane.lane
             target_iri = (
@@ -38798,10 +38899,21 @@ class DoxaBase:
                 )
             )
 
+        helper_context_by_source = {
+            lane.source_revision_iri: (
+                DoxaBase._staged_recovery_helper_frontier_context(lane)
+            )
+            for lane in lane_list
+            if lane.lane == "repair_or_replace"
+        }
         for action in helper_mutation_frontier_actions:
             restages_revision = action.arguments.get("restages_revision")
             source_revision_iris = (
                 [restages_revision] if isinstance(restages_revision, str) else []
+            )
+            context = helper_context_by_source.get(
+                restages_revision if isinstance(restages_revision, str) else None,
+                DoxaBase._staged_recovery_helper_frontier_context(None),
             )
             items.append(
                 StagedRevisionMutationFrontierItem(
@@ -38810,18 +38922,28 @@ class DoxaBase:
                     target_iri=None,
                     target_record_kind=None,
                     source_revision_iris=source_revision_iris,
-                    row_iris=[],
+                    row_iris=list(context["row_iris"]),
                     action=action,
                     call=action.call,
-                    semantic_risk_level=None,
-                    semantic_risk_reasons=[],
-                    alternative_set_iris=[],
-                    alternative_set_source_iri=None,
-                    alternative_set_roles=[],
-                    alternative_gate_statuses=[],
-                    alternative_applied_source_iris=[],
-                    alternative_applied_revision_iris=[],
-                    requires_semantic_review_before_mutation=False,
+                    semantic_risk_level=context["semantic_risk_level"],
+                    semantic_risk_reasons=list(context["semantic_risk_reasons"]),
+                    alternative_set_iris=list(context["alternative_set_iris"]),
+                    alternative_set_source_iri=context[
+                        "alternative_set_source_iri"
+                    ],
+                    alternative_set_roles=list(context["alternative_set_roles"]),
+                    alternative_gate_statuses=list(
+                        context["alternative_gate_statuses"]
+                    ),
+                    alternative_applied_source_iris=list(
+                        context["alternative_applied_source_iris"]
+                    ),
+                    alternative_applied_revision_iris=list(
+                        context["alternative_applied_revision_iris"]
+                    ),
+                    requires_semantic_review_before_mutation=context[
+                        "requires_semantic_review_before_mutation"
+                    ],
                     reason=(
                         "Repair helper mutation for a staged recovery lane "
                         "that does not have a concrete successor IRI yet."
@@ -53098,6 +53220,55 @@ class DoxaBase:
                     ),
                 )
             )
+        if would_block_sensitive_export:
+            inspect_arguments = {
+                "seed_iris": seed_values,
+                "profile": profile,
+                "max_triples": max_triples,
+                "privacy_scan_limit": limit,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect blocked context slice",
+                    tool_name="describe_context_slice",
+                    mcp_tool_name="doxabase.describe_context_slice",
+                    arguments=inspect_arguments,
+                    reason=(
+                        "The context-slice export preflight found redacted "
+                        "sensitive-looking terms. Inspect the selected slice "
+                        "locally, then narrow to clean seed resources or scrub "
+                        "project content before writing an artifact."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_context_slice",
+                        inspect_arguments,
+                    ),
+                )
+            )
+            if not includes_history:
+                preflight_arguments = {
+                    "export_kind": "handoff_bundle",
+                    "graphs": ["project"],
+                    "limit": limit,
+                }
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Preflight project export privacy",
+                        tool_name="export_preflight",
+                        mcp_tool_name="doxabase.export_preflight",
+                        arguments=preflight_arguments,
+                        reason=(
+                            "The resource-scoped slice is blocked by privacy "
+                            "matches. Run the broader redacted export preflight "
+                            "before choosing whether to narrow scope, scrub "
+                            "content, or defer sharing."
+                        ),
+                        call=self._suggested_call_string(
+                            "export_preflight",
+                            preflight_arguments,
+                        ),
+                    )
+                )
         if not write and not would_block_sensitive_export:
             digest_source = "\n".join(seed_values)
             digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]

@@ -280,7 +280,10 @@ row, then rerun the planner.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty because the concrete mutation is a helper call rather than an
 existing revision target. In current responses this appears as a
-`mutation_frontier_items[]` entry with `item_kind="helper_action"`. When
+`mutation_frontier_items[]` entry with `item_kind="helper_action"`. Helper
+items reuse the same semantic-risk, alternative-set, and applied-source fields
+when the repair lane is an alternative to already-applied work, so frontier-only
+scripts can explain the review gate before staging the repair successor. When
 `include_drafts=True`, the planner embeds only the first repair draft by default
 (`repair_draft_limit=1`). Use `helper_mutation_frontier_actions` /
 `helper_mutation_frontier_calls` as the top-level deduped list of preferred
@@ -299,9 +302,9 @@ before applying from an unattended loop. A row can be mechanically ready and
 still require semantic review when it is an alternative to an already-applied
 source; inspect the item's semantic-risk and alternative-set fields, then the
 row's `alternative_gate` and applied source before any mutation. For
-`alternative_to_applied_source`, the frontier item includes the applied source
-and applied revision IRIs even when the source row is no longer current staged
-work.
+`alternative_to_applied_source`, the frontier item, including helper-action
+items, includes the applied source and applied revision IRIs even when the source
+row is no longer current staged work.
 When helper mutation actions are present, the planner also warns that they are
 not represented by `mutation_frontier_iris`; treat that warning as an unattended
 loop guard, not as a blocker.

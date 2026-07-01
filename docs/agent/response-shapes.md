@@ -1106,12 +1106,13 @@ export.recovery_complete
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
 and `bytes_written` is `0`. It includes a suggested `export_context_slice`
 action only when the selected triples are scanner-clean; if `decision="block"`,
+the suggested actions stay read-only, for example inspecting the selected slice
+with `describe_context_slice` or running project-level `export_preflight`;
 resolve privacy review before writing rather than blindly following a doomed
-export. `decision` is `block` when selected export triples have
-sensitive-looking terms and `clean_by_scanner_only` otherwise; `scanner_clean`
-is the matching boolean, while `shareability_review_required` remains true
-because scanner-clean is not proof that a resource-scoped bundle is appropriate
-to share.
+export. `decision` is `block` when selected export triples have sensitive-looking
+terms and `clean_by_scanner_only` otherwise; `scanner_clean` is the matching
+boolean, while `shareability_review_required` remains true because scanner-clean
+is not proof that a resource-scoped bundle is appropriate to share.
 `handoff_fit` is `resource_scoped_review_context` for ordinary context-slice
 exports and `resource_scoped_review_context_not_recovery_complete` when the
 selected triples include `history`.
@@ -3074,9 +3075,11 @@ When `decision.peer_ready_requires_intent_review` is true, read
 executing unattended. Automatic selection among peer ready candidates is
 DoxaBase precedence, not project intent.
 When `decision.route_intent_review_candidate_indexes` is non-empty, those ready
-peer cards carry production/current/canonical route-role intent that the
-selected candidate lacks; inspect them and pass their `candidate_selector` when
-that route is intended.
+or direct-clean peer cards carry production/current/canonical route-role intent
+that the selected candidate lacks; inspect them and pass their
+`candidate_selector` when that route is intended. These indexes can be non-empty
+even when `ready_candidate_indexes` is empty because sibling metadata blocks the
+overall context.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:
@@ -6083,7 +6086,7 @@ For revision targets, the semantic-risk and alternative-set fields are copied
 from the grouped queue rows. Check them before restaging or applying, especially
 when `alternative_set_iris` is non-empty or
 `requires_semantic_review_before_mutation` is true.
-For rows gated by `alternative_to_applied_source`,
+For rows or helper actions gated by `alternative_to_applied_source`,
 `alternative_applied_source_iris` and `alternative_applied_revision_iris` name
 the already-durable competing source even when that source is absent from the
 current staged queue.

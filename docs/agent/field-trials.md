@@ -3811,6 +3811,17 @@ few useful gaps:
   `scanned_source_handles` naming alias for query results, a `safety_gate` flag
   on project-brief health tasks, and suggested scrub/review actions for blocked
   context-slice preflights.
+- The next broad wave retested those fixes against harder context. Project brief
+  is steering well: privacy-bearing capsules still route first to
+  `export_preflight`, while clean low-limit briefs prefer full frontier
+  expansion before staged/profile/query mutation. Two workflow gaps remained and
+  were fixed. Route intent now uses direct-clean peers when a broken sibling
+  makes the whole query context review-required, so production/current/canonical
+  intent stays visible even when `ready_candidate_indexes` is empty. Blocked
+  `preflight_context_slice_export` responses now include read-only recovery
+  actions instead of an empty action list. Staged helper-action frontier items
+  also carry applied-source alternative context, so an executor can explain the
+  semantic gate before staging a repair successor.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

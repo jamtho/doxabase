@@ -2974,6 +2974,44 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert preflight.suggested_next_actions[0].arguments["fail_on_sensitive"] is True
     assert fake_secret not in json.dumps(to_dict(preflight))
 
+    dirty_preflight = db.preflight_context_slice_export(
+        [sensitive],
+        profile="dataset_brief",
+        max_triples=200,
+        limit=5,
+    )
+
+    assert dirty_preflight.path is None
+    assert dirty_preflight.decision == "block"
+    assert dirty_preflight.scanner_clean is False
+    assert dirty_preflight.would_block_sensitive_export is True
+    assert dirty_preflight.sensitive_literal_count > 0
+    assert [
+        action.tool_name for action in dirty_preflight.suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "export_preflight",
+    ]
+    assert dirty_preflight.suggested_next_actions[0].arguments == {
+        "seed_iris": [sensitive],
+        "profile": "dataset_brief",
+        "max_triples": 200,
+        "privacy_scan_limit": 5,
+    }
+    assert dirty_preflight.suggested_next_actions[1].arguments == {
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
+        "limit": 5,
+    }
+    assert all(
+        action.tool_name != "export_context_slice"
+        for action in dirty_preflight.suggested_next_actions
+    )
+    assert dirty_preflight.suggested_next_calls == [
+        action.call for action in dirty_preflight.suggested_next_actions
+    ]
+    assert fake_secret not in json.dumps(to_dict(dirty_preflight))
+
     export_path = tmp_path / "shareable-context-slice.trig"
     export = db.export_context_slice(
         export_path,
@@ -9597,6 +9635,25 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
         aggregate_rows.revision_iri
     )
     assert helper_action.arguments["alternative_to"] == event_rows.revision_iri
+    helper_item = stale_plan.mutation_frontier_items[-1]
+    assert helper_item.item_kind == "helper_action"
+    assert helper_item.action == helper_action
+    assert helper_item.source_revision_iris == [aggregate_rows.revision_iri]
+    assert helper_item.row_iris == [aggregate_rows.revision_iri]
+    assert helper_item.alternative_set_iris == [
+        event_rows.revision_iri,
+        aggregate_rows.revision_iri,
+    ]
+    assert helper_item.alternative_set_source_iri == event_rows.revision_iri
+    assert helper_item.alternative_set_roles == ["alternative"]
+    assert helper_item.alternative_gate_statuses == [
+        "alternative_to_applied_source"
+    ]
+    assert helper_item.alternative_applied_source_iris == [event_rows.revision_iri]
+    assert helper_item.alternative_applied_revision_iris == [
+        applied_event.applied_revision_iri
+    ]
+    assert helper_item.requires_semantic_review_before_mutation is True
     lanes_by_source = {
         lane.source_revision_iri: lane for lane in stale_plan.lanes
     }
@@ -19259,6 +19316,7 @@ def test_query_target_candidates_surface_global_blockers(
     local_storage = db.record_map_storage_access(
         "https://example.test/project#orders_z_local_storage",
         label="Orders local access",
+        route_roles=["rc:SampleRoute"],
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root="/warehouse",
         layout_verification_status="rc:VerifiedByListingLayout",
@@ -19266,6 +19324,7 @@ def test_query_target_candidates_surface_global_blockers(
     archive_storage = db.record_map_storage_access(
         "https://example.test/project#orders_zz_archive_storage",
         label="Orders archive local access",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root="/warehouse-archive",
         layout_verification_status="rc:VerifiedByListingLayout",
@@ -19355,6 +19414,19 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.query_target_decision.reason_codes == [
         "query_context_has_other_blockers"
     ]
+    assert context.query_target_decision.route_intent_review_candidate_indexes == [
+        archive_index
+    ]
+    assert context.query_target_decision.route_intent_caution is not None
+    assert "production/current/canonical route role intent" in (
+        context.query_target_decision.route_intent_caution
+    )
+    assert context.query_target_decision.selection_caution == (
+        context.query_target_decision.route_intent_caution
+    )
+    assert "route_intent_review_candidates_present" in (
+        context.query_target_decision.selection_reason_codes
+    )
     assert context.ready_candidate_indexes == []
     assert context.unselected_ready_candidate_indexes == []
     assert context.direct_clean_candidate_indexes == [
@@ -19407,6 +19479,15 @@ def test_query_target_candidates_surface_global_blockers(
         archive_index,
     ]
     assert plan.source_context.unselected_direct_clean_candidate_indexes == [
+        archive_index
+    ]
+    assert plan.source_context.route_intent_review_candidate_indexes == [
+        archive_index
+    ]
+    assert plan.source_context.route_intent_caution == (
+        context.query_target_decision.route_intent_caution
+    )
+    assert plan.handoff_summary.route_intent_review_candidate_indexes == [
         archive_index
     ]
     assert plan.review_gate.selection_overridden is False
@@ -19483,6 +19564,12 @@ def test_query_target_candidates_surface_global_blockers(
         archive_index,
     ]
     assert allowed_plan.source_context.unselected_direct_clean_candidate_indexes == [
+        archive_index
+    ]
+    assert allowed_plan.source_context.route_intent_review_candidate_indexes == [
+        archive_index
+    ]
+    assert allowed_plan.handoff_summary.route_intent_review_candidate_indexes == [
         archive_index
     ]
     assert allowed_plan.selected_candidate is not None

@@ -162,12 +162,12 @@ Start with `describe_query_context(dataset_iri)`:
    automatic ranking or an explicit selector. Treat automatic selection among
    peer ready candidates as precedence, not project intent.
    If `query_target_decision.route_intent_review_candidate_indexes` is non-empty,
-   the selected candidate skipped ready peer card(s) with reviewed
-   production/current/canonical route intent. Inspect those cards and pass their
-   `candidate_selector` when that route is intended.
-   These indexes are candidate-local direct readiness, so they can be non-empty
-   even when top-level `readiness == "needs_review"` because sibling metadata
-   still blocks the whole context.
+   the selected candidate skipped ready or direct-clean peer card(s) with
+   reviewed production/current/canonical route intent. Inspect those cards and
+   pass their `candidate_selector` when that route is intended. These indexes
+   are candidate-local direct cleanliness, so they can be non-empty even when
+   strict `ready_candidate_indexes` is empty because sibling metadata still
+   blocks the whole context.
    When global context blockers are present, `ready_candidate_indexes` may be
    empty even though some candidates have no direct warning or error. In that
    case read `direct_clean_candidate_indexes` and

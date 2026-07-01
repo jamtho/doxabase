@@ -525,10 +525,10 @@ as `candidate_path` and expose `relation_identifier` plus
 comes from a storage-access-owned template. Dataset or partition file paths
 paired with database storage stay review-only with
 `database_relation_template_source_mismatch` and no relation identifier. Candidate
-`query_target_decision.route_intent_review_candidate_indexes` points at ready
-peer candidates with production/current/canonical route-role intent that the
-selected candidate lacks; inspect those cards and pass their `candidate_selector`
-when they match project intent.
+`query_target_decision.route_intent_review_candidate_indexes` points at ready or
+direct-clean peer candidates with production/current/canonical route-role intent
+that the selected candidate lacks; inspect those cards and pass their
+`candidate_selector` when they match project intent.
 `review_reasons` can include overall-context blockers
 from sibling metadata as well as protocol/location warnings, for example
 S3-compatible access without endpoint/credential/region cues, non-S3 access
