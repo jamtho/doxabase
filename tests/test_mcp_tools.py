@@ -8304,6 +8304,14 @@ def test_describe_query_context_tool_blocks_s3_template_outside_storage_root(
     assert "outside recorded storage_root" in candidate["review_reasons"][0][
         "details"
     ]["mismatch_reasons"][0]
+    action_types = {
+        action["action_type"]
+        for action in candidate["review_reasons"][0]["details"]["repair_hint"][
+            "actions"
+        ]
+    }
+    assert "set_reviewed_bucket_name" in action_types
+    assert "set_reviewed_key_prefix" in action_types
     assert result["query_target_decision"]["status"] == "candidate_needs_review"
     assert result["query_target_decision"]["reason_codes"] == [
         "storage_protocol_location_mismatch"
@@ -8649,8 +8657,8 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     )
     assert repair_group["requires_review"] is True
     assert repair_group["action_count"] == len(repair_group["actions"])
-    assert repair_group["action_status_counts"] == {"pending_review": 6}
-    assert repair_group["pending_action_count"] == 6
+    assert repair_group["action_status_counts"] == {"pending_review": 4}
+    assert repair_group["pending_action_count"] == 4
     assert repair_group["skippable_action_count"] == 0
     assert repair_group["already_satisfied_action_count"] == 0
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
@@ -8666,6 +8674,8 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     assert action_by_type["set_reviewed_storage_protocol"][
         "reviewed_value_fields"
     ] == ["object"]
+    assert "set_reviewed_bucket_name" not in action_by_type
+    assert "set_reviewed_key_prefix" not in action_by_type
     assert action_by_type["remove_conflicting_bucket_name"]["arguments"][
         "object"
     ] == "public"
@@ -9302,6 +9312,16 @@ def test_describe_query_context_tool_blocks_dataset_absolute_template_outside_lo
     assert "outside recorded storage_root" in target["review_reasons"][0][
         "details"
     ]["mismatch_reasons"][0]
+    action_types = {
+        action["action_type"]
+        for action in target["review_reasons"][0]["details"]["repair_hint"][
+            "actions"
+        ]
+    }
+    assert "set_reviewed_bucket_name" not in action_types
+    assert "set_reviewed_key_prefix" not in action_types
+    assert "add_reviewed_path_template" in action_types
+    assert "remove_conflicting_path_template" in action_types
     assert result["query_target_decision"]["status"] == "candidate_needs_review"
     assert result["query_target_decision"]["reason_codes"] == [
         "storage_protocol_location_mismatch"

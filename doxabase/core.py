@@ -26736,55 +26736,62 @@ class DoxaBase:
                     "scheme."
                 ),
             },
-            {
-                "action_type": "set_reviewed_bucket_name",
-                "tool_name": "stage_map_assertion_change",
-                "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                "required_extra_arguments": ["rationale"],
-                "rationale_template": (
-                    "Reviewed bucket name for storage access "
-                    f"{storage_access.iri}."
-                ),
-                "arguments_template": {
-                    "subject": storage_access.iri,
-                    "predicate": "rc:bucketName",
-                    "object": "<reviewed_bucket_name>",
-                    "object_kind": "literal",
-                    "change_kind": "replace",
-                    "graph": "map",
-                },
-                "placeholder_fields": ["object"],
-                "reviewed_value_fields": ["object"],
-                "condition": (
-                    "Use for S3-compatible storage when review confirms the "
-                    "bucket should be recorded separately from path templates."
-                ),
-            },
-            {
-                "action_type": "set_reviewed_key_prefix",
-                "tool_name": "stage_map_assertion_change",
-                "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                "required_extra_arguments": ["rationale"],
-                "rationale_template": (
-                    "Reviewed key prefix for storage access "
-                    f"{storage_access.iri}."
-                ),
-                "arguments_template": {
-                    "subject": storage_access.iri,
-                    "predicate": "rc:keyPrefix",
-                    "object": "<reviewed_key_prefix>",
-                    "object_kind": "literal",
-                    "change_kind": "replace",
-                    "graph": "map",
-                },
-                "placeholder_fields": ["object"],
-                "reviewed_value_fields": ["object"],
-                "condition": (
-                    "Use for S3-compatible storage when review confirms the "
-                    "prefix should be recorded separately from path templates."
-                ),
-            },
         ]
+        if self._is_s3_storage(storage_access.storage_protocol):
+            actions.extend(
+                [
+                    {
+                        "action_type": "set_reviewed_bucket_name",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["rationale"],
+                        "rationale_template": (
+                            "Reviewed bucket name for storage access "
+                            f"{storage_access.iri}."
+                        ),
+                        "arguments_template": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:bucketName",
+                            "object": "<reviewed_bucket_name>",
+                            "object_kind": "literal",
+                            "change_kind": "replace",
+                            "graph": "map",
+                        },
+                        "placeholder_fields": ["object"],
+                        "reviewed_value_fields": ["object"],
+                        "condition": (
+                            "Use for S3-compatible storage when review confirms "
+                            "the bucket should be recorded separately from path "
+                            "templates."
+                        ),
+                    },
+                    {
+                        "action_type": "set_reviewed_key_prefix",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["rationale"],
+                        "rationale_template": (
+                            "Reviewed key prefix for storage access "
+                            f"{storage_access.iri}."
+                        ),
+                        "arguments_template": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:keyPrefix",
+                            "object": "<reviewed_key_prefix>",
+                            "object_kind": "literal",
+                            "change_kind": "replace",
+                            "graph": "map",
+                        },
+                        "placeholder_fields": ["object"],
+                        "reviewed_value_fields": ["object"],
+                        "condition": (
+                            "Use for S3-compatible storage when review confirms "
+                            "the prefix should be recorded separately from path "
+                            "templates."
+                        ),
+                    },
+                ]
+            )
         if storage_access.bucket_name:
             actions.append(
                 {

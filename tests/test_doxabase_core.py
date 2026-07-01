@@ -21253,12 +21253,8 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     assert action_by_type["set_reviewed_storage_root"]["placeholder_fields"] == [
         "object"
     ]
-    assert action_by_type["set_reviewed_bucket_name"]["placeholder_fields"] == [
-        "object"
-    ]
-    assert action_by_type["set_reviewed_key_prefix"]["placeholder_fields"] == [
-        "object"
-    ]
+    assert "set_reviewed_bucket_name" not in action_by_type
+    assert "set_reviewed_key_prefix" not in action_by_type
     assert action_by_type["remove_conflicting_bucket_name"]["arguments"] == {
         "subject": storage.iri,
         "predicate": "rc:bucketName",
@@ -21292,9 +21288,9 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     }
     assert pending_group.action_status_counts == {
         "already_pending": 1,
-        "pending_review": 5,
+        "pending_review": 3,
     }
-    assert pending_group.pending_action_count == 5
+    assert pending_group.pending_action_count == 3
     assert pending_group.skippable_action_count == 1
     assert pending_action_by_type["set_reviewed_storage_protocol"][
         "action_status"
@@ -21416,6 +21412,22 @@ def test_describe_query_context_warns_on_storage_root_protocol_mismatch(
         and "storage_root" in reason.message
         for reason in target.review_reasons
     )
+    mismatch = next(
+        reason
+        for reason in target.review_reasons
+        if reason.code == "storage_protocol_location_mismatch"
+    )
+    assert mismatch.details is not None
+    action_types = {
+        action["action_type"]
+        for action in mismatch.details["repair_hint"]["actions"]
+    }
+    if protocol == "rc:S3CompatibleStorage":
+        assert "set_reviewed_bucket_name" in action_types
+        assert "set_reviewed_key_prefix" in action_types
+    else:
+        assert "set_reviewed_bucket_name" not in action_types
+        assert "set_reviewed_key_prefix" not in action_types
 
 
 def test_describe_query_context_requires_storage_access_owned_location(

@@ -3325,8 +3325,9 @@ looks clean. Protocol/location warnings such as
 the candidate path is only an orientation aid until storage access is clarified.
 For `storage_protocol_location_mismatch`, read
 `details.repair_hint.actions`: it gives reviewed `stage_map_assertion_change`
-templates for protocol/root/bucket/prefix edits and, when applicable, exact
-path-template add/remove repairs.
+templates for protocol/root edits, S3 bucket/prefix edits when the recorded
+protocol is S3-compatible, non-S3 bucket/prefix removal when conflicting facts
+exist, and, when applicable, exact path-template add/remove repairs.
 Complete path templates such as `s3://...` or `/warehouse/...` are checked
 against the declared storage protocol, any recorded storage root, and any
 bucket/prefix metadata. A complete S3 template outside the recorded S3

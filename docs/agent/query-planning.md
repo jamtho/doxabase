@@ -726,10 +726,12 @@ bucket/prefix fields; a template that escapes the reviewed root remains
 orientation-only even when endpoint and credential references are present.
 When `storage_protocol_location_mismatch` appears, read
 `details.repair_hint` before hand-authoring a repair. It offers reviewed
-`stage_map_assertion_change` templates for fixing protocol/root/bucket/prefix
-metadata and, when a path template caused the mismatch, adding a reviewed
-replacement template or removing the conflicting exact template. Templated
-protocol/location actions name `placeholder_fields` and
+`stage_map_assertion_change` templates for fixing protocol/root metadata, S3
+bucket/prefix metadata when the recorded protocol is S3-compatible, and, when a
+path template caused the mismatch, adding a reviewed replacement template or
+removing the conflicting exact template. For non-S3 storage, existing
+bucket/prefix facts appear as removal actions rather than new bucket/prefix
+setters. Templated protocol/location actions name `placeholder_fields` and
 `reviewed_value_fields` for the reviewed value to copy into the call.
 
 Database candidates use the generic draft-plan shape, but a clean

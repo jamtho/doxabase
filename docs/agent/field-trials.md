@@ -4205,6 +4205,13 @@ few useful gaps:
   still required agents to infer the lineage inspection route from fields such
   as `restaged_by` and `applied_by`. Graph-version rows with apply/restage
   links now include a row-local `describe_revision_lineage` suggested action.
+- A local query-planning repair trial found filesystem path-containment
+  mismatches were offering generic S3 bucket/key setter actions even when the
+  useful repair was to add a reviewed inside-root path template and remove the
+  conflicting exact template. Protocol/location repair hints now only offer
+  bucket/key setters for currently S3-compatible storage; non-S3 storage keeps
+  protocol/root review, path-template repair actions, and removal actions for
+  already-recorded conflicting bucket/key facts.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
