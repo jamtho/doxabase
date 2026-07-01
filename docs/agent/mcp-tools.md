@@ -1277,7 +1277,9 @@ datasets that already have storage access resources; pass
 route will not create duplicate query target candidates. When the repair comes
 from a profile draft's `query_context_review` lane, pass
 `profile_route_sources=[query_action.source_query_context]` so profile insight
-review bundles can mark the staged repair as a direct query-context action.
+review bundles can mark the staged repair as a direct query-context action. If
+that profile draft used sampled evidence, the route source carries its sampled
+evidence caution into generic staged exports as well.
 
 ### doxabase.stage_query_physical_layout_repair
 

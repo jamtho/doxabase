@@ -34118,6 +34118,86 @@ def test_query_storage_repair_profile_route_sources_close_query_lane(
     }
 
 
+def test_query_storage_repair_profile_route_sources_preserve_sample_caution(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-query-sample#"
+    dataset = f"{base}Tickets"
+    column = f"{base}TicketsStatus"
+    evidence = f"{base}TicketsSampleProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Tickets",
+        is_table=True,
+        row_count_snapshot=1000,
+        path_templates=["tickets/current/*.csv"],
+    )
+    db.record_map_physical_layout(
+        f"{base}TicketsCsvLayout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        datasets=[dataset],
+    )
+    db.record_map_column(column, table_iri=dataset, column_name="status")
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Tickets sampled profile pass.",
+        evidence_summary="Tickets sampled profile evidence.",
+        evidence_sources=["test://tickets/sample"],
+        shared_evidence_iri=evidence,
+        sample_size=40,
+        sample_scope="Sampled partition rows; not the full Tickets table.",
+        sample_method="DuckDB sampled partition profile.",
+        row_count=40,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": column,
+                "column_name": "status",
+                "summary": "Status contained nulls in the sample.",
+                "null_count": 3,
+            }
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.sampled_evidence_caution is not None
+    query_action = draft.suggested_next_action_groups["query_context_review"][0]
+    assert query_action.source_query_context["profile_quality_summary"] == (
+        draft.profile_quality_summary
+    )
+    assert query_action.source_query_context["sampled_evidence_caution"] == (
+        draft.sampled_evidence_caution
+    )
+
+    repair = db.stage_query_storage_access_repair(
+        dataset,
+        f"{base}TicketsStorage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        location_kind="directory",
+        rationale="Reviewed storage route for sampled-profile query context.",
+        profile_route_sources=[query_action.source_query_context],
+    )
+    generic_path = tmp_path / "sampled-query-repair-staged-review.md"
+    generic = db.export_staged_revisions([repair.revision_iri], generic_path)
+    route_group = generic.revision_summaries[0].profile_route_groups[0]
+    assert route_group["review_lane"] == "query_context_review"
+    assert route_group["profile_quality_summaries"] == [
+        draft.profile_quality_summary
+    ]
+    assert route_group["sampled_evidence_cautions"] == [
+        draft.sampled_evidence_caution
+    ]
+    generic_text = generic_path.read_text(encoding="utf-8")
+    assert "## Profile Route Bridge" in generic_text
+    assert "Mechanical readiness is not full-scan evidence" in generic_text
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_profile_map_update_logical_only_dataset_omits_query_context_lane(
     tmp_path: Path,
 ) -> None:

@@ -462,6 +462,8 @@ sample, archive, or backfill. If this repair
 comes from a profile draft's `query_context_review` lane, pass
 `profile_route_sources=[query_action.source_query_context]` so profile insight
 review can mark the staged storage repair as the direct query-context action.
+For sampled profile drafts, that route source also carries the profile quality
+summary and sampled-evidence caution into generic staged review exports.
 Existing
 storage candidates can carry
 `pending_staged_repair_iris` and `candidate_status="already_pending"` when that

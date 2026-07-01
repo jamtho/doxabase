@@ -127,9 +127,13 @@ context action with
 insight exports treat the repair as a `direct_action`. Do the same for
 caller-authored systematisation repairs. A systematisation draft returns
 `profile_route_source_count`; for query repair helpers, confirm the stored route
-with `describe_staged_revision().profile_route_sources` if needed. The profile
-update lanes remain available for explicit review; the query lane is an
-ordering cue, not a rejection of the profile evidence.
+with `describe_staged_revision().profile_route_sources` if needed. For sampled
+profile evidence, that query-context route source also carries the draft's
+profile quality summary and sampled-evidence caution, so a generic staged
+export can still warn Markdown-only reviewers that a storage/layout repair came
+from sampled profile context. The profile update lanes remain available for
+explicit review; the query lane is an ordering cue, not a rejection of the
+profile evidence.
 The draft may not add this bridge when the dataset has no physical-query cue at
 all, for example when the query blocker is only `missing_path_template`. In that
 case use `describe_query_context` directly, add reviewed storage/path/layout

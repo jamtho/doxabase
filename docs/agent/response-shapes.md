@@ -3049,7 +3049,10 @@ also accept `profile_route_sources`. When called from a profile draft's
 `query_context_review` lane, pass
 `profile_route_sources=[query_action.source_query_context]`; the staged revision
 stores those sources and profile insight review bundles can close the
-query-context lane as a direct action.
+query-context lane as a direct action. Query-context route sources produced by
+sampled profile drafts also include `profile_quality_summary` and
+`sampled_evidence_caution`, so generic staged exports preserve the same
+evidence-scope warning for profile-routed storage/layout repairs.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
@@ -6472,7 +6475,8 @@ Bridge`; use them to connect staged rows back to profile map-update, metric,
 type, query-context, or caveat review lanes without regenerating a full profile
 insight bundle. The Markdown bridge also renders stored
 `sampled_evidence_cautions`, so generic staged exports preserve sampled-profile
-scope warnings for Markdown-only reviewers.
+scope warnings for Markdown-only reviewers, including query-context repairs
+staged from sampled profile drafts.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
 for the row's current status, such as validation repair or restage advice.

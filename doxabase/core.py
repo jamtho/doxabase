@@ -16020,6 +16020,8 @@ class DoxaBase:
                 dataset_description,
                 graph=graph,
                 evidence_iri=evidence_value,
+                profile_quality_summary=profile_quality_summary,
+                sampled_evidence_caution=sampled_evidence_caution,
             )
             if dataset_description is not None
             else []
@@ -17020,6 +17022,8 @@ class DoxaBase:
         *,
         graph: str | None,
         evidence_iri: str,
+        profile_quality_summary: Mapping[str, Any],
+        sampled_evidence_caution: str | None,
     ) -> list[SuggestedNextAction]:
         if not self._profile_query_context_has_physical_intent(dataset):
             return []
@@ -17089,6 +17093,8 @@ class DoxaBase:
                         "suggested_repair_action_group_count": (
                             context.suggested_repair_action_group_count
                         ),
+                        "profile_quality_summary": dict(profile_quality_summary),
+                        "sampled_evidence_caution": sampled_evidence_caution,
                     },
                     action,
                 ),

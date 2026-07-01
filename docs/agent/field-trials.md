@@ -3872,6 +3872,13 @@ few useful gaps:
   runs promote the reviewed real batch restage call for
   `would_restage_revision_iris`, while real batches promote deduped item-local
   continuation actions for current successors.
+- A profile-to-query bridge trial confirmed that full profile insight bundles
+  correctly close query-context repair lanes, but generic staged exports lost
+  sampled evidence cautions for storage/layout repairs staged from
+  `query_action.source_query_context`. Query-context route sources now carry
+  the draft profile quality summary and sampled-evidence caution, so generic
+  Profile Route Bridge rows warn about sampled profile scope for those repairs
+  too.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
