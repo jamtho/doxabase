@@ -319,9 +319,9 @@ record_map_relationship_tool(
 
 Endpoint specs still write ordinary `sourceDataset` / `targetDataset` edges for
 compatibility, while `describe_dataset` exposes the ordered `source_endpoints`
-and `target_endpoints` lists. Use observations, patterns, or staged
-systematisation when the relationship needs richer transform details or
-competing RDF framings beyond endpoint role/order.
+and `target_endpoints` lists. When the relationship needs reviewed filters,
+selection rules, per-output formulas, or tuple output grain, use
+`record_map_asset_transform` rather than packing those details into prose.
 
 Column-shaped aggregation relationships can carry `source_dataset`,
 `target_dataset`, `group_by_columns`, and `aggregated_columns`. Each
@@ -346,11 +346,45 @@ record_map_relationship_tool(
 )
 ```
 
-For conditional aggregates, use a project-specific aggregation-function IRI
-such as `ex:ConditionalTrueCount` and define or label it in project ontology
-when it will be reused. Put the filter condition in the function description,
-the relationship description, evidence, or a supporting pattern. There is no
-structured `filter_column` / `filter_value` field on aggregate mappings yet.
+For conditional asset-level aggregates or derivations, use
+`record_map_asset_transform` with `conditions` and `outputs`. Conditions carry a
+controlled `condition_kind` of `rc:FilterCondition` or `rc:SelectionCondition`
+and reviewed `expression` text; outputs carry `target_dataset`, optional
+`formula`, optional `function`, optional linked `conditions`, and optional
+`tuple_grain`:
+
+```python
+record_map_asset_transform_tool(
+    db,
+    iri="ex:mosaic_from_bags_and_navigation",
+    relationship_type="derivation",
+    source_endpoints=[
+        {"dataset": "ex:RawSonarBags", "role": "primary sonar input", "order": 1},
+        {"dataset": "ex:NavigationCorrections", "role": "navigation input", "order": 2},
+    ],
+    target_datasets=["ex:SurveyMosaic"],
+    conditions=[
+        {
+            "iri": "ex:valid_navigation_filter",
+            "condition_kind": "rc:FilterCondition",
+            "expression": "only pings with reviewed navigation fixes",
+        },
+    ],
+    outputs=[
+        {
+            "target_dataset": "ex:SurveyMosaic",
+            "formula": "grid corrected ping intensities into a GeoTIFF mosaic",
+            "conditions": ["ex:valid_navigation_filter"],
+            "tuple_grain": {
+                "components": [
+                    {"dataset": "ex:RawSonarBags", "role": "source survey"},
+                    {"expression": "mosaic tile coordinate", "role": "tile"},
+                ],
+            },
+        },
+    ],
+)
+```
 
 Derivation relationships can name `source_columns`, `derived_columns`,
 `derivation_function`, and `derivation_properties`. Treat those as relationship
@@ -364,8 +398,7 @@ formula.
 
 ## Grain And Row Units
 
-DoxaBase does not yet have a single generic `grain` helper or ontology pattern.
-Use the existing map signals together:
+Use the existing map signals for ordinary tabular grain:
 
 - `rowSemantics` for the broad row kind: event, snapshot, aggregate, or
   dimension.
@@ -382,9 +415,13 @@ Do not squeeze a composite grain into `entity_key`; use `entity_key` only when
 one map column really behaves as the row identity. Put the tuple-grain wording
 in the dataset description or a pattern when future agents must not miss it.
 
-If an agent needs a richer grain concept, it should say so explicitly and stage
-or document the modelling hunch rather than forcing it into a misleading
-current helper. This is an active design area for field trials.
+For non-tabular output assets or tuple grain that is not honestly a column list,
+use `record_map_asset_transform(..., outputs=[{"tuple_grain": ...}])`.
+Tuple-grain components accept exactly one of `column`, `dataset`, or
+`expression`. `column` must name a real column resource; known datasets/tables
+are rejected in that slot so agents do not mint fake columns for assets.
+`describe_dataset` exposes direct `tuple_grains` on the output asset and nested
+`transform_outputs[].tuple_grain` on the relationship.
 
 ## Limits
 

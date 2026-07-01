@@ -1075,8 +1075,9 @@ implication.
 Map authoring helpers write current-best project facts to `map`:
 `record_map_dataset()`, `record_map_column()`, `record_map_caveat()`,
 `record_map_storage_access()`, `record_map_physical_layout()`,
-`record_map_partition_scheme()`, and `record_map_relationship()`. Use them when
-observations or patterns are ready to become operating context for future
+`record_map_partition_scheme()`, `record_map_relationship()`, and
+`record_map_asset_transform()`. Use them when observations or patterns are ready
+to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing. Use physical-layout and partition helpers when path or
 layout verification belongs to one part of the executable catalog rather than
@@ -1123,6 +1124,11 @@ precedence matters for asset endpoints, pass `source_endpoints` or
 Endpoint specs also write the compatibility `sourceDataset` / `targetDataset`
 edges. Relationship column fields must point to column
 resources; known data assets, datasets, and tables are rejected in those slots.
+Use `record_map_asset_transform()` for asset-level derivations or aggregations
+that need reviewed filters, selection rules, per-output formulas, output
+functions, or tuple grain. Its tuple-grain components accept exactly one of a
+real `column`, a `dataset`, or a reviewed `expression`; do not invent fake
+columns to represent non-tabular grain.
 Dataset descriptions expose all partition columns as
 `partition_columns`; the older singular `partition_column` field remains as a
 compatibility shortcut to the first returned column. Treat `partition_columns`

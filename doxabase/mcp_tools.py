@@ -1535,6 +1535,40 @@ def record_map_relationship_tool(
     return to_dict(result)
 
 
+def record_map_asset_transform_tool(
+    db: DoxaBase,
+    iri: str,
+    relationship_type: str,
+    label: str | None = None,
+    description: str | None = None,
+    source_dataset: str | None = None,
+    target_dataset: str | None = None,
+    source_datasets: list[str] | None = None,
+    target_datasets: list[str] | None = None,
+    source_endpoints: list[dict[str, Any]] | None = None,
+    target_endpoints: list[dict[str, Any]] | None = None,
+    derivation_properties: list[str] | None = None,
+    conditions: list[dict[str, Any]] | None = None,
+    outputs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_asset_transform(
+        iri=iri,
+        relationship_type=relationship_type,  # type: ignore[arg-type]
+        label=label,
+        description=description,
+        source_dataset=source_dataset,
+        target_dataset=target_dataset,
+        source_datasets=source_datasets,
+        target_datasets=target_datasets,
+        source_endpoints=source_endpoints,
+        target_endpoints=target_endpoints,
+        derivation_properties=derivation_properties,
+        conditions=conditions,
+        outputs=outputs,
+    )
+    return to_dict(result)
+
+
 def search_tool(
     db: DoxaBase,
     query: str,

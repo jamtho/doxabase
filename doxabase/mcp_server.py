@@ -61,6 +61,7 @@ from doxabase.mcp_tools import (
     record_column_profile_tool,
     record_dataset_profile_tool,
     record_map_caveat_tool,
+    record_map_asset_transform_tool,
     record_map_column_tool,
     record_map_dataset_tool,
     record_map_partition_scheme_tool,
@@ -1646,6 +1647,41 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             referential_integrity=referential_integrity,
             derivation_function=derivation_function,
             derivation_properties=derivation_properties,
+        )
+
+    @server.tool(name="doxabase.record_map_asset_transform")
+    def record_map_asset_transform(
+        iri: str,
+        relationship_type: str,
+        label: str | None = None,
+        description: str | None = None,
+        source_dataset: str | None = None,
+        target_dataset: str | None = None,
+        source_datasets: list[str] | None = None,
+        target_datasets: list[str] | None = None,
+        source_endpoints: list[dict[str, Any]] | None = None,
+        target_endpoints: list[dict[str, Any]] | None = None,
+        derivation_properties: list[str] | None = None,
+        conditions: list[dict[str, Any]] | None = None,
+        outputs: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Record or update an asset-level transform with filters, formulas, and tuple grain."""
+
+        return record_map_asset_transform_tool(
+            db,
+            iri=iri,
+            relationship_type=relationship_type,
+            label=label,
+            description=description,
+            source_dataset=source_dataset,
+            target_dataset=target_dataset,
+            source_datasets=source_datasets,
+            target_datasets=target_datasets,
+            source_endpoints=source_endpoints,
+            target_endpoints=target_endpoints,
+            derivation_properties=derivation_properties,
+            conditions=conditions,
+            outputs=outputs,
         )
 
     @server.tool(name="doxabase.search")

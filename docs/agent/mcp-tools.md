@@ -1640,6 +1640,25 @@ relationship descriptions expose `relationship_kind` as the RDF class IRI and
 Column fields must point to column resources; known data assets, datasets, and
 tables are rejected in those slots.
 
+`doxabase.record_map_asset_transform`
+
+Records or updates an asset-level derivation or aggregation with reviewed
+transform details. Use it when endpoint role/order is not enough and the map
+needs durable filters, selection rules, per-output formulas, output functions,
+or tuple grain. `relationship_type` must be `derivation` or `aggregation`; the
+helper accepts the same `source_dataset`, `target_dataset`, `source_datasets`,
+`target_datasets`, `source_endpoints`, `target_endpoints`, and
+`derivation_properties` arguments as `record_map_relationship`.
+
+`conditions[]` entries accept optional `iri`, `label`, `description`,
+controlled `condition_kind` (`rc:FilterCondition` or `rc:SelectionCondition`),
+required reviewed `expression`, optional `expression_language`, and optional
+`applies_to_datasets` / `applies_to_endpoints`. `outputs[]` entries require
+`target_dataset` and can carry `role`, `formula`, `expression_language`,
+`function`, linked `conditions`, and a `tuple_grain`. Tuple grain components
+accept exactly one of `column`, `dataset`, or `expression`; `column` must be an
+actual column resource, not a dataset/table asset.
+
 `doxabase.record_graph_revision`
 
 Records revision metadata in the `history` graph: changed graph roles, summary,

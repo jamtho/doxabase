@@ -3649,10 +3649,16 @@ few useful gaps:
   supporting observations, patterns, and staged anchors. It also found helper
   validation lag: project-specific `derivation_properties` could be written even
   though SHACL only accepts `rc:Deterministic`, `rc:Invertible`, and `rc:Lossy`;
-  the map helper now rejects those upfront. The larger product gap remains:
-  transform filters, per-output formulas, and tuple grain still collapse into
-  prose or staged custom RDF, so a future asset-level transform/grain primitive
-  should be tested before more helper-specific polish.
+  the map helper now rejects those upfront. The follow-up
+  `record_map_asset_transform` helper now covers reviewed transform conditions,
+  per-output formulas/functions, and tuple grain without fake columns; future
+  trials should test whether this is enough for awkward non-tabular and
+  mixed-asset workflow handoffs before adding more shape-specific fields. A
+  follow-up smoke trial using MCP-callable Python wrappers on a scratch capsule
+  passed for non-tabular aggregation assets with ordered endpoints, a selection
+  condition, output formula/function, tuple grain, `describe_dataset`, context
+  slicing, and SHACL validation; the only observed friction was response-shape
+  convention clarity, now noted in `response-shapes.md`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

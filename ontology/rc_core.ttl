@@ -322,6 +322,21 @@ rc:RelationshipEndpointDirection a rdfs:Class ;
 rc:AggregatedColumn a rdfs:Class ;
     rdfs:comment "A per-column mapping inside an aggregation relationship." .
 
+rc:TransformCondition a rdfs:Class ;
+    rdfs:comment "A reviewed condition, filter, or selection rule attached to an asset-level transform relationship." .
+
+rc:TransformConditionKind a rdfs:Class ;
+    rdfs:comment "A controlled kind of transform condition." .
+
+rc:TransformOutput a rdfs:Class ;
+    rdfs:comment "A per-output mapping for an asset-level transform relationship, including formula and output grain." .
+
+rc:TupleGrain a rdfs:Class ;
+    rdfs:comment "A reviewed tuple-valued grain for an asset or transform output." .
+
+rc:GrainComponent a rdfs:Class ;
+    rdfs:comment "One ordered component of a tuple grain, expressed as a column, dataset, or reviewed expression." .
+
 rc:Constraint a rdfs:Class ;
     rdfs:comment "A project-level expectation, invariant, or rule that may be checked or cited." .
 
@@ -447,6 +462,104 @@ rc:withinGroupOrdering a rdf:Property ;
     rdfs:range rc:Column ;
     rdfs:comment "A column that defines ordering within groups for an order-sensitive aggregation." .
 
+rc:hasTransformCondition a rdf:Property ;
+    rdfs:domain rc:Relationship ;
+    rdfs:range rc:TransformCondition ;
+    rdfs:comment "Links a transform relationship to a reviewed condition, filter, or selection rule." .
+
+rc:conditionKind a rdf:Property ;
+    rdfs:domain rc:TransformCondition ;
+    rdfs:range rc:TransformConditionKind ;
+    rdfs:comment "The controlled kind of a transform condition." .
+
+rc:expressionText a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed expression text for a transform condition or mapping formula." .
+
+rc:expressionLanguage a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The language or notation used for expression text." .
+
+rc:appliesToDataset a rdf:Property ;
+    rdfs:domain rc:TransformCondition ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The dataset or data asset a transform condition applies to." .
+
+rc:appliesToEndpoint a rdf:Property ;
+    rdfs:domain rc:TransformCondition ;
+    rdfs:range rc:RelationshipEndpoint ;
+    rdfs:comment "The structured relationship endpoint a transform condition applies to." .
+
+rc:hasTransformOutput a rdf:Property ;
+    rdfs:domain rc:Relationship ;
+    rdfs:range rc:TransformOutput ;
+    rdfs:comment "Links a transform relationship to a reviewed per-output mapping." .
+
+rc:outputDataset a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The output dataset or data asset produced by a transform output mapping." .
+
+rc:outputRole a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed role text for a transform output." .
+
+rc:outputFormula a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed formula or recipe text for a transform output." .
+
+rc:outputFunction a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A URI identifying the transform function used for one output." .
+
+rc:outputCondition a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range rc:TransformCondition ;
+    rdfs:comment "A condition that constrains one transform output." .
+
+rc:outputGrain a rdf:Property ;
+    rdfs:domain rc:TransformOutput ;
+    rdfs:range rc:TupleGrain ;
+    rdfs:comment "The tuple grain of one transform output." .
+
+rc:hasGrain a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:TupleGrain ;
+    rdfs:comment "Links a data asset to a reviewed tuple grain." .
+
+rc:hasGrainComponent a rdf:Property ;
+    rdfs:domain rc:TupleGrain ;
+    rdfs:range rc:GrainComponent ;
+    rdfs:comment "Links a tuple grain to one ordered component." .
+
+rc:grainOrder a rdf:Property ;
+    rdfs:domain rc:GrainComponent ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "One-based order for a tuple grain component." .
+
+rc:grainRole a rdf:Property ;
+    rdfs:domain rc:GrainComponent ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed role text for a tuple grain component." .
+
+rc:grainColumn a rdf:Property ;
+    rdfs:domain rc:GrainComponent ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column-valued tuple grain component." .
+
+rc:grainDataset a rdf:Property ;
+    rdfs:domain rc:GrainComponent ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "A dataset- or asset-valued tuple grain component." .
+
+rc:grainExpression a rdf:Property ;
+    rdfs:domain rc:GrainComponent ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed expression text for a tuple grain component." .
+
 rc:computationalProfile a rdf:Property ;
     rdfs:range rc:ComputationalProfile ;
     rdfs:comment "The expected cost or method needed to verify a constraint or claim." .
@@ -479,6 +592,12 @@ rc:Invertible a rc:DerivationProperty ;
 
 rc:Lossy a rc:DerivationProperty ;
     rdfs:comment "The derivation loses information." .
+
+rc:FilterCondition a rc:TransformConditionKind ;
+    rdfs:comment "A condition that filters input or output records in a transform." .
+
+rc:SelectionCondition a rc:TransformConditionKind ;
+    rdfs:comment "A condition that selects cases, branches, or assets in a transform." .
 
 rc:SourceEndpoint a rc:RelationshipEndpointDirection ;
     rdfs:label "source endpoint" .

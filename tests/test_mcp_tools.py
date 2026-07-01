@@ -61,6 +61,7 @@ from doxabase.mcp_tools import (
     record_claim_reconsideration_tool,
     record_column_profile_tool,
     record_dataset_profile_tool,
+    record_map_asset_transform_tool,
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -186,6 +187,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_physical_layout" in tool_names
     assert "doxabase.record_map_partition_scheme" in tool_names
     assert "doxabase.record_map_relationship" in tool_names
+    assert "doxabase.record_map_asset_transform" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.search_staged_patch_payloads" in tool_names
     assert "doxabase.export_graph" in tool_names
@@ -11228,6 +11230,75 @@ def test_record_map_relationship_tool_accepts_asset_level_endpoints(
         and related["relationship_kind"] == RC + "Derivation"
         for related in description["related_datasets"]
     )
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_map_asset_transform_tool_serializes_transform_details(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-transform#"
+    raw = f"{base}raw_packets"
+    correction = f"{base}navigation_corrections"
+    mosaic = f"{base}survey_mosaic"
+    condition = f"{base}valid_navigation_filter"
+
+    record_map_dataset_tool(db, iri=raw, label="Raw packets")
+    record_map_dataset_tool(db, iri=correction, label="Navigation corrections")
+    record_map_dataset_tool(db, iri=mosaic, label="Survey mosaic")
+    result = record_map_asset_transform_tool(
+        db,
+        iri=f"{base}mosaic_derivation",
+        relationship_type="derivation",
+        label="mosaic derivation",
+        source_endpoints=[
+            {
+                "dataset": raw,
+                "role": "primary packet input",
+                "order": 1,
+            },
+            {
+                "dataset": correction,
+                "role": "navigation correction input",
+                "order": 2,
+            },
+        ],
+        target_datasets=[mosaic],
+        conditions=[
+            {
+                "iri": condition,
+                "condition_kind": "rc:FilterCondition",
+                "expression": "valid navigation fixes only",
+            }
+        ],
+        outputs=[
+            {
+                "target_dataset": mosaic,
+                "formula": "apply navigation corrections and rasterize packets",
+                "conditions": [condition],
+                "tuple_grain": {
+                    "components": [
+                        {"dataset": raw, "role": "source survey"},
+                        {"expression": "tile coordinate", "role": "tile"},
+                    ]
+                },
+            }
+        ],
+    )
+
+    assert result["resource_type"] == RC + "Derivation"
+    description = describe_dataset_tool(db, iri=mosaic)
+    assert len(description["tuple_grains"]) == 1
+    relationship = description["relationships"][0]
+    assert relationship["transform_conditions"][0]["expression"] == (
+        "valid navigation fixes only"
+    )
+    output = relationship["transform_outputs"][0]
+    assert output["target_dataset"]["iri"] == mosaic
+    assert output["formula"] == "apply navigation corrections and rasterize packets"
+    assert output["conditions"][0]["iri"] == condition
+    assert output["tuple_grain"]["components"][0]["dataset"]["iri"] == raw
+    assert output["tuple_grain"]["components"][1]["expression"] == "tile coordinate"
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

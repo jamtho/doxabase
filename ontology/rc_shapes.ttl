@@ -364,6 +364,151 @@ rc:AggregatedColumnShape a sh:NodeShape ;
         sh:message "withinGroupOrdering should be a named column resource." ;
     ] .
 
+rc:TransformConditionShape a sh:NodeShape ;
+    sh:targetClass rc:TransformCondition ;
+    sh:property [
+        sh:path rc:conditionKind ;
+        sh:maxCount 1 ;
+        sh:in ( rc:FilterCondition rc:SelectionCondition ) ;
+        sh:message "conditionKind must be FilterCondition or SelectionCondition if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:expressionText ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "TransformCondition must carry exactly one expressionText string." ;
+    ] ;
+    sh:property [
+        sh:path rc:expressionLanguage ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "expressionLanguage must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:appliesToDataset ;
+        sh:nodeKind sh:IRI ;
+        sh:message "appliesToDataset values should be named data assets." ;
+    ] ;
+    sh:property [
+        sh:path rc:appliesToEndpoint ;
+        sh:nodeKind sh:IRI ;
+        sh:message "appliesToEndpoint values should be named relationship endpoints." ;
+    ] .
+
+rc:TransformOutputShape a sh:NodeShape ;
+    sh:targetClass rc:TransformOutput ;
+    sh:property [
+        sh:path rc:outputDataset ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "TransformOutput must name exactly one outputDataset." ;
+    ] ;
+    sh:property [
+        sh:path rc:outputRole ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "outputRole must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:outputFormula ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "outputFormula must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:expressionLanguage ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "expressionLanguage must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:outputFunction ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "outputFunction should be a named resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:outputCondition ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:TransformCondition ;
+        sh:message "outputCondition must point to a TransformCondition." ;
+    ] ;
+    sh:property [
+        sh:path rc:outputGrain ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:TupleGrain ;
+        sh:message "outputGrain must point to one TupleGrain if declared." ;
+    ] .
+
+rc:TupleGrainShape a sh:NodeShape ;
+    sh:targetClass rc:TupleGrain ;
+    sh:property [
+        sh:path rc:hasGrainComponent ;
+        sh:minCount 2 ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:GrainComponent ;
+        sh:message "TupleGrain must have at least two named GrainComponent values." ;
+    ] .
+
+rc:GrainComponentShape a sh:NodeShape ;
+    sh:targetClass rc:GrainComponent ;
+    sh:property [
+        sh:path rc:grainOrder ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "GrainComponent must carry one positive grainOrder." ;
+    ] ;
+    sh:property [
+        sh:path rc:grainRole ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "grainRole must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:grainColumn ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "grainColumn should be a named column resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:grainDataset ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "grainDataset should be a named data asset resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:grainExpression ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "grainExpression must be a single string if declared." ;
+    ] ;
+    sh:or (
+        [
+            sh:property [
+                sh:path rc:grainColumn ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path rc:grainDataset ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path rc:grainExpression ;
+                sh:minCount 1 ;
+            ]
+        ]
+    ) ;
+    sh:message "GrainComponent must include a grainColumn, grainDataset, or grainExpression." .
+
 rc:RelationshipColumnReferenceShape a sh:NodeShape ;
     sh:targetObjectsOf
         rc:foreignKeyFrom,
@@ -374,7 +519,8 @@ rc:RelationshipColumnReferenceShape a sh:NodeShape ;
         rc:groupByColumn,
         rc:targetColumn,
         rc:aggregationSourceColumn,
-        rc:withinGroupOrdering ;
+        rc:withinGroupOrdering,
+        rc:grainColumn ;
     sh:not [
         sh:class rc:DataAsset
     ] ;

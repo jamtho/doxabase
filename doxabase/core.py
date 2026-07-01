@@ -170,6 +170,11 @@ DERIVATION_PROPERTIES = (
     "rc:Lossy",
 )
 
+TRANSFORM_CONDITION_KINDS = (
+    "rc:FilterCondition",
+    "rc:SelectionCondition",
+)
+
 CONFIDENCE_LEVELS = (
     "rc:LowConfidence",
     "rc:MediumConfidence",
@@ -3011,6 +3016,52 @@ class RelationshipEndpointDescription:
 
 
 @dataclass(frozen=True)
+class TransformConditionDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    condition_kind: ResourceSummary | None
+    expression: str | None
+    expression_language: str | None
+    applies_to_datasets: list[ResourceSummary]
+    applies_to_endpoints: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
+class GrainComponentDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    order: int | None
+    role: str | None
+    column: ResourceSummary | None
+    dataset: ResourceSummary | None
+    expression: str | None
+
+
+@dataclass(frozen=True)
+class TupleGrainDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    components: list[GrainComponentDescription]
+
+
+@dataclass(frozen=True)
+class TransformOutputDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    target_dataset: ResourceSummary | None
+    role: str | None
+    formula: str | None
+    expression_language: str | None
+    function: ResourceSummary | None
+    conditions: list[TransformConditionDescription]
+    tuple_grain: TupleGrainDescription | None
+
+
+@dataclass(frozen=True)
 class RelationshipDescription:
     iri: str
     label: str | None
@@ -3037,6 +3088,8 @@ class RelationshipDescription:
     derivation_properties: list[ResourceSummary]
     group_by_columns: list[ResourceSummary]
     aggregated_columns: list[AggregatedColumnDescription]
+    transform_conditions: list[TransformConditionDescription]
+    transform_outputs: list[TransformOutputDescription]
     source_caveats: list[CaveatDescription]
 
 
@@ -3456,6 +3509,7 @@ class DatasetDescription:
     related_datasets: list[RelatedDatasetDescription]
     related_dataset_groups: list[RelatedDatasetGroup]
     relationships: list[RelationshipDescription]
+    tuple_grains: list[TupleGrainDescription]
     linked_patterns: list[ResourceSummary]
     linked_pattern_reasons: list[LinkedPatternReason]
 
@@ -11942,6 +11996,80 @@ class DoxaBase:
                     source_iri=endpoint.iri,
                     depth=depth + 2,
                 )
+            for condition in relationship.transform_conditions:
+                add_resource(
+                    condition.iri,
+                    "transform_condition",
+                    "transform condition",
+                    source_iri=relationship.iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    condition.condition_kind,
+                    "transform_condition_kind",
+                    "transform condition kind",
+                    source_iri=condition.iri,
+                    depth=depth + 2,
+                )
+                for summary in (
+                    *condition.applies_to_datasets,
+                    *condition.applies_to_endpoints,
+                ):
+                    add_summary(
+                        summary,
+                        "transform_condition_scope",
+                        "transform condition scope",
+                        source_iri=condition.iri,
+                        depth=depth + 2,
+                    )
+            for output in relationship.transform_outputs:
+                add_resource(
+                    output.iri,
+                    "transform_output",
+                    "transform output",
+                    source_iri=relationship.iri,
+                    depth=depth + 1,
+                )
+                for summary in (output.target_dataset, output.function):
+                    add_summary(
+                        summary,
+                        "transform_output_resource",
+                        "transform output resource",
+                        source_iri=output.iri,
+                        depth=depth + 2,
+                    )
+                for condition in output.conditions:
+                    add_resource(
+                        condition.iri,
+                        "transform_output_condition",
+                        "transform output condition",
+                        source_iri=output.iri,
+                        depth=depth + 2,
+                    )
+                if output.tuple_grain is not None:
+                    add_resource(
+                        output.tuple_grain.iri,
+                        "tuple_grain",
+                        "tuple grain",
+                        source_iri=output.iri,
+                        depth=depth + 2,
+                    )
+                    for component in output.tuple_grain.components:
+                        add_resource(
+                            component.iri,
+                            "grain_component",
+                            "grain component",
+                            source_iri=output.tuple_grain.iri,
+                            depth=depth + 3,
+                        )
+                        for summary in (component.column, component.dataset):
+                            add_summary(
+                                summary,
+                                "grain_component_resource",
+                                "grain component resource",
+                                source_iri=component.iri,
+                                depth=depth + 4,
+                            )
 
         def add_dataset(dataset_iri: str, source_iri: str | None, depth: int) -> None:
             add_resource(
@@ -12179,6 +12307,30 @@ class DoxaBase:
                         )
             for relationship in dataset.relationships:
                 add_relationship(relationship, depth + 1)
+            for grain in dataset.tuple_grains:
+                add_resource(
+                    grain.iri,
+                    "tuple_grain",
+                    "tuple grain",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                for component in grain.components:
+                    add_resource(
+                        component.iri,
+                        "grain_component",
+                        "grain component",
+                        source_iri=grain.iri,
+                        depth=depth + 2,
+                    )
+                    for summary in (component.column, component.dataset):
+                        add_summary(
+                            summary,
+                            "grain_component_resource",
+                            "grain component resource",
+                            source_iri=component.iri,
+                            depth=depth + 3,
+                        )
             for reason in dataset.linked_pattern_reasons:
                 for group in reason.match_groups:
                     add_summary(
@@ -15005,11 +15157,22 @@ class DoxaBase:
             data_graphs,
             lookup_graphs,
         )
+        tuple_grains = self._tuple_grains_for_dataset(
+            dataset_iri,
+            data_graphs,
+            lookup_graphs,
+        )
         linked_pattern_targets = [
             dataset_iri,
             *column_iris,
             *caveat_iris,
             *(relationship.iri for relationship in relationships),
+            *(grain.iri for grain in tuple_grains),
+            *(
+                component.iri
+                for grain in tuple_grains
+                for component in grain.components
+            ),
         ]
         related_datasets = self._related_datasets(
             dataset_iri,
@@ -15141,6 +15304,7 @@ class DoxaBase:
                 relationships,
             ),
             relationships=relationships,
+            tuple_grains=tuple_grains,
             linked_patterns=self._linked_patterns_for_dataset(
                 linked_pattern_targets,
             ),
@@ -33138,6 +33302,309 @@ class DoxaBase:
             triples=triples,
         )
 
+    def record_map_asset_transform(
+        self,
+        iri: str,
+        *,
+        relationship_type: TypingLiteral["derivation", "aggregation"],
+        label: str | None = None,
+        description: str | None = None,
+        source_dataset: str | None = None,
+        target_dataset: str | None = None,
+        source_datasets: Iterable[str] | str | None = None,
+        target_datasets: Iterable[str] | str | None = None,
+        source_endpoints: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        target_endpoints: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        derivation_properties: Iterable[str] | str | None = None,
+        conditions: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        outputs: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+    ) -> MapResourceRecord:
+        if relationship_type not in {"derivation", "aggregation"}:
+            raise DoxaBaseError(
+                "relationship_type must be 'derivation' or 'aggregation' for asset transforms"
+            )
+        relationship_iri = self._required_iri("iri", iri)
+        condition_specs = self._normalise_transform_condition_specs(
+            conditions,
+            relationship_iri=relationship_iri,
+        )
+        output_specs = self._normalise_transform_output_specs(
+            outputs,
+            relationship_iri=relationship_iri,
+        )
+        self._validate_transform_output_condition_refs(condition_specs, output_specs)
+        relationship_record = self.record_map_relationship(
+            relationship_iri,
+            relationship_type=relationship_type,
+            label=label,
+            description=description,
+            source_dataset=source_dataset,
+            target_dataset=target_dataset,
+            source_datasets=source_datasets,
+            target_datasets=target_datasets,
+            source_endpoints=source_endpoints,
+            target_endpoints=target_endpoints,
+            derivation_properties=derivation_properties,
+        )
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(relationship_iri)
+        for condition in condition_specs:
+            condition_ref = URIRef(condition["iri"])
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasTransformCondition")),
+                    condition_ref,
+                )
+            )
+            graph.add(
+                (
+                    condition_ref,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:TransformCondition")),
+                )
+            )
+            self._add_optional_literal(
+                graph,
+                condition_ref,
+                str(RDFS.label),
+                condition["label"],
+            )
+            self._add_optional_literal(
+                graph,
+                condition_ref,
+                str(RDFS.comment),
+                condition["description"],
+            )
+            if condition["condition_kind"] is not None:
+                graph.add(
+                    (
+                        condition_ref,
+                        URIRef(self.expand_iri("rc:conditionKind")),
+                        URIRef(condition["condition_kind"]),
+                    )
+                )
+            graph.add(
+                (
+                    condition_ref,
+                    URIRef(self.expand_iri("rc:expressionText")),
+                    Literal(condition["expression"]),
+                )
+            )
+            self._add_optional_literal(
+                graph,
+                condition_ref,
+                "rc:expressionLanguage",
+                condition["expression_language"],
+            )
+            for dataset in condition["applies_to_datasets"]:
+                graph.add(
+                    (
+                        condition_ref,
+                        URIRef(self.expand_iri("rc:appliesToDataset")),
+                        self._resource_ref(
+                            "conditions.applies_to_datasets",
+                            dataset,
+                        ),
+                    )
+                )
+            for endpoint in condition["applies_to_endpoints"]:
+                graph.add(
+                    (
+                        condition_ref,
+                        URIRef(self.expand_iri("rc:appliesToEndpoint")),
+                        self._resource_ref(
+                            "conditions.applies_to_endpoints",
+                            endpoint,
+                        ),
+                    )
+                )
+
+        for output in output_specs:
+            output_ref = URIRef(output["iri"])
+            target_dataset_ref = self._resource_ref(
+                "outputs.target_dataset",
+                output["target_dataset"],
+            )
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasTransformOutput")),
+                    output_ref,
+                )
+            )
+            graph.add(
+                (
+                    output_ref,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:TransformOutput")),
+                )
+            )
+            self._add_optional_literal(graph, output_ref, str(RDFS.label), output["label"])
+            self._add_optional_literal(
+                graph,
+                output_ref,
+                str(RDFS.comment),
+                output["description"],
+            )
+            graph.add(
+                (
+                    output_ref,
+                    URIRef(self.expand_iri("rc:outputDataset")),
+                    target_dataset_ref,
+                )
+            )
+            self._add_optional_literal(
+                graph,
+                output_ref,
+                "rc:outputRole",
+                output["role"],
+            )
+            self._add_optional_literal(
+                graph,
+                output_ref,
+                "rc:outputFormula",
+                output["formula"],
+            )
+            self._add_optional_literal(
+                graph,
+                output_ref,
+                "rc:expressionLanguage",
+                output["expression_language"],
+            )
+            if output["function"] is not None:
+                graph.add(
+                    (
+                        output_ref,
+                        URIRef(self.expand_iri("rc:outputFunction")),
+                        self._resource_ref("outputs.function", output["function"]),
+                    )
+                )
+            for condition in output["conditions"]:
+                graph.add(
+                    (
+                        output_ref,
+                        URIRef(self.expand_iri("rc:outputCondition")),
+                        self._resource_ref("outputs.conditions", condition),
+                    )
+                )
+            tuple_grain = output["tuple_grain"]
+            if tuple_grain is not None:
+                grain_ref = URIRef(tuple_grain["iri"])
+                graph.add(
+                    (
+                        output_ref,
+                        URIRef(self.expand_iri("rc:outputGrain")),
+                        grain_ref,
+                    )
+                )
+                graph.add(
+                    (
+                        target_dataset_ref,
+                        URIRef(self.expand_iri("rc:hasGrain")),
+                        grain_ref,
+                    )
+                )
+                graph.add(
+                    (
+                        grain_ref,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:TupleGrain")),
+                    )
+                )
+                self._add_optional_literal(
+                    graph,
+                    grain_ref,
+                    str(RDFS.label),
+                    tuple_grain["label"],
+                )
+                self._add_optional_literal(
+                    graph,
+                    grain_ref,
+                    str(RDFS.comment),
+                    tuple_grain["description"],
+                )
+                for component in tuple_grain["components"]:
+                    component_ref = URIRef(component["iri"])
+                    graph.add(
+                        (
+                            grain_ref,
+                            URIRef(self.expand_iri("rc:hasGrainComponent")),
+                            component_ref,
+                        )
+                    )
+                    graph.add(
+                        (
+                            component_ref,
+                            RDF.type,
+                            URIRef(self.expand_iri("rc:GrainComponent")),
+                        )
+                    )
+                    self._add_optional_literal(
+                        graph,
+                        component_ref,
+                        str(RDFS.label),
+                        component["label"],
+                    )
+                    self._add_optional_literal(
+                        graph,
+                        component_ref,
+                        str(RDFS.comment),
+                        component["description"],
+                    )
+                    graph.add(
+                        (
+                            component_ref,
+                            URIRef(self.expand_iri("rc:grainOrder")),
+                            Literal(component["order"], datatype=XSD.integer),
+                        )
+                    )
+                    self._add_optional_literal(
+                        graph,
+                        component_ref,
+                        "rc:grainRole",
+                        component["role"],
+                    )
+                    if component["column"] is not None:
+                        graph.add(
+                            (
+                                component_ref,
+                                URIRef(self.expand_iri("rc:grainColumn")),
+                                self._resource_ref(
+                                    "tuple_grain.components.column",
+                                    component["column"],
+                                ),
+                            )
+                        )
+                    if component["dataset"] is not None:
+                        graph.add(
+                            (
+                                component_ref,
+                                URIRef(self.expand_iri("rc:grainDataset")),
+                                self._resource_ref(
+                                    "tuple_grain.components.dataset",
+                                    component["dataset"],
+                                ),
+                            )
+                        )
+                    self._add_optional_literal(
+                        graph,
+                        component_ref,
+                        "rc:grainExpression",
+                        component["expression"],
+                    )
+
+        self._delete_existing_asset_transform_triples(relationship_iri)
+        transform_triples = self._insert_graph("map", graph)
+        return MapResourceRecord(
+            iri=relationship_iri,
+            resource_type=relationship_record.resource_type,
+            graph="map",
+            triples=relationship_record.triples + transform_triples,
+        )
+
     def _relationship_endpoint_values(
         self,
         plural_name: str,
@@ -33149,6 +33616,396 @@ class DoxaBase:
             values.extend(self._string_values(plural_name, singular_value))
         values.extend(self._string_values(plural_name, plural_values))
         return list(dict.fromkeys(values))
+
+    def _normalise_transform_condition_specs(
+        self,
+        values: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        *,
+        relationship_iri: str,
+    ) -> list[dict[str, Any]]:
+        raw_values = self._mapping_list("conditions", values)
+        specs: list[dict[str, Any]] = []
+        for index, item in enumerate(raw_values, start=1):
+            item_name = f"conditions[{index}]"
+            expression = self._mapping_string(
+                item_name,
+                item,
+                "expression",
+                "expression_text",
+                "expressionText",
+                required=True,
+            )
+            assert expression is not None
+            condition_kind = self._mapping_string(
+                item_name,
+                item,
+                "condition_kind",
+                "conditionKind",
+                "kind",
+            )
+            condition_kind_iri = (
+                str(
+                    self._controlled_resource_ref(
+                        f"{item_name}.condition_kind",
+                        condition_kind,
+                        TRANSFORM_CONDITION_KINDS,
+                    )
+                )
+                if condition_kind is not None
+                else None
+            )
+            condition_iri = self._mapping_string(item_name, item, "iri", "id")
+            applies_to_datasets = self._string_values(
+                f"{item_name}.applies_to_datasets",
+                self._mapping_value(
+                    item,
+                    "applies_to_datasets",
+                    "appliesToDatasets",
+                    "applies_to_dataset",
+                    "appliesToDataset",
+                    "datasets",
+                ),
+            )
+            applies_to_endpoints = self._string_values(
+                f"{item_name}.applies_to_endpoints",
+                self._mapping_value(
+                    item,
+                    "applies_to_endpoints",
+                    "appliesToEndpoints",
+                    "applies_to_endpoint",
+                    "appliesToEndpoint",
+                    "endpoints",
+                ),
+            )
+            self._validate_resource_values(
+                f"{item_name}.applies_to_datasets",
+                applies_to_datasets,
+            )
+            self._validate_resource_values(
+                f"{item_name}.applies_to_endpoints",
+                applies_to_endpoints,
+            )
+            specs.append(
+                {
+                    "iri": (
+                        self._required_iri(f"{item_name}.iri", condition_iri)
+                        if condition_iri is not None
+                        else f"{relationship_iri}/condition/{index}"
+                    ),
+                    "label": self._mapping_string(item_name, item, "label"),
+                    "description": self._mapping_string(
+                        item_name,
+                        item,
+                        "description",
+                        "comment",
+                    ),
+                    "condition_kind": condition_kind_iri,
+                    "expression": expression,
+                    "expression_language": self._mapping_string(
+                        item_name,
+                        item,
+                        "expression_language",
+                        "expressionLanguage",
+                        "language",
+                    ),
+                    "applies_to_datasets": applies_to_datasets,
+                    "applies_to_endpoints": applies_to_endpoints,
+                }
+            )
+        return specs
+
+    def _normalise_transform_output_specs(
+        self,
+        values: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        *,
+        relationship_iri: str,
+    ) -> list[dict[str, Any]]:
+        raw_values = self._mapping_list("outputs", values)
+        specs: list[dict[str, Any]] = []
+        for index, item in enumerate(raw_values, start=1):
+            item_name = f"outputs[{index}]"
+            target_dataset = self._mapping_string(
+                item_name,
+                item,
+                "target_dataset",
+                "targetDataset",
+                "output_dataset",
+                "outputDataset",
+                "dataset",
+                required=True,
+            )
+            assert target_dataset is not None
+            output_iri = self._mapping_string(item_name, item, "iri", "id")
+            output_iri_value = (
+                self._required_iri(f"{item_name}.iri", output_iri)
+                if output_iri is not None
+                else f"{relationship_iri}/output/{index}"
+            )
+            function = self._mapping_string(
+                item_name,
+                item,
+                "function",
+                "output_function",
+                "outputFunction",
+            )
+            condition_values = self._string_values(
+                f"{item_name}.conditions",
+                self._mapping_value(
+                    item,
+                    "conditions",
+                    "condition_iris",
+                    "conditionIris",
+                    "condition_iri",
+                    "conditionIri",
+                    "condition",
+                ),
+            )
+            self._resource_ref(f"{item_name}.target_dataset", target_dataset)
+            if function is not None:
+                self._resource_ref(f"{item_name}.function", function)
+            self._validate_resource_values(f"{item_name}.conditions", condition_values)
+            specs.append(
+                {
+                    "iri": output_iri_value,
+                    "label": self._mapping_string(item_name, item, "label"),
+                    "description": self._mapping_string(
+                        item_name,
+                        item,
+                        "description",
+                        "comment",
+                    ),
+                    "target_dataset": target_dataset,
+                    "role": self._mapping_string(
+                        item_name,
+                        item,
+                        "role",
+                        "output_role",
+                        "outputRole",
+                    ),
+                    "formula": self._mapping_string(
+                        item_name,
+                        item,
+                        "formula",
+                        "output_formula",
+                        "outputFormula",
+                        "expression",
+                    ),
+                    "expression_language": self._mapping_string(
+                        item_name,
+                        item,
+                        "expression_language",
+                        "expressionLanguage",
+                        "language",
+                    ),
+                    "function": function,
+                    "conditions": condition_values,
+                    "tuple_grain": self._normalise_tuple_grain_spec(
+                        f"{item_name}.tuple_grain",
+                        self._mapping_value(
+                            item,
+                            "tuple_grain",
+                            "tupleGrain",
+                            "output_grain",
+                            "outputGrain",
+                            "grain",
+                        ),
+                        default_iri=f"{output_iri_value}/grain",
+                    ),
+                }
+            )
+        return specs
+
+    def _normalise_tuple_grain_spec(
+        self,
+        name: str,
+        value: Any,
+        *,
+        default_iri: str,
+    ) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        if not isinstance(value, MappingABC):
+            raise DoxaBaseError(f"{name} must be an object")
+        grain_iri = self._mapping_string(name, value, "iri", "id")
+        components_value = self._mapping_value(
+            value,
+            "components",
+            "grain_components",
+            "grainComponents",
+        )
+        if components_value is None:
+            raise DoxaBaseError(f"{name}.components must contain at least two entries")
+        if isinstance(components_value, (str, MappingABC)):
+            raise DoxaBaseError(f"{name}.components must be a list of objects")
+        components = list(components_value)
+        if len(components) < 2:
+            raise DoxaBaseError(f"{name}.components must contain at least two entries")
+        normalised_components: list[dict[str, Any]] = []
+        for index, component in enumerate(components, start=1):
+            component_name = f"{name}.components[{index}]"
+            if not isinstance(component, MappingABC):
+                raise DoxaBaseError(f"{component_name} must be an object")
+            order = self._mapping_value(component, "order", "grain_order", "grainOrder")
+            if order is None:
+                order = index
+            if not isinstance(order, int) or isinstance(order, bool) or order < 1:
+                raise DoxaBaseError(f"{component_name}.order must be a positive integer")
+            column = self._mapping_string(
+                component_name,
+                component,
+                "column",
+                "grain_column",
+                "grainColumn",
+            )
+            dataset = self._mapping_string(
+                component_name,
+                component,
+                "dataset",
+                "grain_dataset",
+                "grainDataset",
+            )
+            expression = self._mapping_string(
+                component_name,
+                component,
+                "expression",
+                "grain_expression",
+                "grainExpression",
+            )
+            present_values = [
+                value for value in (column, dataset, expression) if value is not None
+            ]
+            if not present_values:
+                raise DoxaBaseError(
+                    f"{component_name} requires exactly one of column, dataset, or expression"
+                )
+            if len(present_values) > 1:
+                raise DoxaBaseError(
+                    f"{component_name} must not mix column, dataset, and expression"
+                )
+            if column is not None:
+                self._validate_relationship_column_resource(
+                    f"{component_name}.column",
+                    column,
+                )
+            if dataset is not None:
+                self._resource_ref(f"{component_name}.dataset", dataset)
+            component_iri = self._mapping_string(component_name, component, "iri", "id")
+            normalised_components.append(
+                {
+                    "iri": (
+                        self._required_iri(f"{component_name}.iri", component_iri)
+                        if component_iri is not None
+                        else f"{default_iri}/component/{index}"
+                    ),
+                    "label": self._mapping_string(component_name, component, "label"),
+                    "description": self._mapping_string(
+                        component_name,
+                        component,
+                        "description",
+                        "comment",
+                    ),
+                    "order": order,
+                    "role": self._mapping_string(
+                        component_name,
+                        component,
+                        "role",
+                        "grain_role",
+                        "grainRole",
+                    ),
+                    "column": column,
+                    "dataset": dataset,
+                    "expression": expression,
+                }
+            )
+        return {
+            "iri": (
+                self._required_iri(f"{name}.iri", grain_iri)
+                if grain_iri is not None
+                else default_iri
+            ),
+            "label": self._mapping_string(name, value, "label"),
+            "description": self._mapping_string(name, value, "description", "comment"),
+            "components": normalised_components,
+        }
+
+    def _validate_transform_output_condition_refs(
+        self,
+        condition_specs: Iterable[Mapping[str, Any]],
+        output_specs: Iterable[Mapping[str, Any]],
+    ) -> None:
+        supplied_condition_iris = {
+            str(condition["iri"]) for condition in condition_specs
+        }
+        transform_condition_type = self.expand_iri("rc:TransformCondition")
+        all_graphs = self._expand_graphs(["all"])
+        for output_index, output in enumerate(output_specs, start=1):
+            for condition in output["conditions"]:
+                condition_iri = str(
+                    self._resource_ref(
+                        f"outputs[{output_index}].conditions",
+                        condition,
+                    )
+                )
+                if condition_iri in supplied_condition_iris:
+                    continue
+                if transform_condition_type in self._types_from_graphs(
+                    all_graphs,
+                    condition_iri,
+                ):
+                    continue
+                raise DoxaBaseError(
+                    f"outputs[{output_index}].conditions references "
+                    f"{condition_iri!r}, which is not a supplied or existing "
+                    "rc:TransformCondition"
+                )
+
+    def _mapping_list(
+        self,
+        name: str,
+        values: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[Mapping[str, Any]]:
+        if values is None:
+            return []
+        if isinstance(values, MappingABC):
+            return [values]
+        if isinstance(values, str):
+            raise DoxaBaseError(f"{name} must be an object or list of objects")
+        raw_values = list(values)
+        for index, value in enumerate(raw_values, start=1):
+            if not isinstance(value, MappingABC):
+                raise DoxaBaseError(f"{name}[{index}] must be an object")
+        return raw_values
+
+    @staticmethod
+    def _mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:
+        for key in keys:
+            if key in mapping:
+                return mapping[key]
+        return None
+
+    def _mapping_string(
+        self,
+        name: str,
+        mapping: Mapping[str, Any],
+        *keys: str,
+        required: bool = False,
+    ) -> str | None:
+        value = self._mapping_value(mapping, *keys)
+        if value is None:
+            if required:
+                joined_keys = " or ".join(keys)
+                raise DoxaBaseError(f"{name} requires {joined_keys}")
+            return None
+        if not isinstance(value, str):
+            joined_keys = " or ".join(keys)
+            raise DoxaBaseError(f"{name}.{joined_keys} must be a string")
+        cleaned = value.strip()
+        if not cleaned:
+            if required:
+                joined_keys = " or ".join(keys)
+                raise DoxaBaseError(f"{name} requires {joined_keys}")
+            return None
+        return cleaned
 
     def _normalise_relationship_endpoint_specs(
         self,
@@ -33267,9 +34124,8 @@ class DoxaBase:
         raise DoxaBaseError(
             f"{field_name} points to a data asset resource, not an rc:Column: "
             f"{column_iri} ({type_labels}). Use source_dataset/target_dataset "
-            "for dataset endpoints, and use observations, patterns, or staged "
-            "systematisation for asset-level derivation or aggregation until a "
-            "dedicated asset-relationship helper exists."
+            "for dataset endpoints, or record_map_asset_transform for asset-level "
+            "transform conditions, formulas, and tuple grain."
         )
 
     def _normalise_aggregated_column_specs(
@@ -33390,6 +34246,126 @@ class DoxaBase:
                 """,
                 ["map", mapping_iri, *predicates],
             )
+        self._conn.commit()
+
+    def _delete_existing_asset_transform_triples(self, relationship_iri: str) -> None:
+        condition_iris = self._objects(
+            ["map"],
+            relationship_iri,
+            "rc:hasTransformCondition",
+        )
+        output_iris = self._objects(
+            ["map"],
+            relationship_iri,
+            "rc:hasTransformOutput",
+        )
+        if not condition_iris and not output_iris:
+            return
+
+        def delete_subject_predicates(subject: str, predicates: Iterable[str]) -> None:
+            predicate_values = list(dict.fromkeys(predicates))
+            if not predicate_values:
+                return
+            placeholders = ",".join("?" for _ in predicate_values)
+            self._conn.execute(
+                f"""
+                DELETE FROM quads
+                WHERE graph = ?
+                  AND subject = ?
+                  AND predicate IN ({placeholders})
+                """,
+                ["map", subject, *predicate_values],
+            )
+
+        grain_iris: list[str] = []
+        for output_iri in output_iris:
+            output_grain_iris = self._objects(["map"], output_iri, "rc:outputGrain")
+            grain_iris.extend(output_grain_iris)
+            for dataset_iri in self._objects(["map"], output_iri, "rc:outputDataset"):
+                for grain_iri in output_grain_iris:
+                    self._conn.execute(
+                        """
+                        DELETE FROM quads
+                        WHERE graph = ?
+                          AND subject = ?
+                          AND predicate = ?
+                          AND object = ?
+                        """,
+                        [
+                            "map",
+                            dataset_iri,
+                            self.expand_iri("rc:hasGrain"),
+                            grain_iri,
+                        ],
+                    )
+
+        component_iris: list[str] = []
+        for grain_iri in grain_iris:
+            component_iris.extend(
+                self._objects(["map"], grain_iri, "rc:hasGrainComponent")
+            )
+
+        for component_iri in component_iris:
+            delete_subject_predicates(
+                component_iri,
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:grainOrder"),
+                    self.expand_iri("rc:grainRole"),
+                    self.expand_iri("rc:grainColumn"),
+                    self.expand_iri("rc:grainDataset"),
+                    self.expand_iri("rc:grainExpression"),
+                ],
+            )
+        for grain_iri in grain_iris:
+            delete_subject_predicates(
+                grain_iri,
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:hasGrainComponent"),
+                ],
+            )
+        for output_iri in output_iris:
+            delete_subject_predicates(
+                output_iri,
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:outputDataset"),
+                    self.expand_iri("rc:outputRole"),
+                    self.expand_iri("rc:outputFormula"),
+                    self.expand_iri("rc:expressionLanguage"),
+                    self.expand_iri("rc:outputFunction"),
+                    self.expand_iri("rc:outputCondition"),
+                    self.expand_iri("rc:outputGrain"),
+                ],
+            )
+        for condition_iri in condition_iris:
+            delete_subject_predicates(
+                condition_iri,
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:conditionKind"),
+                    self.expand_iri("rc:expressionText"),
+                    self.expand_iri("rc:expressionLanguage"),
+                    self.expand_iri("rc:appliesToDataset"),
+                    self.expand_iri("rc:appliesToEndpoint"),
+                ],
+            )
+        delete_subject_predicates(
+            relationship_iri,
+            [
+                self.expand_iri("rc:hasTransformCondition"),
+                self.expand_iri("rc:hasTransformOutput"),
+            ],
+        )
         self._conn.commit()
 
     def record_graph_revision(
@@ -56259,6 +57235,27 @@ class DoxaBase:
         relationship_iris.update(
             self._subjects(data_graphs, "rc:targetDataset", dataset_iri)
         )
+        for output_iri in self._subjects(data_graphs, "rc:outputDataset", dataset_iri):
+            relationship_iris.update(
+                self._subjects(data_graphs, "rc:hasTransformOutput", output_iri)
+            )
+        for condition_iri in self._subjects(
+            data_graphs,
+            "rc:appliesToDataset",
+            dataset_iri,
+        ):
+            relationship_iris.update(
+                self._subjects(
+                    data_graphs,
+                    "rc:hasTransformCondition",
+                    condition_iri,
+                )
+            )
+        for grain_iri in self._objects(data_graphs, dataset_iri, "rc:hasGrain"):
+            for output_iri in self._subjects(data_graphs, "rc:outputGrain", grain_iri):
+                relationship_iris.update(
+                    self._subjects(data_graphs, "rc:hasTransformOutput", output_iri)
+                )
         for column_iri in column_iris:
             for predicate in (
                 "rc:foreignKeyFrom",
@@ -56288,6 +57285,28 @@ class DoxaBase:
                             aggregated_column_iri,
                         )
                     )
+            for component_iri in self._subjects(
+                data_graphs,
+                "rc:grainColumn",
+                column_iri,
+            ):
+                for grain_iri in self._subjects(
+                    data_graphs,
+                    "rc:hasGrainComponent",
+                    component_iri,
+                ):
+                    for output_iri in self._subjects(
+                        data_graphs,
+                        "rc:outputGrain",
+                        grain_iri,
+                    ):
+                        relationship_iris.update(
+                            self._subjects(
+                                data_graphs,
+                                "rc:hasTransformOutput",
+                                output_iri,
+                            )
+                        )
 
         return [
             self._describe_relationship(relationship_iri, data_graphs, lookup_graphs)
@@ -56484,6 +57503,17 @@ class DoxaBase:
                 "rc:hasAggregatedColumn",
             )
         ]
+        transform_conditions = self._transform_condition_descriptions(
+            relationship_iri,
+            data_graphs,
+            lookup_graphs,
+        )
+        transform_outputs = self._transform_output_descriptions(
+            relationship_iri,
+            transform_conditions,
+            data_graphs,
+            lookup_graphs,
+        )
         return RelationshipDescription(
             iri=relationship_iri,
             label=self._display_label_from_graphs(lookup_graphs, relationship_iri),
@@ -56523,6 +57553,8 @@ class DoxaBase:
             ),
             group_by_columns=group_by_columns,
             aggregated_columns=aggregated_columns,
+            transform_conditions=transform_conditions,
+            transform_outputs=transform_outputs,
             source_caveats=self._relationship_source_caveats(
                 data_graphs,
                 lookup_graphs,
@@ -56577,6 +57609,200 @@ class DoxaBase:
                 lookup_graphs,
                 within_group_ordering,
             ),
+        )
+
+    def _transform_condition_descriptions(
+        self,
+        relationship_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[TransformConditionDescription]:
+        conditions = [
+            self._describe_transform_condition(
+                condition_iri,
+                data_graphs,
+                lookup_graphs,
+            )
+            for condition_iri in self._objects(
+                data_graphs,
+                relationship_iri,
+                "rc:hasTransformCondition",
+            )
+        ]
+        return sorted(
+            conditions,
+            key=lambda condition: (condition.label or "", condition.iri),
+        )
+
+    def _describe_transform_condition(
+        self,
+        condition_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> TransformConditionDescription:
+        condition_kind = self._first_object(
+            data_graphs,
+            condition_iri,
+            "rc:conditionKind",
+        )
+        return TransformConditionDescription(
+            iri=condition_iri,
+            label=self._display_label_from_graphs(lookup_graphs, condition_iri),
+            description=self._description_from_graphs(lookup_graphs, condition_iri),
+            condition_kind=self._optional_resource_summary(
+                lookup_graphs,
+                condition_kind,
+            ),
+            expression=self._first_object(
+                data_graphs,
+                condition_iri,
+                "rc:expressionText",
+            ),
+            expression_language=self._first_object(
+                data_graphs,
+                condition_iri,
+                "rc:expressionLanguage",
+            ),
+            applies_to_datasets=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, condition_iri, "rc:appliesToDataset"),
+            ),
+            applies_to_endpoints=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, condition_iri, "rc:appliesToEndpoint"),
+            ),
+        )
+
+    def _transform_output_descriptions(
+        self,
+        relationship_iri: str,
+        relationship_conditions: Iterable[TransformConditionDescription],
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[TransformOutputDescription]:
+        conditions_by_iri = {
+            condition.iri: condition for condition in relationship_conditions
+        }
+        outputs = [
+            self._describe_transform_output(
+                output_iri,
+                conditions_by_iri,
+                data_graphs,
+                lookup_graphs,
+            )
+            for output_iri in self._objects(
+                data_graphs,
+                relationship_iri,
+                "rc:hasTransformOutput",
+            )
+        ]
+        return sorted(
+            outputs,
+            key=lambda output: (output.role or "", output.label or "", output.iri),
+        )
+
+    def _describe_transform_output(
+        self,
+        output_iri: str,
+        relationship_conditions: Mapping[str, TransformConditionDescription],
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> TransformOutputDescription:
+        target_dataset = self._first_object(data_graphs, output_iri, "rc:outputDataset")
+        output_function = self._first_object(data_graphs, output_iri, "rc:outputFunction")
+        condition_descriptions: list[TransformConditionDescription] = []
+        for condition_iri in self._objects(data_graphs, output_iri, "rc:outputCondition"):
+            condition_descriptions.append(
+                relationship_conditions.get(condition_iri)
+                or self._describe_transform_condition(
+                    condition_iri,
+                    data_graphs,
+                    lookup_graphs,
+                )
+            )
+        grain_iri = self._first_object(data_graphs, output_iri, "rc:outputGrain")
+        return TransformOutputDescription(
+            iri=output_iri,
+            label=self._display_label_from_graphs(lookup_graphs, output_iri),
+            description=self._description_from_graphs(lookup_graphs, output_iri),
+            target_dataset=self._optional_resource_summary(
+                lookup_graphs,
+                target_dataset,
+            ),
+            role=self._first_object(data_graphs, output_iri, "rc:outputRole"),
+            formula=self._first_object(data_graphs, output_iri, "rc:outputFormula"),
+            expression_language=self._first_object(
+                data_graphs,
+                output_iri,
+                "rc:expressionLanguage",
+            ),
+            function=self._optional_resource_summary(lookup_graphs, output_function),
+            conditions=sorted(
+                condition_descriptions,
+                key=lambda condition: (condition.label or "", condition.iri),
+            ),
+            tuple_grain=(
+                self._describe_tuple_grain(grain_iri, data_graphs, lookup_graphs)
+                if grain_iri is not None
+                else None
+            ),
+        )
+
+    def _tuple_grains_for_dataset(
+        self,
+        dataset_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[TupleGrainDescription]:
+        grain_iris = list(self._objects(data_graphs, dataset_iri, "rc:hasGrain"))
+        for output_iri in self._subjects(data_graphs, "rc:outputDataset", dataset_iri):
+            grain_iris.extend(self._objects(data_graphs, output_iri, "rc:outputGrain"))
+        return [
+            self._describe_tuple_grain(grain_iri, data_graphs, lookup_graphs)
+            for grain_iri in sorted(set(grain_iris))
+        ]
+
+    def _describe_tuple_grain(
+        self,
+        grain_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> TupleGrainDescription:
+        components = [
+            self._describe_grain_component(component_iri, data_graphs, lookup_graphs)
+            for component_iri in self._objects(
+                data_graphs,
+                grain_iri,
+                "rc:hasGrainComponent",
+            )
+        ]
+        return TupleGrainDescription(
+            iri=grain_iri,
+            label=self._display_label_from_graphs(lookup_graphs, grain_iri),
+            description=self._description_from_graphs(lookup_graphs, grain_iri),
+            components=sorted(
+                components,
+                key=lambda component: (component.order or 999999, component.iri),
+            ),
+        )
+
+    def _describe_grain_component(
+        self,
+        component_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> GrainComponentDescription:
+        column_iri = self._first_object(data_graphs, component_iri, "rc:grainColumn")
+        dataset_iri = self._first_object(data_graphs, component_iri, "rc:grainDataset")
+        return GrainComponentDescription(
+            iri=component_iri,
+            label=self._display_label_from_graphs(lookup_graphs, component_iri),
+            description=self._description_from_graphs(lookup_graphs, component_iri),
+            order=self._int_object(data_graphs, component_iri, "rc:grainOrder"),
+            role=self._first_object(data_graphs, component_iri, "rc:grainRole"),
+            column=self._optional_resource_summary(lookup_graphs, column_iri),
+            dataset=self._optional_resource_summary(lookup_graphs, dataset_iri),
+            expression=self._first_object(data_graphs, component_iri, "rc:grainExpression"),
         )
 
     def _relationship_type_token(self, relationship_kind: str | None) -> str | None:

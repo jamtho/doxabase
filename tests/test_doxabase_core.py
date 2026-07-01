@@ -124,9 +124,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1304
+    assert graphs["base_ontology"].triple_count == 1396
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1270
+    assert graphs["base_shapes"].triple_count == 1394
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -23733,6 +23733,172 @@ def test_record_map_relationship_supports_asset_level_endpoints(
         and related.relationship_kind == RC + "Aggregation"
         for related in contact_description.related_datasets
     )
+
+
+def test_record_map_asset_transform_captures_conditions_outputs_and_tuple_grain(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/asset-transform#"
+    raw_bags = f"{base}raw_sonar_bag_files"
+    navigation = f"{base}navigation_corrections_yaml"
+    mosaic = f"{base}survey_mosaic_geotiff"
+    condition = f"{base}valid_navigation_filter"
+
+    db.record_map_dataset(raw_bags, label="Raw side-scan sonar bag files")
+    db.record_map_dataset(navigation, label="Navigation correction pack")
+    db.record_map_dataset(mosaic, label="Survey mosaic GeoTIFF")
+    result = db.record_map_asset_transform(
+        f"{base}mosaic_from_bags_and_navigation",
+        relationship_type="derivation",
+        label="mosaic from bags and navigation corrections",
+        source_endpoints=[
+            {
+                "dataset": raw_bags,
+                "role": "primary sonar input",
+                "order": 1,
+            },
+            {
+                "dataset": navigation,
+                "role": "navigation correction input",
+                "order": 2,
+            },
+        ],
+        target_datasets=[mosaic],
+        derivation_properties=["rc:Deterministic", "rc:Lossy"],
+        conditions=[
+            {
+                "iri": condition,
+                "label": "valid navigation filter",
+                "condition_kind": "rc:FilterCondition",
+                "expression": "only pings with a reviewed navigation correction fix",
+                "expression_language": "reviewed prose",
+                "applies_to_datasets": [raw_bags, navigation],
+            }
+        ],
+        outputs=[
+            {
+                "target_dataset": mosaic,
+                "role": "corrected mosaic output",
+                "formula": "grid corrected ping intensities into a GeoTIFF mosaic",
+                "expression_language": "reviewed prose",
+                "function": f"{base}BuildCorrectedMosaic",
+                "conditions": [condition],
+                "tuple_grain": {
+                    "label": "mosaic tile tuple grain",
+                    "components": [
+                        {
+                            "dataset": raw_bags,
+                            "role": "source survey",
+                            "order": 1,
+                        },
+                        {
+                            "expression": "mosaic tile coordinate in the output grid",
+                            "role": "tile coordinate",
+                            "order": 2,
+                        },
+                    ],
+                },
+            }
+        ],
+    )
+
+    assert result.resource_type == RC + "Derivation"
+    assert db.validate_graph(scope="all").conforms
+
+    mosaic_description = db.describe_dataset(mosaic)
+    assert mosaic_description.columns == []
+    assert len(mosaic_description.tuple_grains) == 1
+    grain = mosaic_description.tuple_grains[0]
+    assert [component.role for component in grain.components] == [
+        "source survey",
+        "tile coordinate",
+    ]
+    assert grain.components[0].dataset is not None
+    assert grain.components[0].dataset.iri == raw_bags
+    assert grain.components[1].expression == "mosaic tile coordinate in the output grid"
+
+    relationship = next(
+        item
+        for item in mosaic_description.relationships
+        if item.relationship_type == "derivation"
+    )
+    assert [dataset.iri for dataset in relationship.source_datasets] == [
+        raw_bags,
+        navigation,
+    ]
+    assert [dataset.iri for dataset in relationship.target_datasets] == [mosaic]
+    assert [prop.iri for prop in relationship.derivation_properties] == [
+        RC + "Deterministic",
+        RC + "Lossy",
+    ]
+    assert len(relationship.transform_conditions) == 1
+    described_condition = relationship.transform_conditions[0]
+    assert described_condition.iri == condition
+    assert described_condition.condition_kind is not None
+    assert described_condition.condition_kind.iri == RC + "FilterCondition"
+    assert described_condition.expression == (
+        "only pings with a reviewed navigation correction fix"
+    )
+    assert {dataset.iri for dataset in described_condition.applies_to_datasets} == {
+        raw_bags,
+        navigation,
+    }
+    assert len(relationship.transform_outputs) == 1
+    output = relationship.transform_outputs[0]
+    assert output.target_dataset is not None
+    assert output.target_dataset.iri == mosaic
+    assert output.formula == "grid corrected ping intensities into a GeoTIFF mosaic"
+    assert output.function is not None
+    assert output.function.iri == f"{base}BuildCorrectedMosaic"
+    assert [item.iri for item in output.conditions] == [condition]
+    assert output.tuple_grain is not None
+    assert [component.role for component in output.tuple_grain.components] == [
+        "source survey",
+        "tile coordinate",
+    ]
+
+    before_map_count = db.triple_count("map")
+    with pytest.raises(
+        DoxaBaseError,
+        match=r"outputs\[1\]\.conditions references .*not a supplied or existing rc:TransformCondition",
+    ):
+        db.record_map_asset_transform(
+            f"{base}bad_condition_reference",
+            relationship_type="derivation",
+            source_datasets=[raw_bags],
+            target_datasets=[mosaic],
+            outputs=[
+                {
+                    "target_dataset": mosaic,
+                    "conditions": [f"{base}missing_condition"],
+                }
+            ],
+        )
+    assert db.triple_count("map") == before_map_count
+
+    with pytest.raises(
+        DoxaBaseError,
+        match=r"outputs\[1\]\.tuple_grain\.components\[1\]\.column.*data asset resource.*rc:Column",
+    ):
+        db.record_map_asset_transform(
+            f"{base}bad_grain",
+            relationship_type="derivation",
+            source_datasets=[raw_bags],
+            target_datasets=[mosaic],
+            outputs=[
+                {
+                    "target_dataset": mosaic,
+                    "tuple_grain": {
+                        "components": [
+                            {"column": raw_bags, "role": "not a column"},
+                            {"expression": "tile coordinate"},
+                        ],
+                    },
+                }
+            ],
+        )
+    assert db.triple_count("map") == before_map_count
 
 
 def test_record_map_relationship_rejects_project_specific_derivation_properties(

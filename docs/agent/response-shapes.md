@@ -1526,6 +1526,7 @@ dataset.caveats
 dataset.upstream_caveats
 dataset.operational_warnings
 dataset.relationships
+dataset.tuple_grains
 dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
@@ -1539,6 +1540,12 @@ Cold-route note: this long doc also contains linked pattern reasons,
 query-context fields, and draft-query-plan fields. Use the section headings
 `Linked Pattern Reasons`, `Query Context`, and `Draft Query Plan` when reading
 through MCP `get_doc(section=...)`.
+
+Shape convention note: top-level class/type fields such as `dataset.types` are
+plain strings, while nested resource references are usually resource-summary
+objects with `iri`, `label`, and related context. Map helper return values such
+as `triples` are count-like integers, not lists of triples. Query-context
+readiness is exposed as `readiness`, not `query_readiness`.
 
 ### Dataset Storage And Layout
 
@@ -2608,6 +2615,8 @@ relationship.derivation_function
 relationship.derivation_properties
 relationship.group_by_columns
 relationship.aggregated_columns
+relationship.transform_conditions
+relationship.transform_outputs
 relationship.source_caveats
 ```
 
@@ -2623,6 +2632,15 @@ compatibility shortcuts to the first endpoint when present.
 target role/order matters, use `source_endpoints` and `target_endpoints`; each
 endpoint carries `dataset`, `direction`, `direction_label`, `role`, and
 one-based `order`.
+
+Asset-level transform relationships can also expose `transform_conditions[]` and
+`transform_outputs[]`. Conditions include `condition_kind`, `expression`,
+`expression_language`, `applies_to_datasets`, and `applies_to_endpoints`.
+Outputs include `target_dataset`, `role`, `formula`, `expression_language`,
+`function`, linked `conditions`, and optional `tuple_grain`. Dataset-level
+`tuple_grains[]` exposes the same tuple grain objects directly from the output
+asset; each grain has ordered `components[]` whose component can carry one of
+`column`, `dataset`, or `expression`.
 
 `dataset.profile_observations` contains recent dataset-scoped
 `ProfileObservationSummary` items for observations whose `observed_asset` is the
