@@ -3948,6 +3948,13 @@ few useful gaps:
   contexts with physical metadata blockers now also surface ordinary
   dataset-linked query evidence with `rc:queryExecutionStatus`, preserving
   scanned source paths/handles in the reviewed storage-overlay route.
+- A systematisation alternatives scout found a restaged fallback could be
+  routed as an ordinary ready alternative after a sibling in the same choose-one
+  set had already been applied, because the direct `alternative_to` target was
+  still an unapplied diagnostic anchor. Alternative gates now also detect
+  applied sibling set members and report
+  `alternative_gate.status == "alternative_set_member_applied"` with the
+  applied source/event before exposing the apply route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

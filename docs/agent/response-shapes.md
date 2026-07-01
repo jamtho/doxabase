@@ -5713,9 +5713,9 @@ successor or applied event. Suggested actions inspect the successor or applied
 event first and may include an `export_staged_revision` diagnostic bundle for
 the handled failed source.
 `alternative_gate` is the row-local alternative semantic gate. Its `status` is
-`not_applicable`, `alternative_to_unapplied_source`, or
-`alternative_to_applied_source`; the last status sets
-`semantic_review_required=True` and carries `applied_source_iri` /
+`not_applicable`, `alternative_to_unapplied_source`,
+`alternative_to_applied_source`, or `alternative_set_member_applied`; applied
+statuses set `semantic_review_required=True` and carry `applied_source_iri` /
 `applied_revision_iri`. Treat that as a semantic review gate even when
 `status="ready"` and `next_action.queue="apply_after_review"`: mechanical
 readiness is not approval to make both alternatives durable.

@@ -479,8 +479,9 @@ Semantic same-slot repair smoke route:
 4. Stage the helper repair or the lane's
    `repair_draft.preferred_action`, then check the successor. A successor that
    is mechanically `ready` can still have
-   `alternative_gate.status="alternative_to_applied_source"` and an apply label
-   of `Apply only after semantic review`.
+   `alternative_gate.status="alternative_to_applied_source"` or
+   `alternative_gate.status="alternative_set_member_applied"` and an apply
+   label of `Apply only after semantic review`.
 5. Replan after each apply. `mutation_frontier_iris` can contain a mechanically
    ready semantic alternative after its successor exists; read
    `semantic_review_required_queue_counts`, `mutation_frontier_items`, and

@@ -442,12 +442,16 @@ The active stale successor should remain visible with
 by `application_status`; handled stale originals can remain historical
 `conflict` rows. If a stale source has `restaged_by` or `current_restaged_by`,
 inspect or restage the current successor instead of the original source. If a
-ready successor is an alternative to a source that has already been applied,
-read `alternative_gate.status`, `alternative_gate.semantic_review_required`,
+ready successor is an alternative to a source or sibling alternative-set member
+that has already been applied, read `alternative_gate.status`,
+`alternative_gate.semantic_review_required`,
 `alternative_gate.applied_source_iri`, and
-`alternative_gate.applied_revision_iri` before mutating. `alternative_to` is the
-stored provenance edge; `current_alternative_to` follows a restaged alternative
-target to its current successor. Queue summaries also surface this as
+`alternative_gate.applied_revision_iri` before mutating.
+`alternative_gate.status` can be `alternative_to_applied_source` for the direct
+target or `alternative_set_member_applied` for a sibling in the same choose-one
+set. `alternative_to` is the stored provenance edge; `current_alternative_to`
+follows a restaged alternative target to its current successor. Queue summaries
+also surface this as
 `semantic_review_required_queue_counts` and queue-item fields
 `alternative_semantic_review_required`, `alternative_applied_source_iri`, and
 `alternative_applied_revision_iri`. For unresolved alternatives where both

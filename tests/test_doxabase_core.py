@@ -9730,6 +9730,120 @@ def test_same_slot_replacement_preserves_applied_alternative_gate(
     )
 
 
+def test_restage_alternative_gate_detects_applied_sibling_set_member(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    source = db.stage_graph_revision(
+        summary="Model order rows as raw events",
+        rationale="Keep the first framing as an unapplied comparison anchor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    lifecycle = db.stage_graph_revision(
+        summary="Model order rows as lifecycle entities",
+        rationale="A sibling alternative that will be chosen first.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderLifecycles a rc:Dataset .
+                """,
+            }
+        ],
+        alternative_to=source.revision_iri,
+    )
+    snapshot = db.stage_graph_revision(
+        summary="Model order rows as snapshot entities",
+        rationale="A second sibling alternative staged before the first choice.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderSnapshots a rc:Dataset .
+                """,
+            }
+        ],
+        alternative_to=source.revision_iri,
+    )
+
+    applied_lifecycle = db.apply_staged_revision(lifecycle.revision_iri)
+    stale_snapshot_check = db.check_staged_revision_apply(snapshot.revision_iri)
+
+    assert stale_snapshot_check.status == "conflict"
+    assert stale_snapshot_check.alternative_gate.status == (
+        "alternative_set_member_applied"
+    )
+    assert stale_snapshot_check.alternative_gate.applied_source_iri == (
+        lifecycle.revision_iri
+    )
+
+    restaged_snapshot = db.restage_staged_revision(snapshot.revision_iri)
+    restaged_snapshot_check = db.check_staged_revision_apply(
+        restaged_snapshot.revision_iri
+    )
+
+    assert restaged_snapshot_check.status == "ready"
+    assert restaged_snapshot_check.decision == "review_then_apply"
+    assert restaged_snapshot_check.alternative_gate.status == (
+        "alternative_set_member_applied"
+    )
+    assert (
+        restaged_snapshot_check.alternative_gate.current_alternative_to
+        == source.revision_iri
+    )
+    assert restaged_snapshot_check.alternative_gate.semantic_review_required is True
+    assert restaged_snapshot_check.alternative_gate.applied_source_iri == (
+        lifecycle.revision_iri
+    )
+    assert restaged_snapshot_check.alternative_gate.applied_revision_iri == (
+        applied_lifecycle.applied_revision_iri
+    )
+    assert restaged_snapshot_check.next_action is not None
+    assert restaged_snapshot_check.next_action.queue == "apply_after_review"
+    assert restaged_snapshot_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    assert lifecycle.revision_iri in restaged_snapshot_check.next_action.reason
+    assert (
+        applied_lifecycle.applied_revision_iri
+        in restaged_snapshot_check.next_action.reason
+    )
+
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    restaged_item = next(
+        item
+        for item in current_work.revisions
+        if item.iri == restaged_snapshot.revision_iri
+    )
+    assert restaged_item.alternative_gate.status == "alternative_set_member_applied"
+    assert restaged_item.alternative_gate.semantic_review_required is True
+    assert restaged_item.alternative_gate.applied_source_iri == (
+        lifecycle.revision_iri
+    )
+    assert current_work.semantic_review_required_queue_counts == {
+        "apply_after_review": 1
+    }
+
+
 def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     tmp_path: Path,
 ) -> None:

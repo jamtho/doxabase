@@ -8408,6 +8408,7 @@ class DoxaBase:
             )
             alternative_gate = self._staged_revision_alternative_gate(
                 alternative_to,
+                revision_iri=revision_iri,
                 graphs=data_graphs,
             )
             items.append(
@@ -10847,6 +10848,7 @@ class DoxaBase:
         self,
         alternative_to: str | None,
         *,
+        revision_iri: str | None = None,
         graphs: list[str] | None = None,
     ) -> StagedRevisionAlternativeGate:
         if alternative_to is None:
@@ -10869,32 +10871,129 @@ class DoxaBase:
             "rc:appliesStagedRevision",
             current_alternative_to,
         )
-        if applied_revision_iri is None:
+        if applied_revision_iri is not None:
             return StagedRevisionAlternativeGate(
-                status="alternative_to_unapplied_source",
+                status="alternative_to_applied_source",
                 alternative_to=alternative_to,
                 current_alternative_to=current_alternative_to,
-                applied_source_iri=None,
-                applied_revision_iri=None,
-                semantic_review_required=False,
+                applied_source_iri=current_alternative_to,
+                applied_revision_iri=applied_revision_iri,
+                semantic_review_required=True,
                 note=(
-                    "This staged revision is an alternative; compare related "
-                    "alternatives before applying one framing."
+                    "The current alternative target has already been applied. "
+                    "Mechanical readiness is not approval to make both alternatives "
+                    "durable; inspect the applied source before applying this row."
+                ),
+            )
+        applied_set_member = self._applied_alternative_set_member(
+            revision_iri,
+            current_alternative_to=current_alternative_to,
+            graphs=lookup_graphs,
+        )
+        if applied_set_member is not None:
+            applied_source_iri, applied_revision_iri = applied_set_member
+            return StagedRevisionAlternativeGate(
+                status="alternative_set_member_applied",
+                alternative_to=alternative_to,
+                current_alternative_to=current_alternative_to,
+                applied_source_iri=applied_source_iri,
+                applied_revision_iri=applied_revision_iri,
+                semantic_review_required=True,
+                note=(
+                    "A sibling member of this alternative set has already been "
+                    "applied. Mechanical readiness is not approval to make both "
+                    "alternatives durable; inspect the applied set member before "
+                    "applying this row."
                 ),
             )
         return StagedRevisionAlternativeGate(
-            status="alternative_to_applied_source",
+            status="alternative_to_unapplied_source",
             alternative_to=alternative_to,
             current_alternative_to=current_alternative_to,
-            applied_source_iri=current_alternative_to,
-            applied_revision_iri=applied_revision_iri,
-            semantic_review_required=True,
+            applied_source_iri=None,
+            applied_revision_iri=None,
+            semantic_review_required=False,
             note=(
-                "The current alternative target has already been applied. "
-                "Mechanical readiness is not approval to make both alternatives "
-                "durable; inspect the applied source before applying this row."
+                "This staged revision is an alternative; compare related "
+                "alternatives before applying one framing."
             ),
         )
+
+    def _applied_alternative_set_member(
+        self,
+        revision_iri: str | None,
+        *,
+        current_alternative_to: str,
+        graphs: list[str],
+    ) -> tuple[str, str] | None:
+        if revision_iri is None:
+            return None
+        membership = self._staged_revision_alternative_set_membership(
+            revision_iri,
+            graphs=graphs,
+        )
+        if membership is None:
+            return None
+        member_iris, _, _ = membership
+        for member_iri in member_iris:
+            if member_iri == revision_iri:
+                continue
+            candidate_source_iri = (
+                self._current_restage_successor_iri(member_iri, graphs=graphs)
+                or member_iri
+            )
+            if candidate_source_iri in {revision_iri, current_alternative_to}:
+                continue
+            applied_revision_iri = self._applied_event_for_staged_revision(
+                candidate_source_iri,
+                graphs=graphs,
+            )
+            if applied_revision_iri is not None:
+                return candidate_source_iri, applied_revision_iri
+        return None
+
+    def _staged_revision_alternative_set_membership(
+        self,
+        revision_iri: str,
+        *,
+        graphs: list[str],
+    ) -> tuple[list[str], str, str] | None:
+        staged_revision_type = self.expand_iri("rc:StagedRevision")
+        row_iris = [
+            iri
+            for iri in self._subjects(
+                graphs,
+                str(RDF.type),
+                self.expand_iri("rc:GraphRevision"),
+            )
+            if (
+                self._first_object(graphs, iri, "rc:revisionType")
+                == staged_revision_type
+            )
+            and self._objects(graphs, iri, "rc:hasGraphPatch")
+        ]
+        rows: list[tuple[str, str | None, str | None]] = []
+        for row_iri in row_iris:
+            row_alternative_to = self._first_object(
+                graphs,
+                row_iri,
+                "rc:alternativeTo",
+            )
+            rows.append(
+                (
+                    row_iri,
+                    row_alternative_to,
+                    (
+                        self._current_alternative_to_iri(
+                            row_alternative_to,
+                            graphs=graphs,
+                        )
+                        if row_alternative_to is not None
+                        else None
+                    ),
+                )
+            )
+        return self._alternative_set_membership_by_iri(rows).get(revision_iri)
 
     def _stale_resolution_state(
         self,
@@ -11281,6 +11380,7 @@ class DoxaBase:
             ),
             alternative_gate=self._staged_revision_alternative_gate(
                 alternative_to_iri,
+                revision_iri=revision_iri,
                 graphs=all_lookup_graphs,
             ),
             restaged_from=restaged_from,
