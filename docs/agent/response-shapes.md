@@ -3976,7 +3976,9 @@ For that invalid-anchor case, `warning.warning_code` is
 `first_alternative_anchor_not_ready` and
 `warning.suggested_rerun_arguments == {"link_alternatives": False}`. The warning
 only fires when a sibling actually default-linked to the first framing; use
-per-framing `alternative_to` when ready siblings should point elsewhere. A
+per-framing `alternative_to` when ready siblings should point at an existing
+staged revision, or `alternative_to_framing_index` when they should point at an
+earlier framing in the same `stage_systematisation` call. A
 multi-framing draft with shared `ontology` or `shapes` patches also reports
 `shared_semantic_context_applies_to_all_framings`; its suggested rerun arguments
 name the shared graph roles and original `shared_additions` / `shared_removals`

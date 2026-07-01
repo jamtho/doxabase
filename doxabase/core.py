@@ -41008,8 +41008,39 @@ class DoxaBase:
                 framing_rationale=framing_rationale,
             )
             framing_alternative_to = str(framing.get("alternative_to") or "").strip()
+            framing_alternative_to_index = (
+                framing.get("alternative_to_framing_index")
+                if "alternative_to_framing_index" in framing
+                else framing.get("alternativeToFramingIndex")
+            )
+            if isinstance(framing_alternative_to_index, str):
+                framing_alternative_to_index = (
+                    framing_alternative_to_index.strip() or None
+                )
+            if framing_alternative_to and framing_alternative_to_index is not None:
+                raise DoxaBaseError(
+                    "framing alternative_to and alternative_to_framing_index "
+                    "are mutually exclusive"
+                )
             default_linked_to_first = False
-            if framing_alternative_to:
+            if framing_alternative_to_index is not None:
+                if isinstance(framing_alternative_to_index, bool):
+                    raise DoxaBaseError(
+                        "alternative_to_framing_index must be a 1-based integer"
+                    )
+                try:
+                    relative_index = int(framing_alternative_to_index)
+                except (TypeError, ValueError) as exc:
+                    raise DoxaBaseError(
+                        "alternative_to_framing_index must be a 1-based integer"
+                    ) from exc
+                if relative_index < 1 or relative_index >= index:
+                    raise DoxaBaseError(
+                        "alternative_to_framing_index must reference an earlier "
+                        "framing in the same stage_systematisation call"
+                    )
+                alternative_target = staged_revisions[relative_index - 1].revision_iri
+            elif framing_alternative_to:
                 alternative_target = framing_alternative_to
             elif index == 1:
                 alternative_target = alternative_to
@@ -51672,6 +51703,62 @@ class DoxaBase:
             )
 
         descriptions = [self.describe_staged_revision(iri) for iri in source_iris]
+        alternative_memberships = self._alternative_set_membership_by_iri(
+            (
+                (
+                    description.iri,
+                    (
+                        description.alternative_to.iri
+                        if description.alternative_to is not None
+                        else None
+                    ),
+                    description.alternative_gate.current_alternative_to,
+                )
+                for description in descriptions
+            )
+        )
+        if alternative_memberships:
+            description_by_iri = {
+                description.iri: description for description in descriptions
+            }
+            ordered_descriptions: list[StagedGraphRevisionDescription] = []
+            seen_description_iris: set[str] = set()
+            for description in descriptions:
+                if description.iri in seen_description_iris:
+                    continue
+                membership = alternative_memberships.get(description.iri)
+                if membership is None:
+                    ordered_descriptions.append(description)
+                    seen_description_iris.add(description.iri)
+                    continue
+                member_iris, source_iri, _ = membership
+                ordered_member_iris = [
+                    source_iri,
+                    *(iri for iri in member_iris if iri != source_iri),
+                ]
+                for member_iri in ordered_member_iris:
+                    if member_iri in seen_description_iris:
+                        continue
+                    member_description = description_by_iri.get(member_iri)
+                    if member_description is None:
+                        continue
+                    ordered_descriptions.append(member_description)
+                    seen_description_iris.add(member_iri)
+            descriptions = ordered_descriptions
+            alternative_memberships = self._alternative_set_membership_by_iri(
+                (
+                    (
+                        description.iri,
+                        (
+                            description.alternative_to.iri
+                            if description.alternative_to is not None
+                            else None
+                        ),
+                        description.alternative_gate.current_alternative_to,
+                    )
+                    for description in descriptions
+                )
+            )
         shared_role = self.expand_iri("rc:SharedContextPatch")
         semantic_shared_graphs = {"ontology", "shapes"}
         shared_patch_keys: set[tuple[str, str, str, str]] = set()
@@ -51768,6 +51855,10 @@ class DoxaBase:
             stage_args["evidence"] = evidence
 
         target_set = set(target_iris)
+        source_framing_index_by_iri = {
+            description.iri: index
+            for index, description in enumerate(descriptions, start=1)
+        }
         framing_records: list[SystematisationSharedContextRerunFraming] = []
         framing_args: list[dict[str, Any]] = []
         warnings: list[str] = []
@@ -51796,6 +51887,17 @@ class DoxaBase:
                 )
             label = self._systematisation_framing_label(description)
             framing: dict[str, Any] = {"label": label}
+            membership = alternative_memberships.get(description.iri)
+            if not link_alternatives and membership is not None:
+                _, source_iri, role = membership
+                source_framing_index = source_framing_index_by_iri.get(source_iri)
+                current_framing_index = len(framing_args) + 1
+                if (
+                    role != "source"
+                    and source_framing_index is not None
+                    and source_framing_index < current_framing_index
+                ):
+                    framing["alternative_to_framing_index"] = source_framing_index
             if additions:
                 framing["additions"] = additions
             if removals:

@@ -16074,6 +16074,139 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     ] == ["source", "alternative"]
 
 
+def test_stage_systematisation_links_relative_framing_alternative(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    first_framing = """
+    @prefix ex: <https://example.test/relative-framing#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:CandidateOne rdfs:comment "First candidate framing." .
+    """
+    second_framing = """
+    @prefix ex: <https://example.test/relative-framing#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:CandidateTwo rdfs:comment "Second candidate framing." .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Compare relative framing alternatives",
+        intent="Keep two caller-authored framings grouped without default linking.",
+        framings=[
+            {
+                "label": "First candidate",
+                "graph": "map",
+                "content": first_framing,
+            },
+            {
+                "label": "Second candidate",
+                "graph": "map",
+                "content": second_framing,
+                "alternative_to_framing_index": 1,
+            },
+        ],
+        link_alternatives=False,
+    )
+
+    revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
+    assert draft.choose_one_group_count == 1
+    assert draft.choose_one_groups[0].revision_iris == revision_iris
+    assert [
+        item.alternative_set_role for item in draft.next_action_queue_items
+    ] == ["source", "alternative"]
+
+    first = db.describe_staged_revision(revision_iris[0])
+    second = db.describe_staged_revision(revision_iris[1])
+
+    assert first.alternative_to is None
+    assert second.alternative_to is not None
+    assert second.alternative_to.iri == first.iri
+
+
+def test_shared_context_rerun_preserves_reversed_alternative_group(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    shared_ontology = """
+    @prefix ex: <https://example.test/reversed-rerun#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:ReviewScope a rdfs:Class ;
+        rdfs:label "Review scope" .
+    """
+    map_framing = """
+    @prefix ex: <https://example.test/reversed-rerun#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:MapCandidate rdfs:comment "Map candidate with shared vocabulary." .
+    """
+    fallback_framing = """
+    @prefix ex: <https://example.test/reversed-rerun#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:FallbackCandidate rdfs:comment "Fallback candidate without shared vocabulary." .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Compare reversed shared-context alternatives",
+        intent="Create linked alternatives that need a shared-context rerun.",
+        shared_additions=[{"graph": "ontology", "content": shared_ontology}],
+        framings=[
+            {"label": "Map candidate", "graph": "map", "content": map_framing},
+            {
+                "label": "Fallback candidate",
+                "graph": "map",
+                "content": fallback_framing,
+            },
+        ],
+        validation_scope="all",
+    )
+    revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
+
+    rerun_draft = db.draft_systematisation_shared_context_rerun(
+        list(reversed(revision_iris)),
+        shared_context_target_revision_iris=[revision_iris[0]],
+    )
+    rerun_args = rerun_draft.stage_systematisation_arguments
+
+    assert [
+        framing.source_revision_iri for framing in rerun_draft.framings
+    ] == revision_iris
+    assert [framing["label"] for framing in rerun_args["framings"]] == [
+        "Map candidate",
+        "Fallback candidate",
+    ]
+    assert rerun_args["link_alternatives"] is False
+    assert rerun_args["framings"][1]["alternative_to_framing_index"] == 1
+
+    rerun = db.stage_systematisation(**rerun_args)
+    rerun_revision_iris = [
+        revision.revision_iri for revision in rerun.staged_revisions
+    ]
+
+    assert rerun.choose_one_group_count == 1
+    assert rerun.choose_one_groups[0].revision_iris == rerun_revision_iris
+    assert rerun.choose_one_groups[0].alternative_set_roles == [
+        "source",
+        "alternative",
+    ]
+
+    export_path = tmp_path / "reversed-shared-context-rerun.md"
+    export = db.export_staged_revisions(rerun_revision_iris, export_path)
+    exported = export_path.read_text(encoding="utf-8")
+
+    assert len(export.bundle_summary.choose_one_groups) == 1
+    assert export.bundle_summary.choose_one_groups[0].revision_iris == (
+        rerun_revision_iris
+    )
+    assert "- Choose-one groups:" in exported
+    assert "- Choose-one groups: none" not in exported
+
+
 def test_stage_pattern_promotion_rolls_pattern_support_into_staged_revision(
     tmp_path: Path,
 ) -> None:

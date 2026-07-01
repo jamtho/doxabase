@@ -3173,6 +3173,7 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         "Map scope",
         "Pattern fallback",
     ]
+    assert rerun_args["framings"][1]["alternative_to_framing_index"] == 1
     assert [
         [patch["graph"] for patch in framing["additions"]]
         for framing in rerun_args["framings"]
@@ -3187,6 +3188,30 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
     assert [
         warning["warning_code"] for warning in rerun["structured_warnings"]
     ] == []
+    rerun_revision_iris = [
+        revision["revision_iri"] for revision in rerun["staged_revisions"]
+    ]
+    assert rerun["choose_one_group_count"] == 1
+    assert rerun["choose_one_groups"][0]["revision_iris"] == rerun_revision_iris
+    assert rerun["choose_one_groups"][0]["alternative_set_roles"] == [
+        "source",
+        "alternative",
+    ]
+
+    rerun_export_path = tmp_path / "shared-context-rerun-review.md"
+    rerun_export = export_staged_revisions_tool(
+        db,
+        revision_iris=rerun_revision_iris,
+        path=str(rerun_export_path),
+        title="Shared context rerun alternatives",
+    )
+    rerun_exported = rerun_export_path.read_text(encoding="utf-8")
+
+    assert rerun_export["bundle_summary"]["choose_one_groups"][0][
+        "revision_iris"
+    ] == rerun_revision_iris
+    assert "- Choose-one groups:" in rerun_exported
+    assert "- Choose-one groups: none" not in rerun_exported
 
     session = start_staged_revision_recovery_session_tool(
         db,

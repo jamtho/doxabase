@@ -45,6 +45,10 @@ later framings are linked with `alternative_to` pointing at the first framing by
 default. If the first framing is diagnostic, complementary, or expected to fail
 validation, pass explicit `alternative_to` values or set
 `link_alternatives=False`.
+When the alternative target is another framing in the same call rather than an
+existing staged revision, put `alternative_to_framing_index` on the later
+framing. The value is 1-based and must reference an earlier framing, for example
+`{"label": "Fallback", "alternative_to_framing_index": 1, ...}`.
 When a draft detects this mistake after staging, the first suggested next action
 is a complete `stage_systematisation(..., link_alternatives=False)` rerun call.
 That rerun can still report

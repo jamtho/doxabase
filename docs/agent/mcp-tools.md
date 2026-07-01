@@ -1900,7 +1900,10 @@ default-linked to a first framing that did not route to `apply_after_review`,
 `suggested_rerun_arguments={"link_alternatives": False}`; in that case
 `suggested_next_actions` starts with a complete `stage_systematisation` rerun
 action using explicit alternative routing. Per-framing `alternative_to` values
-reroute siblings without that warning. When multiple framings share `ontology`
+reroute siblings without that warning. Per-framing
+`alternative_to_framing_index` points to an earlier framing in the same call
+when a generated rerun needs explicit sibling routing before the target staged
+revision IRI exists. When multiple framings share `ontology`
 or `shapes` patches, `structured_warnings` includes
 `shared_semantic_context_applies_to_all_framings`; move those patches into
 per-framing additions/removals when fallback alternatives should not carry the
@@ -2178,6 +2181,13 @@ those framings' ordinary additions/removals, leaves fallback framings with only
 their own `rc:FramingPatch` content, and returns
 `stage_systematisation_arguments` plus a ready suggested action. It does not
 stage, restage, apply, or write files.
+When `link_alternatives=false`, the generated framing arguments preserve
+existing linked comparison sets with `alternative_to_framing_index` so the rerun
+and its grouped export still expose `choose_one_groups` without default-linking
+every later framing to the first row. The generated framing order may put the
+alternative source before its sibling alternatives even if `revision_iris` was
+passed in another order; use `source_revision_iri` on `framings[]` to map back to
+the original staged rows.
 
 ### doxabase.start_staged_revision_recovery_session
 

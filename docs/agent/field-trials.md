@@ -3243,6 +3243,12 @@ few useful gaps:
   `shared_context_graphs`; use
   `draft_systematisation_shared_context_rerun` after semantic review selects
   which framings should keep the provisional ontology or shape context.
+- A follow-up shared-context rerun trial found the generated
+  `link_alternatives=false` rerun could correctly move ontology/shapes patches
+  but drop the choose-one comparison in the staged draft and grouped export.
+  Framing arguments now accept `alternative_to_framing_index`, and
+  `draft_systematisation_shared_context_rerun` uses it to preserve linked
+  comparison sets without default-linking every later framing to the first row.
 - A storage-overlay handoff trial showed agents could execute a scratch query
   and repair storage metadata, but had to infer the scanned input path from
   prose or local runtime context. `record_query_result` now accepts

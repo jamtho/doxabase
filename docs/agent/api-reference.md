@@ -1304,7 +1304,10 @@ route to `apply_after_review`, `structured_warnings` includes
 `suggested_rerun_arguments={"link_alternatives": False}`; in that case the first
 `suggested_next_actions` entry is a complete `stage_systematisation` rerun call
 with explicit alternative routing. Per-framing `alternative_to` values reroute
-siblings without that warning. When multiple framings share `ontology` or
+siblings without that warning. Per-framing `alternative_to_framing_index` points
+to an earlier framing in the same call when a generated or hand-authored rerun
+needs explicit sibling routing before the target revision IRI exists. When
+multiple framings share `ontology` or
 `shapes` patches, `structured_warnings` includes
 `warning_code="shared_semantic_context_applies_to_all_framings"` and suggested
 rerun arguments naming the shared graph roles and original shared patch source
