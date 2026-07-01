@@ -80,7 +80,7 @@ compaction, read `start_here` first.
 22. Use `doxabase.stage_pattern_promotion` when existing patterns support a
     caller-authored map, ontology, shape, or other graph change that should
     remain reviewable before being applied.
-23. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, `doxabase.record_map_relationship`, and `doxabase.record_map_asset_transform` when a finding is ready to become current-best map context.
+23. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_table_bundle`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, `doxabase.record_map_relationship`, and `doxabase.record_map_asset_transform` when a finding is ready to become current-best map context.
 24. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
 25. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph

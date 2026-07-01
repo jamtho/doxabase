@@ -1153,7 +1153,7 @@ implication.
 
 Map authoring helpers write current-best project facts to `map`:
 `record_map_dataset()`, `record_map_analysis_view()`,
-`record_map_column()`, `record_map_caveat()`,
+`record_map_table_bundle()`, `record_map_column()`, `record_map_caveat()`,
 `record_map_storage_access()`, `record_map_physical_layout()`,
 `record_map_partition_scheme()`, `record_map_relationship()`, and
 `record_map_asset_transform()`. Use them when observations or patterns are ready
@@ -1193,6 +1193,12 @@ physical routes. It writes an `rc:AnalysisView`, optional
 `describe_analysis_view()` reads that logical definition, while
 `describe_query_context()` reports `readiness="logical_analysis_view"` and does
 not offer missing-storage repair groups for the view itself.
+Use `record_map_table_bundle()` when reviewed table schema/storage/layout facts
+are already available from an external profiler, Parquet footer inspection, or
+catalog. It is a no-I/O convenience wrapper over the ordinary map helpers: it
+records the table, columns, optional storage access, and optional physical
+layout, then returns `describe_dataset` and `describe_query_context` follow-up
+actions. It does not infer physical types or replace profile evidence helpers.
 Supplied same-subject fields replace the helper-owned predicates on the
 resource being recorded, but incoming convenience links such as
 `record_map_caveat(targets=...)`, `record_map_storage_access(datasets=...)`,

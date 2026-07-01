@@ -4204,6 +4204,17 @@ class MapResourceRecord:
 
 
 @dataclass(frozen=True)
+class MapTableBundleRecord:
+    dataset: MapResourceRecord
+    storage_access: MapResourceRecord | None
+    physical_layout: MapResourceRecord | None
+    columns: list[MapResourceRecord]
+    column_iris: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ResourceTriple:
     graph: str
     subject: str
@@ -36566,6 +36577,250 @@ class DoxaBase:
             triples=triples,
         )
 
+    def record_map_table_bundle(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        columns: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        path_templates: Iterable[str] | str | None = None,
+        row_count_snapshot: int | None = None,
+        row_semantics: str | None = None,
+        entity_key: str | None = None,
+        schema_stability: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        caveats: Iterable[str] | str | None = None,
+        companion_datasets: Iterable[str] | str | None = None,
+        extra_types: Iterable[str] | str | None = None,
+        storage_access_iri: str | None = None,
+        storage_label: str | None = None,
+        storage_description: str | None = None,
+        route_roles: Iterable[str] | str | None = None,
+        storage_protocol: str | None = None,
+        access_mode: str | None = None,
+        location_kind: str | None = None,
+        storage_root: str | None = None,
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        storage_path_templates: Iterable[str] | str | None = None,
+        storage_layout_verification_status: str | None = None,
+        storage_layout_verification_note: str | None = None,
+        physical_layout_iri: str | None = None,
+        physical_layout_label: str | None = None,
+        physical_layout_description: str | None = None,
+        file_format: str | None = None,
+        compression_codec: str | None = None,
+        physical_layout_verification_status: str | None = None,
+        physical_layout_verification_note: str | None = None,
+    ) -> MapTableBundleRecord:
+        dataset_iri = self._required_iri("iri", iri)
+        columns_supplied = columns is not None
+        column_specs = self._normalise_table_bundle_column_specs(
+            dataset_iri,
+            columns,
+        )
+
+        storage_requested = any(
+            value is not None
+            for value in (
+                storage_access_iri,
+                storage_label,
+                storage_description,
+                route_roles,
+                storage_protocol,
+                access_mode,
+                location_kind,
+                storage_root,
+                endpoint_profile,
+                bucket_name,
+                key_prefix,
+                region,
+                path_style_access,
+                credential_reference,
+                storage_path_templates,
+                storage_layout_verification_status,
+                storage_layout_verification_note,
+            )
+        )
+        physical_layout_requested = any(
+            value is not None
+            for value in (
+                physical_layout_iri,
+                physical_layout_label,
+                physical_layout_description,
+                file_format,
+                compression_codec,
+                physical_layout_verification_status,
+                physical_layout_verification_note,
+            )
+        )
+        storage_iri = (
+            str(self._resource_ref("storage_access_iri", storage_access_iri))
+            if storage_access_iri is not None
+            else f"{dataset_iri}/storage-access/1"
+        )
+        physical_layout_value = (
+            str(self._resource_ref("physical_layout_iri", physical_layout_iri))
+            if physical_layout_iri is not None
+            else f"{dataset_iri}/physical-layout/1"
+        )
+
+        self._preflight_map_table_bundle(
+            label=label,
+            description=description,
+            path_templates=path_templates,
+            row_count_snapshot=row_count_snapshot,
+            row_semantics=row_semantics,
+            entity_key=entity_key,
+            schema_stability=schema_stability,
+            layout_verification_status=layout_verification_status,
+            layout_verification_note=layout_verification_note,
+            caveats=caveats,
+            companion_datasets=companion_datasets,
+            extra_types=extra_types,
+            storage_label=storage_label,
+            storage_description=storage_description,
+            route_roles=route_roles,
+            storage_protocol=storage_protocol,
+            access_mode=access_mode,
+            location_kind=location_kind,
+            storage_root=storage_root,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            storage_path_templates=storage_path_templates,
+            storage_layout_verification_status=storage_layout_verification_status,
+            storage_layout_verification_note=storage_layout_verification_note,
+            physical_layout_label=physical_layout_label,
+            physical_layout_description=physical_layout_description,
+            file_format=file_format,
+            compression_codec=compression_codec,
+            physical_layout_verification_status=physical_layout_verification_status,
+            physical_layout_verification_note=physical_layout_verification_note,
+        )
+
+        storage_record = (
+            self.record_map_storage_access(
+                storage_iri,
+                label=storage_label,
+                description=storage_description,
+                route_roles=route_roles,
+                storage_protocol=storage_protocol,
+                access_mode=access_mode,
+                location_kind=location_kind,
+                storage_root=storage_root,
+                endpoint_profile=endpoint_profile,
+                bucket_name=bucket_name,
+                key_prefix=key_prefix,
+                region=region,
+                path_style_access=path_style_access,
+                credential_reference=credential_reference,
+                path_templates=storage_path_templates,
+                layout_verification_status=storage_layout_verification_status,
+                layout_verification_note=storage_layout_verification_note,
+                datasets=[dataset_iri],
+            )
+            if storage_requested
+            else None
+        )
+        physical_layout_record = (
+            self.record_map_physical_layout(
+                physical_layout_value,
+                label=physical_layout_label,
+                description=physical_layout_description,
+                file_format=file_format,
+                compression_codec=compression_codec,
+                layout_verification_status=physical_layout_verification_status,
+                layout_verification_note=physical_layout_verification_note,
+                datasets=[dataset_iri],
+            )
+            if physical_layout_requested
+            else None
+        )
+
+        dataset_record = self.record_map_dataset(
+            dataset_iri,
+            label=label,
+            description=description,
+            is_table=True,
+            columns=[spec["iri"] for spec in column_specs] if columns_supplied else None,
+            path_templates=path_templates,
+            row_count_snapshot=row_count_snapshot,
+            row_semantics=row_semantics,
+            entity_key=entity_key,
+            schema_stability=schema_stability,
+            layout_verification_status=layout_verification_status,
+            layout_verification_note=layout_verification_note,
+            caveats=caveats,
+            storage_accesses=[storage_iri] if storage_requested else None,
+            physical_layouts=(
+                [physical_layout_value] if physical_layout_requested else None
+            ),
+            companion_datasets=companion_datasets,
+            extra_types=extra_types,
+        )
+        column_records = [
+            self.record_map_column(
+                spec["iri"],
+                table_iri=dataset_iri,
+                column_name=spec["column_name"],
+                label=spec["label"],
+                description=spec["description"],
+                physical_type=spec["physical_type"],
+                value_type=spec["value_type"],
+                nullable=spec["nullable"],
+            )
+            for spec in column_specs
+        ]
+        suggested_next_actions = [
+            SuggestedNextAction(
+                action_label="Describe bundled table",
+                tool_name="describe_dataset",
+                mcp_tool_name="doxabase.describe_dataset",
+                arguments={"iri": dataset_iri},
+                reason=(
+                    "Inspect the map table bundle just recorded, including "
+                    "columns, storage access, and physical layout links."
+                ),
+                call=self._suggested_call_string(
+                    "describe_dataset",
+                    {"iri": dataset_iri},
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Inspect bundled table query context",
+                tool_name="describe_query_context",
+                mcp_tool_name="doxabase.describe_query_context",
+                arguments={"iri": dataset_iri},
+                reason=(
+                    "Check whether the bundled table metadata is sufficient for "
+                    "query planning or needs reviewed storage/layout repairs."
+                ),
+                call=self._suggested_call_string(
+                    "describe_query_context",
+                    {"iri": dataset_iri},
+                ),
+            ),
+        ]
+        return MapTableBundleRecord(
+            dataset=dataset_record,
+            storage_access=storage_record,
+            physical_layout=physical_layout_record,
+            columns=column_records,
+            column_iris=[record.iri for record in column_records],
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def record_map_analysis_view(
         self,
         iri: str,
@@ -65935,6 +66190,255 @@ class DoxaBase:
     def _validate_resource_values(self, name: str, values: Iterable[str]) -> None:
         for value in values:
             self._resource_ref(name, value)
+
+    def _normalise_table_bundle_column_specs(
+        self,
+        dataset_iri: str,
+        columns: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        if columns is None:
+            column_values: list[Mapping[str, Any]] = []
+        elif isinstance(columns, MappingABC):
+            column_values = [columns]
+        else:
+            column_values = list(columns)
+        allowed_fields = {
+            "iri",
+            "column_iri",
+            "column_name",
+            "label",
+            "description",
+            "physical_type",
+            "value_type",
+            "nullable",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(column_values, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"columns[{index}] must be an object")
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"columns[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            column_name = item.get("column_name")
+            if not isinstance(column_name, str) or not column_name.strip():
+                raise DoxaBaseError(
+                    f"columns[{index}].column_name must be a non-empty string"
+                )
+            column_iri_value = item.get("column_iri", item.get("iri"))
+            if column_iri_value is None:
+                column_iri = self._default_table_bundle_column_iri(
+                    dataset_iri,
+                    column_name,
+                )
+            elif isinstance(column_iri_value, str):
+                column_iri = str(
+                    self._resource_ref(
+                        f"columns[{index}].column_iri",
+                        column_iri_value,
+                    )
+                )
+            else:
+                raise DoxaBaseError(
+                    f"columns[{index}].column_iri must be a string when provided"
+                )
+            if column_iri in seen_iris:
+                raise DoxaBaseError(f"columns[{index}].column_iri duplicates {column_iri}")
+            seen_iris.add(column_iri)
+
+            def optional_string(field: str) -> str | None:
+                value = item.get(field)
+                if value is None:
+                    return None
+                if not isinstance(value, str):
+                    raise DoxaBaseError(f"columns[{index}].{field} must be a string")
+                return value
+
+            physical_type = optional_string("physical_type")
+            value_type = optional_string("value_type")
+            if physical_type is not None:
+                self._resource_ref(f"columns[{index}].physical_type", physical_type)
+            if value_type is not None:
+                self._resource_ref(f"columns[{index}].value_type", value_type)
+            nullable = item.get("nullable")
+            if nullable is not None and not isinstance(nullable, bool):
+                raise DoxaBaseError(f"columns[{index}].nullable must be a boolean")
+            specs.append(
+                {
+                    "iri": column_iri,
+                    "column_name": column_name.strip(),
+                    "label": optional_string("label"),
+                    "description": optional_string("description"),
+                    "physical_type": physical_type,
+                    "value_type": value_type,
+                    "nullable": nullable,
+                }
+            )
+        return specs
+
+    @staticmethod
+    def _default_table_bundle_column_iri(dataset_iri: str, column_name: str) -> str:
+        local_name = re.sub(r"[^A-Za-z0-9_]+", "_", column_name.strip()).strip("_")
+        if not local_name:
+            raise DoxaBaseError("column_name must contain an IRI-safe character")
+        return f"{dataset_iri}__{local_name}"
+
+    def _preflight_map_table_bundle(
+        self,
+        *,
+        label: str | None,
+        description: str | None,
+        path_templates: Iterable[str] | str | None,
+        row_count_snapshot: int | None,
+        row_semantics: str | None,
+        entity_key: str | None,
+        schema_stability: str | None,
+        layout_verification_status: str | None,
+        layout_verification_note: str | None,
+        caveats: Iterable[str] | str | None,
+        companion_datasets: Iterable[str] | str | None,
+        extra_types: Iterable[str] | str | None,
+        storage_label: str | None,
+        storage_description: str | None,
+        route_roles: Iterable[str] | str | None,
+        storage_protocol: str | None,
+        access_mode: str | None,
+        location_kind: str | None,
+        storage_root: str | None,
+        endpoint_profile: str | None,
+        bucket_name: str | None,
+        key_prefix: str | None,
+        region: str | None,
+        path_style_access: bool | None,
+        credential_reference: str | None,
+        storage_path_templates: Iterable[str] | str | None,
+        storage_layout_verification_status: str | None,
+        storage_layout_verification_note: str | None,
+        physical_layout_label: str | None,
+        physical_layout_description: str | None,
+        file_format: str | None,
+        compression_codec: str | None,
+        physical_layout_verification_status: str | None,
+        physical_layout_verification_note: str | None,
+    ) -> None:
+        for name, value in (
+            ("label", label),
+            ("description", description),
+            ("layout_verification_note", layout_verification_note),
+            ("storage_label", storage_label),
+            ("storage_description", storage_description),
+            ("storage_root", storage_root),
+            ("endpoint_profile", endpoint_profile),
+            ("bucket_name", bucket_name),
+            ("key_prefix", key_prefix),
+            ("region", region),
+            ("credential_reference", credential_reference),
+            (
+                "storage_layout_verification_note",
+                storage_layout_verification_note,
+            ),
+            ("physical_layout_label", physical_layout_label),
+            ("physical_layout_description", physical_layout_description),
+            (
+                "physical_layout_verification_note",
+                physical_layout_verification_note,
+            ),
+        ):
+            self._preflight_optional_string(name, value)
+        self._preflight_string_values("path_templates", path_templates)
+        self._ensure_non_negative("row_count_snapshot", row_count_snapshot)
+        if row_semantics is not None:
+            self._controlled_resource_ref(
+                "row_semantics",
+                row_semantics,
+                ROW_SEMANTICS_TYPES,
+            )
+        if entity_key is not None:
+            self._resource_ref("entity_key", entity_key)
+        if schema_stability is not None:
+            self._controlled_resource_ref(
+                "schema_stability",
+                schema_stability,
+                SCHEMA_STABILITY_LEVELS,
+            )
+        if layout_verification_status is not None:
+            self._controlled_resource_ref(
+                "layout_verification_status",
+                layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
+            )
+        self._validate_resource_values(
+            "caveats",
+            self._preflight_string_values("caveats", caveats),
+        )
+        self._validate_resource_values(
+            "companion_datasets",
+            self._preflight_string_values("companion_datasets", companion_datasets),
+        )
+        self._validate_resource_values(
+            "extra_types",
+            self._preflight_string_values("extra_types", extra_types),
+        )
+        self._validate_resource_values(
+            "route_roles",
+            self._preflight_string_values("route_roles", route_roles),
+        )
+        if storage_protocol is not None:
+            self._resource_ref("storage_protocol", storage_protocol)
+        if access_mode is not None:
+            self._resource_ref("access_mode", access_mode)
+        self._storage_location_kind(location_kind)
+        if path_style_access is not None and not isinstance(path_style_access, bool):
+            raise DoxaBaseError("path_style_access must be a boolean")
+        if storage_layout_verification_status is not None:
+            self._controlled_resource_ref(
+                "storage_layout_verification_status",
+                storage_layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
+            )
+        self._preflight_string_values(
+            "storage_path_templates",
+            storage_path_templates,
+        )
+        if file_format is not None:
+            self._resource_ref("file_format", file_format)
+        if compression_codec is not None:
+            self._resource_ref("compression_codec", compression_codec)
+        if physical_layout_verification_status is not None:
+            self._controlled_resource_ref(
+                "physical_layout_verification_status",
+                physical_layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
+            )
+
+    @staticmethod
+    def _preflight_optional_string(name: str, value: Any) -> None:
+        if value is not None and not isinstance(value, str):
+            raise DoxaBaseError(f"{name} must be a string")
+
+    @staticmethod
+    def _preflight_string_values(
+        name: str,
+        value: Iterable[str] | str | None,
+    ) -> list[str]:
+        if value is None:
+            values: list[Any] = []
+        elif isinstance(value, str):
+            values = [value]
+        else:
+            try:
+                values = list(value)
+            except TypeError as exc:
+                raise DoxaBaseError(
+                    f"{name} must be a string or iterable of strings"
+                ) from exc
+        for index, item in enumerate(values, start=1):
+            if not isinstance(item, str):
+                raise DoxaBaseError(f"{name}[{index}] must be a string")
+        return [item.strip() for item in values if item.strip()]
 
     def _controlled_resource_ref(
         self,

@@ -4402,6 +4402,21 @@ few useful gaps:
   `describe_query_context` readiness `logical_analysis_view`, so logical views
   can preserve denominator and query-snippet context without triggering
   missing-storage repair loops.
+- The Enron `body -> body_top` attempt clarified that column derivations are
+  valid map relationships only when the endpoint values are mapped
+  `rc:Column` resources. Raw column names or dataset/table IRIs in
+  `source_columns` / `derived_columns` should fail; uncertain transform lore
+  belongs in observations, claims, patterns, or caveats until promoted.
+- The Enron ingestion feedback showed that the missing Parquet path was mostly
+  authoring ceremony, not RDF vocabulary or file I/O. `record_map_table_bundle`
+  now gives agents one no-I/O map helper for a reviewed table schema plus
+  optional storage/layout facts, while keeping profiler output in
+  `record_profile_bundle`.
+- The extended Enron handoff still leaves broader workflow candidates after
+  this helper: a profile-to-capsule CLI/cookbook that composes table bundles,
+  profile bundles, analysis views, and handoff verification; and a
+  domain-network profiling helper that preserves extraction denominators and
+  aggregate domain-pair counts without recording individual addresses.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

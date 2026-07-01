@@ -26925,6 +26925,121 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert context.first_unattended_action_index is None
 
 
+def test_record_map_table_bundle_records_parquet_table_map(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/table-bundle#"
+    table = f"{base}orders"
+    amount = f"{base}orders__amount"
+
+    result = db.record_map_table_bundle(
+        table,
+        label="Orders",
+        description="Orders table from a reviewed Parquet export.",
+        columns=[
+            {
+                "column_name": "order_id",
+                "physical_type": "rc:Varchar",
+                "nullable": False,
+            },
+            {
+                "column_iri": amount,
+                "column_name": "amount",
+                "physical_type": "rc:Double",
+                "value_type": f"{base}MoneyAmount",
+                "nullable": True,
+            },
+        ],
+        path_templates=["orders.parquet"],
+        row_count_snapshot=120,
+        row_semantics="rc:EventRow",
+        schema_stability="rc:FixedSchema",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="DuckDB schema check reviewed on the local export.",
+        storage_access_iri=f"{base}orders_storage",
+        storage_label="Orders local Parquet object",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        storage_path_templates=["orders.parquet"],
+        storage_layout_verification_status="rc:VerifiedByListingLayout",
+        physical_layout_iri=f"{base}orders_parquet_layout",
+        physical_layout_label="Orders Parquet layout",
+        file_format="rc:Parquet",
+        compression_codec="rc:ZstdCompression",
+        physical_layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    assert result.dataset.resource_type == RC + "Table"
+    assert result.storage_access is not None
+    assert result.storage_access.iri == f"{base}orders_storage"
+    assert result.physical_layout is not None
+    assert result.physical_layout.iri == f"{base}orders_parquet_layout"
+    assert result.column_iris == [f"{table}__order_id", amount]
+    assert [record.resource_type for record in result.columns] == [RC + "Column"] * 2
+    assert result.suggested_next_actions[0].tool_name == "describe_dataset"
+    assert result.suggested_next_actions[1].tool_name == "describe_query_context"
+
+    description = db.describe_dataset(table)
+    assert description.label == "Orders"
+    assert description.row_count_snapshot == 120
+    assert description.row_semantics is not None
+    assert description.row_semantics.iri == RC + "EventRow"
+    assert [column.column_name for column in description.columns] == [
+        "amount",
+        "order_id",
+    ]
+    amount_column = next(
+        column for column in description.columns if column.column_name == "amount"
+    )
+    assert amount_column.value_type is not None
+    assert amount_column.value_type.iri == f"{base}MoneyAmount"
+    assert description.storage_accesses[0].storage_protocol is not None
+    assert description.storage_accesses[0].storage_protocol.iri == (
+        RC + "LocalFilesystemStorage"
+    )
+    assert description.physical_layouts[0].file_format is not None
+    assert description.physical_layouts[0].file_format.iri == RC + "Parquet"
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_map_table_bundle_preflights_column_specs(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="unsupported field"):
+        db.record_map_table_bundle(
+            "https://example.test/table-bundle#orders",
+            columns=[
+                {
+                    "column_name": "order_id",
+                    "unexpected": "not supported",
+                }
+            ],
+            file_format="rc:Parquet",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+    with pytest.raises(DoxaBaseError, match="physical_layout_label must be a string"):
+        db.record_map_table_bundle(
+            "https://example.test/table-bundle#orders",
+            columns=[{"column_name": "order_id"}],
+            storage_access_iri="https://example.test/table-bundle#orders_storage",
+            storage_protocol="rc:LocalFilesystemStorage",
+            access_mode="rc:ReadOnlyAccess",
+            location_kind="object",
+            storage_root="/tmp/orders.parquet",
+            physical_layout_label=42,
+            file_format="rc:Parquet",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     table = "https://example.test/project#messages"

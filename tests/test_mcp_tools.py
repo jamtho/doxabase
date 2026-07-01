@@ -67,6 +67,7 @@ from doxabase.mcp_tools import (
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
+    record_map_table_bundle_tool,
     record_map_partition_scheme_tool,
     record_map_physical_layout_tool,
     record_map_relationship_tool,
@@ -199,6 +200,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_analysis_view" in tool_names
+    assert "doxabase.record_map_table_bundle" in tool_names
     assert "doxabase.record_map_column" in tool_names
     assert "doxabase.record_map_caveat" in tool_names
     assert "doxabase.record_map_storage_access" in tool_names
@@ -6966,6 +6968,62 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert context["query_target_candidates"] == []
     assert context["query_target_decision"]["status"] == "logical_analysis_view"
     assert context["suggested_next_actions"][0]["tool_name"] == "describe_analysis_view"
+
+
+def test_record_map_table_bundle_tool_returns_json_like_records(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-table-bundle#"
+    table = f"{base}orders"
+
+    result = record_map_table_bundle_tool(
+        db,
+        iri=table,
+        label="Orders",
+        columns=[
+            {
+                "column_name": "order_id",
+                "physical_type": "rc:Varchar",
+                "nullable": False,
+            },
+            {
+                "column_name": "status",
+                "physical_type": "rc:Varchar",
+            },
+        ],
+        row_count_snapshot=12,
+        schema_stability="rc:FixedSchema",
+        storage_access_iri=f"{base}orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        physical_layout_iri=f"{base}orders_layout",
+        file_format="rc:Parquet",
+        compression_codec="rc:ZstdCompression",
+    )
+
+    assert result["dataset"]["resource_type"] == RC + "Table"
+    assert result["storage_access"]["iri"] == f"{base}orders_storage"
+    assert result["physical_layout"]["iri"] == f"{base}orders_layout"
+    assert result["column_iris"] == [
+        f"{table}__order_id",
+        f"{table}__status",
+    ]
+    assert [record["resource_type"] for record in result["columns"]] == [
+        RC + "Column",
+        RC + "Column",
+    ]
+    assert result["suggested_next_actions"][0]["tool_name"] == "describe_dataset"
+
+    description = describe_dataset_tool(db, iri=table)
+    assert description["row_count_snapshot"] == 12
+    assert {column["column_name"] for column in description["columns"]} == {
+        "order_id",
+        "status",
+    }
+    assert description["physical_layouts"][0]["file_format"]["iri"] == RC + "Parquet"
 
 
 def test_describe_query_context_tool_returns_planning_projection(

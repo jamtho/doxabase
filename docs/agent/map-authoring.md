@@ -15,6 +15,7 @@ Use first-class map helpers for routine map writes:
 
 - `doxabase.record_map_dataset`
 - `doxabase.record_map_analysis_view`
+- `doxabase.record_map_table_bundle`
 - `doxabase.record_map_column`
 - `doxabase.record_map_caveat`
 - `doxabase.record_map_storage_access`
@@ -90,6 +91,15 @@ plus a reviewed query snippet. `describe_query_context` returns
 `readiness="logical_analysis_view"` for these resources and deliberately does
 not produce missing-storage repair actions unless you separately model a
 materialized physical route.
+
+For reviewed table schemas from Parquet, CSV, database catalogs, or profiler
+output, use `record_map_table_bundle` when you want one no-I/O map mutation for
+the table, columns, optional storage access, and optional physical layout. The
+helper does not read files and does not infer Arrow/DuckDB types; supply
+reviewed `columns`, `file_format`, `compression_codec`, storage facts, and
+layout verification metadata yourself. It orchestrates the ordinary map helpers
+and returns the records plus `describe_dataset` / `describe_query_context`
+follow-up actions.
 
 ## When To Use Map Helpers
 
@@ -239,21 +249,7 @@ accepted column updates that still become one reviewable staged revision.
 
 ```python
 table = "https://example.test/enron#eml_messages"
-doc_id = "https://example.test/enron#eml_messages__doc_id"
 caveat = "https://example.test/enron#caveat_body_processing_lossy"
-storage = "https://example.test/enron#local_parquet_access"
-
-db.record_map_storage_access(
-    iri=storage,
-    label="local parquet access",
-    route_roles=["rc:SampleRoute"],
-    storage_protocol="rc:LocalFilesystemStorage",
-    access_mode="rc:ReadOnlyAccess",
-    location_kind="directory",
-    storage_root="/home/james/github.com/jamtho/enron-emails",
-    path_templates=["data/parquet/*.parquet"],
-    datasets=[table],
-)
 
 db.record_map_caveat(
     iri=caveat,
@@ -263,26 +259,34 @@ db.record_map_caveat(
     targets=[table],
 )
 
-db.record_map_dataset(
+db.record_map_table_bundle(
     iri=table,
     label="EML messages",
     description="One row per parsed raw .eml message.",
-    is_table=True,
+    columns=[
+        {
+            "column_name": "doc_id",
+            "physical_type": "rc:Varchar",
+            "value_type": "https://example.test/enron#DocId",
+            "nullable": False,
+        }
+    ],
     path_templates=["data/parquet/eml_messages.parquet"],
     row_semantics="rc:EventRow",
-    entity_key=doc_id,
+    entity_key="https://example.test/enron#eml_messages__doc_id",
     schema_stability="rc:FixedSchema",
     caveats=[caveat],
-    storage_accesses=[storage],
-)
-
-db.record_map_column(
-    iri=doc_id,
-    table_iri=table,
-    column_name="doc_id",
-    physical_type="rc:Varchar",
-    value_type="https://example.test/enron#DocId",
-    nullable=False,
+    storage_access_iri="https://example.test/enron#local_parquet_access",
+    storage_label="local parquet access",
+    route_roles=["rc:SampleRoute"],
+    storage_protocol="rc:LocalFilesystemStorage",
+    access_mode="rc:ReadOnlyAccess",
+    location_kind="directory",
+    storage_root="/home/james/github.com/jamtho/enron-emails",
+    storage_path_templates=["data/parquet/*.parquet"],
+    physical_layout_iri="https://example.test/enron#eml_messages_parquet_layout",
+    file_format="rc:Parquet",
+    compression_codec="rc:ZstdCompression",
 )
 ```
 
@@ -317,6 +321,14 @@ Relationship column fields are for column resources. The helper rejects known
 data assets, datasets, or tables in `from_column`, `to_column`,
 `identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
 and aggregate mapping column fields.
+
+For column-to-column transforms such as cleaned text, normalized subjects, or
+`body -> body_top`, first record the real columns with `record_map_column`, then
+use `record_map_relationship(..., relationship_type="derivation",
+source_columns=[source_column_iri], derived_columns=[derived_column_iri])`.
+Do not pass raw column names or the owning dataset IRI in those column slots.
+If the transform is only a tentative interpretation, keep it in observations,
+claims, patterns, or caveats until it is current-best map structure.
 
 For no-column asset-level derivation or aggregation, use `source_datasets` and
 `target_datasets` without column fields. The singular `source_dataset` and

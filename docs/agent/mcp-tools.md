@@ -1760,6 +1760,18 @@ useful. Use `describe_context_slice(profile="deep_lore")` or
 `not_applicable_non_tabular_asset` unless a separate queryable table route is
 modeled.
 
+`doxabase.record_map_table_bundle`
+
+Records one table map bundle without reading data: the dataset/table resource,
+zero or more columns, optional storage access, and optional physical layout.
+Use it when a profiler, Parquet footer inspection, warehouse catalog, or other
+external process has already produced reviewed schema/storage facts and you want
+to avoid repeated `record_map_dataset` / `record_map_column` /
+`record_map_storage_access` / `record_map_physical_layout` calls. Column specs
+require `column_name`; `column_iri` is optional and otherwise defaults to a
+stable dataset-derived IRI. Resource-valued fields still require IRIs or CURIEs.
+The helper does not infer physical types and does not execute I/O.
+
 `doxabase.record_map_analysis_view`
 
 Records or updates a logical analysis view in the `map` graph. Use it for

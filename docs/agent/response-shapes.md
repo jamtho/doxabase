@@ -3031,6 +3031,26 @@ context has `readiness="logical_analysis_view"`,
 `query_target_candidates=[]`, `suggested_repair_action_group_count=0`, and an
 informational issue with code `logical_analysis_view_not_physical_route`.
 
+### Map Table Bundles
+
+`db.record_map_table_bundle(table_iri, ...)` returns a `MapTableBundleRecord`:
+
+```python
+bundle.dataset
+bundle.storage_access
+bundle.physical_layout
+bundle.columns
+bundle.column_iris
+bundle.suggested_next_actions
+bundle.suggested_next_calls
+```
+
+`dataset`, `storage_access`, `physical_layout`, and each entry in `columns` are
+ordinary `MapResourceRecord` objects. `storage_access` and `physical_layout` are
+`None` when the call did not include fields that request those resources. Use
+`column_iris` for the deterministic column IRIs generated from omitted
+`column_iri` values.
+
 ### Query Context
 
 `db.describe_query_context(table_iri)` returns a `QueryPlanningContext`:
