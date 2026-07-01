@@ -1100,8 +1100,11 @@ Queue values are the returned row IRIs; always read the row's
 applied event reached through a restaged successor. For automation, prefer the
 machine-readable `bundle_summary.next_action_queue_items`: each item includes
 `row_iri`, `resolved_target_iri`, `row_is_target`, row status fields, and the
-selected tool/call. When rows in the same response are unresolved alternatives,
-every member, including the source/default row, carries `alternative_set_iris`,
+selected tool/call. `requires_semantic_review_before_mutation` repeats the
+row's alternative semantic gate when computed, so lineage/list/export consumers
+do not need to reopen the full apply check before avoiding unattended mutation.
+When rows in the same response are unresolved alternatives, every member,
+including the source/default row, carries `alternative_set_iris`,
 `alternative_set_source_iri`, and `alternative_set_role`.
 `next_action_queue_item_counts` mirrors queue sizes, and
 `semantic_review_required_queue_counts` highlights alternative-gated rows by

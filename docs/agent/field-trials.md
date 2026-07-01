@@ -4082,6 +4082,12 @@ few useful gaps:
   remaining `route_step_key` rollups, and the Markdown closure section repeats
   them, so `closed_semantic_moves=["assert_map_type"]` is not mistaken for a
   fully closed type followthrough when vocabulary steps remain.
+- A staged conflict/rebase/version trial found `mutation_frontier_items[]`
+  exposed `requires_semantic_review_before_mutation`, while lineage/list/export
+  queue items required callers to infer the same gate from `alternative_gate`.
+  `RevisionNextActionQueueItem` now carries the nullable
+  `requires_semantic_review_before_mutation` field so cold recovery scripts can
+  avoid unattended mutation from any queue-item surface.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

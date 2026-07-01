@@ -2963,6 +2963,15 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
         RC + "SnapshotRow"
     )
     assert result["next_action"]["source"] == "draft_staged_revision_rebase"
+    assert result["next_action_queue_item"]["alternative_gate_status"] == (
+        "alternative_to_applied_source"
+    )
+    assert (
+        result["next_action_queue_item"][
+            "requires_semantic_review_before_mutation"
+        ]
+        is True
+    )
 
 
 def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
@@ -3017,6 +3026,12 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["next_action"]["tool_name"] == "apply_staged_revision"
     assert lane["next_action_queue_item"]["resolved_target_iri"] == (
         staged["revision_iri"]
+    )
+    assert (
+        lane["next_action_queue_item"][
+            "requires_semantic_review_before_mutation"
+        ]
+        is False
     )
     assert result["mutation_frontier_items"] == [
         {

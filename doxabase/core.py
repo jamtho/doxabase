@@ -4056,6 +4056,7 @@ class RevisionNextActionQueueItem:
     semantic_risk_reasons: list[str]
     alternative_gate_status: str | None
     alternative_semantic_review_required: bool
+    requires_semantic_review_before_mutation: bool | None
     alternative_applied_source_iri: str | None
     alternative_applied_revision_iri: str | None
     alternative_set_iris: list[str]
@@ -45592,6 +45593,11 @@ class DoxaBase:
                 alternative_gate.semantic_review_required
                 if alternative_gate is not None
                 else False
+            ),
+            requires_semantic_review_before_mutation=(
+                alternative_gate.semantic_review_required
+                if alternative_gate is not None
+                else None
             ),
             alternative_applied_source_iri=(
                 alternative_gate.applied_source_iri

@@ -10330,6 +10330,7 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert semantic_item.row_iri == repair.staged_revision.revision_iri
     assert semantic_item.alternative_gate_status == "alternative_to_applied_source"
     assert semantic_item.alternative_semantic_review_required is True
+    assert semantic_item.requires_semantic_review_before_mutation is True
     frontier_item = final_plan.mutation_frontier_items[0]
     assert frontier_item.target_iri == repair.staged_revision.revision_iri
     assert frontier_item.semantic_risk_level == semantic_item.semantic_risk_level

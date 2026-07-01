@@ -5582,8 +5582,10 @@ whose `alternative_gate.semantic_review_required` is true can still use the
 name the semantic gate; the apply suggestion says `Apply only after semantic
 review` and names the already-applied source when known. On list and bundle
 responses, `semantic_review_required_queue_counts` and
-`next_action_queue_items[].alternative_semantic_review_required` make the same
-gate visible without opening the full row.
+`next_action_queue_items[].requires_semantic_review_before_mutation` make the
+same gate visible without opening the full row.
+`alternative_semantic_review_required` remains as the row-local alternative gate
+flag.
 For grouped export bundles, use `bundle_summary.semantic_risk_queue_counts`
 when ordinary linked-support or judgement-panel risk also needs a
 machine-readable queue aggregate; grouped export queue items also copy
@@ -6789,7 +6791,9 @@ groups the returned row IRIs by action class; inspect each row's
 `next_action.arguments` for the target to call, because handled stale rows may
 point to an applied event even though the queued row is the stale source.
 `next_action_queue_items[].resolved_target_iri` exposes that target directly,
-and `row_is_target=False` flags redirected rows.
+and `row_is_target=False` flags redirected rows. Queue items also carry
+`requires_semantic_review_before_mutation`, a nullable boolean copied from the
+row's alternative gate when that gate was computed.
 `mutation_frontier_iris` is the deduped resolved-target worklist for
 apply/restage/repair queues. Use it when an unattended script needs current
 mutation targets rather than returned row IRIs; it omits informational handled
