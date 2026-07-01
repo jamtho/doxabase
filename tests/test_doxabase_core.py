@@ -20794,6 +20794,9 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert getattr(overlay_action, "source_profile_evidence")[
         "scanned_source_paths"
     ] == [str(csv_path)]
+    assert getattr(overlay_action, "source_profile_evidence")[
+        "scanned_source_handles"
+    ] == [str(csv_path)]
 
     draft = db.draft_query_evidence_storage_overlay(
         dataset,
@@ -20824,6 +20827,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert draft.source_profile_evidence["result_sources"] == [str(result_path)]
     assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
     assert draft.source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
+    assert draft.source_profile_evidence["scanned_source_handles"] == [str(csv_path)]
     assert draft.reviewed_overlay["storage_access_iri"] == draft.storage_access_iri
     assert draft.reviewed_overlay["physical_layout_iri"] == draft.physical_layout_iri
     assert draft.reviewed_overlay["storage_label"] == "Reviewed Orders storage route"
@@ -27258,11 +27262,12 @@ def test_record_query_result_preserves_database_relation_source_handle(
         engine="external-postgres-client",
         query_source_path=str(tmp_path / "orders_status_summary.sql"),
         result_sources=[str(tmp_path / "orders_status_summary.result.json")],
-        scanned_source_paths=[relation_handle],
+        scanned_source_handles=[relation_handle],
     )
 
     assert result.observation_type == "observation"
     assert result.scanned_source_paths == [relation_handle]
+    assert result.scanned_source_handles == [relation_handle]
     scanned_span = db.describe_resource(
         result.scanned_source_span_iris[0],
         graph="evidence",
@@ -27479,7 +27484,10 @@ def test_record_query_result_rejects_unsourced_or_fake_failure_counts(
 
     with pytest.raises(
         DoxaBaseError,
-        match="result_sources, query_source_path, or scanned_source_paths",
+        match=(
+            "result_sources, query_source_path, scanned_source_paths, "
+            "or scanned_source_handles"
+        ),
     ):
         db.record_query_result(
             summary="Unsourced query result should not be recorded.",

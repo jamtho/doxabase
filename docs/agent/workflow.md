@@ -47,7 +47,8 @@ compaction, read `start_here` first.
 12. Use `doxabase.record_observation` when you discover a simple point-in-time finding that should remain available to later agents.
 13. Use `doxabase.record_query_result` after an external query attempt produces
     a result or failure worth preserving as evidence; include
-    `scanned_source_paths` when the runtime scanned non-secret source inputs.
+    `scanned_source_handles` when the runtime scanned non-secret source inputs.
+    `scanned_source_paths` is still accepted for older examples.
 14. Use `doxabase.record_dataset_profile` when a profiling result should write
     a profile observation and optionally update map/pattern context together.
 15. Use `doxabase.record_column_profile` when a column profiling result should

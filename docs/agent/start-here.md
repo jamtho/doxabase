@@ -43,6 +43,10 @@ When arriving cold, use this route before reading every reference doc.
    Treat `frontier_status.is_complete` as only the hidden-frontier audit: if
    `first_unattended_action` or `mutation_allowed_after` still points to safety
    review, do that before any mutation.
+   After completing a safety/export review, resume with the prior
+   `frontier_first_action` or `frontier_status.must_rerun_call` only for
+   read-only frontier inspection. Continue to treat `mutation_allowed_after` as
+   blocking mutation or export until the rerun says otherwise.
    If a stale-seed `export_preflight(export_kind="handoff_bundle")` is clean but
    the current agent is read-only or cannot write the handoff/import artifacts,
    stop and report that recovery-complete handoff is required. Repeating the

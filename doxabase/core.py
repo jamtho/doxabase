@@ -3585,6 +3585,7 @@ class QueryResultRecord:
     query_hash: str | None
     result_sources: list[str]
     scanned_source_paths: list[str]
+    scanned_source_handles: list[str]
     observation_triples: int
     evidence_triples: int
     source_span_triples: int
@@ -20300,6 +20301,7 @@ class DoxaBase:
             ),
             "query_source_paths": query_source_paths[:span_limit],
             "scanned_source_paths": scanned_source_paths[:result_source_limit],
+            "scanned_source_handles": scanned_source_paths[:result_source_limit],
             "query_source_spans": [
                 self._query_context_source_span_preview(span)
                 for span in preview_spans[:span_limit]
@@ -30335,6 +30337,7 @@ class DoxaBase:
         query_hash: str | None = None,
         result_sources: Iterable[str] | str | None = None,
         scanned_source_paths: Iterable[str] | str | None = None,
+        scanned_source_handles: Iterable[str] | str | None = None,
         evidence_summary: str | None = None,
         failure_summary: str | None = None,
         sample_size: int | None = None,
@@ -30373,7 +30376,16 @@ class DoxaBase:
         result_source_values = self._string_values("result_sources", result_sources)
         scanned_source_path_values = list(
             dict.fromkeys(
-                self._string_values("scanned_source_paths", scanned_source_paths)
+                [
+                    *self._string_values(
+                        "scanned_source_paths",
+                        scanned_source_paths,
+                    ),
+                    *self._string_values(
+                        "scanned_source_handles",
+                        scanned_source_handles,
+                    ),
+                ]
             )
         )
         if (
@@ -30383,7 +30395,7 @@ class DoxaBase:
         ):
             raise DoxaBaseError(
                 "record_query_result requires result_sources, query_source_path, "
-                "or scanned_source_paths"
+                "scanned_source_paths, or scanned_source_handles"
             )
         for name, value in {"start_line": start_line, "end_line": end_line}.items():
             if value is not None and value < 1:
@@ -30491,6 +30503,7 @@ class DoxaBase:
             query_hash=query_hash_value,
             result_sources=result_source_values,
             scanned_source_paths=scanned_source_path_values,
+            scanned_source_handles=scanned_source_path_values,
             observation_triples=observation.observation_triples,
             evidence_triples=(
                 observation.evidence_triples

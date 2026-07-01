@@ -332,6 +332,8 @@ or stale seed recovery before frontier expansion or task review. Use
 and the coarse `mutation_allowed_after` gate. `brief.frontier_first_action`
 remains the safety-cleared frontier hop over `full_frontier_expansion`,
 `next_best_expansion`, and `recommended_next_tasks[0]`.
+After a safety/export review, use that frontier hop or `must_rerun_call` only
+for read-only inspection until a rerun clears `mutation_allowed_after`.
 
 `describe_dataset()` returns bounded context for one dataset/table: row
 semantics, entity/snapshot keys, columns, physical/value types, path templates,
@@ -939,9 +941,11 @@ successful profile-like fields such as `row_count`, `sample_size`,
 ordinary observations and reject profile count fields. Use `query_source_path`
 for a non-secret query file or query artifact, which is stored as an
 `rc:SourceSpan` with `rc:QuerySource`; use `result_sources` for result files,
-logs, or output artifacts; and use `scanned_source_paths` for non-secret source
-files, objects, or path-like inputs the external runtime actually scanned,
-which are stored as `rc:DataSampleSource` spans.
+logs, or output artifacts; and use `scanned_source_handles` for non-secret
+source files, objects, relation handles, or path-like inputs the external
+runtime actually scanned, which are stored as `rc:DataSampleSource` spans.
+`scanned_source_paths` remains accepted for older callers and returns the same
+values.
 When `observed_asset` is supplied, the returned record includes
 `suggested_next_actions`: profile-like results start with
 `describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset

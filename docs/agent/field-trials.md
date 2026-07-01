@@ -3822,6 +3822,19 @@ few useful gaps:
   actions instead of an empty action list. Staged helper-action frontier items
   also carry applied-source alternative context, so an executor can explain the
   semantic gate before staging a repair successor.
+- A four-agent broad wave over staged semantic recovery, profile-to-map
+  promotion, storage-metadata query planning, and post-safety frontier routing
+  found no broken core workflow. Staged recovery separated mechanical restage
+  from semantic same-slot repair and preserved applied-alternative context;
+  profile-to-map preserved semantic judgement across full-scan, sampled, metric,
+  and type-review lanes; and project brief could resume safely after privacy
+  review using existing `frontier_first_action` / `must_rerun_call` cues. The
+  concrete query-planning friction was terminology: database relation handles
+  worked through `scanned_source_paths`, but that name made cold agents infer a
+  filesystem-only field. `record_query_result` now accepts the preferred
+  `scanned_source_handles` alias, returns both names, and exposes the alias in
+  downstream query-context evidence previews. Docs now state that post-safety
+  frontier resumption is read-only until `mutation_allowed_after` clears.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

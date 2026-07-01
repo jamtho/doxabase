@@ -1324,7 +1324,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
         engine="python-csv",
         query_source_path="queries/orders.sql",
         result_sources=["/tmp/orders-result.json"],
-        scanned_source_paths=["warehouse/orders.csv"],
+        scanned_source_handles=["warehouse/orders.csv"],
         sample_size=3,
         sample_scope="All rows in the scratch Orders CSV.",
         sample_method="External read-only query.",
@@ -1341,6 +1341,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
         "https://richcanopy.org/doxabase/generated/source-span/"
     )
     assert result["scanned_source_paths"] == ["warehouse/orders.csv"]
+    assert result["scanned_source_handles"] == ["warehouse/orders.csv"]
     assert len(result["scanned_source_span_iris"]) == 1
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
@@ -1436,6 +1437,7 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
         "queries/orders_paid_aggregate.sql"
     ]
     assert source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
+    assert source_profile_evidence["scanned_source_handles"] == [str(csv_path)]
     assert source_profile_evidence["result_sources"] == [str(result_path)]
     assert source_profile_evidence["profile_summaries"][0]["summary"] == (
         "Orders paid aggregate scanned the scratch CSV."
@@ -1523,6 +1525,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert overlay_action["source_profile_evidence"]["scanned_source_paths"] == [
         str(csv_path)
     ]
+    assert overlay_action["source_profile_evidence"]["scanned_source_handles"] == [
+        str(csv_path)
+    ]
 
     draft = draft_query_evidence_storage_overlay_tool(
         db,
@@ -1547,6 +1552,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         str(query_path)
     ]
     assert draft["source_profile_evidence"]["scanned_source_paths"] == [
+        str(csv_path)
+    ]
+    assert draft["source_profile_evidence"]["scanned_source_handles"] == [
         str(csv_path)
     ]
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]

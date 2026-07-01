@@ -159,6 +159,10 @@ Do not read `frontier_status.is_complete` as permission to mutate; it only says
 the hidden frontier is fully exposed. `first_unattended_action` and
 `mutation_allowed_after` remain authoritative when safety review is still
 blocking.
+After completing a safety/export review, resume with the prior
+`frontier_first_action` or `frontier_status.must_rerun_call` only for read-only
+inspection. Do not mutate or export until a rerun clears
+`mutation_allowed_after`.
 Check `safety_first_action` / `safety_first_call` when you need to explain the
 safety branch separately; when a blocking privacy/export health task exists, it
 points to the redacted `export_preflight` review before any expansion or
@@ -1220,6 +1224,7 @@ compression, and replaced dataset verification values. It also reports the
 source query context and source profile/query evidence, previews validation for
 the Turtle addition, and returns `stage_arguments` plus a
 `stage_graph_revision` suggested action. Treat
+`source_query_evidence.scanned_source_handles` /
 `source_query_evidence.scanned_source_paths` as reviewed provenance context for
 choosing those values, not as an automatically accepted storage root.
 `source_profile_evidence` is retained as a compatibility alias for the same
@@ -1387,8 +1392,9 @@ are supplied, an `rc:ProfileObservation`, linked evidence, and an optional
 Use it after `draft_query_plan` and an external runtime attempt. Supply
 `result_sources` for result files, logs, or output artifacts, and
 `query_source_path` when the query text has a durable non-secret location.
-Supply `scanned_source_paths` for non-secret source files, objects, relation
-handles, or path-like inputs the external runtime actually scanned. For database
+Supply `scanned_source_handles` for non-secret source files, objects, relation
+handles, or path-like inputs the external runtime actually scanned. The older
+`scanned_source_paths` name remains accepted as an alias. For database
 handoffs, a reviewed handle such as `warehouse-prod:mart.orders` can preserve
 `connection_reference` plus `relation_identifier`; do not coerce it into a fake
 filesystem path. Later query-context and storage overlay handoffs expose scanned

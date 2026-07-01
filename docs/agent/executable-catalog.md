@@ -328,7 +328,7 @@ result = db.record_query_result(
     query_source_path="queries/orders_paid_count.sql",
     query_hash="sha256:...",
     result_sources=["/tmp/orders-paid-count.json"],
-    scanned_source_paths=["/data/orders.csv"],
+    scanned_source_handles=["/data/orders.csv"],
     sample_size=3,
     sample_scope="All rows in the reviewed local Orders CSV.",
     sample_method="External read-only aggregate after draft_query_plan.",
@@ -336,10 +336,11 @@ result = db.record_query_result(
 ```
 
 Use `result_sources` for arbitrary result-table or aggregate payloads such as
-grouped counts, sums, or JSON output, and `scanned_source_paths` for the
-non-secret inputs the runtime actually scanned. For a database relation handoff,
-record a reviewed relation handle such as `warehouse-prod:mart.orders` rather
-than forcing the value into a fake file path. The structured `sample_size`,
+grouped counts, sums, or JSON output, and use `scanned_source_handles` for the
+non-secret inputs the runtime actually scanned. `scanned_source_paths` remains
+accepted for older examples. For a database relation handoff, record a reviewed
+relation handle such as `warehouse-prod:mart.orders` rather than forcing the
+value into a fake file path. The structured `sample_size`,
 `row_count`, `null_count`, `distinct_count`, value-frequency, and metric fields
 are profile-shaped observation fields; only fill them when their meaning is
 clear in `summary`, `sample_scope`, and `sample_method`. For filtered or grouped
