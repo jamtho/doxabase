@@ -33770,8 +33770,8 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
     } == {"assert_map_type", "caveat_fallback", "define_value_type"}
 
     assert plan.produced_binding_count >= 1
-    assert plan.binding_resolution_count == 2
-    assert plan.resolved_action_count == 2
+    assert plan.binding_resolution_count == 1
+    assert plan.resolved_action_count == 1
     assert plan.missing_binding_action_count == 0
     assert {
         resolution.status for resolution in plan.binding_resolutions
@@ -33787,13 +33787,25 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
         for resolution in plan.action_resolution_groups[
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    ] == ["stage_map_assertion_change"]
     assert [
         action.tool_name
         for action in plan.suggested_next_action_groups[
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    ] == ["stage_map_assertion_change"]
+    independent_value_type_action = [
+        resolution
+        for resolution in plan.action_resolution_groups[
+            "independent_mutation_reviews"
+        ]
+        if resolution.tool_name == "stage_map_assertion_change"
+        and resolution.action.arguments["predicate"] == "rc:valueType"
+    ][0]
+    assert independent_value_type_action.binding_status == "not_applicable"
+    assert independent_value_type_action.action.arguments["supporting_patterns"] == [
+        recorded_pattern.pattern_iri
+    ]
     assert "missing_binding_prerequisites" not in (
         plan.action_resolution_groups
     )
@@ -33814,21 +33826,14 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
         if resolution.tool_name == "stage_map_assertion_change"
         and resolution.action.arguments["predicate"] == "rc:valueType"
     ][0]
-    assert value_type_action_resolution.binding_status == "resolved"
-    assert value_type_action_resolution.applied_binding_keys == [
-        produced_binding["binding_key"]
-    ]
+    assert value_type_action_resolution.binding_status == "not_applicable"
+    assert value_type_action_resolution.applied_binding_keys == []
     value_type_action = value_type_action_resolution.action
     assert value_type_action.arguments["supporting_patterns"] == [
         recorded_pattern.pattern_iri
     ]
     route_source = value_type_action.arguments["profile_route_sources"][0]
-    assert route_source["resolved_result_bindings"][0]["binding_key"] == (
-        produced_binding["binding_key"]
-    )
-    assert route_source["resolved_result_bindings"][0]["value"] == (
-        recorded_pattern.pattern_iri
-    )
+    assert "resolved_result_bindings" not in route_source
     assert f"'{recorded_pattern.pattern_iri}'" in value_type_action.call
     assert any(
         resolution.tool_name == "stage_pattern_promotion"
@@ -34691,6 +34696,10 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
         "review_note"
     ]
     assert "Mixed support" in value_assertion_action.arguments["review_note"]
+    assert value_assertion_action.arguments["supporting_patterns"] == [pattern_iri]
+    assert "consumes_result_bindings" not in (
+        value_assertion_action.source_profile_advisory
+    )
 
     grouped_metric_action = [
         action
@@ -34718,6 +34727,10 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
         "other_review_lanes": ["metric_vocabulary_review"],
         "note": type_advisory.mixed_support_note,
     }
+    assert grouped_type_action.arguments["supporting_patterns"] == [pattern_iri]
+    assert "consumes_result_bindings" not in (
+        grouped_type_action.source_profile_advisory
+    )
     assert draft.mixed_support_review_group_count == 1
     mixed_group = draft.mixed_support_review_groups[0]
     assert mixed_group.pattern_iris == [pattern_iri]
@@ -34735,6 +34748,23 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
     assert mixed_group.metric_advisory_indexes == [0]
     assert mixed_group.type_advisory_indexes == [0]
     assert "Compare the grouped actions" in mixed_group.note
+
+    followthrough = db.plan_profile_followthrough(dataset, evidence)
+    assert followthrough.missing_binding_keys == []
+    assert "missing_binding_prerequisites" not in (
+        followthrough.suggested_next_action_groups
+    )
+    value_type_resolution = [
+        resolution
+        for resolution in followthrough.action_resolutions
+        if resolution.tool_name == "stage_map_assertion_change"
+        and resolution.action.arguments["predicate"] == "rc:valueType"
+    ][0]
+    assert value_type_resolution.binding_status == "not_applicable"
+    assert value_type_resolution.action.arguments["supporting_patterns"] == [
+        pattern_iri
+    ]
+    assert value_type_resolution.action.unattended_choice_role == "primary"
 
 
 def test_stage_profile_map_updates_keeps_mixed_advisory_vocabulary_out_of_map_patch(

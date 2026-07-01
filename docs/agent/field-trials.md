@@ -4189,6 +4189,16 @@ few useful gaps:
   project-specific observed value types for column profile patterns, and for
   bundle patterns when `pattern_support_scope="all_profiles"`; built-in `rc:`
   metric and value-type terms remain evidence-only.
+- A follow-up profile follow-through trial confirmed the all-profiles helper
+  pattern now gives metric and value-type advisories shared promotion support,
+  and agents could stage the map update, metric vocabulary, value-type
+  vocabulary, and value-type assertion lanes. The remaining friction was that
+  `plan_profile_followthrough` still treated the value-type map assertion as
+  waiting for a fresh `record_pattern` binding even when the helper-created
+  same-evidence pattern already implied the value type. Value-type assertion
+  actions now prefill those existing same-evidence support patterns and omit
+  `consumes_result_bindings`, so supported value-type assertions are call-ready
+  while unsupported type assertions still use the binding handoff.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

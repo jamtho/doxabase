@@ -398,9 +398,11 @@ for vocabulary or pattern-supported modelling. Type advisories may suggest
 context slices, `record_pattern`, related column shells, or focused
 `stage_map_assertion_change` calls.
 Profile-bundle helper pattern implication synthesis carries project-specific
-metric IRIs, but observed project value-type IRIs may need a targeted
-`record_pattern` before their type-review lane has the same support trail. When
-a value-type finding should travel with metric/type review routing, record a
+metric IRIs and, with `pattern_support_scope="all_profiles"`, observed
+project-specific value-type IRIs. When a value-type assertion action already has
+same-evidence support patterns, those pattern IRIs are prefilled in
+`supporting_patterns`; review that support before staging. When no support
+pattern is present and the finding needs a durable support trail, record a
 pattern that targets or implies the value type and shares the profile evidence
 before staging the assertion or systematisation alternative.
 When a type advisory or modelling note first routes through `record_pattern`,
@@ -416,7 +418,9 @@ Generated profile type-review actions now expose this handoff as route-scoped
 binding metadata. Read `produces_result_bindings[]` on the `record_pattern`
 action and `consumes_result_bindings[]` on paired `stage_map_assertion_change`
 actions; matching `binding_key` values tell an unattended script to append the
-returned `pattern_iri` to `supporting_patterns`.
+returned `pattern_iri` to `supporting_patterns`. If the staged assertion action
+already has `supporting_patterns`, it is call-ready and does not carry
+`consumes_result_bindings`.
 `plan_profile_followthrough(dataset_iri, evidence_iri, result_bindings={...})`
 does that binding step from a fresh draft. Use it after recording the pattern
 so newly visible `stage_pattern_promotion` actions and resolved
@@ -434,9 +438,9 @@ call-ready `suggested_next_actions`. Follow the paired
 profile map update is intentional.
 If the first follow-through pass reports `missing_binding_keys`, run or inspect
 the producing action for those keys, then pass the returned values back through
-`result_bindings`. For example, a value-type support route may need the
-`pattern_iri` produced by `record_pattern` before its
-`stage_map_assertion_change` arguments are complete.
+`result_bindings`. For example, a type assertion without an existing
+same-evidence support pattern may need the `pattern_iri` produced by
+`record_pattern` before its `stage_map_assertion_change` arguments are complete.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

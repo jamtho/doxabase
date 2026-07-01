@@ -770,7 +770,9 @@ advisory first led you through `record_pattern`, or after applying one related
 staged revision made sibling readiness uncertain. The helper resolves
 `source_profile_advisory.produces_result_bindings` /
 `consumes_result_bindings` metadata into refreshed structured action
-arguments; do not parse `action.call`.
+arguments; do not parse `action.call`. When an assertion action already has
+same-evidence support in `arguments.supporting_patterns`, it is call-ready and
+does not carry `consumes_result_bindings`.
 
 Pass `result_bindings` as a mapping from `binding_key` to the returned value,
 for example `{binding_key: pattern_iri}` after `record_pattern`. The result

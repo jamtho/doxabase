@@ -29957,6 +29957,15 @@ class DoxaBase:
                     or current_value_type.iri != profile.observed_value_type.iri
                 )
             ):
+                value_type_supporting_patterns = (
+                    value_type_promotion_pattern_iris
+                )
+                value_type_support_note = (
+                    " Existing same-evidence value-type promotion patterns "
+                    "are prefilled in supporting_patterns."
+                    if value_type_supporting_patterns
+                    else pattern_carry_forward_note
+                )
                 add_action(
                     "stage_map_assertion_change",
                     self._profile_type_assertion_action_arguments(
@@ -29965,11 +29974,12 @@ class DoxaBase:
                         predicate="rc:valueType",
                         object_iri=profile.observed_value_type.iri,
                         advisory_status=advisory_status,
+                        supporting_patterns=value_type_supporting_patterns,
                     ),
                     (
                         "Stage a reviewable value-type assertion only after "
                         "checking the profile evidence and domain semantics."
-                        f"{pattern_carry_forward_note}"
+                        f"{value_type_support_note}"
                     ),
                     action_label="Stage value type assertion",
                 )
@@ -30206,6 +30216,7 @@ class DoxaBase:
         predicate: str,
         object_iri: str,
         advisory_status: str,
+        supporting_patterns: list[str] | None = None,
     ) -> dict[str, Any]:
         assert profile.observed_column is not None
         column_label = (
@@ -30214,6 +30225,21 @@ class DoxaBase:
             or profile.observed_column_name
             or profile.observed_column.iri
         )
+        supporting_pattern_values = list(dict.fromkeys(supporting_patterns or []))
+        if supporting_pattern_values:
+            review_note = (
+                "Generated from a profile type-finding advisory; profile type "
+                "findings are evidence, not automatic map updates. "
+                "Same-evidence type-review patterns were prefilled in "
+                "supporting_patterns; review that support before staging."
+            )
+        else:
+            review_note = (
+                "Generated from a profile type-finding advisory; profile type "
+                "findings are evidence, not automatic map updates. If the "
+                "suggested type-finding pattern was recorded first, add its "
+                "pattern_iri to supporting_patterns before staging."
+            )
         return {
             "subject": profile.observed_column.iri,
             "predicate": predicate,
@@ -30226,15 +30252,10 @@ class DoxaBase:
                 "map assertion and review current context before applying."
             ),
             "supporting_observations": [profile.iri],
-            "supporting_patterns": [],
+            "supporting_patterns": supporting_pattern_values,
             "evidence": [evidence_iri],
             "revision_anchors": [profile.observed_column.iri, object_iri],
-            "review_note": (
-                "Generated from a profile type-finding advisory; profile type "
-                "findings are evidence, not automatic map updates. If the "
-                "suggested type-finding pattern was recorded first, add its "
-                "pattern_iri to supporting_patterns before staging."
-            ),
+            "review_note": review_note,
             "review_recommendation": (
                 "Apply only if the profile evidence and current map/value-type "
                 f"context support replacing or recording this assertion "
@@ -31005,6 +31026,9 @@ class DoxaBase:
                 }
             ]
         elif action.tool_name == "stage_map_assertion_change":
+            supporting_patterns = action.arguments.get("supporting_patterns")
+            if isinstance(supporting_patterns, list) and supporting_patterns:
+                return
             source_profile_advisory["consumes_result_bindings"] = [
                 {
                     "binding_key": binding_key,

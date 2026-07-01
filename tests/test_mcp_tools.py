@@ -11045,20 +11045,20 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     assert result["draft"]["type_advisory_count"] == 1
     assert result["draft"]["type_advisories"][0]["promotion_pattern_count"] == 1
     assert result["produced_binding_count"] >= 1
-    assert result["binding_resolution_count"] == 2
-    assert result["resolved_action_count"] == 2
+    assert result["binding_resolution_count"] == 1
+    assert result["resolved_action_count"] == 1
     assert [
         resolution["tool_name"]
         for resolution in result["action_resolution_groups"][
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    ] == ["stage_map_assertion_change"]
     assert [
         action["tool_name"]
         for action in result["suggested_next_action_groups"][
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    ] == ["stage_map_assertion_change"]
     assert result["suggested_next_call_groups"]["ready_resolved_mutations"] == [
         action["call"]
         for action in result["suggested_next_action_groups"][
@@ -11071,14 +11071,14 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
         if resolution["tool_name"] == "stage_map_assertion_change"
         and resolution["action"]["arguments"]["predicate"] == "rc:valueType"
     ][0]
-    assert value_type_resolution["binding_status"] == "resolved"
-    assert value_type_resolution["applied_binding_keys"] == [binding_key]
+    assert value_type_resolution["binding_status"] == "not_applicable"
+    assert value_type_resolution["applied_binding_keys"] == []
     assert value_type_resolution["action"]["arguments"]["supporting_patterns"] == [
         pattern["pattern_iri"]
     ]
-    assert value_type_resolution["action"]["arguments"]["profile_route_sources"][0][
-        "resolved_result_bindings"
-    ][0]["value"] == pattern["pattern_iri"]
+    assert "resolved_result_bindings" not in (
+        value_type_resolution["action"]["arguments"]["profile_route_sources"][0]
+    )
 
 
 def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
@@ -11667,6 +11667,12 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     assert grouped_type_action["source_profile_advisory"]["mixed_support"][
         "pattern_iris"
     ] == [pattern_iri]
+    assert grouped_type_action["arguments"]["supporting_patterns"] == [
+        pattern_iri
+    ]
+    assert "consumes_result_bindings" not in (
+        grouped_type_action["source_profile_advisory"]
+    )
     assert grouped_metric_action["arguments"]["profile_route_sources"] == [
         grouped_metric_action["source_profile_advisory"]
     ]
@@ -11691,6 +11697,26 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     assert mixed_group["metric_advisory_indexes"] == [0]
     assert mixed_group["type_advisory_indexes"] == [0]
     assert "Compare the grouped actions" in mixed_group["note"]
+
+    followthrough = plan_profile_followthrough_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    assert followthrough["missing_binding_keys"] == []
+    assert "missing_binding_prerequisites" not in (
+        followthrough["suggested_next_action_groups"]
+    )
+    value_type_resolution = [
+        resolution
+        for resolution in followthrough["action_resolutions"]
+        if resolution["tool_name"] == "stage_map_assertion_change"
+        and resolution["action"]["arguments"]["predicate"] == "rc:valueType"
+    ][0]
+    assert value_type_resolution["binding_status"] == "not_applicable"
+    assert value_type_resolution["action"]["arguments"]["supporting_patterns"] == [
+        pattern_iri
+    ]
 
 
 def test_stage_profile_map_updates_tool_returns_json_like_payload(

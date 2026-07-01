@@ -1895,6 +1895,10 @@ Resolved action rows keep the structured `action.arguments` updated; prefer
 those arguments over `action.call`. `revision_checks[]` mirrors
 `check_staged_revision_apply` routing for supplied staged rows and records any
 explicit `restage_stale_revisions=True` refresh.
+When a profile type assertion already has same-evidence support patterns, the
+assertion action can be call-ready without a binding: its
+`action.arguments.supporting_patterns` is prefilled and the route source omits
+`consumes_result_bindings`.
 Use `missing_binding_keys` as the compact script-facing worklist when the first
 follow-through call says some actions still need a prior result such as a
 `record_pattern().pattern_iri`. The detailed `action_resolutions[]` rows still
@@ -2152,8 +2156,11 @@ same-evidence pattern that names it as a target or map implication,
 `stage_pattern_promotion` ontology skeleton for `rc:ValueType`. The skeleton
 borrows pattern prose for its `rdfs:comment` only when that prose mentions the
 value type IRI, local name, or normalized local-name phrase; otherwise it uses a
-generic review-first comment. If the same promotion pattern is also used by a
-metric advisory, `mixed_support_patterns`, `mixed_support_pattern_count`, and
+generic review-first comment. Value-type assertion actions prefill such
+same-evidence pattern IRIs in `supporting_patterns`, so they do not require a
+fresh `record_pattern` binding before follow-through. If the same promotion
+pattern is also used by a metric advisory, `mixed_support_patterns`,
+`mixed_support_pattern_count`, and
 `mixed_support_note` flag the shared evidence; grouped promotion and
 `stage_map_assertion_change` actions also carry this cue in
 `source_profile_advisory.mixed_support` and review notes. Top-level
@@ -2270,7 +2277,9 @@ For profile type-review actions, `record_pattern` may carry
 `produces_result_bindings[]` and paired `stage_map_assertion_change` actions may
 carry `consumes_result_bindings[]`. Match the shared `binding_key`, read the
 source result field such as `pattern_iri`, and append it to the target argument
-such as `supporting_patterns` before calling the staged assertion helper.
+such as `supporting_patterns` before calling the staged assertion helper. If a
+same-evidence support pattern is already present, the staged assertion action
+omits `consumes_result_bindings` and is routed as a primary call-ready action.
 The top-level advisory action fields mirror the route source so scripts do not
 need to descend into `source_profile_advisory` for first-pass routing.
 `unattended_choice_role` is `primary`, `fallback`, `inspect`, or
