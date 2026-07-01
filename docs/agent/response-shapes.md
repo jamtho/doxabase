@@ -5072,7 +5072,9 @@ sensitive-looking value. `export_part` is `graphs` or `revision_snapshots`, so
 agents can tell whether a match came from current RDF graph content or stored
 SQLite-side snapshot rows. Clean preflights include a suggested export action
 with `fail_on_sensitive=True`; blocked preflights suggest the redacted graph scan
-and/or the same preflight scope for snapshot review.
+and/or a snapshot-only `export_preflight(export_kind="revision_snapshots", ...)`
+for snapshot review, so low match limits cannot let graph matches hide stored
+snapshot matches.
 
 `db.export_graph(...)` and `db.export_trig(...)` return `GraphExportRecord`:
 
@@ -5273,7 +5275,12 @@ structured follow-up action. Use it for PASS/FAIL continuity checks, then open
 the raw fields when a count is surprising or incomplete. When
 `first_mutation_action` is present, it is copied from the recovery plan's first
 mutation-frontier item so a receiver can see the next reviewed mutation without
-opening the nested plan first.
+opening the nested plan first. If the manifest records nonzero
+`sensitive_literal_count`, the real import still loads the local handoff but
+sets `recommended_next_step="review_handoff_privacy_before_recovery"`, makes the
+top-level `first_suggested_next_action` and
+`first_safe_review_or_mutation_action` an `export_preflight` privacy review, and
+suppresses `first_mutation_action` until that review is explicit.
 
 `doxabase.import_trig(path, replace=False)` returns:
 

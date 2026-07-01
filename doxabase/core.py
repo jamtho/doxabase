@@ -54832,6 +54832,9 @@ class DoxaBase:
             trig_path=trig_path,
             snapshot_path=snapshot_path,
         )
+        privacy_review_required_before_recovery = (
+            self._handoff_manifest_sensitive_literal_count(payload) > 0
+        )
 
         trig_imported: dict[str, int] = {}
         post_trig_snapshot_evidence: list[RevisionSnapshotEvidenceStatus] = []
@@ -54909,7 +54912,7 @@ class DoxaBase:
                     offset=0,
                     total_count=0,
                 )
-            suggested_next_actions = self._dedupe_suggested_next_actions(
+            recovery_suggested_next_actions = self._dedupe_suggested_next_actions(
                 [
                     *self._import_handoff_bundle_recovery_session_actions(
                         matching_recovery_session_iris=matching_recovery_session_iris,
@@ -54924,6 +54927,19 @@ class DoxaBase:
                     *recovery_plan.suggested_next_actions,
                 ]
             )
+            if privacy_review_required_before_recovery:
+                suggested_next_actions = [
+                    self._import_handoff_bundle_privacy_review_action(
+                        graph_roles=graph_roles,
+                        revision_iris=revision_iris,
+                        snapshot_graph_roles=snapshot_graph_roles,
+                        sensitive_literal_count=(
+                            self._handoff_manifest_sensitive_literal_count(payload)
+                        ),
+                    )
+                ]
+            else:
+                suggested_next_actions = recovery_suggested_next_actions
             if not suggested_next_actions and not recovery_plan.processed_revision_iris:
                 suggested_next_actions = [
                     self._post_handoff_import_project_brief_action()
@@ -54939,6 +54955,9 @@ class DoxaBase:
             matching_recovery_session_iris=matching_recovery_session_iris,
             recovery_plan=recovery_plan,
             suggested_next_actions=suggested_next_actions,
+            privacy_review_required_before_recovery=(
+                privacy_review_required_before_recovery and not dry_run
+            ),
         )
 
         return HandoffBundleImportRecord(
@@ -54984,6 +55003,7 @@ class DoxaBase:
         matching_recovery_session_iris: list[str],
         recovery_plan: StagedRevisionRecoveryPlan | None,
         suggested_next_actions: list[SuggestedNextAction],
+        privacy_review_required_before_recovery: bool = False,
     ) -> HandoffBundleRecoverySummary:
         snapshot_status_counts: dict[str, int] = {}
         for evidence in snapshot_evidence:
@@ -54995,7 +55015,9 @@ class DoxaBase:
             for evidence in snapshot_evidence
             if evidence.status != "history_plus_snapshot_rows"
         ]
-        if dry_run:
+        if privacy_review_required_before_recovery:
+            recommended_next_step = "review_handoff_privacy_before_recovery"
+        elif dry_run:
             recommended_next_step = "run_import_handoff_bundle"
         elif matching_recovery_session_iris:
             recommended_next_step = "continue_imported_recovery_session"
@@ -55017,14 +55039,24 @@ class DoxaBase:
         first_mutation_frontier_item = (
             mutation_frontier_items[0] if mutation_frontier_items else None
         )
-        first_mutation_action = (
-            first_mutation_frontier_item.action
-            if first_mutation_frontier_item is not None
-            else None
-        )
+        first_mutation_action = None
+        if (
+            not privacy_review_required_before_recovery
+            and first_mutation_frontier_item is not None
+        ):
+            first_mutation_action = first_mutation_frontier_item.action
         first_safe_action: SuggestedNextAction | RevisionNextAction | None = None
         first_safe_action_source: str | None = None
-        if (
+        if privacy_review_required_before_recovery:
+            first_safe_action = (
+                suggested_next_actions[0] if suggested_next_actions else None
+            )
+            first_safe_action_source = (
+                "handoff_import_privacy_review"
+                if first_safe_action is not None
+                else None
+            )
+        elif (
             recovery_plan is not None
             and recovery_plan.mutation_allowed_after
             != "handoff_preflight_required_before_mutation"
@@ -55065,6 +55097,12 @@ class DoxaBase:
         note = (
             f"{snapshot_note} recommended_next_step={recommended_next_step}."
         )
+        if privacy_review_required_before_recovery:
+            note = (
+                "The imported handoff manifest records sensitive-looking "
+                "artifact terms; run the suggested export_preflight before "
+                f"following recovery or mutation actions. {note}"
+            )
         return HandoffBundleRecoverySummary(
             result_kind="handoff_bundle_recovery_summary",
             dry_run=dry_run,
@@ -55107,7 +55145,11 @@ class DoxaBase:
                 if recovery_plan is not None
                 else 0
             ),
-            first_mutation_frontier_item=first_mutation_frontier_item,
+            first_mutation_frontier_item=(
+                None
+                if privacy_review_required_before_recovery
+                else first_mutation_frontier_item
+            ),
             first_mutation_action=first_mutation_action,
             first_safe_review_or_mutation_action=first_safe_action,
             first_safe_review_or_mutation_call=(
@@ -55370,6 +55412,45 @@ class DoxaBase:
             )
         return warnings
 
+    @staticmethod
+    def _handoff_manifest_sensitive_literal_count(
+        manifest: MappingABC[str, Any],
+    ) -> int:
+        sensitive_literal_count = manifest.get("sensitive_literal_count")
+        if isinstance(sensitive_literal_count, int) and sensitive_literal_count > 0:
+            return sensitive_literal_count
+        return 0
+
+    def _import_handoff_bundle_privacy_review_action(
+        self,
+        *,
+        graph_roles: list[str],
+        revision_iris: list[str],
+        snapshot_graph_roles: list[str],
+        sensitive_literal_count: int,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "export_kind": "handoff_bundle",
+            "graphs": graph_roles or ["project"],
+            "limit": max(20, min(sensitive_literal_count, 100)),
+        }
+        if revision_iris:
+            arguments["revision_iris"] = revision_iris
+        if snapshot_graph_roles:
+            arguments["snapshot_graph_roles"] = snapshot_graph_roles
+        return SuggestedNextAction(
+            action_label="Review imported handoff privacy",
+            tool_name="export_preflight",
+            mcp_tool_name="doxabase.export_preflight",
+            arguments=arguments,
+            reason=(
+                "The imported handoff manifest records sensitive-looking "
+                "artifact terms. Run this redacted receiver-side preflight "
+                "before following staged recovery or mutation actions."
+            ),
+            call=self._suggested_call_string("export_preflight", arguments),
+        )
+
     def _import_handoff_bundle_suggested_action(
         self,
         *,
@@ -55578,13 +55659,11 @@ class DoxaBase:
                 )
             if record.snapshot_sensitive_literal_count:
                 arguments = {
-                    "export_kind": record.export_kind,
+                    "export_kind": "revision_snapshots",
                     "revision_iris": record.revision_iris,
                     "snapshot_graph_roles": record.snapshot_graph_roles,
-                    "limit": record.limit,
+                    "limit": max(record.limit, 20),
                 }
-                if record.export_kind != "revision_snapshots":
-                    arguments["graphs"] = record.graphs
                 actions.append(
                     SuggestedNextAction(
                         action_label="Review snapshot privacy matches",
@@ -55594,8 +55673,8 @@ class DoxaBase:
                         reason=(
                             "Stored revision snapshots can contain historical "
                             "terms outside current graph content; use the "
-                            "preflight matches when narrowing or cleaning the "
-                            "handoff scope."
+                            "snapshot-only preflight matches when narrowing or "
+                            "cleaning the handoff scope."
                         ),
                         call=self._suggested_call_string(
                             "export_preflight",

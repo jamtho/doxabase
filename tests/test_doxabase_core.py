@@ -2431,6 +2431,93 @@ def test_import_handoff_bundle_routes_non_staged_revision_context(
     assert validation.conforms, validation.report_text
 
 
+def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_DIRTY_HANDOFF_IMPORT"
+    source.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    staged = source.stage_graph_revision(
+        summary="Stage dirty handoff receiver probe",
+        rationale="Create a recoverable staged row in a privacy-dirty handoff.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:DirtyHandoffImportProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "dirty-project-handoff.trig"
+    snapshot_path = tmp_path / "dirty-revision-snapshots.json"
+    manifest_path = tmp_path / "dirty-handoff-manifest.json"
+    exported = source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[staged.revision_iri],
+    )
+    assert exported.sensitive_literal_count > 0
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(manifest_path)
+
+    assert imported.recovery_plan is not None
+    assert imported.recovery_plan.processed_revision_iris == [staged.revision_iri]
+    assert imported.suggested_next_actions
+    assert [action.tool_name for action in imported.suggested_next_actions] == [
+        "export_preflight"
+    ]
+    privacy_action = imported.suggested_next_actions[0]
+    assert privacy_action.arguments == {
+        "export_kind": "handoff_bundle",
+        "graphs": exported.graph_roles,
+        "limit": 20,
+        "revision_iris": [staged.revision_iri],
+        "snapshot_graph_roles": exported.snapshot_graph_roles,
+    }
+    followup = receiver.export_preflight(**privacy_action.arguments)
+    assert followup.sensitive_literal_count == exported.sensitive_literal_count
+    assert followup.graph_sensitive_literal_count == (
+        exported.graph_sensitive_literal_count
+    )
+    assert followup.snapshot_sensitive_literal_count == (
+        exported.snapshot_sensitive_literal_count
+    )
+    assert imported.recovery_summary.recommended_next_step == (
+        "review_handoff_privacy_before_recovery"
+    )
+    assert imported.recovery_summary.first_suggested_next_action == privacy_action
+    assert (
+        imported.recovery_summary.first_safe_review_or_mutation_action
+        == privacy_action
+    )
+    assert imported.recovery_summary.first_safe_review_or_mutation_source == (
+        "handoff_import_privacy_review"
+    )
+    assert imported.recovery_summary.first_mutation_action is None
+    assert imported.recovery_summary.first_mutation_frontier_item is None
+    assert "start_staged_revision_recovery_session" not in [
+        action.tool_name for action in imported.suggested_next_actions
+    ]
+    assert "apply_staged_revision" not in [
+        action.tool_name for action in imported.suggested_next_actions
+    ]
+    assert any(
+        "potential sensitive terms" in warning
+        for warning in imported.warnings
+    )
+    assert fake_secret not in json.dumps(to_dict(imported))
+
+
 def test_export_preflight_blocks_sensitive_handoff_scope(
     tmp_path: Path,
 ) -> None:
@@ -2496,6 +2583,20 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
         "export_preflight",
         "preflight_context_slice_export",
     ]
+    snapshot_action = preflight.suggested_next_actions[1]
+    assert snapshot_action.arguments == {
+        "export_kind": "revision_snapshots",
+        "revision_iris": [staged.revision_iri],
+        "snapshot_graph_roles": ["map"],
+        "limit": 20,
+    }
+    snapshot_followup = db.export_preflight(**snapshot_action.arguments)
+    assert snapshot_followup.graph_sensitive_literal_count == 0
+    assert snapshot_followup.snapshot_sensitive_literal_count >= 1
+    assert snapshot_followup.matches
+    assert {match.export_part for match in snapshot_followup.matches} == {
+        "revision_snapshots"
+    }
     slice_action = preflight.suggested_next_actions[-1]
     assert slice_action.arguments == {
         "seed_iris": ["<target-resource-iri>"],

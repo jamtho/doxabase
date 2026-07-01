@@ -2494,7 +2494,12 @@ profile route keys/group counts, the first mutation-frontier action when one is
 available, the first structured follow-up action, and a `recommended_next_step`
 value such as `run_import_handoff_bundle`,
 `continue_imported_recovery_session`, `follow_recovery_plan_mutation_frontier`,
-or `resume_project_frontier`.
+`review_handoff_privacy_before_recovery`, or `resume_project_frontier`.
+When the manifest records nonzero `sensitive_literal_count`, the import can
+still be useful locally, but its top-level next action is a redacted
+`doxabase.export_preflight(export_kind="handoff_bundle", ...)` privacy review
+and recovery/mutation actions are not promoted as top-level continuations until
+that review is explicit.
 If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is
@@ -2611,6 +2616,10 @@ required.
 Use `doxabase.export_preflight(export_kind="handoff_bundle")` before choosing
 paths when you need to review both the RDF graph roles and stored snapshot rows
 without creating artifacts.
+If a blocked handoff preflight reports snapshot matches, follow its
+snapshot-only `export_preflight(export_kind="revision_snapshots", ...)` action
+to inspect stored snapshot rows directly; that avoids repeating a low-limit
+combined handoff preflight where graph matches can fill the returned match list.
 
 `doxabase.export_revision_snapshots`
 

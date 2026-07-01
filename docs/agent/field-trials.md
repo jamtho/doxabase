@@ -3885,6 +3885,16 @@ few useful gaps:
   descriptions now expose `suggested_next_actions`: capped runs first route to
   an uncapped profile-run read, then to `draft_profile_map_updates`; uncapped
   runs route directly to the draft.
+- A privacy/export handoff trial found two unattended routing traps after the
+  core redaction/blocking behavior already worked. Low-limit combined handoff
+  preflights could suggest a repeat combined preflight whose graph matches again
+  hid snapshot matches, so blocked snapshot review actions now rerun
+  `export_preflight(export_kind="revision_snapshots", ...)` directly. Dirty
+  manifests imported with `fail_on_sensitive=false` also warned receivers but
+  still promoted recovery/apply actions; `import_handoff_bundle()` now gates
+  top-level continuations through a receiver-side handoff `export_preflight`
+  and reports `review_handoff_privacy_before_recovery` before exposing mutation
+  as the first safe action.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
