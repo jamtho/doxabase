@@ -2208,6 +2208,10 @@ class GraphVersionListItem:
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
+    alternative_gate_status: str | None
+    alternative_semantic_review_required: bool
+    alternative_applied_source_iri: str | None
+    alternative_applied_revision_iri: str | None
     triple_count: int | None
     content_digest: str | None
     count_basis: str
@@ -2253,6 +2257,10 @@ class GraphVersionRevisionContext:
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
+    alternative_gate_status: str | None
+    alternative_semantic_review_required: bool
+    alternative_applied_source_iri: str | None
+    alternative_applied_revision_iri: str | None
     related_revision_iris: list[str]
 
 
@@ -8942,6 +8950,16 @@ class DoxaBase:
             restaged_from=revision.restaged_from,
             restaged_by=revision.restaged_by,
             current_restaged_by=revision.current_restaged_by,
+            alternative_gate_status=revision.alternative_gate.status,
+            alternative_semantic_review_required=(
+                revision.alternative_gate.semantic_review_required
+            ),
+            alternative_applied_source_iri=(
+                revision.alternative_gate.applied_source_iri
+            ),
+            alternative_applied_revision_iri=(
+                revision.alternative_gate.applied_revision_iri
+            ),
             triple_count=snapshot.triple_count,
             content_digest=snapshot.content_digest,
             count_basis=snapshot.count_basis,
@@ -9022,6 +9040,16 @@ class DoxaBase:
             restaged_from=revision.restaged_from,
             restaged_by=revision.restaged_by,
             current_restaged_by=revision.current_restaged_by,
+            alternative_gate_status=revision.alternative_gate.status,
+            alternative_semantic_review_required=(
+                revision.alternative_gate.semantic_review_required
+            ),
+            alternative_applied_source_iri=(
+                revision.alternative_gate.applied_source_iri
+            ),
+            alternative_applied_revision_iri=(
+                revision.alternative_gate.applied_revision_iri
+            ),
             related_revision_iris=related_revision_iris,
         )
 
@@ -16303,6 +16331,9 @@ class DoxaBase:
             resolution.action
             for resolution in action_resolutions
             if resolution.binding_status != "missing_bindings"
+            and not self._profile_followthrough_pending_map_update_review(
+                resolution
+            )
         ]
         for check in revision_checks:
             suggested_next_actions.extend(check.suggested_next_actions)
@@ -16381,6 +16412,8 @@ class DoxaBase:
             if resolution.binding_status == "missing_bindings":
                 continue
             group_name = self._profile_followthrough_resolution_group(resolution)
+            if group_name == "pending_profile_map_update_review":
+                continue
             groups.setdefault(group_name, []).append(resolution.action)
         recheck_actions: list[SuggestedNextAction] = []
         for check in revision_checks:
@@ -16397,6 +16430,8 @@ class DoxaBase:
     ) -> str:
         if resolution.binding_status == "missing_bindings":
             return "missing_binding_prerequisites"
+        if DoxaBase._profile_followthrough_pending_map_update_review(resolution):
+            return "pending_profile_map_update_review"
         action_kind = DoxaBase._profile_followthrough_primary_action_kind(
             resolution.tool_name
         )
@@ -16420,6 +16455,20 @@ class DoxaBase:
         if action_kind == "export_artifact":
             return "export_review_artifacts"
         return "other_followthrough"
+
+    @staticmethod
+    def _profile_followthrough_pending_map_update_review(
+        resolution: ProfileFollowthroughActionResolution,
+    ) -> bool:
+        if resolution.tool_name != "stage_profile_map_updates":
+            return False
+        source = getattr(resolution.action, "source_profile_map_update", None)
+        if not isinstance(source, MappingABC):
+            return False
+        if source.get("action_status") == "available_after_pending_review":
+            return True
+        pending_count = source.get("pending_staged_profile_update_count")
+        return isinstance(pending_count, int) and pending_count > 0
 
     def _profile_followthrough_resolve_action_bindings(
         self,
@@ -31339,10 +31388,11 @@ class DoxaBase:
         evidence_iri: str,
     ) -> list[SuggestedNextAction]:
         if observed_asset is None:
-            return []
-        observed_asset_iri = self.expand_iri(observed_asset)
+            observed_asset_iri = None
+        else:
+            observed_asset_iri = self.expand_iri(observed_asset)
         actions: list[SuggestedNextAction] = []
-        if observation_type == "profile":
+        if observation_type == "profile" and observed_asset_iri is not None:
             profile_arguments = {
                 "dataset_iri": observed_asset_iri,
                 "evidence_iri": evidence_iri,
@@ -31364,6 +31414,30 @@ class DoxaBase:
                     ),
                 )
             )
+        evidence_arguments = {
+            "seed_iris": [evidence_iri],
+            "profile": "resource_brief",
+        }
+        actions.append(
+            SuggestedNextAction(
+                action_label="Inspect recorded query evidence",
+                tool_name="describe_context_slice",
+                mcp_tool_name="doxabase.describe_context_slice",
+                arguments=evidence_arguments,
+                reason=(
+                    "Inspect the evidence resource just written by "
+                    "record_query_result, including query source spans, "
+                    "scanned source handles, result sources, and execution "
+                    "metadata before continuing query planning."
+                ),
+                call=self._suggested_call_string(
+                    "describe_context_slice",
+                    evidence_arguments,
+                ),
+            )
+        )
+        if observed_asset_iri is None:
+            return actions
         context_arguments = {"iri": observed_asset_iri}
         actions.append(
             SuggestedNextAction(

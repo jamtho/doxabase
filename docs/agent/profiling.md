@@ -400,6 +400,13 @@ related `staged_revision_iris` when a previous apply may have made sibling
 staged rows stale; `restage_stale_revisions=True` can mechanically refresh
 rows whose next action is `restage_staged_revision`, but the helper does not
 apply profile-generated map or ontology changes.
+When a same dataset/evidence profile map update is already pending,
+`plan_profile_followthrough` keeps duplicate `stage_profile_map_updates` rows in
+`action_resolution_groups.pending_profile_map_update_review` but omits them from
+call-ready `suggested_next_actions`. Follow the paired
+`plan_staged_revision_recovery` action first, and pass
+`allow_pending_profile_updates=true` only after review confirms another staged
+profile map update is intentional.
 If the first follow-through pass reports `missing_binding_keys`, run or inspect
 the producing action for those keys, then pass the returned values back through
 `result_bindings`. For example, a value-type support route may need the

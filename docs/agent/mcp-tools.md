@@ -389,8 +389,9 @@ when a workflow needs the timeline of `map`, `ontology`, `patterns`, or another
 graph role without scripting over revision rows. Rows include `revision_iri`,
 `record_kind`, `snapshot_semantics`, `triple_count`, `content_digest`,
 `count_basis`, `exact_snapshot_available`, `snapshot_evidence_status`, lineage
-links, and suggested calls to `describe_revision_graph_snapshot` and, for exact
-rows, `describe_graph_version_diff`.
+links, alternative semantic-review gate fields when relevant, and suggested
+calls to `describe_revision_graph_snapshot` and, for exact rows,
+`describe_graph_version_diff`.
 `snapshot_semantics` distinguishes `staged_before_graph`,
 `applied_after_graph`, and `recorded_graph_snapshot`. Set `exact_only=True` to
 hide RDF-only count/digest snapshots, and `include_current=False` when a caller
@@ -408,8 +409,10 @@ version?" rather than merely inspect count/digest metadata. Pass
 triple counts are reported when stored rows are available, and
 `include_triples=true` includes bounded changed-triple arrays.
 The response also carries compact before/after revision context and
-`related_revision_iris`, plus follow-up actions to `describe_revision_lineage`
-and, for applied-event comparison points, `describe_applied_revision_diff`.
+`related_revision_iris`, including alternative semantic-review gate fields when
+a staged comparison point competes with an already-applied alternative, plus
+follow-up actions to `describe_revision_lineage` and, for applied-event
+comparison points, `describe_applied_revision_diff`.
 Use those actions when a graph-version diff is being used as recovery context;
 the graph delta alone does not explain staged/applied/restaged lineage.
 
@@ -1434,9 +1437,12 @@ Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
 When `observed_asset` is supplied, the returned payload includes
 `suggested_next_actions`: profile-shaped results start with
-`describe_profile_run(observed_asset, evidence_iri)` and all observed-asset
-results include `describe_query_context(iri=observed_asset)`. Follow those
-actions before drafting another query plan or promoting profile-derived facts.
+`describe_profile_run(observed_asset, evidence_iri)`, every result includes
+`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+for the newly written evidence, and observed-asset results include
+`describe_query_context(iri=observed_asset)`. Inspect the evidence action when
+source handles, result artifacts, or source spans need to travel with the next
+handoff; use query context to refresh the dataset planning route.
 
 `doxabase.record_dataset_profile`
 

@@ -1316,10 +1316,12 @@ The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
 When `observed_asset` is supplied, the response now includes a
+`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+action so an agent can inspect the exact evidence it just wrote, plus a
 `describe_query_context` next action for that asset. Profile-shaped query
 results also include a leading `describe_profile_run` action using the returned
-`evidence_iri`, so a plan-to-result loop can continue without reconstructing
-the follow-up call by hand.
+evidence IRI, so a plan-to-result loop can continue without reconstructing the
+follow-up call by hand.
 
 `db.draft_query_evidence_storage_overlay(...)` returns a
 `QueryEvidenceStorageOverlayDraft`:
@@ -1871,6 +1873,12 @@ include non-callable `missing_binding_prerequisites`; suggested-action groups
 only include call-ready actions and use buckets such as
 `ready_resolved_mutations`, `binding_producers`, `independent_mutation_reviews`,
 `inspection`, `export_review_artifacts`, and `staged_revision_recheck`.
+`pending_profile_map_update_review` is intentionally present only in
+`action_resolution_groups`: it marks a duplicate
+`stage_profile_map_updates` action that the staging helper would reject until
+the existing same dataset/evidence staged update has been reviewed. Follow the
+paired `plan_staged_revision_recovery` action instead of passing
+`allow_pending_profile_updates=True` by default.
 When serializing a nested field directly, such as
 `draft.advisory_followthrough_plan` or `plan.action_resolutions`, use
 `to_jsonable(...)` rather than `to_dict(...)`; `to_dict(...)` is for a single
@@ -4211,6 +4219,10 @@ item.applied_by
 item.restaged_from
 item.restaged_by
 item.current_restaged_by
+item.alternative_gate_status
+item.alternative_semantic_review_required
+item.alternative_applied_source_iri
+item.alternative_applied_revision_iri
 item.triple_count
 item.content_digest
 item.count_basis
@@ -4285,10 +4297,12 @@ self-route to `import_revision_snapshots` or `import_trig`.
 The revision-context fields are compact lineage pointers for the comparison
 points. They include `record_kind`, `snapshot_semantics`, `application_status`,
 `staged_validation_status`, `is_current_staged_work`, `applies_staged_revision`,
-`applied_by`, `restaged_from`, `restaged_by`, `current_restaged_by`, and
+`applied_by`, `restaged_from`, `restaged_by`, `current_restaged_by`,
+`alternative_gate_status`, `alternative_semantic_review_required`,
+`alternative_applied_source_iri`, `alternative_applied_revision_iri`, and
 per-context `related_revision_iris`. Use them when a graph delta is zero or
 small but the revision may still be staged, applied, restaged, or semantically
-gated. Graph-version diffs now suggest `describe_revision_lineage(...)` for the
+gated. Graph-version diffs suggest `describe_revision_lineage(...)` for the
 comparison points and `describe_applied_revision_diff(...)` for applied-event
 comparison points, so follow those before treating a version diff as the whole
 revision story.

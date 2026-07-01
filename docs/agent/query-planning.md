@@ -594,6 +594,11 @@ as long as `engine` and `sample_method` say what actually ran.
 paths, and scanned source paths as structured evidence metadata, so custom
 evidence summaries still remain machine-readable in later query-context
 handoffs.
+After recording the result, follow the returned
+`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+action when you need the exact result evidence, relation handle, source span, or
+scanned path/handle trail. The returned `describe_query_context` action is for
+the refreshed dataset handoff; it is not a substitute for evidence inspection.
 Directory storage with a reviewed wildcard CSV path template can also reach
 `handoff_kind="execution_attempt_ready"`; after an external aggregate, seed
 `describe_context_slice(profile="deep_lore")` from the dataset, returned

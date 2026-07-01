@@ -9656,7 +9656,7 @@ def test_same_slot_replacement_preserves_applied_alternative_gate(
         revision_anchors=[orders],
         alternative_to=applied_source.revision_iri,
     )
-    db.apply_staged_revision(applied_source.revision_iri)
+    applied = db.apply_staged_revision(applied_source.revision_iri)
 
     check = db.check_staged_revision_apply(stale_alternative.revision_iri)
 
@@ -9688,6 +9688,45 @@ def test_same_slot_replacement_preserves_applied_alternative_gate(
     assert repair_check.next_action is not None
     assert repair_check.next_action.action_label == (
         "Apply only after semantic review"
+    )
+
+    repair_iri = repair.staged_revision.revision_iri
+    graph_versions = db.list_graph_versions(
+        "map",
+        exact_only=True,
+        record_kind="staged_patch",
+    )
+    repair_version = next(
+        item for item in graph_versions.versions if item.revision_iri == repair_iri
+    )
+    assert repair_version.alternative_gate_status == (
+        "alternative_to_applied_source"
+    )
+    assert repair_version.alternative_semantic_review_required is True
+    assert repair_version.alternative_applied_source_iri == (
+        applied_source.revision_iri
+    )
+    assert repair_version.alternative_applied_revision_iri == (
+        applied.applied_revision_iri
+    )
+
+    version_diff = db.describe_graph_version_diff("map", repair_iri)
+    assert version_diff.count_delta == 0
+    assert version_diff.digest_changed is False
+    assert version_diff.before_revision_context is not None
+    assert version_diff.before_revision_context.application_status == "ready"
+    assert version_diff.before_revision_context.alternative_gate_status == (
+        "alternative_to_applied_source"
+    )
+    assert (
+        version_diff.before_revision_context.alternative_semantic_review_required
+        is True
+    )
+    assert version_diff.before_revision_context.alternative_applied_source_iri == (
+        applied_source.revision_iri
+    )
+    assert version_diff.before_revision_context.alternative_applied_revision_iri == (
+        applied.applied_revision_iri
     )
 
 
@@ -21121,7 +21160,14 @@ def test_local_csv_directory_wildcard_handoff_records_generic_result(
     assert result.observation_type == "observation"
     assert result.execution_status == "succeeded"
     assert result.scanned_source_paths == scanned_paths
-    assert result.suggested_next_actions[0].tool_name == "describe_query_context"
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_query_context",
+    ]
+    assert result.suggested_next_actions[0].arguments == {
+        "seed_iris": [result.evidence_iri],
+        "profile": "resource_brief",
+    }
 
     result_slice = db.describe_context_slice(
         result.observation_iri,
@@ -27692,17 +27738,26 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.evidence_triples > result.source_span_triples > 0
     assert [action.tool_name for action in result.suggested_next_actions] == [
         "describe_profile_run",
+        "describe_context_slice",
         "describe_query_context",
     ]
     assert result.suggested_next_actions[0].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": result.evidence_iri,
     }
-    assert result.suggested_next_actions[1].arguments == {"iri": dataset}
+    assert result.suggested_next_actions[1].arguments == {
+        "seed_iris": [result.evidence_iri],
+        "profile": "resource_brief",
+    }
+    assert result.suggested_next_actions[2].arguments == {"iri": dataset}
     assert result.suggested_next_calls == [
         (
             f"describe_profile_run(dataset_iri='{dataset}', "
             f"evidence_iri='{result.evidence_iri}')"
+        ),
+        (
+            "describe_context_slice("
+            f"seed_iris=['{result.evidence_iri}'], profile='resource_brief')"
         ),
         f"describe_query_context(iri='{dataset}')",
     ]
@@ -27799,19 +27854,31 @@ def test_record_query_result_preserves_database_relation_source_handle(
     assert result.scanned_source_paths == []
     assert result.scanned_source_handles == [relation_handle]
     assert result.scanned_source_span_iris == []
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_query_context",
+    ]
+    assert result.suggested_next_actions[0].arguments == {
+        "seed_iris": [result.evidence_iri],
+        "profile": "resource_brief",
+    }
     evidence = db.describe_resource(result.evidence_iri, graph="evidence")
     evidence_outgoing = {
         (triple.predicate, triple.object) for triple in evidence.outgoing
     }
     assert (RC + "scannedSourceHandle", relation_handle) in evidence_outgoing
     evidence_slice = db.describe_context_slice(
-        result.evidence_iri,
-        profile="resource_brief",
+        **result.suggested_next_actions[0].arguments,
         max_triples=80,
     )
     assert result.evidence_iri in {
         resource.iri for resource in evidence_slice.resources
     }
+    assert any(
+        triple.predicate == RC + "scannedSourceHandle"
+        and triple.object == relation_handle
+        for triple in evidence_slice.triples
+    )
     assert db.validate_graph(scope="all").conforms
 
 
@@ -27954,9 +28021,14 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
 
     assert aggregate.observation_type == "observation"
     assert [action.tool_name for action in aggregate.suggested_next_actions] == [
+        "describe_context_slice",
         "describe_query_context"
     ]
-    assert aggregate.suggested_next_actions[0].arguments == {"iri": dataset}
+    assert aggregate.suggested_next_actions[0].arguments == {
+        "seed_iris": [aggregate.evidence_iri],
+        "profile": "resource_brief",
+    }
+    assert aggregate.suggested_next_actions[1].arguments == {"iri": dataset}
 
     sampled_aggregate = db.record_query_result(
         summary="Orders status aggregate also recorded source rows scanned.",
@@ -27978,6 +28050,7 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
         action.tool_name for action in sampled_aggregate.suggested_next_actions
     ] == [
         "describe_profile_run",
+        "describe_context_slice",
         "describe_query_context",
     ]
     assert db.validate_graph(scope="all").conforms
@@ -27999,7 +28072,13 @@ def test_record_query_result_records_failures_as_observations(
     assert result.observation_type == "observation"
     assert result.execution_status == "failed"
     assert result.source_span_iri is not None
-    assert result.suggested_next_actions == []
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_context_slice"
+    ]
+    assert result.suggested_next_actions[0].arguments == {
+        "seed_iris": [result.evidence_iri],
+        "profile": "resource_brief",
+    }
     assert db.validate_graph(scope="all").conforms
 
 
@@ -30916,6 +30995,22 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         staged_from_suggestion.staged_revision.revision_iri
     ]
     assert rerun_draft.suggested_next_actions[0] == pending_action
+    followthrough = db.plan_profile_followthrough(dataset, evidence)
+    assert [
+        resolution.tool_name
+        for resolution in followthrough.action_resolution_groups[
+            "pending_profile_map_update_review"
+        ]
+    ] == ["stage_profile_map_updates"]
+    assert "pending_profile_map_update_review" not in (
+        followthrough.suggested_next_action_groups
+    )
+    assert [
+        action.tool_name for action in followthrough.suggested_next_actions
+    ][:1] == ["plan_staged_revision_recovery"]
+    assert "stage_profile_map_updates" not in {
+        action.tool_name for action in followthrough.suggested_next_actions
+    }
     with pytest.raises(DoxaBaseError, match="pending staged profile map update"):
         db.stage_profile_map_updates(**duplicate_stage_action.arguments)
     forced_duplicate = db.stage_profile_map_updates(

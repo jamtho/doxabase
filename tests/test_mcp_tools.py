@@ -1346,6 +1346,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "describe_profile_run",
+        "describe_context_slice",
         "describe_query_context",
     ]
     assert result["suggested_next_actions"][0]["arguments"] == {
@@ -1353,6 +1354,10 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
         "evidence_iri": result["evidence_iri"],
     }
     assert result["suggested_next_actions"][1]["arguments"] == {
+        "seed_iris": [result["evidence_iri"]],
+        "profile": "resource_brief",
+    }
+    assert result["suggested_next_actions"][2]["arguments"] == {
         "iri": "https://example.test/project#Orders"
     }
     assert result["suggested_next_calls"] == [
@@ -1360,6 +1365,10 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
             "describe_profile_run("
             "dataset_iri='https://example.test/project#Orders', "
             f"evidence_iri='{result['evidence_iri']}')"
+        ),
+        (
+            "describe_context_slice("
+            f"seed_iris=['{result['evidence_iri']}'], profile='resource_brief')"
         ),
         "describe_query_context(iri='https://example.test/project#Orders')",
     ]

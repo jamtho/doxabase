@@ -3923,6 +3923,25 @@ few useful gaps:
   now applies record-kind, current-work, and stored validation filters before
   `check_staged_revision_apply()`, while status-dependent filters still run
   after live checks.
+- A staged rebase/version scout found same-slot repaired alternatives carried
+  the correct semantic-review gate in apply checks and recovery plans, but
+  graph-version browsing could still show a ready staged-before snapshot with
+  zero delta to current before exposing that gate. Graph-version timeline rows
+  and diff revision contexts now surface alternative gate status, semantic
+  review requirement, and applied alternative pointers directly.
+- A profile follow-through scout found pending same dataset/evidence profile
+  map updates were correctly gated by `draft_profile_map_updates` and
+  `stage_profile_map_updates`, but `plan_profile_followthrough` still exposed
+  the duplicate staging action as a call-ready independent mutation. The
+  coordinator now keeps that row in `pending_profile_map_update_review` for
+  diagnostics and leaves the recovery-plan action as the runnable next step.
+- A query-planning scout found database relation and partition handoffs could
+  be recorded as query evidence correctly, but the returned follow-up sent
+  agents back to dataset query context without a direct route to the evidence
+  just written. `record_query_result()` now always returns an evidence-focused
+  `describe_context_slice(..., profile="resource_brief")` action so relation
+  handles, scanned source handles, source spans, and result artifacts remain in
+  the immediate unattended route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
