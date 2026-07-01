@@ -28853,6 +28853,225 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     ]
 
 
+def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    orders = "https://example.test/project#Orders"
+    fulfillment = "https://example.test/project#FulfillmentEvents"
+    source.record_map_dataset(orders, label="Orders", is_table=True)
+    event_source = source.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="Choose event-row framing for Orders.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+
+                    <{orders}> a ex:EventRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        validation_scope="all",
+    )
+    stale_mechanical = source.stage_graph_revision(
+        summary="Add fulfillment events dataset",
+        rationale=(
+            "Independent map addition staged before the Orders event framing "
+            "is applied."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{fulfillment}> a rc:Dataset .
+                """,
+            }
+        ],
+        revision_anchors=[fulfillment],
+        validation_scope="all",
+    )
+    applied = source.apply_staged_revision(event_source.revision_iri)
+    semantic_alternative = source.stage_systematisation(
+        summary="Review aggregate row alternative",
+        intent=(
+            "Keep the aggregate-row alternative visible after the event-row "
+            "source was applied."
+        ),
+        anchors=[orders],
+        framings=[
+            {
+                "label": "Aggregate row alternative",
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+
+                    <{orders}> a ex:AggregateRow .
+                """,
+                "alternative_to": event_source.revision_iri,
+            }
+        ],
+        validation_scope="all",
+    )
+    semantic_iri = semantic_alternative.staged_revisions[0].revision_iri
+    revision_iris = [semantic_iri, stale_mechanical.revision_iri]
+
+    semantic_check = source.check_staged_revision_apply(semantic_iri)
+    assert semantic_check.status == "ready"
+    assert semantic_check.can_apply is True
+    assert semantic_check.next_action is not None
+    assert semantic_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    assert semantic_check.first_safe_next_action is not None
+    assert semantic_check.first_safe_next_action.tool_name == (
+        "describe_staged_revision"
+    )
+    assert source.check_staged_revision_apply(
+        stale_mechanical.revision_iri
+    ).next_action.tool_name == "restage_staged_revision"
+
+    source_plan = source.plan_staged_revision_recovery(
+        revision_iris,
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+    assert source_plan.lane_counts == {
+        "apply_after_review": 1,
+        "restage_after_review": 1,
+    }
+    assert source_plan.mutation_allowed_after == (
+        "semantic_review_required_before_mutation"
+    )
+    assert source_plan.first_mutation_action is not None
+    assert source_plan.first_mutation_action.tool_name == "restage_staged_revision"
+    assert source_plan.first_safe_review_or_mutation_action is not None
+    assert source_plan.first_safe_review_or_mutation_action.tool_name == (
+        "restage_staged_revisions"
+    )
+    source_lanes = {lane.row_iri: lane for lane in source_plan.lanes}
+    assert source_lanes[semantic_iri].alternative_gate is not None
+    assert source_lanes[semantic_iri].alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    assert (
+        source_lanes[semantic_iri].alternative_gate.semantic_review_required
+        is True
+    )
+    assert source_lanes[stale_mechanical.revision_iri].next_action is not None
+    assert source_lanes[
+        stale_mechanical.revision_iri
+    ].next_action.tool_name == "restage_staged_revision"
+
+    manifest_path = tmp_path / "handoff-manifest.json"
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    session = source.start_staged_revision_recovery_session(
+        revision_iris,
+        summary="Mixed staged handoff recovery session",
+        handoff_manifest_path=str(manifest_path),
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+    source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=revision_iris,
+    )
+
+    trig_only_receiver = DoxaBase.create(tmp_path / "trig-only.sqlite")
+    trig_only_receiver.import_trig(trig_path)
+    trig_only_plan = trig_only_receiver.plan_staged_revision_recovery(
+        revision_iris,
+        current_staged_work_only=False,
+    )
+    assert trig_only_plan.lane_counts == {"complete_handoff_import": 2}
+    assert trig_only_plan.mutation_allowed_after == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert trig_only_plan.first_mutation_action is None
+    assert trig_only_plan.first_safe_review_or_mutation_action is not None
+    assert trig_only_plan.first_safe_review_or_mutation_action.tool_name == (
+        "import_revision_snapshots"
+    )
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(
+        manifest_path,
+        drift_detail="exact",
+    )
+    assert imported.matching_recovery_session_iris == [session.session_iri]
+    assert imported.recovery_summary.recommended_next_step == (
+        "continue_imported_recovery_session"
+    )
+    assert imported.suggested_next_actions[0].tool_name == (
+        "describe_staged_revision_recovery_session"
+    )
+    described_session = receiver.describe_staged_revision_recovery_session(
+        session.session_iri,
+        drift_detail="exact",
+    )
+    receiver_plan = described_session.current_plan
+    assert receiver_plan.lane_counts == {
+        "apply_after_review": 1,
+        "restage_after_review": 1,
+    }
+    assert receiver_plan.first_mutation_action is not None
+    assert receiver_plan.first_mutation_action.tool_name == (
+        "restage_staged_revision"
+    )
+    assert receiver_plan.first_safe_review_or_mutation_action is not None
+    assert receiver_plan.first_safe_review_or_mutation_action.tool_name == (
+        "restage_staged_revisions"
+    )
+    receiver_lanes = {lane.row_iri: lane for lane in receiver_plan.lanes}
+    receiver_semantic_lane = receiver_lanes[semantic_iri]
+    assert receiver_semantic_lane.next_action is not None
+    assert receiver_semantic_lane.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    assert receiver_semantic_lane.alternative_gate is not None
+    assert receiver_semantic_lane.alternative_gate.applied_source_iri == (
+        event_source.revision_iri
+    )
+    assert receiver_semantic_lane.alternative_gate.applied_revision_iri == (
+        applied.applied_revision_iri
+    )
+    assert receiver_lanes[stale_mechanical.revision_iri].next_action is not None
+    assert receiver_lanes[
+        stale_mechanical.revision_iri
+    ].next_action.tool_name == "restage_staged_revision"
+
+    receiver_semantic_check = receiver.check_staged_revision_apply(semantic_iri)
+    assert receiver_semantic_check.status == "ready"
+    assert receiver_semantic_check.can_apply is True
+    assert receiver_semantic_check.first_safe_next_action is not None
+    assert receiver_semantic_check.first_safe_next_action.tool_name == (
+        "describe_staged_revision"
+    )
+    assert receiver_semantic_check.next_action is not None
+    assert receiver_semantic_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    semantic_lineage = receiver.describe_revision_lineage(semantic_iri)
+    assert semantic_lineage.selected_role == "current_staged_revision"
+    assert event_source.revision_iri in semantic_lineage.related_revision_iris
+    versions = receiver.list_graph_versions("map", exact_only=True)
+    assert versions.exact_snapshot_available_count >= 2
+    diff = receiver.describe_graph_version_diff(
+        "map",
+        before_revision_iri=stale_mechanical.revision_iri,
+        include_triples=True,
+    )
+    assert diff.exact_changed_triples_available is True
+    assert diff.digest_changed is True
+
+
 def test_scratch_capsule_observation_write_recovers_search_index(
     tmp_path: Path,
 ) -> None:

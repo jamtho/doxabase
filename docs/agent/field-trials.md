@@ -4316,6 +4316,13 @@ few useful gaps:
   `record_pattern` / `stage_systematisation` fallback mutations with
   `describe_staged_revision` and `export_staged_revisions` actions carrying
   `source_profile_advisory.pending_staged_fallback_iris`.
+- A staged semantic handoff/version trial confirmed a recovery-complete
+  handoff can preserve a mixed plan with one semantic-gated ready alternative
+  and one separate mechanical stale row. TriG-only receivers still block
+  mutation until revision snapshots are imported; manifest imports continue the
+  source recovery session, keep the semantic alternative review-first, and keep
+  the mechanical row restageable. This mixed handoff now has focused regression
+  coverage so future recovery changes do not flatten those lanes together.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
