@@ -625,7 +625,7 @@ siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
 for the selected storage/layout shape.
 `physical_layout_path_extension_mismatch` is also a review blocker: it means a
 clear candidate path extension, such as `.csv`, conflicts with the single linked
-physical layout file format, such as `rc:Parquet`.
+or caller-selected physical layout file format, such as `rc:Parquet`.
 `physical_layout_storage_protocol_mismatch` is also a review blocker: it means
 the caller explicitly paired a selected storage route with a layout format from
 the wrong route kind, such as database storage plus `rc:CSV` or local file

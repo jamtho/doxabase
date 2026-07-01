@@ -7105,15 +7105,10 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
         {
             "iri": dataset,
             "candidate_selector": candidate_selector,
-            "physical_layout_iri": csv_layout["iri"],
-        },
-        {
-            "iri": dataset,
-            "candidate_selector": candidate_selector,
             "physical_layout_iri": parquet_layout["iri"],
         },
     ]
-    assert selection_actions[1]["call"].startswith("draft_query_plan(")
+    assert selection_actions[0]["call"].startswith("draft_query_plan(")
     assert automatic["scan"]["function"] is None
     assert automatic["review_gate"]["blocking_reason_codes"] == [
         "ambiguous_physical_layout"

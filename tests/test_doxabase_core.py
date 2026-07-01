@@ -19117,7 +19117,7 @@ def test_distinct_physical_layout_signatures_require_explicit_review(
     ]
     assert {
         action.arguments["physical_layout_iri"] for action in layout_selection_actions
-    } == {parquet_layout.iri, csv_layout.iri}
+    } == {parquet_layout.iri}
 
     selected_layout_plan = db.draft_query_plan(
         dataset,
@@ -20991,6 +20991,91 @@ def test_query_context_blocks_path_extension_layout_mismatch(
     assert plan.handoff_kind == "metadata_review_required"
 
 
+def test_draft_query_plan_blocks_selected_layout_path_extension_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders.csv")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders local object",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    target = context.query_target_candidates[0]
+    selection_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.action_label == "Select physical layout for draft"
+    ]
+
+    assert [issue.code for issue in context.issues] == ["ambiguous_physical_layout"]
+    assert [action.arguments for action in selection_actions] == [
+        {
+            "iri": dataset,
+            "candidate_selector": target.candidate_selector,
+            "physical_layout_iri": csv_layout.iri,
+        }
+    ]
+
+    csv_plan = db.draft_query_plan(
+        dataset,
+        physical_layout_iri=csv_layout.iri,
+    )
+
+    assert csv_plan.scan.function == "read_csv_auto"
+    assert csv_plan.review_gate.ready_for_execution_attempt is True
+    assert csv_plan.handoff_kind == "execution_attempt_ready"
+
+    parquet_plan = db.draft_query_plan(
+        dataset,
+        physical_layout_iri=parquet_layout.iri,
+    )
+
+    assert parquet_plan.scan.function == "read_parquet"
+    assert parquet_plan.scan.physical_layout is not None
+    assert parquet_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert parquet_plan.selected_candidate is not None
+    assert parquet_plan.selected_candidate.candidate_path_status == "orientation_only"
+    assert parquet_plan.selected_candidate.direct_review_required is True
+    assert [issue.code for issue in parquet_plan.issues] == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    mismatch = parquet_plan.issues[0]
+    assert mismatch.details is not None
+    assert mismatch.details["physical_layout_selection_basis"] == "caller_selected"
+    assert mismatch.details["path_extension_format"] == "csv"
+    assert mismatch.details["physical_layout_format_kind"] == "parquet"
+    assert parquet_plan.review_gate.ready_for_execution_attempt is False
+    assert parquet_plan.review_gate.blocking_reason_codes == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    assert parquet_plan.handoff_kind == "metadata_review_required"
+
+
 def test_query_context_allows_matching_csv_extension_and_layout(
     tmp_path: Path,
 ) -> None:
@@ -21098,16 +21183,10 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
         {
             "iri": dataset,
             "candidate_selector": target.candidate_selector,
-            "physical_layout_iri": csv_layout.iri,
-        },
-        {
-            "iri": dataset,
-            "candidate_selector": target.candidate_selector,
             "physical_layout_iri": parquet_layout.iri,
         },
     ]
-    assert "file format rc:CSV" in selection_actions[0].reason
-    assert "file format rc:Parquet" in selection_actions[1].reason
+    assert "file format rc:Parquet" in selection_actions[0].reason
 
     plan = db.draft_query_plan(dataset)
 
@@ -21212,12 +21291,6 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
         {
             "iri": dataset,
             "candidate_selector": clean_selector,
-            "physical_layout_iri": csv_layout.iri,
-            "allow_context_blocked_candidate": True,
-        },
-        {
-            "iri": dataset,
-            "candidate_selector": clean_selector,
             "physical_layout_iri": parquet_layout.iri,
             "allow_context_blocked_candidate": True,
         },
@@ -21271,7 +21344,7 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
 
-    selected_from_action = db.draft_query_plan(**selection_actions[1].arguments)
+    selected_from_action = db.draft_query_plan(**selection_actions[0].arguments)
 
     assert selected_from_action.source_context.allow_context_blocked_candidate is True
     assert selected_from_action.review_gate.context_blocked_candidate_allowed is True

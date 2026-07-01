@@ -20451,6 +20451,11 @@ class DoxaBase:
                 file_format_iri if isinstance(file_format_iri, str) else None,
             ):
                 continue
+            if self._query_layout_signature_path_extension_mismatch(
+                candidate,
+                file_format_iri if isinstance(file_format_iri, str) else None,
+            ):
+                continue
             signature_note = (
                 " with " + " and ".join(signature_note_parts)
                 if signature_note_parts
@@ -20573,6 +20578,21 @@ class DoxaBase:
             selected_candidate = self._query_candidate_with_added_issue(
                 selected_candidate,
                 layout_mismatch_issue,
+            )
+        layout_path_mismatch_issue = (
+            self._query_selected_physical_layout_path_extension_issue(
+                selected_candidate,
+                selected_physical_layout,
+            )
+        )
+        if layout_path_mismatch_issue is not None:
+            effective_issues = self._with_unique_query_issue(
+                effective_issues,
+                layout_path_mismatch_issue,
+            )
+            selected_candidate = self._query_candidate_with_added_issue(
+                selected_candidate,
+                layout_path_mismatch_issue,
             )
         original_selected_candidate = selected_candidate
         (
@@ -22657,6 +22677,22 @@ class DoxaBase:
             },
         )
 
+    def _query_selected_physical_layout_path_extension_issue(
+        self,
+        candidate: QueryTargetCandidate | None,
+        layout: PhysicalLayoutDescription | None,
+    ) -> QueryPlanningIssue | None:
+        if candidate is None or layout is None:
+            return None
+        return self._query_candidate_path_extension_physical_layout_issue(
+            candidate_path=candidate.candidate_path,
+            template=candidate.template,
+            template_source=candidate.template_source,
+            source_resource=candidate.source_resource,
+            physical_layouts=[layout],
+            selected_physical_layout=layout,
+        )
+
     def _draft_query_plan_effective_issues(
         self,
         issues: list[QueryPlanningIssue],
@@ -24497,16 +24533,24 @@ class DoxaBase:
         template_source: str,
         source_resource: ResourceSummary,
         physical_layouts: list[PhysicalLayoutDescription],
+        selected_physical_layout: PhysicalLayoutDescription | None = None,
     ) -> QueryPlanningIssue | None:
         path_format = self._query_candidate_path_extension_format(candidate_path)
         if path_format is None:
             return None
-        layout = self._unique_physical_layout_for_query_plan(physical_layouts)
+        layout = selected_physical_layout or (
+            self._unique_physical_layout_for_query_plan(physical_layouts)
+        )
         if layout is None:
             return None
         layout_format = self._query_physical_layout_format_kind(layout)
         if layout_format is None or layout_format == path_format:
             return None
+        layout_basis = (
+            "selected physical layout"
+            if selected_physical_layout is not None
+            else "single linked physical layout"
+        )
         layout_resource = self._summary_from_description(layout)
         if layout.file_format is not None:
             layout_label = (
@@ -24522,7 +24566,7 @@ class DoxaBase:
             severity="warning",
             message=(
                 "Candidate path extension suggests "
-                f"{path_format.upper()} data, but the single linked physical "
+                f"{path_format.upper()} data, but the {layout_basis} "
                 f"layout records {layout_label} as the file format. Review "
                 "the physical layout and path metadata before executable use."
             ),
@@ -24546,6 +24590,11 @@ class DoxaBase:
                     else None
                 ),
                 "physical_layout_format_kind": layout_format,
+                "physical_layout_selection_basis": (
+                    "caller_selected"
+                    if selected_physical_layout is not None
+                    else "single_linked_layout"
+                ),
                 "review_note": (
                     "This is a conservative extension/file-format guard for "
                     "known CSV and Parquet mismatches. Correct either the "
@@ -24606,6 +24655,29 @@ class DoxaBase:
         if "csv" in text:
             return "csv"
         return None
+
+    def _query_layout_signature_path_extension_mismatch(
+        self,
+        candidate: QueryTargetCandidate,
+        file_format_iri: str | None,
+    ) -> bool:
+        path_format = self._query_candidate_path_extension_format(
+            candidate.candidate_path,
+        )
+        if path_format is None or file_format_iri is None:
+            return False
+        values = [
+            file_format_iri,
+            self._compact_iri(file_format_iri),
+            self._local_name(file_format_iri),
+        ]
+        text = " ".join(value for value in values if value).lower()
+        layout_format = None
+        if "parquet" in text:
+            layout_format = "parquet"
+        elif "csv" in text:
+            layout_format = "csv"
+        return layout_format is not None and layout_format != path_format
 
     def _storage_protocol_location_repair_hint(
         self,
