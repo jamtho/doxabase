@@ -17,7 +17,10 @@ from doxabase import (
     to_dict,
     to_jsonable,
 )
-from doxabase.core import ProjectBriefRecommendedTask
+from doxabase.core import (
+    ProfileScalarConflictRecommendationContext,
+    ProjectBriefRecommendedTask,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
@@ -32730,11 +32733,19 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
             (1210, 12),
         )
     ):
+        if index == 0:
+            sample_size = row_count
+            sample_scope = "All rows in the local Tickets table."
+            sample_method = "DuckDB full-table profile."
+        else:
+            sample_size = 100
+            sample_scope = "Sampled rows from the local Tickets table."
+            sample_method = "DuckDB sampled profile."
         column_profiles = [
             {
                 "column_iri": status_column,
                 "column_name": "status",
-                "summary": "Status nullability came from the full profile.",
+                "summary": "Status nullability came from the profile.",
                 "null_count": status_null_count,
             }
         ]
@@ -32753,9 +32764,9 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
             evidence_summary="Tickets full profile evidence.",
             evidence_sources=[f"test://tickets/full/{index}"],
             shared_evidence_iri=evidence,
-            sample_size=row_count,
-            sample_scope="All rows in the local Tickets table.",
-            sample_method="DuckDB full-table profile.",
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
             row_count=row_count,
             update_map_snapshot=False,
             column_defaults={"update_map_column": False},
@@ -32812,6 +32823,47 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
         1200,
         1210,
     }
+    row_count_options_by_value = {
+        option.observed_value: option for option in row_count_group.options
+    }
+    row_count_recommendations_by_value = {
+        recommendation.observed_value: recommendation
+        for recommendation in row_count_recommendations
+    }
+    assert row_count_options_by_value[1200].recommendation_contexts == [
+        ProfileScalarConflictRecommendationContext(
+            recommendation_index=row_count_options_by_value[
+                1200
+            ].representative_recommendation_index,
+            profile_observation_iri=(
+                row_count_recommendations_by_value[1200].profile_observation_iri
+            ),
+            observed_count=1200,
+            sample_size=1200,
+            sample_scope="All rows in the local Tickets table.",
+            sample_method="DuckDB full-table profile.",
+            profile_row_count=1200,
+            basis="full_scan",
+            confidence="high",
+        )
+    ]
+    assert row_count_options_by_value[1210].recommendation_contexts == [
+        ProfileScalarConflictRecommendationContext(
+            recommendation_index=row_count_options_by_value[
+                1210
+            ].representative_recommendation_index,
+            profile_observation_iri=(
+                row_count_recommendations_by_value[1210].profile_observation_iri
+            ),
+            observed_count=1210,
+            sample_size=100,
+            sample_scope="Sampled rows from the local Tickets table.",
+            sample_method="DuckDB sampled profile.",
+            profile_row_count=1210,
+            basis="sample",
+            confidence="medium",
+        )
+    ]
     for option in row_count_group.options:
         assert option.suggested_next_action.tool_name == "stage_profile_map_updates"
         assert option.suggested_next_action.arguments == {
@@ -32876,6 +32928,14 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
             for action in scalar_conflict_actions
         }
     ) == len(scalar_conflict_actions)
+    row_count_action_sources = {
+        action.source_scalar_conflict["observed_value"]: action.source_scalar_conflict
+        for action in scalar_conflict_actions
+        if action.source_scalar_conflict["kind"] == "dataset_row_count_snapshot"
+    }
+    assert row_count_action_sources[1210]["recommendation_contexts"] == [
+        to_jsonable(row_count_options_by_value[1210].recommendation_contexts[0])
+    ]
 
     conflicting_scalar_indexes = [
         recommendation.recommendation_index
@@ -32905,7 +32965,11 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
         if item.status == "skipped"
     )
 
-    chosen_row_count = row_count_recommendations[0]
+    chosen_row_count = next(
+        recommendation
+        for recommendation in row_count_recommendations
+        if recommendation.observed_value == 1200
+    )
     chosen_nullable = next(
         recommendation
         for recommendation in nullable_recommendations
@@ -33443,6 +33507,9 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
         ),
         "duplicate_profile_observation_iris": (
             duplicate_option.duplicate_profile_observation_iris
+        ),
+        "recommendation_contexts": to_jsonable(
+            duplicate_option.recommendation_contexts
         ),
         "review_note": conflict_group.review_note,
     }

@@ -156,10 +156,13 @@ Accept one representative from duplicate groups unless sibling rows need
 different modelling judgement. Repeated `unmapped_profiled_column` shell rows are
 grouped by the helper mutation, so profile-specific sample or null details do not
 make agents stage the same shell twice; the accepted representative still carries
-all supporting profile observations. For scalar conflicts, choose at most one option
-from `profile_scalar_conflict_review` or from
+all supporting profile observations. For scalar conflicts, choose at most one
+option from `profile_scalar_conflict_review` or from
 `scalar_conflict_groups[].options[]`; those options intentionally stay out of
-flat `suggested_next_actions`. A focused option call to
+flat `suggested_next_actions`. Read each option's
+`recommendation_contexts[]` before choosing; it carries the profile
+observation, sample, basis, observed-count, profile-row-count, and confidence
+fields needed to compare full-scan and sampled support. A focused option call to
 `stage_profile_map_updates` still returns full-draft accounting: unrelated draft
 recommendations appear as `not_selected` in `status_counts` / `items[]` even
 though the selected scalar option was the only accepted index.

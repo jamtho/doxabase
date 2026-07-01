@@ -1254,7 +1254,12 @@ few useful gaps:
   queue-following trial found conflict-only drafts still looked actionless to
   agents that read only grouped lanes, so those option actions now also appear
   in `profile_scalar_conflict_review` with `source_scalar_conflict` metadata,
-  while remaining out of the flat `suggested_next_actions` list.
+  while remaining out of the flat `suggested_next_actions` list. A later
+  exported-review trial found those lanes still forced agents to rejoin against
+  the live recommendation list before comparing sample/full-scan support, so
+  scalar conflict options and lane sources now include
+  `recommendation_contexts[]` with profile observation, sample, basis,
+  observed-count, profile-row-count, and confidence fields.
 - A profile action-queue trial found mixed map, metric, and type follow-ups were
   mechanically followable but noisy when flattened together. Draft profile-map
   responses now expose `suggested_next_action_groups` and

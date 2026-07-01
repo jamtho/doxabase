@@ -1925,6 +1925,7 @@ option.representative_recommendation_index
 option.recommendation_indexes
 option.duplicate_recommendation_indexes
 option.duplicate_profile_observation_iris
+option.recommendation_contexts
 option.suggested_next_action
 option.suggested_next_call
 ```
@@ -1937,7 +1938,13 @@ suggested action is inspection rather than a new stage call. These option
 actions also appear in the grouped `profile_scalar_conflict_review` lane with
 `source_scalar_conflict` metadata, but are intentionally not copied into the
 draft's flat `suggested_next_actions`; review the group and choose at most one
-option before calling a mutating action explicitly.
+option before calling a mutating action explicitly. Each option's
+`recommendation_contexts[]` repeats the support basis for its recommendation
+rows, including `profile_observation_iri`, `observed_count`, `sample_size`,
+`sample_scope`, `sample_method`, `profile_row_count`, `basis`, and
+`confidence`, so exported review queues do not need to rejoin against the live
+recommendation list before judging whether a value came from a full scan,
+sample, or ambiguous profile.
 
 `metric_advisories[]` rows name project-specific profile metric IRIs observed
 in the run and recommend vocabulary review before reusable comparison or map
@@ -2252,13 +2259,14 @@ action.source_scalar_conflict["predicate"]
 action.source_scalar_conflict["observed_value"]
 action.source_scalar_conflict["representative_recommendation_index"]
 action.source_scalar_conflict["duplicate_profile_observation_iris"]
+action.source_scalar_conflict["recommendation_contexts"]
 ```
 
 Use `route_group_key` to keep all options for one choose-one decision together
 and `route_step_key` to distinguish the individual explicit staging actions.
-Use that lane for discovery, then pick at most one chosen value for each
-row-count or nullable conflict group. These option actions are intentionally not
-copied into flat `suggested_next_actions`.
+Use `recommendation_contexts` to compare sample/full-scan support before picking
+one value for a row-count or nullable conflict group. These option actions are
+intentionally not copied into flat `suggested_next_actions`.
 When same-evidence
 profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map

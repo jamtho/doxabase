@@ -10018,6 +10018,24 @@ def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
     assert source["duplicate_recommendation_indexes"] == (
         source["recommendation_indexes"]
     )
+    option_contexts_by_value = {
+        option["observed_value"]: option["recommendation_contexts"]
+        for option in result["scalar_conflict_groups"][0]["options"]
+    }
+    assert source["recommendation_contexts"] == option_contexts_by_value[120]
+    assert source["recommendation_contexts"][0] == {
+        "recommendation_index": source["representative_recommendation_index"],
+        "profile_observation_iri": source["recommendation_contexts"][0][
+            "profile_observation_iri"
+        ],
+        "observed_count": 120,
+        "sample_size": 120,
+        "sample_scope": "All rows in the Invoices table.",
+        "sample_method": "DuckDB full-table profile.",
+        "profile_row_count": 120,
+        "basis": "full_scan",
+        "confidence": "high",
+    }
     assert actions_by_value[120]["arguments"] == {
         "dataset_iri": table,
         "evidence_iri": shared_evidence,

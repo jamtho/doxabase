@@ -725,7 +725,10 @@ those option actions are exposed through the
 `profile_scalar_conflict_review` lane rather than the default
 `profile_map_updates` lane or flat `suggested_next_actions`. Each lane action
 has `source_scalar_conflict` metadata with route group/step keys and is mutually
-exclusive with sibling options from the same conflict group. After one scalar
+exclusive with sibling options from the same conflict group. Both the option and
+the lane source include `recommendation_contexts[]` with profile observation,
+sample, basis, observed-count, profile-row-count, and confidence fields; review
+that support before choosing between conflicting scalar values. After one scalar
 conflict option has been applied, sibling observations from the same evidence
 remain non-default-stageable when the applied value already matches the current
 map; the scalar-conflict review lane then routes to inspection rather than a

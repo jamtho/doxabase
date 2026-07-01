@@ -3195,12 +3195,26 @@ class ProfileMapUpdateRecommendation:
 
 
 @dataclass(frozen=True)
+class ProfileScalarConflictRecommendationContext:
+    recommendation_index: int
+    profile_observation_iri: str
+    observed_count: int | None
+    sample_size: int | None
+    sample_scope: str | None
+    sample_method: str | None
+    profile_row_count: int | None
+    basis: str
+    confidence: str
+
+
+@dataclass(frozen=True)
 class ProfileScalarConflictOption:
     observed_value: Any
     representative_recommendation_index: int
     recommendation_indexes: list[int]
     duplicate_recommendation_indexes: list[int]
     duplicate_profile_observation_iris: list[str]
+    recommendation_contexts: list[ProfileScalarConflictRecommendationContext]
     suggested_next_action: SuggestedNextAction
     suggested_next_call: str
 
@@ -17018,6 +17032,9 @@ class DoxaBase:
                                     "duplicate_profile_observation_iris": (
                                         option.duplicate_profile_observation_iris
                                     ),
+                                    "recommendation_contexts": to_jsonable(
+                                        option.recommendation_contexts
+                                    ),
                                     "review_note": group.review_note,
                                 },
                                 action,
@@ -18036,6 +18053,22 @@ class DoxaBase:
                         )
                     )
                 )
+                recommendation_contexts = [
+                    ProfileScalarConflictRecommendationContext(
+                        recommendation_index=recommendation.recommendation_index,
+                        profile_observation_iri=(
+                            recommendation.profile_observation_iri
+                        ),
+                        observed_count=recommendation.observed_count,
+                        sample_size=recommendation.sample_size,
+                        sample_scope=recommendation.sample_scope,
+                        sample_method=recommendation.sample_method,
+                        profile_row_count=recommendation.profile_row_count,
+                        basis=recommendation.basis,
+                        confidence=recommendation.confidence,
+                    )
+                    for recommendation in recommendations_for_value
+                ]
                 if has_current_equal_value:
                     arguments = {
                         "dataset_iri": dataset_iri,
@@ -18095,6 +18128,7 @@ class DoxaBase:
                         duplicate_profile_observation_iris=(
                             duplicate_profile_observation_iris
                         ),
+                        recommendation_contexts=recommendation_contexts,
                         suggested_next_action=action,
                         suggested_next_call=action.call,
                     )

@@ -738,8 +738,12 @@ after apply, sibling options route to inspection instead of a new stage call.
 Option actions are exposed in the grouped
 `profile_scalar_conflict_review` lane with `source_scalar_conflict` metadata,
 including route group/step keys, but are not copied into the default flat
-`suggested_next_actions`. It does not mutate or stage graph changes, and it
-skips sampled zero-null promotions. Metric advisories
+`suggested_next_actions`. Each option and lane source includes
+`recommendation_contexts[]`, which repeats the profile observation, sample,
+basis, observed-count, profile-row-count, and confidence fields needed to judge
+support strength without rejoining against the recommendation list. It does not
+mutate or stage graph changes, and it skips sampled zero-null promotions. Metric
+advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, `context_patterns`, `pending_staged_promotion_iris`,
 duplicate-group metadata, and structured `suggested_next_actions` for
