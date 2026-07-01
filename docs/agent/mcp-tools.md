@@ -1001,6 +1001,13 @@ template source, storage label, route role summaries, path or relation handle,
 direct issue codes, required bindings, and partition binding examples. Prefer
 `action.route_card` over parsing `reason` text when choosing between peer,
 layout-selection, production/current, sample, archive, or backfill routes.
+Candidate cards and route cards both include non-secret storage orientation such
+as `access_mode`, `region`, `endpoint_profile`, `credential_reference`,
+`path_style_access`, and `requires_endpoint_profile`, so scripts do not need a
+second `describe_dataset` call just to compare runtime route handles.
+Candidate cards also include `required_bindings`, `required_binding_details`,
+`binding_example`, and `binding_examples`, so candidate-only planners can see
+path-template runtime parameters before drafting.
 `query_target_decision.route_intent_review_candidate_indexes` points at ready
 or direct-clean peer cards with production/current/canonical route-role intent
 that the selected candidate lacks; review those cards before unattended
@@ -1096,7 +1103,10 @@ have stable `action_type` values (`stage_reviewed_storage_access`,
 `record_reviewed_storage_access`, and `stage_existing_storage_access_link`), and
 the repair hint carries `choice_mode="choose_one"` plus
 `candidate_existing_storage_accesses` when current map storage accesses are
-available for review. A candidate can carry
+available for review. Candidate rows repeat non-secret access handles such as
+`access_mode`, `endpoint_profile`, `credential_reference`, `region`,
+`path_style_access`, path templates, and layout verification notes so scripts can
+compare existing routes in place. A candidate can carry
 `pending_staged_repair_iris` and `candidate_status="already_pending"` when a
 current staged `rc:hasStorageAccess` add already proposes that exact
 dataset/storage link; review the staged row before staging a duplicate. When

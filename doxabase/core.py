@@ -2852,11 +2852,13 @@ class QueryTargetCandidate:
     storage_access: ResourceSummary | None
     route_roles: list[ResourceSummary]
     storage_protocol: ResourceSummary | None
+    access_mode: ResourceSummary | None
     location_kind: str | None
     storage_root: str | None
     endpoint_profile: str | None
     bucket_name: str | None
     key_prefix: str | None
+    region: str | None
     candidate_path: str | None
     relation_identifier: str | None
     connection_reference: str | None
@@ -2869,6 +2871,10 @@ class QueryTargetCandidate:
     review_reasons: list[QueryPlanningIssue]
     direct_review_required: bool
     direct_review_reasons: list[QueryPlanningIssue]
+    required_bindings: list[str] = field(default_factory=list)
+    required_binding_details: list[dict[str, Any]] = field(default_factory=list)
+    binding_example: str | None = None
+    binding_examples: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -25494,7 +25500,16 @@ class DoxaBase:
                 candidate.storage_access
             ),
             "storage_protocol": candidate.storage_protocol,
+            "access_mode": candidate.access_mode,
             "location_kind": candidate.location_kind,
+            "storage_root": candidate.storage_root,
+            "endpoint_profile": candidate.endpoint_profile,
+            "bucket_name": candidate.bucket_name,
+            "key_prefix": candidate.key_prefix,
+            "region": candidate.region,
+            "credential_reference": candidate.credential_reference,
+            "path_style_access": candidate.path_style_access,
+            "requires_endpoint_profile": candidate.requires_endpoint_profile,
             "route_roles": candidate.route_roles,
             "route_role_labels": route_role_labels,
             "candidate_path": candidate.candidate_path,
@@ -25508,25 +25523,12 @@ class DoxaBase:
                 candidate.direct_review_reasons
             ),
             "issue_codes": self._query_issue_codes(candidate.review_reasons),
-            "required_bindings": [
-                binding.name
-                for binding in binding_requirements
-                if binding.required
-            ],
-            "required_binding_details": [
-                {
-                    "name": binding.name,
-                    "binding_kind": binding.binding_kind,
-                    "partition_scheme": binding.partition_scheme,
-                    "partition_column": binding.partition_column,
-                    "partition_granularity": binding.partition_granularity,
-                    "candidate_column_match_status": (
-                        binding.candidate_column_match_status
-                    ),
-                }
-                for binding in binding_requirements
-                if binding.required
-            ],
+            "required_bindings": self._query_plan_required_binding_names(
+                binding_requirements
+            ),
+            "required_binding_details": (
+                self._query_plan_required_binding_details(binding_requirements)
+            ),
             "binding_example": (
                 self._query_plan_action_binding_example_summary(binding_examples)
             ),
@@ -25535,6 +25537,35 @@ class DoxaBase:
         if physical_layout_iri is not None:
             card["physical_layout_iri"] = physical_layout_iri
         return card
+
+    @staticmethod
+    def _query_plan_required_binding_names(
+        binding_requirements: list[DraftQueryPlanBinding],
+    ) -> list[str]:
+        return [
+            binding.name
+            for binding in binding_requirements
+            if binding.required
+        ]
+
+    @staticmethod
+    def _query_plan_required_binding_details(
+        binding_requirements: list[DraftQueryPlanBinding],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": binding.name,
+                "binding_kind": binding.binding_kind,
+                "partition_scheme": binding.partition_scheme,
+                "partition_column": binding.partition_column,
+                "partition_granularity": binding.partition_granularity,
+                "candidate_column_match_status": (
+                    binding.candidate_column_match_status
+                ),
+            }
+            for binding in binding_requirements
+            if binding.required
+        ]
 
     def _query_plan_action_binding_examples(
         self,
@@ -25938,6 +25969,11 @@ class DoxaBase:
                         if storage_access is not None
                         else None
                     ),
+                    access_mode=(
+                        storage_access.access_mode
+                        if storage_access is not None
+                        else None
+                    ),
                     location_kind=(
                         storage_access.location_kind
                         if storage_access is not None
@@ -25958,6 +25994,9 @@ class DoxaBase:
                     ),
                     key_prefix=(
                         storage_access.key_prefix if storage_access is not None else None
+                    ),
+                    region=(
+                        storage_access.region if storage_access is not None else None
                     ),
                     candidate_path=candidate_path,
                     relation_identifier=relation_identifier,
@@ -26017,7 +26056,38 @@ class DoxaBase:
                     storage_access,
                 )
 
-        return candidates
+        return [
+            self._query_target_candidate_with_binding_summary(candidate, dataset)
+            for candidate in candidates
+        ]
+
+    def _query_target_candidate_with_binding_summary(
+        self,
+        candidate: QueryTargetCandidate,
+        dataset: DatasetDescription,
+    ) -> QueryTargetCandidate:
+        binding_requirements = self._draft_query_plan_binding_requirements(
+            candidate,
+            columns=dataset.columns,
+            partition_schemes=dataset.partition_schemes,
+        )
+        binding_examples = self._query_plan_action_binding_examples(
+            candidate,
+            binding_requirements,
+        )
+        return replace(
+            candidate,
+            required_bindings=self._query_plan_required_binding_names(
+                binding_requirements
+            ),
+            required_binding_details=self._query_plan_required_binding_details(
+                binding_requirements
+            ),
+            binding_example=self._query_plan_action_binding_example_summary(
+                binding_examples
+            ),
+            binding_examples=binding_examples,
+        )
 
     @staticmethod
     def _query_target_candidate_selector(
@@ -28637,14 +28707,20 @@ class DoxaBase:
                 "route_roles": to_jsonable(access.route_roles),
                 "route_role_labels": route_role_labels,
                 "storage_protocol": to_jsonable(access.storage_protocol),
+                "access_mode": to_jsonable(access.access_mode),
                 "location_kind": access.location_kind,
                 "storage_root": access.storage_root,
+                "endpoint_profile": access.endpoint_profile,
                 "bucket_name": access.bucket_name,
                 "key_prefix": access.key_prefix,
+                "region": access.region,
+                "credential_reference": access.credential_reference,
+                "path_style_access": access.path_style_access,
                 "path_templates": access.path_templates,
                 "layout_verification_status": to_jsonable(
                     access.layout_verification_status
                 ),
+                "layout_verification_note": access.layout_verification_note,
                 "match_reasons": match_reasons,
                 "dataset_token_matches": strong_exact_token_matches,
                 "generic_dataset_token_matches": generic_exact_token_matches,

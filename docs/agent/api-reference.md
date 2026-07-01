@@ -490,7 +490,14 @@ Every suggested `draft_query_plan` action also carries `route_card` with the
 candidate selector, storage label, route roles, path or relation handle, direct
 issue codes, required bindings, and any partition binding examples. Use that
 structured card instead of parsing action prose when choosing peer,
-production/current, sample/archive, or layout-selection routes.
+production/current, sample/archive, or layout-selection routes. Candidate cards
+and route cards include non-secret storage orientation such as `access_mode`,
+`region`, `endpoint_profile`, `credential_reference`, `path_style_access`, and
+`requires_endpoint_profile`; DoxaBase still does not resolve credentials,
+endpoint profiles, or object existence. Candidate cards also include
+`required_bindings`, `required_binding_details`, `binding_example`, and
+`binding_examples` so scripts can compare runtime parameter needs before
+drafting a selected route.
 When `row_count_snapshot` or profile metrics matter to the query handoff,
 `profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
 `describe_profile_run()` without first switching to `describe_dataset()`.
@@ -534,7 +541,9 @@ preserve template provenance, expose a stable `candidate_selector` for reviewed
 follow-up calls, carry storage-access `route_roles`, and compose best-effort
 file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or
-credential references. For database-backed storage, candidates keep the relation
+credential references. They also carry the same non-secret access handles used
+by route cards, including `access_mode` and `region`. For database-backed
+storage, candidates keep the relation
 as `candidate_path` and expose `relation_identifier` plus
 `connection_reference` instead of a joined file-like path when the relation
 comes from a storage-access-owned template. Dataset or partition file paths

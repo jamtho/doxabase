@@ -6813,6 +6813,24 @@ def test_describe_query_context_tool_returns_planning_projection(
     )
     assert result["query_target_candidates"][0]["template_source"] == "partition_scheme"
     assert result["query_target_candidates"][0]["requires_endpoint_profile"] is True
+    assert result["query_target_candidates"][0]["access_mode"]["iri"] == (
+        RC + "ReadOnlyAccess"
+    )
+    assert result["query_target_candidates"][0]["region"] == "local"
+    assert result["query_target_candidates"][0]["required_bindings"] == [
+        "year",
+        "date",
+    ]
+    assert result["query_target_candidates"][0]["required_binding_details"][1][
+        "partition_column"
+    ]["iri"] == "https://richcanopy.org/example/manifest/ais#bc_date"
+    assert result["query_target_candidates"][0]["binding_example"] == (
+        "year='2026', date='2026-06-30' -> "
+        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+    )
+    assert result["query_target_candidates"][0]["binding_examples"][1][
+        "binding"
+    ] == "date"
     assert result["query_target_candidates"][0]["review_required"] is True
     assert result["query_target_candidates"][0]["direct_review_required"] is True
     assert {
@@ -6833,12 +6851,24 @@ def test_describe_query_context_tool_returns_planning_projection(
         result["query_target_candidates"][0]["candidate_selector"]
     )
     assert route_card["storage_label"] == "AIS local object-store access profile"
+    assert route_card["access_mode"]["iri"] == RC + "ReadOnlyAccess"
+    assert route_card["storage_root"] == "s3://ais-noaa/"
+    assert route_card["endpoint_profile"] == "local-minio"
+    assert route_card["bucket_name"] == "ais-noaa"
+    assert route_card["region"] == "local"
+    assert route_card["credential_reference"] == "profile:ais-readonly"
+    assert route_card["path_style_access"] is True
+    assert route_card["requires_endpoint_profile"] is True
     assert route_card["required_bindings"] == ["year", "date"]
     assert route_card["binding_example"] == (
         "year='2026', date='2026-06-30' -> "
         "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
     )
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
+    assert result["storage_accesses"][0]["access_mode"]["iri"] == (
+        RC + "ReadOnlyAccess"
+    )
+    assert result["storage_accesses"][0]["region"] == "local"
     assert any(
         issue["code"] == "layout_needs_verification"
         and issue["domain"] == "query_planning"

@@ -3254,6 +3254,17 @@ candidate handoff for scripts and unattended agents:
 action.route_card["candidate_index"]
 action.route_card["candidate_selector"]
 action.route_card["storage_label"]
+action.route_card["storage_protocol"]
+action.route_card["access_mode"]
+action.route_card["location_kind"]
+action.route_card["storage_root"]
+action.route_card["endpoint_profile"]
+action.route_card["bucket_name"]
+action.route_card["key_prefix"]
+action.route_card["region"]
+action.route_card["credential_reference"]
+action.route_card["path_style_access"]
+action.route_card["requires_endpoint_profile"]
 action.route_card["route_roles"]
 action.route_card["route_role_labels"]
 action.route_card["candidate_path"]
@@ -3363,6 +3374,15 @@ action declares `required_extra_arguments=["object", "rationale"]` and
 identifier and add a reviewed rationale before calling
 `stage_map_assertion_change`.
 These cards do not resolve credentials, endpoint profiles, or executable SQL.
+Storage metadata on each candidate is non-secret orientation copied from the
+linked storage access, including `storage_protocol`, `access_mode`,
+`location_kind`, `storage_root`, `endpoint_profile`, `bucket_name`,
+`key_prefix`, `region`, `credential_reference`, `path_style_access`, and
+`requires_endpoint_profile`.
+Candidate cards also copy the pre-draft binding summary fields from route cards:
+`required_bindings`, `required_binding_details`, `binding_example`, and
+`binding_examples`. Use them when comparing candidate rows before choosing a
+specific `draft_query_plan` action.
 `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use. `direct_review_reasons` excludes the
@@ -3551,6 +3571,23 @@ repair_hint.candidate_existing_storage_access_route_intent_caution_indexes
 repair_hint.candidate_existing_storage_access_route_intent_note
 repair_hint.candidate_existing_storage_accesses[].candidate_status
 repair_hint.candidate_existing_storage_accesses[].pending_staged_repair_iris
+repair_hint.candidate_existing_storage_accesses[].storage_access
+repair_hint.candidate_existing_storage_accesses[].storage_access_iri
+repair_hint.candidate_existing_storage_accesses[].route_roles
+repair_hint.candidate_existing_storage_accesses[].route_role_labels
+repair_hint.candidate_existing_storage_accesses[].storage_protocol
+repair_hint.candidate_existing_storage_accesses[].access_mode
+repair_hint.candidate_existing_storage_accesses[].location_kind
+repair_hint.candidate_existing_storage_accesses[].storage_root
+repair_hint.candidate_existing_storage_accesses[].endpoint_profile
+repair_hint.candidate_existing_storage_accesses[].bucket_name
+repair_hint.candidate_existing_storage_accesses[].key_prefix
+repair_hint.candidate_existing_storage_accesses[].region
+repair_hint.candidate_existing_storage_accesses[].credential_reference
+repair_hint.candidate_existing_storage_accesses[].path_style_access
+repair_hint.candidate_existing_storage_accesses[].path_templates
+repair_hint.candidate_existing_storage_accesses[].layout_verification_status
+repair_hint.candidate_existing_storage_accesses[].layout_verification_note
 repair_hint.already_pending_candidate_count
 repair_hint.already_pending_storage_access_iris
 repair_hint.pending_staged_repair_iris

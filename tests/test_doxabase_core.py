@@ -18344,10 +18344,22 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     assert target.bucket_name == "ais-noaa"
     assert target.candidate_path == "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     assert target.composition == "storage_root_joined"
+    assert target.access_mode is not None
+    assert target.access_mode.iri == RC + "ReadOnlyAccess"
     assert target.endpoint_profile == "local-minio"
+    assert target.region == "local"
     assert target.requires_endpoint_profile is True
     assert target.credential_reference == "profile:ais-readonly"
     assert target.path_style_access is True
+    assert target.required_bindings == ["year", "date"]
+    assert target.required_binding_details[1]["partition_column"].iri == (
+        "https://richcanopy.org/example/manifest/ais#bc_date"
+    )
+    assert target.binding_example == (
+        "year='2026', date='2026-06-30' -> "
+        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+    )
+    assert target.binding_examples[1]["binding"] == "date"
     assert target.review_required is True
     assert any(reason.code == "layout_needs_verification" for reason in target.review_reasons)
     assert context.storage_accesses[0].endpoint_profile == "local-minio"
@@ -18365,6 +18377,14 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     assert route_card["candidate_index"] == 0
     assert route_card["candidate_selector"] == target.candidate_selector
     assert route_card["storage_label"] == "AIS local object-store access profile"
+    assert route_card["access_mode"].iri == RC + "ReadOnlyAccess"
+    assert route_card["storage_root"] == "s3://ais-noaa/"
+    assert route_card["endpoint_profile"] == "local-minio"
+    assert route_card["bucket_name"] == "ais-noaa"
+    assert route_card["region"] == "local"
+    assert route_card["credential_reference"] == "profile:ais-readonly"
+    assert route_card["path_style_access"] is True
+    assert route_card["requires_endpoint_profile"] is True
     assert route_card["candidate_path"] == target.candidate_path
     assert route_card["direct_issue_codes"] == [
         "layout_needs_verification",
@@ -19733,8 +19753,14 @@ def test_missing_storage_existing_candidates_expose_route_intent_indexes(
         label="Warehouse orders archive",
         route_roles=["rc:ArchiveRoute"],
         storage_protocol="rc:S3CompatibleStorage",
+        access_mode="rc:ReadOnlyAccess",
         storage_root="s3://archive/warehouse/orders",
+        endpoint_profile="archive-minio",
+        credential_reference="profile:archive-readonly",
+        region="eu-west-2",
+        path_style_access=True,
         layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Reviewed archive listing.",
     )
     current = db.record_map_storage_access(
         "https://example.test/project#warehouse_orders_current_storage",
@@ -19758,6 +19784,13 @@ def test_missing_storage_existing_candidates_expose_route_intent_indexes(
     candidate_iris = [candidate["storage_access_iri"] for candidate in candidates]
     archive_index = candidate_iris.index(archive.iri)
     current_index = candidate_iris.index(current.iri)
+    archive_candidate = candidates[archive_index]
+    assert archive_candidate["access_mode"]["iri"] == RC + "ReadOnlyAccess"
+    assert archive_candidate["endpoint_profile"] == "archive-minio"
+    assert archive_candidate["credential_reference"] == "profile:archive-readonly"
+    assert archive_candidate["region"] == "eu-west-2"
+    assert archive_candidate["path_style_access"] is True
+    assert archive_candidate["layout_verification_note"] == "Reviewed archive listing."
     assert repair_hint[
         "candidate_existing_storage_access_route_intent_preferred_indexes"
     ] == [current_index]

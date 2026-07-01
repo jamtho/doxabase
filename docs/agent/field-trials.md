@@ -4275,6 +4275,17 @@ few useful gaps:
   `omitted_count`, `has_more`, `next_offset`, and next-page suggested calls, so
   broad exploration scripts can keep paging instead of silently stopping at a
   full first page.
+- A storage-metadata query-planning trial found full `storage_accesses` and
+  `draft_query_plan.storage_environment` carried non-secret access details, but
+  compact target/route handoff cards split or omitted fields such as
+  `access_mode`, `region`, endpoint profile, credential reference, and path
+  style. Query target candidates, draft route cards, and missing-storage
+  existing-access candidates now repeat those non-secret route handles so
+  unattended agents can compare current/production/archive routes without an
+  extra dataset-description hop. The same trial found candidate-only planners
+  could miss path-template parameter requirements until drafting; query target
+  candidates now also carry `required_bindings`, `required_binding_details`,
+  `binding_example`, and `binding_examples` copied from route cards.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
