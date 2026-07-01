@@ -172,6 +172,10 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "suggested_profile_candidate_limit": 3,
             "profile_candidate_omitted_count": 1,
             "sensitive_literal_count": null,
+            "would_block_invalid_export": null,
+            "validation_scope": null,
+            "validation_conforms": null,
+            "validation_result_count": null,
             "missing_seed_terms": [],
         },
         {
@@ -188,6 +192,10 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "suggested_profile_candidate_limit": null,
             "profile_candidate_omitted_count": null,
             "sensitive_literal_count": 1,
+            "would_block_invalid_export": null,
+            "validation_scope": null,
+            "validation_conforms": null,
+            "validation_result_count": null,
             "missing_seed_terms": [],
         },
     ],
@@ -420,11 +428,15 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
 `profile_candidate_limit`, `privacy_export_review` when the default
 handoff-bundle export preflight finds potential sensitive project-graph or
-revision-snapshot terms, `query_fixture_staleness_review` when known AIS or
+revision-snapshot terms, `export_validation_review` when the same preflight is
+scanner-clean but live validation would block the handoff,
+`query_fixture_staleness_review` when known AIS or
 Polymarket fixture tables are present without linked `rc:StorageAccess`
 resources, and `seed_recovery_review` when immutable seed graphs are missing
 current staging vocabulary. `storage_access_count` on the fixture task is the
 global capsule count; it can be nonzero when unrelated storage exists elsewhere.
+Export-validation health tasks carry `would_block_invalid_export`,
+`validation_scope`, `validation_conforms`, and `validation_result_count`.
 `next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are

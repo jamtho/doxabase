@@ -640,6 +640,10 @@ class ProjectBriefHealthTask:
     suggested_profile_candidate_limit: int | None = None
     profile_candidate_omitted_count: int | None = None
     sensitive_literal_count: int | None = None
+    would_block_invalid_export: bool | None = None
+    validation_scope: str | None = None
+    validation_conforms: bool | None = None
+    validation_result_count: int | None = None
     missing_seed_terms: list[str] = field(default_factory=list)
     current_staged_revision_count: int | None = None
     fixture_names: list[str] = field(default_factory=list)
@@ -5559,9 +5563,21 @@ class DoxaBase:
         if fixture_storage_task is not None:
             tasks.append(fixture_storage_task)
 
-        privacy_task = self._project_brief_privacy_health_task()
+        export_preflight_arguments, export_preflight = (
+            self._project_brief_default_handoff_preflight()
+        )
+        privacy_task = self._project_brief_privacy_health_task(
+            export_preflight_arguments,
+            export_preflight,
+        )
         if privacy_task is not None:
             tasks.append(privacy_task)
+
+        export_validation_task = self._project_brief_export_validation_health_task(
+            export_preflight,
+        )
+        if export_validation_task is not None:
+            tasks.append(export_validation_task)
 
         seed_task = self._project_brief_seed_recovery_health_task(
             current_staged_revision_count=current_staged_revision_count,
@@ -5687,6 +5703,15 @@ class DoxaBase:
             ):
                 return (
                     "health_tasks:seed_recovery_review",
+                    task.suggested_next_action,
+                )
+        for task in health_tasks:
+            if (
+                task.task_type == "export_validation_review"
+                and task.suggested_next_action is not None
+            ):
+                return (
+                    "health_tasks:export_validation_review",
                     task.suggested_next_action,
                 )
         return None, None
@@ -6073,15 +6098,25 @@ class DoxaBase:
             for task in selected_tasks
         ]
 
-    def _project_brief_privacy_health_task(
-        self,
-    ) -> ProjectBriefHealthTask | None:
-        arguments = {
+    @staticmethod
+    def _project_brief_default_handoff_preflight_arguments() -> dict[str, Any]:
+        return {
             "export_kind": "handoff_bundle",
             "graphs": ["project"],
             "limit": 20,
         }
-        preflight = self.export_preflight(**arguments)
+
+    def _project_brief_default_handoff_preflight(
+        self,
+    ) -> tuple[dict[str, Any], ExportPreflightRecord]:
+        arguments = self._project_brief_default_handoff_preflight_arguments()
+        return arguments, self.export_preflight(**arguments)
+
+    def _project_brief_privacy_health_task(
+        self,
+        arguments: dict[str, Any],
+        preflight: ExportPreflightRecord,
+    ) -> ProjectBriefHealthTask | None:
         if preflight.sensitive_literal_count == 0:
             return None
         action = SuggestedNextAction(
@@ -6108,6 +6143,57 @@ class DoxaBase:
             suggested_next_action=action,
             suggested_next_call=action.call,
             sensitive_literal_count=preflight.sensitive_literal_count,
+        )
+
+    def _project_brief_export_validation_health_task(
+        self,
+        preflight: ExportPreflightRecord,
+    ) -> ProjectBriefHealthTask | None:
+        if not preflight.would_block_invalid_export:
+            return None
+        action = next(
+            (
+                candidate
+                for candidate in preflight.suggested_next_actions
+                if candidate.tool_name == "validate_graph"
+            ),
+            None,
+        )
+        if action is None and preflight.validation_scope is not None:
+            arguments = {
+                "scope": preflight.validation_scope,
+                "limit_results": max(preflight.limit, 20),
+            }
+            action = SuggestedNextAction(
+                action_label="Inspect export validation failures",
+                tool_name="validate_graph",
+                mcp_tool_name="doxabase.validate_graph",
+                arguments=arguments,
+                reason=(
+                    "The live graph validation gate failed for this export "
+                    "scope. Inspect SHACL diagnostics and repair the graph "
+                    "before writing a recovery or share artifact."
+                ),
+                call=self._suggested_call_string(
+                    "validate_graph",
+                    arguments,
+                ),
+            )
+        return ProjectBriefHealthTask(
+            priority=18,
+            task_type="export_validation_review",
+            source="export_preflight",
+            reason=(
+                "The default handoff-bundle export scope is scanner-clean but "
+                "fails live graph validation; inspect SHACL diagnostics before "
+                "writing recovery or share artifacts."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call if action is not None else None,
+            would_block_invalid_export=preflight.would_block_invalid_export,
+            validation_scope=preflight.validation_scope,
+            validation_conforms=preflight.validation_conforms,
+            validation_result_count=preflight.validation_result_count,
         )
 
     def _project_brief_seed_recovery_health_task(

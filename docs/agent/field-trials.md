@@ -4440,9 +4440,15 @@ few useful gaps:
   helper that composes table bundles, profile bundles, analysis views, and
   optional explicit profile-derived map promotion; locator-grade
   `shareability_hints` that name the graph term, revision snapshot, resource,
-  or Markdown line behind local-only handoff warnings; and a
-  `project_brief` export-validation health task for scanner-clean but
-  SHACL-invalid handoff preflights.
+  or Markdown line behind local-only handoff warnings; and better
+  `project_brief` health routing for scanner-clean but SHACL-invalid handoff
+  preflights.
+- A direct invalid-export trial confirmed that `export_preflight` already
+  blocked scanner-clean invalid handoffs and returned `validate_graph`, but
+  `project_brief.health_tasks` stayed empty because privacy health only checked
+  sensitive-literal counts. `project_brief` now emits
+  `export_validation_review` with validation scope/count fields and a
+  safety-first `validate_graph` action before frontier or mutation work.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

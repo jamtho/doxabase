@@ -135,6 +135,10 @@ succeeds with `fail_on_sensitive=true`.
 `project_brief` privacy health follows the handoff-bundle route, so its
 `sensitive_literal_count` can include both current project graph matches and
 stored revision-snapshot matches.
+The same default handoff preflight can also surface
+`export_validation_review` when the scanner is clean but live SHACL validation
+would block the handoff; follow its `validate_graph` action before export or
+mutation work.
 
 `doxabase.project_brief`
 

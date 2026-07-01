@@ -1768,6 +1768,59 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
     assert fake_secret not in json.dumps(to_dict(brief))
 
 
+def test_project_brief_surfaces_invalid_export_health_task(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "Scanner-clean invalid observation." .
+        }
+        """
+    )
+
+    preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        graphs=["project"],
+    )
+    assert preflight.scanner_clean is True
+    assert preflight.would_block_invalid_export is True
+    assert preflight.suggested_next_actions[0].tool_name == "validate_graph"
+
+    brief = db.project_brief(limit=5)
+
+    validation_task = next(
+        task
+        for task in brief.health_tasks
+        if task.task_type == "export_validation_review"
+    )
+    assert validation_task.source == "export_preflight"
+    assert validation_task.would_block_invalid_export is True
+    assert validation_task.validation_scope == "all"
+    assert validation_task.validation_conforms is False
+    assert validation_task.validation_result_count == preflight.validation_result_count
+    assert validation_task.suggested_next_action is not None
+    assert validation_task.suggested_next_action.tool_name == "validate_graph"
+    assert validation_task.suggested_next_action.arguments == {
+        "scope": "all",
+        "limit_results": 20,
+    }
+    assert brief.safety_first_action == validation_task.suggested_next_action
+    assert brief.safety_first_source == "health_tasks:export_validation_review"
+    assert brief.first_unattended_action == validation_task.suggested_next_action
+    assert brief.first_unattended_source == "health_tasks:export_validation_review"
+    assert (
+        brief.frontier_status.mutation_allowed_after
+        == "safety_review_required_before_frontier_or_mutation"
+    )
+
+
 def test_project_brief_redacts_nested_query_and_staged_payloads(
     tmp_path: Path,
 ) -> None:
