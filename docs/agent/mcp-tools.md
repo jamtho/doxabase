@@ -701,10 +701,15 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 `representative_type_advisory_indexes`, `type_advisory_status_counts`, and
 `advisory_followthrough_plan`, and top-level `suggested_next_actions` /
 `suggested_next_calls` for compatibility.
-Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
-routing; non-empty lanes are grouped as `query_context_review`,
-`profile_map_updates`, `profile_scalar_conflict_review`,
-`metric_vocabulary_review`, and `profile_type_review`.
+Prefer `suggested_next_action_group_summaries` for quick scanning and
+`suggested_next_action_groups` for execution; non-empty lanes are grouped as
+`query_context_review`, `profile_map_updates`,
+`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
+`profile_type_review`. The summaries expose route keys, semantic moves,
+source kind, target anchors, binding keys, argument keys, and
+argument/call availability without repeating full action payloads.
+`suggested_next_call_groups` remains available for compatibility when a call
+string is useful.
 When same dataset/evidence profile map updates are already staged, the draft
 sets `pending_staged_profile_update_iris` and the `profile_map_updates` group
 contains only `plan_staged_revision_recovery` for those staged rows. The default
@@ -799,10 +804,15 @@ for example `{binding_key: pattern_iri}` after `record_pattern`. The result
 includes `binding_resolutions`, `action_resolutions`, `produced_bindings`, and
 fresh `suggested_next_actions`. Use top-level `missing_binding_keys` as the
 compact worklist when a first pass needs prior action results before some
-actions can be called. Prefer `suggested_next_action_groups` and
-`suggested_next_call_groups` over the flat action list when running unattended:
-the grouped queues separate `ready_resolved_mutations`, `binding_producers`,
-`independent_mutation_reviews`, `inspection`, and `staged_revision_recheck`.
+actions can be called. Prefer `suggested_next_action_group_summaries` for
+scanning and `suggested_next_action_groups` for execution when running
+unattended: the grouped queues separate `ready_resolved_mutations`,
+`binding_producers`, `independent_mutation_reviews`, `inspection`, and
+`staged_revision_recheck`. `suggested_next_call_groups` remains available when
+a call string is useful, but the route summaries avoid repeating large Turtle
+skeletons and route-source payloads. A resolved action may still list
+`consumes_binding_keys` as provenance; `requires_result_bindings=false` means
+the grouped action already has executable arguments.
 `action_resolution_groups` also includes non-callable
 `missing_binding_prerequisites`, so scripts can show what is blocked without
 trying to execute it. A resolved paired

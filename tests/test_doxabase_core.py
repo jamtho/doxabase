@@ -3157,7 +3157,8 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     )
     assert preflight.matches[0].match_id.startswith("redacted-sha256:")
     assert preflight.privacy_warnings
-    assert preflight.scanner_note in preflight.warnings
+    assert preflight.scanner_note not in preflight.warnings
+    assert not any("Scanner-clean means" in warning for warning in preflight.warnings)
     assert [
         action.tool_name for action in preflight.suggested_next_actions
     ] == [

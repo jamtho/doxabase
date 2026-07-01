@@ -3615,6 +3615,36 @@ class ProfileAdvisoryFollowthroughPlanItem:
 
 
 @dataclass(frozen=True)
+class ProfileActionRouteSummary:
+    action_group: str
+    action_index: int
+    tool_name: str
+    mcp_tool_name: str
+    action_label: str
+    action_kind: str | None
+    writes_graph: bool
+    review_lane: str | None
+    semantic_move: str | None
+    route_group_key: str | None
+    route_step_key: str | None
+    source_kind: str | None
+    advisory_indexes: list[int]
+    recommendation_indexes: list[int]
+    duplicate_group_keys: list[str]
+    route_anchor_iris: list[str]
+    route_pattern_iris: list[str]
+    consumes_binding_keys: list[str]
+    produces_binding_keys: list[str]
+    requires_result_bindings: bool
+    produces_result_bindings: bool
+    unattended_choice_role: str | None
+    unattended_recommended: bool
+    argument_keys: list[str]
+    has_arguments: bool
+    has_call: bool
+
+
+@dataclass(frozen=True)
 class ProfileMixedSupportReviewGroup:
     group_index: int
     pattern_iris: list[str]
@@ -3714,6 +3744,11 @@ class ProfileFollowthroughPlan:
     suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
     suggested_next_call_groups: dict[str, list[str]]
+    suggested_next_action_summaries: list[ProfileActionRouteSummary]
+    suggested_next_action_group_summaries: dict[
+        str,
+        list[ProfileActionRouteSummary],
+    ]
     review_note: str
 
 
@@ -3745,6 +3780,11 @@ class ProfileMapUpdateDraft:
     suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
     suggested_next_call_groups: dict[str, list[str]]
+    suggested_next_action_summaries: list[ProfileActionRouteSummary]
+    suggested_next_action_group_summaries: dict[
+        str,
+        list[ProfileActionRouteSummary],
+    ]
     advisory_followthrough_plan: list[ProfileAdvisoryFollowthroughPlanItem]
     mixed_support_review_groups: list[ProfileMixedSupportReviewGroup]
     mixed_support_review_group_count: int
@@ -17018,6 +17058,16 @@ class DoxaBase:
             group: [action.call for action in actions]
             for group, actions in suggested_next_action_groups.items()
         }
+        suggested_next_action_group_summaries = (
+            self._profile_action_route_summary_groups(
+                suggested_next_action_groups
+            )
+        )
+        suggested_next_action_summaries = (
+            self._profile_action_route_summaries_from_groups(
+                suggested_next_action_group_summaries
+            )
+        )
         advisory_followthrough_plan = self._profile_advisory_followthrough_plan(
             suggested_next_action_groups,
             metric_advisories=metric_advisories,
@@ -17063,6 +17113,10 @@ class DoxaBase:
             ],
             suggested_next_action_groups=suggested_next_action_groups,
             suggested_next_call_groups=suggested_next_call_groups,
+            suggested_next_action_summaries=suggested_next_action_summaries,
+            suggested_next_action_group_summaries=(
+                suggested_next_action_group_summaries
+            ),
             advisory_followthrough_plan=advisory_followthrough_plan,
             mixed_support_review_groups=mixed_support_review_groups,
             mixed_support_review_group_count=len(mixed_support_review_groups),
@@ -17182,6 +17236,16 @@ class DoxaBase:
         for check in revision_checks:
             suggested_next_actions.extend(check.suggested_next_actions)
         suggested_next_calls = [action.call for action in suggested_next_actions]
+        suggested_next_action_group_summaries = (
+            self._profile_action_route_summary_groups(
+                suggested_next_action_groups
+            )
+        )
+        suggested_next_action_summaries = (
+            self._profile_action_route_summaries_from_groups(
+                suggested_next_action_group_summaries
+            )
+        )
         missing_binding_keys = sorted(
             {
                 resolution.binding_key
@@ -17225,6 +17289,10 @@ class DoxaBase:
                 group_name: [action.call for action in actions if action.call]
                 for group_name, actions in suggested_next_action_groups.items()
             },
+            suggested_next_action_summaries=suggested_next_action_summaries,
+            suggested_next_action_group_summaries=(
+                suggested_next_action_group_summaries
+            ),
             review_note=(
                 "Rerun draft_profile_map_updates through this coordinator after "
                 "recording profile-support patterns or applying related staged "
@@ -17267,6 +17335,157 @@ class DoxaBase:
                 self._dedupe_suggested_next_actions(recheck_actions)
             )
         return groups
+
+    @staticmethod
+    def _profile_action_route_summary_groups(
+        suggested_next_action_groups: Mapping[str, list[SuggestedNextAction]],
+    ) -> dict[str, list[ProfileActionRouteSummary]]:
+        return {
+            group_name: [
+                DoxaBase._profile_action_route_summary(
+                    action,
+                    action_group=group_name,
+                    action_index=action_index,
+                )
+                for action_index, action in enumerate(actions)
+            ]
+            for group_name, actions in suggested_next_action_groups.items()
+        }
+
+    @staticmethod
+    def _profile_action_route_summaries_from_groups(
+        summary_groups: Mapping[str, list[ProfileActionRouteSummary]],
+    ) -> list[ProfileActionRouteSummary]:
+        return [
+            summary
+            for summaries in summary_groups.values()
+            for summary in summaries
+        ]
+
+    @staticmethod
+    def _profile_action_route_summary(
+        action: SuggestedNextAction,
+        *,
+        action_group: str,
+        action_index: int,
+    ) -> ProfileActionRouteSummary:
+        source_kind, source = DoxaBase._profile_action_route_source(action)
+        review_lane = DoxaBase._string_field(
+            getattr(action, "review_lane", None),
+        ) or DoxaBase._string_field(source.get("review_lane"))
+        semantic_move = DoxaBase._string_field(
+            getattr(action, "semantic_move", None),
+        ) or DoxaBase._string_field(source.get("semantic_move"))
+        route_group_key = DoxaBase._string_field(
+            getattr(action, "route_group_key", None),
+        ) or DoxaBase._string_field(source.get("route_group_key"))
+        route_step_key = DoxaBase._string_field(
+            getattr(action, "route_step_key", None),
+        ) or DoxaBase._string_field(source.get("route_step_key"))
+        unattended_choice_role = DoxaBase._string_field(
+            getattr(action, "unattended_choice_role", None),
+        ) or DoxaBase._string_field(source.get("unattended_choice_role"))
+        unattended_recommended_value = getattr(
+            action,
+            "unattended_recommended",
+            source.get("unattended_recommended"),
+        )
+        consumes_binding_keys = DoxaBase._profile_route_binding_keys(
+            source.get("consumes_result_bindings")
+        )
+        produces_binding_keys = DoxaBase._profile_route_binding_keys(
+            source.get("produces_result_bindings")
+        )
+        action_kind = DoxaBase._profile_followthrough_primary_action_kind(
+            action.tool_name
+        )
+        return ProfileActionRouteSummary(
+            action_group=action_group,
+            action_index=action_index,
+            tool_name=action.tool_name,
+            mcp_tool_name=action.mcp_tool_name,
+            action_label=action.action_label,
+            action_kind=action_kind,
+            writes_graph=action_kind
+            in {"stage_reviewable_change", "direct_graph_write"},
+            review_lane=review_lane,
+            semantic_move=semantic_move,
+            route_group_key=route_group_key,
+            route_step_key=route_step_key,
+            source_kind=source_kind,
+            advisory_indexes=DoxaBase._int_values(source.get("advisory_indexes")),
+            recommendation_indexes=(
+                DoxaBase._profile_route_recommendation_indexes(source)
+            ),
+            duplicate_group_keys=DoxaBase._string_values_from_any(
+                source.get("duplicate_group_keys"),
+            ),
+            route_anchor_iris=DoxaBase._string_values_from_any(
+                source.get("route_anchor_iris"),
+            ),
+            route_pattern_iris=DoxaBase._string_values_from_any(
+                source.get("route_pattern_iris"),
+            ),
+            consumes_binding_keys=consumes_binding_keys,
+            produces_binding_keys=produces_binding_keys,
+            requires_result_bindings=(
+                bool(consumes_binding_keys)
+                and action_group
+                not in {"ready_resolved_actions", "ready_resolved_mutations"}
+            ),
+            produces_result_bindings=bool(produces_binding_keys),
+            unattended_choice_role=unattended_choice_role,
+            unattended_recommended=bool(unattended_recommended_value),
+            argument_keys=sorted(str(key) for key in action.arguments),
+            has_arguments=bool(action.arguments),
+            has_call=bool(action.call),
+        )
+
+    @staticmethod
+    def _profile_action_route_source(
+        action: SuggestedNextAction,
+    ) -> tuple[str | None, MappingABC[str, Any]]:
+        for source_kind, attr_name in (
+            ("profile_advisory", "source_profile_advisory"),
+            ("profile_map_update", "source_profile_map_update"),
+            ("profile_scalar_conflict", "source_scalar_conflict"),
+        ):
+            source = getattr(action, attr_name, None)
+            if isinstance(source, MappingABC):
+                return source_kind, source
+        return None, {}
+
+    @staticmethod
+    def _profile_route_binding_keys(value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        binding_keys: list[str] = []
+        for item in value:
+            if not isinstance(item, MappingABC):
+                continue
+            binding_key = item.get("binding_key")
+            if isinstance(binding_key, str):
+                DoxaBase._append_unique(binding_keys, binding_key)
+        return binding_keys
+
+    @staticmethod
+    def _profile_route_recommendation_indexes(
+        source: MappingABC[str, Any],
+    ) -> list[int]:
+        indexes: list[int] = []
+        for field_name in (
+            "recommendation_indexes",
+            "duplicate_recommendation_indexes",
+            "representative_recommendation_indexes",
+            "accepted_recommendation_indexes",
+        ):
+            for index in DoxaBase._int_values(source.get(field_name)):
+                DoxaBase._append_unique(indexes, index)
+        return indexes
+
+    @staticmethod
+    def _string_field(value: Any) -> str | None:
+        return value if isinstance(value, str) else None
 
     @staticmethod
     def _profile_followthrough_resolution_group(
@@ -57555,11 +57774,14 @@ class DoxaBase:
             "is shareable or free of user-specific paths, endpoint details, or "
             "confidential project facts."
         )
+        scanner_clean = sensitive_literal_count == 0
         export_scope_warnings = self._export_scope_warnings(
             export_kind=export_kind,
             graph_names=graph_names,
         )
-        warnings = [*privacy_warnings, *export_scope_warnings, scanner_note]
+        warnings = [*privacy_warnings, *export_scope_warnings]
+        if scanner_clean:
+            warnings.append(scanner_note)
         warnings[0:0] = self._shareability_hint_warnings(shareability_hints)
         snapshot_revision_iris = list(
             dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
@@ -57574,7 +57796,7 @@ class DoxaBase:
                 if sensitive_literal_count
                 else "clean_by_scanner_only"
             ),
-            scanner_clean=sensitive_literal_count == 0,
+            scanner_clean=scanner_clean,
             shareability_review_required=True,
             shareability_review_status="required_not_completed",
             would_block_sensitive_export=sensitive_literal_count > 0,

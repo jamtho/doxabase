@@ -2034,6 +2034,9 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     assert result["suggested_next_actions"][-1]["reviewed_value_fields"] == [
         "seed_iris"
     ]
+    assert not any(
+        "Scanner-clean means" in warning for warning in result["warnings"]
+    )
     assert fake_secret not in json.dumps(result)
 
 
@@ -10856,6 +10859,20 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_map_updates"]
     ] == ["stage_profile_map_updates"]
+    map_route_summary = result["suggested_next_action_group_summaries"][
+        "profile_map_updates"
+    ][0]
+    assert map_route_summary["tool_name"] == "stage_profile_map_updates"
+    assert map_route_summary["action_group"] == "profile_map_updates"
+    assert map_route_summary["action_index"] == 0
+    assert map_route_summary["source_kind"] == "profile_map_update"
+    assert map_route_summary["review_lane"] == "profile_map_updates"
+    assert map_route_summary["recommendation_indexes"] == [0, 1]
+    assert map_route_summary["has_arguments"] is True
+    assert map_route_summary["has_call"] is True
+    assert "arguments" not in map_route_summary
+    assert "call" not in map_route_summary
+    assert result["suggested_next_action_summaries"][0] == map_route_summary
     map_action_source = result["suggested_next_action_groups"][
         "profile_map_updates"
     ][0]["source_profile_map_update"]
@@ -10869,6 +10886,20 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
             "metric_vocabulary_review"
         ]
     ] == ["describe_context_slice", "list_entities", "stage_systematisation"]
+    metric_route_summaries = result["suggested_next_action_group_summaries"][
+        "metric_vocabulary_review"
+    ]
+    assert [summary["tool_name"] for summary in metric_route_summaries] == [
+        "describe_context_slice",
+        "list_entities",
+        "stage_systematisation",
+    ]
+    assert metric_route_summaries[0]["semantic_move"] == "define_metric"
+    assert metric_route_summaries[0]["action_kind"] == "inspect_context"
+    assert metric_route_summaries[0]["writes_graph"] is False
+    assert metric_route_summaries[2]["semantic_move"] == "caveat_fallback"
+    assert metric_route_summaries[2]["writes_graph"] is True
+    assert metric_route_summaries[2]["unattended_choice_role"] == "fallback"
     metric_context_action = result["suggested_next_action_groups"][
         "metric_vocabulary_review"
     ][0]
@@ -10933,6 +10964,9 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert type_action_source["consumes_result_bindings"][0]["argument"] == (
         "supporting_patterns"
     )
+    binding_key = type_action_source["consumes_result_bindings"][0][
+        "binding_key"
+    ]
     pattern_action = result["suggested_next_action_groups"][
         "profile_type_review"
     ][1]
@@ -10943,8 +10977,17 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         pattern_action["source_profile_advisory"]["produces_result_bindings"][0][
             "binding_key"
         ]
-        == type_action_source["consumes_result_bindings"][0]["binding_key"]
+        == binding_key
     )
+    type_route_summaries = result["suggested_next_action_group_summaries"][
+        "profile_type_review"
+    ]
+    assert type_route_summaries[1]["tool_name"] == "record_pattern"
+    assert type_route_summaries[1]["produces_binding_keys"] == [binding_key]
+    assert type_route_summaries[3]["tool_name"] == "stage_map_assertion_change"
+    assert type_route_summaries[3]["requires_result_bindings"] is True
+    assert type_route_summaries[3]["consumes_binding_keys"] == [binding_key]
+    assert type_route_summaries[3]["argument_keys"]
     plan_by_move = {
         item["semantic_move"]: item
         for item in result["advisory_followthrough_plan"]
@@ -11212,6 +11255,17 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
             "ready_resolved_mutations"
         ]
     ]
+    ready_route_summary = result["suggested_next_action_group_summaries"][
+        "ready_resolved_mutations"
+    ][0]
+    assert ready_route_summary["tool_name"] == "stage_map_assertion_change"
+    assert ready_route_summary["source_kind"] == "profile_advisory"
+    assert ready_route_summary["semantic_move"] == "assert_map_type"
+    assert ready_route_summary["writes_graph"] is True
+    assert ready_route_summary["consumes_binding_keys"] == [binding_key]
+    assert ready_route_summary["requires_result_bindings"] is False
+    assert "arguments" not in ready_route_summary
+    assert "call" not in ready_route_summary
     value_type_resolution = [
         resolution
         for resolution in result["action_resolutions"]

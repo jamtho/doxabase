@@ -99,7 +99,12 @@ Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call
 `stage_profile_map_updates` just to clear the draft.
-Use `advisory_followthrough_plan` for a compact next-step menu over metric/type
+Use `suggested_next_action_group_summaries` /
+`suggested_next_action_summaries` as the first compact scan of route queues:
+they name the lane, semantic move, tool, source kind, route keys, target
+anchors, binding keys, and whether arguments/calls exist without repeating the
+full payload. Execute from `suggested_next_action_groups` after choosing a row.
+Use `advisory_followthrough_plan` for a compact semantic menu over metric/type
 lanes. It groups existing actions by `semantic_move`: `define_metric`,
 `define_value_type`, `assert_map_type`, or `caveat_fallback`.
 For type review, `caveat_fallback` is the pattern/systematisation alternative
@@ -436,6 +441,11 @@ related `staged_revision_iris` when a previous apply may have made sibling
 staged rows stale; `restage_stale_revisions=True` can mechanically refresh
 rows whose next action is `restage_staged_revision`, but the helper does not
 apply profile-generated map or ontology changes.
+Scan `suggested_next_action_group_summaries` before the full grouped actions
+when a follow-through response is bulky. A resolved action may still list
+`consumes_binding_keys` to show route provenance, but
+`requires_result_bindings=false` means the executable action in
+`suggested_next_action_groups` already has the needed argument values.
 When a same dataset/evidence profile map update is already pending,
 `plan_profile_followthrough` follows the draft and exposes the paired
 `plan_staged_revision_recovery` action, not a default duplicate staging action.
