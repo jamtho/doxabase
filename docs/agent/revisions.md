@@ -371,6 +371,10 @@ just are not current work. This filter also computes apply checks, so the queue
 includes live `application_status`, blocker, and suggested-action fields.
 When inspecting a mixed history list, use `not_current_staged_work_reason` to see
 why a false `is_current_staged_work` row was excluded from that queue.
+Graph-version rows and graph-version diff revision contexts project the same
+closure fields. If a version-first route shows a stale-looking
+`application_status` but `not_current_staged_work_reason=="review_resolved"`,
+inspect `review_resolution` before treating it as unresolved staged work.
 If you keep the mixed page, `returned_application_status_counts` still counts
 historical rows such as handled stale conflicts, while
 `returned_current_staged_work_application_status_counts` narrows the same

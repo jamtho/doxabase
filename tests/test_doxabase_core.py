@@ -14104,6 +14104,9 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert staged_row.created_at == "2026-06-01T10:00:00+00:00"
     assert staged_row.changed_graphs == ["map"]
     assert staged_row.included_graphs == ["map"]
+    assert staged_row.is_current_staged_work is False
+    assert staged_row.not_current_staged_work_reason == "already_applied_source"
+    assert staged_row.review_resolution is None
     assert staged_row.triple_count == 0
     assert staged_row.count_basis == "stored_snapshot_rows"
     assert staged_row.exact_snapshot_available is True
@@ -14124,6 +14127,9 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert applied_row.snapshot_semantics == "applied_after_graph"
     assert applied_row.created_at == "2026-06-01T10:01:00+00:00"
     assert applied_row.applies_staged_revision == staged.revision_iri
+    assert applied_row.is_current_staged_work is False
+    assert applied_row.not_current_staged_work_reason == "applied_event_record"
+    assert applied_row.review_resolution is None
     assert applied_row.triple_count == db.triple_count("map")
     assert applied_row.exact_snapshot_available is True
 
@@ -14149,6 +14155,80 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert second_page.count == 2
     assert second_page.returned_count == 1
     assert second_page.versions[0].revision_iri == staged.revision_iri
+
+
+def test_graph_versions_surface_review_resolved_staged_rows(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    messages = "https://example.test/project#Messages"
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(messages)
+    resolution = db.record_staged_revision_review_decision(
+        staged.revision_iri,
+        decision="no_effective_change",
+        rationale=(
+            "Reviewed the stale source and confirmed the same fact already "
+            "exists in the current map."
+        ),
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    versions = db.list_graph_versions(
+        "map",
+        record_kind="staged_patch",
+        include_current=False,
+    )
+
+    assert [item.revision_iri for item in versions.versions] == [
+        staged.revision_iri
+    ]
+    version = versions.versions[0]
+    assert version.is_current_staged_work is False
+    assert version.not_current_staged_work_reason == "review_resolved"
+    assert version.review_resolution is not None
+    assert version.review_resolution.decision == "no_effective_change"
+    assert (
+        version.review_resolution.resolution_revision_iri
+        == resolution.resolution_revision_iri
+    )
+
+    diff = db.describe_graph_version_diff("map", staged.revision_iri)
+
+    assert diff.before_revision_context is not None
+    assert diff.before_revision_context.application_status == "conflict"
+    assert diff.before_revision_context.application_decision == (
+        "restage_against_current_graph"
+    )
+    assert diff.before_revision_context.is_current_staged_work is False
+    assert (
+        diff.before_revision_context.not_current_staged_work_reason
+        == "review_resolved"
+    )
+    assert diff.before_revision_context.review_resolution is not None
+    assert (
+        diff.before_revision_context.review_resolution.decision
+        == "no_effective_change"
+    )
+    assert (
+        diff.before_revision_context.review_resolution.resolution_revision_iri
+        == resolution.resolution_revision_iri
+    )
 
 
 def test_describe_graph_version_diff_compares_versions_and_current(

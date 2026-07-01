@@ -4332,6 +4332,9 @@ item.applied_by
 item.restaged_from
 item.restaged_by
 item.current_restaged_by
+item.is_current_staged_work
+item.not_current_staged_work_reason
+item.review_resolution
 item.alternative_gate_status
 item.alternative_semantic_review_required
 item.alternative_applied_source_iri
@@ -4354,7 +4357,11 @@ next?" `snapshot_semantics` labels staged-source rows as
 history rows as `recorded_graph_snapshot`. The current live graph summary is in
 `current_graph` unless `include_current=False`. This helper lists stored
 snapshots and their count/digest evidence; it does not checkout historical graph
-state or replay revisions. Exact version rows suggest
+state or replay revisions. Version rows also project staged-closure fields from
+the revision list: if `is_current_staged_work=False` and
+`not_current_staged_work_reason=="review_resolved"`, read
+`review_resolution` before treating stale `application_status` values as
+unresolved work. Exact version rows suggest
 `describe_graph_version_diff()` to compare that stored version with the current
 live graph.
 
@@ -4409,8 +4416,10 @@ import actions from the before/after snapshots are promoted into
 self-route to `import_revision_snapshots` or `import_trig`.
 The revision-context fields are compact lineage pointers for the comparison
 points. They include `record_kind`, `snapshot_semantics`, `application_status`,
-`staged_validation_status`, `is_current_staged_work`, `applies_staged_revision`,
-`applied_by`, `restaged_from`, `restaged_by`, `current_restaged_by`,
+`staged_validation_status`, `is_current_staged_work`,
+`not_current_staged_work_reason`, `review_resolution`,
+`applies_staged_revision`, `applied_by`, `restaged_from`, `restaged_by`,
+`current_restaged_by`,
 `alternative_gate_status`, `alternative_semantic_review_required`,
 `alternative_applied_source_iri`, `alternative_applied_revision_iri`, and
 per-context `related_revision_iris`. Use them when a graph delta is zero or

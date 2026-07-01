@@ -2351,6 +2351,9 @@ class GraphVersionListItem:
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
+    is_current_staged_work: bool
+    not_current_staged_work_reason: str | None
+    review_resolution: StagedRevisionReviewResolutionSummary | None
     alternative_gate_status: str | None
     alternative_semantic_review_required: bool
     alternative_applied_source_iri: str | None
@@ -2395,6 +2398,8 @@ class GraphVersionRevisionContext:
     application_decision: str | None
     staged_validation_status: str
     is_current_staged_work: bool
+    not_current_staged_work_reason: str | None
+    review_resolution: StagedRevisionReviewResolutionSummary | None
     applies_staged_revision: str | None
     applied_by: str | None
     restaged_from: str | None
@@ -9176,6 +9181,11 @@ class DoxaBase:
             restaged_from=revision.restaged_from,
             restaged_by=revision.restaged_by,
             current_restaged_by=revision.current_restaged_by,
+            is_current_staged_work=revision.is_current_staged_work,
+            not_current_staged_work_reason=(
+                revision.not_current_staged_work_reason
+            ),
+            review_resolution=revision.review_resolution,
             alternative_gate_status=revision.alternative_gate.status,
             alternative_semantic_review_required=(
                 revision.alternative_gate.semantic_review_required
@@ -9261,6 +9271,10 @@ class DoxaBase:
             application_decision=revision.application_decision,
             staged_validation_status=revision.staged_validation_status,
             is_current_staged_work=revision.is_current_staged_work,
+            not_current_staged_work_reason=(
+                revision.not_current_staged_work_reason
+            ),
+            review_resolution=revision.review_resolution,
             applies_staged_revision=revision.applies_staged_revision,
             applied_by=revision.applied_by,
             restaged_from=revision.restaged_from,

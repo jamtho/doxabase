@@ -4173,6 +4173,13 @@ few useful gaps:
   templates outside an absolute local `storage_root` and complete S3 templates
   outside a recorded S3 `storage_root` with
   `storage_protocol_location_mismatch`, preserving the existing repair route.
+- A staged/version browsing trial found graph-version rows and
+  `describe_graph_version_diff` revision contexts could show stale
+  apply-status fields for review-resolved staged rows without also showing the
+  review-resolution closure. Graph-version surfaces now project
+  `is_current_staged_work`, `not_current_staged_work_reason`, and
+  `review_resolution`, so version-first agents can tell closed no-effect rows
+  from unresolved stale work.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -4834,6 +4834,9 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert staged_row["created_at"] == "2026-06-01T10:00:00+00:00"
     assert staged_row["changed_graphs"] == ["map"]
     assert staged_row["included_graphs"] == ["map"]
+    assert staged_row["is_current_staged_work"] is False
+    assert staged_row["not_current_staged_work_reason"] == "already_applied_source"
+    assert staged_row["review_resolution"] is None
     assert staged_row["triple_count"] == 0
     assert staged_row["count_basis"] == "stored_snapshot_rows"
     assert staged_row["exact_snapshot_available"] is True
@@ -4849,6 +4852,9 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert applied_row["record_kind"] == "applied_event"
     assert applied_row["snapshot_semantics"] == "applied_after_graph"
     assert applied_row["applies_staged_revision"] == staged["revision_iri"]
+    assert applied_row["is_current_staged_work"] is False
+    assert applied_row["not_current_staged_work_reason"] == "applied_event_record"
+    assert applied_row["review_resolution"] is None
     assert applied_row["triple_count"] == db.triple_count("map")
     assert applied_row["exact_snapshot_available"] is True
 
@@ -4866,6 +4872,77 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert [row["revision_iri"] for row in exact_staged["versions"]] == [
         staged["revision_iri"]
     ]
+
+
+def test_graph_version_tools_surface_review_resolved_staged_rows(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    messages = "https://example.test/project#Messages"
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(messages)
+    resolution = record_staged_revision_review_decision_tool(
+        db,
+        staged["revision_iri"],
+        decision="no_effective_change",
+        rationale=(
+            "Reviewed the stale source and confirmed the same fact already "
+            "exists in the current map."
+        ),
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    versions = list_graph_versions_tool(
+        db,
+        graph_role="map",
+        record_kind="staged_patch",
+        include_current=False,
+    )
+
+    assert [item["revision_iri"] for item in versions["versions"]] == [
+        staged["revision_iri"]
+    ]
+    version = versions["versions"][0]
+    assert version["is_current_staged_work"] is False
+    assert version["not_current_staged_work_reason"] == "review_resolved"
+    assert version["review_resolution"]["decision"] == "no_effective_change"
+    assert (
+        version["review_resolution"]["resolution_revision_iri"]
+        == resolution["resolution_revision_iri"]
+    )
+
+    diff = describe_graph_version_diff_tool(
+        db,
+        graph_role="map",
+        before_revision_iri=staged["revision_iri"],
+    )
+
+    context = diff["before_revision_context"]
+    assert context["application_status"] == "conflict"
+    assert context["application_decision"] == "restage_against_current_graph"
+    assert context["is_current_staged_work"] is False
+    assert context["not_current_staged_work_reason"] == "review_resolved"
+    assert context["review_resolution"]["decision"] == "no_effective_change"
+    assert (
+        context["review_resolution"]["resolution_revision_iri"]
+        == resolution["resolution_revision_iri"]
+    )
 
 
 def test_describe_graph_version_diff_tool_returns_json_payload(
