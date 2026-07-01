@@ -15830,6 +15830,92 @@ def test_list_resource_revisions_filters_current_staged_work_before_pagination(
     assert hidden_patch_only_live_work.patch_mention_scan.status == "not_requested"
 
 
+def test_list_resource_revisions_defers_apply_checks_until_after_resource_page(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    old_relevant = db.stage_graph_revision(
+        summary="Add old Orders note",
+        rationale="Relevant but outside the first returned resource page.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Old Orders note." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    new_relevant = db.stage_graph_revision(
+        summary="Add new Orders note",
+        rationale="Relevant and inside the first returned resource page.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "New Orders note." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:01:00Z",
+    )
+    for index in range(4):
+        db.stage_graph_revision(
+            summary=f"Add unrelated table {index}",
+            rationale="Unrelated staged noise should not require apply checks.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                        @prefix ex: <https://example.test/project#> .
+                        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                        ex:Unrelated{index} a rc:Dataset .
+                    """,
+                }
+            ],
+            created_at=f"2026-06-01T10:0{index + 2}:00Z",
+        )
+
+    checked_revision_iris: list[str] = []
+    original_check = db.check_staged_revision_apply
+
+    def counted_check(revision_iri: str):
+        checked_revision_iris.append(revision_iri)
+        return original_check(revision_iri)
+
+    monkeypatch.setattr(db, "check_staged_revision_apply", counted_check)
+
+    listing = db.list_resource_revisions(
+        orders,
+        include_apply_checks=True,
+        limit=1,
+        offset=0,
+    )
+
+    assert listing.count == 2
+    assert listing.returned_count == 1
+    assert [item.revision.iri for item in listing.revisions] == [
+        new_relevant.revision_iri
+    ]
+    assert old_relevant.revision_iri not in checked_revision_iris
+    assert checked_revision_iris == [new_relevant.revision_iri]
+    assert listing.revisions[0].revision.application_status == "ready"
+    assert listing.next_action_queue == {
+        "apply_after_review": [new_relevant.revision_iri]
+    }
+
+
 def test_list_resource_revisions_filters_noisy_patch_only_current_work(
     tmp_path: Path,
 ) -> None:

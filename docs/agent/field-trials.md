@@ -3995,6 +3995,11 @@ few useful gaps:
   candidates coexist under a tight `project_brief` bound, the first hop is full
   frontier expansion; after expansion, `plan_staged_revision_recovery` stays
   ahead of profile and query actions.
+- A pytest-runtime scout found `list_resource_revisions()` could spend most of
+  a resource-scoped listing validating unrelated staged rows before resource
+  filtering. Resource revision lists now do cheap graph-history filtering first
+  and run apply checks only for the returned resource page, preserving returned
+  application statuses and queue items while avoiding unrelated SHACL previews.
 - A query-planning scout found database relation and partition handoffs could
   be recorded as query evidence correctly, but the returned follow-up sent
   agents back to dataset query context without a direct route to the evidence

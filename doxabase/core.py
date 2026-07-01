@@ -10302,9 +10302,9 @@ class DoxaBase:
 
         all_revisions = self.list_graph_revisions(
             graph=graph,
-            include_apply_checks=include_apply_checks,
+            include_apply_checks=False,
             drift_detail=drift_detail,
-            current_staged_work_only=current_staged_work_only,
+            current_staged_work_only=False,
             limit=1_000_000,
         )
         matched: list[ResourceRevisionListItem] = []
@@ -10313,6 +10313,8 @@ class DoxaBase:
         unreadable_revision_iris: set[str] = set()
         omitted_match_risk = False
         for item in all_revisions.revisions:
+            if current_staged_work_only and not item.is_current_staged_work:
+                continue
             match_types: list[str] = []
             revision_anchor_match = resource_value in self._objects(
                 data_graphs,
@@ -10435,6 +10437,14 @@ class DoxaBase:
             )
 
         sliced = matched[offset : offset + limit]
+        if include_apply_checks:
+            sliced = [
+                self._resource_revision_item_with_apply_check(
+                    item,
+                    drift_detail=drift_detail,
+                )
+                for item in sliced
+            ]
         next_action_queue_items: list[RevisionNextActionQueueItem] = []
         for item in sliced:
             queue_item = self._revision_next_action_queue_item(
@@ -10519,6 +10529,95 @@ class DoxaBase:
                 )
             ),
         )
+
+    def _resource_revision_item_with_apply_check(
+        self,
+        item: ResourceRevisionListItem,
+        *,
+        drift_detail: TypingLiteral["summary", "exact"],
+    ) -> ResourceRevisionListItem:
+        revision = item.revision
+        if not revision.has_patch_payload:
+            return item
+
+        application_status: str | None = None
+        application_decision: str | None = None
+        application_can_apply: bool | None = None
+        application_summary: str | None = None
+        application_recommended_resolution: str | None = None
+        application_validation_skipped_reason: str | None = None
+        application_blocking_reasons: list[str] = []
+        application_count_drifts: list[StagedGraphCountDrift] = []
+        application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
+        application_semantic_risk_level: str | None = None
+        application_semantic_risk_reasons: list[str] = []
+        suggested_next_actions: list[SuggestedNextAction] = []
+        try:
+            check = self.check_staged_revision_apply(revision.iri)
+        except DoxaBaseError:
+            application_status = "not_available"
+            application_decision = "inspect_staged_revision"
+        else:
+            application_status = check.status
+            application_decision = check.decision
+            application_can_apply = check.can_apply
+            application_summary = check.summary
+            application_recommended_resolution = check.recommended_resolution
+            application_validation_skipped_reason = check.validation_skipped_reason
+            application_blocking_reasons = check.blocking_reasons
+            application_count_drifts = check.count_drifts
+            application_semantic_risk_level = check.semantic_risk_level
+            application_semantic_risk_reasons = check.semantic_risk_reasons
+            if drift_detail == "exact":
+                application_snapshot_drifts = check.snapshot_drifts
+            else:
+                application_snapshot_drifts = self._summary_snapshot_drifts(
+                    check.snapshot_drifts
+                )
+            suggested_next_actions = check.suggested_next_actions
+
+        stale_resolution_state = self._stale_resolution_state(
+            status=application_status,
+            has_patch_payload=revision.has_patch_payload,
+            restaged_from=revision.restaged_from,
+            restaged_by=revision.restaged_by,
+        )
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            suggested_next_actions,
+            revision.snapshot_evidence,
+        )
+        next_action = self._revision_next_action(
+            revision.iri,
+            apply_status=application_status,
+            apply_decision=application_decision,
+            stale_resolution_state=stale_resolution_state,
+            suggested_next_actions=suggested_next_actions,
+            restaged_by=revision.restaged_by,
+            current_restaged_by=revision.current_restaged_by,
+            record_kind=revision.record_kind,
+            staged_validation_status=revision.staged_validation_status,
+        )
+        checked_revision = replace(
+            revision,
+            stale_resolution_state=stale_resolution_state,
+            application_status=application_status,
+            application_decision=application_decision,
+            application_can_apply=application_can_apply,
+            application_summary=application_summary,
+            application_recommended_resolution=application_recommended_resolution,
+            application_validation_skipped_reason=(
+                application_validation_skipped_reason
+            ),
+            application_blocking_reasons=application_blocking_reasons,
+            application_count_drifts=application_count_drifts,
+            application_snapshot_drifts=application_snapshot_drifts,
+            application_semantic_risk_level=application_semantic_risk_level,
+            application_semantic_risk_reasons=application_semantic_risk_reasons,
+            next_action=next_action,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+        return replace(item, revision=checked_revision)
 
     def _resource_revision_timeline_events(
         self,
