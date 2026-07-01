@@ -27040,6 +27040,196 @@ def test_record_map_table_bundle_preflights_column_specs(tmp_path: Path) -> None
     assert _mutable_graph_counts(db) == before_counts
 
 
+def test_record_domain_network_profile_records_reviewed_aggregates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/domain-network#"
+    dataset = f"{base}messages"
+    evidence = f"{base}domain_network_profile_evidence"
+    analysis_view = f"{base}message_like_domain_network_view"
+    caveat = f"{base}domain_network_extractability_caveat"
+
+    db.record_map_table_bundle(
+        dataset,
+        label="Messages",
+        columns=[
+            {"column_name": "sender_domain", "physical_type": "rc:Varchar"},
+            {"column_name": "recipient_domain", "physical_type": "rc:Varchar"},
+        ],
+        row_count_snapshot=100,
+        row_semantics="rc:EventRow",
+    )
+
+    result = db.record_domain_network_profile(
+        dataset,
+        summary="Domain extraction coverage for message-like rows.",
+        evidence_summary="Reviewed aggregate domain profile from a query result.",
+        evidence_sources=["scratch://domain-network-profile.json"],
+        evidence_iri=evidence,
+        sample_size=100,
+        sample_scope="All message-like rows in the reviewed snapshot.",
+        sample_method="DuckDB aggregate over canonicalized domain fields.",
+        extraction_method="Regex email extraction followed by lowercase domain parse.",
+        coverage_counts=[
+            {"bucket": "sender_and_recipient_extracted", "count": 70},
+            {"bucket": "sender_only_extracted", "count": 10},
+            {"bucket": "recipient_only_extracted", "count": 5},
+            {"bucket": "neither_extracted", "count": 15},
+        ],
+        coverage_counts_exhaustive=True,
+        domain_pair_counts=[
+            {
+                "sender_domain": "example.test",
+                "recipient_domain": "vendor.test",
+                "count": 25,
+            },
+            {
+                "sender_domain": "vendor.test",
+                "recipient_domain": "example.test",
+                "count": 12,
+            },
+        ],
+        sender_domain_counts=[
+            {"domain": "example.test", "count": 62},
+            {"domain": "vendor.test", "count": 18},
+        ],
+        recipient_domain_counts=[
+            {"domain": "example.test", "count": 41},
+            {"domain": "vendor.test", "count": 37},
+        ],
+        analysis_view_iri=analysis_view,
+        analysis_view_label="Message-like domain-network rows",
+        analysis_view_row_count_snapshot=100,
+        analysis_view_query_text=(
+            "select * from messages where folder_family not in "
+            "('calendar', 'contacts')"
+        ),
+        analysis_view_query_language="DuckDB SQL",
+        analysis_view_query_engine="duckdb",
+        caveat_iri=caveat,
+        caveat_description=(
+            "Domain-network metrics are bounded by sender and recipient "
+            "extractability."
+        ),
+        pattern_summary="Network coverage must be reported with domain graphs.",
+        pattern_text=(
+            "The reviewed aggregate profile records extraction coverage before "
+            "domain-pair counts, so network interpretation should cite both."
+        ),
+        pattern_rationale=(
+            "Missing sender or recipient domains are parser coverage gaps, not "
+            "proof of absent communication."
+        ),
+    )
+
+    assert result.evidence_iri == evidence
+    assert result.analysis_view is not None
+    assert result.analysis_view.iri == analysis_view
+    assert result.caveat is not None
+    assert result.caveat.iri == caveat
+    assert result.pattern is not None
+    assert len(result.profile_observation_iris) == 4
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_dataset",
+        "describe_profile_run",
+        "describe_analysis_view",
+        "describe_pattern",
+    ]
+
+    profile_run = db.describe_profile_run(dataset, evidence, limit=None)
+    assert profile_run.total_profile_count == 4
+    assert set(profile_run.profile_observation_iris) == set(
+        result.profile_observation_iris
+    )
+    coverage = next(
+        observation
+        for observation in profile_run.dataset_profile_observations
+        if observation.summary == "Domain extraction coverage for message-like rows."
+    )
+    assert [(item.value, item.frequency) for item in coverage.value_frequencies] == [
+        ("sender_and_recipient_extracted", 70),
+        ("neither_extracted", 15),
+        ("sender_only_extracted", 10),
+        ("recipient_only_extracted", 5),
+    ]
+    pair_profile = next(
+        observation
+        for observation in profile_run.dataset_profile_observations
+        if observation.summary == "Domain pair aggregate counts for network profiling."
+    )
+    assert pair_profile.value_frequencies[0].value == (
+        "example.test -> vendor.test"
+    )
+    assert db.describe_query_context(analysis_view).readiness == "logical_analysis_view"
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_domain_network_profile_preflights_private_values(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/domain-network#messages"
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="individual address"):
+        db.record_domain_network_profile(
+            dataset,
+            summary="Unsafe domain profile.",
+            evidence_summary="Unsafe aggregate should fail before writes.",
+            sample_size=10,
+            sample_scope="All rows.",
+            sample_method="Aggregate query.",
+            extraction_method="Regex extraction.",
+            coverage_counts=[
+                {"bucket": "alice@example.test", "count": 10},
+            ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+    with pytest.raises(DoxaBaseError, match="below domain_pair_min_count"):
+        db.record_domain_network_profile(
+            dataset,
+            summary="Low-frequency domain profile.",
+            evidence_summary="Low-frequency aggregate should fail before writes.",
+            sample_size=10,
+            sample_scope="All rows.",
+            sample_method="Aggregate query.",
+            extraction_method="Regex extraction.",
+            coverage_counts=[{"bucket": "sender_and_recipient_extracted", "count": 10}],
+            domain_pair_counts=[
+                {
+                    "sender_domain": "example.test",
+                    "recipient_domain": "vendor.test",
+                    "count": 1,
+                }
+            ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="pattern_summary, pattern_text, and pattern_rationale",
+    ):
+        db.record_domain_network_profile(
+            dataset,
+            summary="Partial-pattern domain profile.",
+            evidence_summary="Partial pattern should fail before writes.",
+            sample_size=10,
+            sample_scope="All rows.",
+            sample_method="Aggregate query.",
+            extraction_method="Regex extraction.",
+            coverage_counts=[{"bucket": "sender_and_recipient_extracted", "count": 10}],
+            caveat_description="Domain graphs depend on extraction coverage.",
+            pattern_summary="Missing supporting fields.",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     table = "https://example.test/project#messages"

@@ -1528,6 +1528,31 @@ bundle patterns include column value types only with
 `pattern_support_scope="all_profiles"`. Built-in `rc:` terms stay
 evidence-only.
 
+`db.record_domain_network_profile(...)` returns a
+`DomainNetworkProfileRecord`:
+
+```python
+record.dataset_iri
+record.evidence_iri
+record.analysis_view
+record.caveat
+record.coverage_profile
+record.domain_pair_profile
+record.sender_domain_profile
+record.recipient_domain_profile
+record.pattern
+record.profile_observation_iris
+record.suggested_next_actions
+record.suggested_next_calls
+```
+
+`coverage_profile` is always a `DatasetProfileRecord`. The domain-pair and
+sender/recipient domain profiles are `DatasetProfileRecord` objects when their
+aggregate count lists were supplied, otherwise `None`. `analysis_view`,
+`caveat`, and `pattern` are optional helper-created support records. Use
+`profile_observation_iris` with `describe_profile_run(dataset_iri,
+evidence_iri)` to retrieve the aggregate run after handoff.
+
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 
 ```python

@@ -62,6 +62,7 @@ from doxabase.mcp_tools import (
     record_claim_reconsideration_tool,
     record_column_profile_tool,
     record_dataset_profile_tool,
+    record_domain_network_profile_tool,
     record_map_analysis_view_tool,
     record_map_asset_transform_tool,
     record_map_caveat_tool,
@@ -197,6 +198,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_column_profile" in tool_names
     assert "doxabase.record_dataset_profile" in tool_names
     assert "doxabase.record_profile_bundle" in tool_names
+    assert "doxabase.record_domain_network_profile" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_analysis_view" in tool_names
@@ -7024,6 +7026,86 @@ def test_record_map_table_bundle_tool_returns_json_like_records(
         "status",
     }
     assert description["physical_layouts"][0]["file_format"]["iri"] == RC + "Parquet"
+
+
+def test_record_domain_network_profile_tool_returns_handoff_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-domain-network#"
+    dataset = f"{base}messages"
+    evidence = f"{base}domain_network_profile_evidence"
+    view = f"{base}network_view"
+
+    record_map_table_bundle_tool(
+        db,
+        iri=dataset,
+        label="Messages",
+        columns=[
+            {"column_name": "sender_domain", "physical_type": "rc:Varchar"},
+            {"column_name": "recipient_domain", "physical_type": "rc:Varchar"},
+        ],
+        row_count_snapshot=50,
+    )
+    result = record_domain_network_profile_tool(
+        db,
+        dataset_iri=dataset,
+        summary="Domain-network extraction profile.",
+        evidence_summary="Reviewed aggregate counts from a domain parser.",
+        evidence_sources=["scratch://domain-network-profile.json"],
+        evidence_iri=evidence,
+        sample_size=50,
+        sample_scope="All reviewed message-like rows.",
+        sample_method="Aggregate query over parsed domains.",
+        extraction_method="Lowercase domain extraction from parsed addresses.",
+        coverage_counts=[
+            {"bucket": "sender_and_recipient_extracted", "count": 40},
+            {"bucket": "neither_extracted", "count": 10},
+        ],
+        coverage_counts_exhaustive=True,
+        domain_pair_counts=[
+            {
+                "sender_domain": "example.test",
+                "recipient_domain": "vendor.test",
+                "count": 12,
+            }
+        ],
+        analysis_view_iri=view,
+        analysis_view_label="Message-like network view",
+        caveat_description="Domain graphs depend on extraction coverage.",
+        pattern_summary="Domain networks require extraction denominators.",
+        pattern_text=(
+            "Aggregate domain-pair counts should be read with the coverage "
+            "matrix."
+        ),
+        pattern_rationale="The parser can miss senders or recipients.",
+    )
+
+    assert result["dataset_iri"] == dataset
+    assert result["evidence_iri"] == evidence
+    assert result["analysis_view"]["iri"] == view
+    assert result["caveat"]["resource_type"] == RC + "KnownCaveat"
+    assert result["pattern"]["pattern_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/pattern/"
+    )
+    assert len(result["profile_observation_iris"]) == 2
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "describe_dataset",
+        "describe_profile_run",
+        "describe_analysis_view",
+        "describe_pattern",
+    ]
+
+    profile_run = describe_profile_run_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=evidence,
+        limit=None,
+    )
+    assert profile_run["total_profile_count"] == 2
+    assert describe_query_context_tool(db, iri=view)["readiness"] == (
+        "logical_analysis_view"
+    )
 
 
 def test_describe_query_context_tool_returns_planning_projection(

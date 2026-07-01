@@ -4422,8 +4422,13 @@ few useful gaps:
   profile, and logical-view facts flow through `record_map_table_bundle`,
   `record_profile_bundle`, `record_map_analysis_view`, validation,
   `export_handoff_bundle`, and fresh `import_handoff_bundle` verification.
-  The remaining domain-network helper should likewise preserve reviewed
-  aggregates and denominators, not infer addresses or network semantics.
+- A domain-network aggregate helper now covers the second candidate in the same
+  spirit: `record_domain_network_profile` preserves reviewed sender/recipient
+  extractability buckets, optional domain-pair/top-domain counts, shared
+  evidence, and optional analysis-view/caveat/pattern support. It rejects raw
+  address-looking values and low-frequency domain pairs by default; it still
+  does not parse addresses, infer internal-domain rules, or assert that a
+  network analysis is valid.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

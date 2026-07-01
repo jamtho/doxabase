@@ -1681,6 +1681,22 @@ metric kind IRIs and project-specific column value-type IRIs are included too.
 Built-in `rc:` metric kinds and `rc:` value types remain observed profile
 evidence only.
 
+`doxabase.record_domain_network_profile`
+
+Records reviewed aggregate domain-network profiling output without reading data
+or parsing addresses. Use it for communication-like datasets after an external
+query/parser has already produced sender/recipient extractability buckets,
+optional top domain-pair counts, and optional top sender/recipient domain
+counts. The helper writes one shared evidence resource, profile observations in
+`observations`, and optional map caveat / logical analysis view / pattern
+support. `sample_size`, `sample_scope`, `sample_method`, and
+`extraction_method` are required so the denominator survives handoff.
+`coverage_counts_exhaustive=true` checks that coverage bucket counts sum to the
+sample size. Domain-pair counts below `domain_pair_min_count` are rejected unless
+`allow_low_frequency_domain_pairs=true` is explicitly passed after privacy
+review. Do not pass raw addresses or row samples; values containing `@` are
+rejected.
+
 `doxabase.record_column_profile`
 
 Records one column profile: a profile observation with

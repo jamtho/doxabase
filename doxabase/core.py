@@ -4102,6 +4102,22 @@ class ProfileBundleRecord:
 
 
 @dataclass(frozen=True)
+class DomainNetworkProfileRecord:
+    dataset_iri: str
+    evidence_iri: str | None
+    analysis_view: MapResourceRecord | None
+    caveat: MapResourceRecord | None
+    coverage_profile: DatasetProfileRecord
+    domain_pair_profile: DatasetProfileRecord | None
+    sender_domain_profile: DatasetProfileRecord | None
+    recipient_domain_profile: DatasetProfileRecord | None
+    pattern: PatternRecord | None
+    profile_observation_iris: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ClaimReconsiderationRecord:
     reconsideration_iri: str
     newer_claim_iri: str
@@ -35572,6 +35588,556 @@ class DoxaBase:
                 column_profiles=recorded_columns,
             ),
         )
+
+    def record_domain_network_profile(
+        self,
+        dataset_iri: str,
+        *,
+        summary: str,
+        evidence_summary: str,
+        sample_size: int,
+        sample_scope: str,
+        sample_method: str,
+        extraction_method: str,
+        coverage_counts: Iterable[Mapping[str, Any]],
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        evidence_iri: str | None = None,
+        coverage_counts_exhaustive: bool = False,
+        domain_pair_counts: Iterable[Mapping[str, Any]] | None = None,
+        sender_domain_counts: Iterable[Mapping[str, Any]] | None = None,
+        recipient_domain_counts: Iterable[Mapping[str, Any]] | None = None,
+        domain_pair_min_count: int = 5,
+        allow_low_frequency_domain_pairs: bool = False,
+        analysis_view_iri: str | None = None,
+        analysis_view_label: str | None = None,
+        analysis_view_description: str | None = None,
+        analysis_view_row_count_snapshot: int | None = None,
+        analysis_view_query_text: str | None = None,
+        analysis_view_query_language: str | None = None,
+        analysis_view_query_engine: str | None = None,
+        caveat_iri: str | None = None,
+        caveat_label: str | None = None,
+        caveat_description: str | None = None,
+        caveat_severity: str | None = "rc:Moderate",
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+    ) -> DomainNetworkProfileRecord:
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        evidence_value = (
+            self._required_iri("evidence_iri", evidence_iri)
+            if evidence_iri is not None
+            else self._mint_iri("evidence")
+        )
+        self._ensure_positive_int("sample_size", sample_size)
+        self._ensure_positive_int("domain_pair_min_count", domain_pair_min_count)
+        if not isinstance(summary, str) or not summary.strip():
+            raise DoxaBaseError("summary must not be empty")
+        if not isinstance(evidence_summary, str) or not evidence_summary.strip():
+            raise DoxaBaseError("evidence_summary must not be empty")
+        if not isinstance(sample_scope, str) or not sample_scope.strip():
+            raise DoxaBaseError("sample_scope must not be empty")
+        if not isinstance(sample_method, str) or not sample_method.strip():
+            raise DoxaBaseError("sample_method must not be empty")
+        if not isinstance(extraction_method, str):
+            raise DoxaBaseError("extraction_method must not be empty")
+        extraction_method_value = extraction_method.strip()
+        if not extraction_method_value:
+            raise DoxaBaseError("extraction_method must not be empty")
+        for name, value in (
+            ("observed_by", observed_by),
+            ("evidence_iri", evidence_iri),
+            ("analysis_view_iri", analysis_view_iri),
+            ("analysis_view_label", analysis_view_label),
+            ("analysis_view_description", analysis_view_description),
+            ("analysis_view_query_text", analysis_view_query_text),
+            ("analysis_view_query_language", analysis_view_query_language),
+            ("analysis_view_query_engine", analysis_view_query_engine),
+            ("caveat_iri", caveat_iri),
+            ("caveat_label", caveat_label),
+            ("caveat_description", caveat_description),
+            ("caveat_severity", caveat_severity),
+            ("pattern_summary", pattern_summary),
+            ("pattern_text", pattern_text),
+            ("pattern_rationale", pattern_rationale),
+            ("pattern_confidence", pattern_confidence),
+            ("pattern_status", pattern_status),
+            ("pattern_stability", pattern_stability),
+        ):
+            self._preflight_optional_string(name, value)
+
+        coverage_values = self._domain_network_frequency_values(
+            "coverage_counts",
+            coverage_counts,
+            value_fields=("bucket", "value", "classification"),
+        )
+        if not coverage_values:
+            raise DoxaBaseError("coverage_counts must contain at least one bucket")
+        coverage_total = sum(item["frequency"] for item in coverage_values)
+        if coverage_counts_exhaustive and coverage_total != sample_size:
+            raise DoxaBaseError(
+                "coverage_counts are marked exhaustive but their frequencies "
+                f"sum to {coverage_total}, not sample_size {sample_size}"
+            )
+        pair_values = self._domain_network_pair_frequency_values(
+            domain_pair_counts,
+            min_count=domain_pair_min_count,
+            allow_low_frequency=allow_low_frequency_domain_pairs,
+        )
+        sender_values = self._domain_network_frequency_values(
+            "sender_domain_counts",
+            sender_domain_counts,
+            value_fields=("domain", "value", "sender_domain"),
+            required=False,
+        )
+        recipient_values = self._domain_network_frequency_values(
+            "recipient_domain_counts",
+            recipient_domain_counts,
+            value_fields=("domain", "value", "recipient_domain"),
+            required=False,
+        )
+        self._preflight_evidence_summary_reuse(
+            evidence_value,
+            evidence_summary,
+        )
+
+        caveat_requested = caveat_description is not None or caveat_iri is not None
+        caveat_value = (
+            self._required_iri("caveat_iri", caveat_iri)
+            if caveat_iri is not None
+            else f"{dataset_value}/domain-network-caveat"
+            if caveat_requested
+            else None
+        )
+        if caveat_requested and caveat_severity is not None:
+            self._controlled_resource_ref(
+                "caveat_severity",
+                caveat_severity,
+                CAVEAT_SEVERITY_LEVELS,
+            )
+        analysis_view_requested = any(
+            value is not None
+            for value in (
+                analysis_view_iri,
+                analysis_view_label,
+                analysis_view_description,
+                analysis_view_row_count_snapshot,
+                analysis_view_query_text,
+                analysis_view_query_language,
+                analysis_view_query_engine,
+            )
+        )
+        analysis_view_value = (
+            self._required_iri("analysis_view_iri", analysis_view_iri)
+            if analysis_view_iri is not None
+            else f"{dataset_value}/domain-network-analysis-view"
+            if analysis_view_requested
+            else None
+        )
+        self._ensure_non_negative(
+            "analysis_view_row_count_snapshot",
+            analysis_view_row_count_snapshot,
+        )
+        if analysis_view_query_text is not None and not analysis_view_query_text.strip():
+            raise DoxaBaseError("analysis_view_query_text must not be empty")
+        should_record_pattern = self._profile_pattern_requested(
+            pattern_summary,
+            pattern_text,
+            pattern_rationale,
+        )
+        pattern_implications = [
+            target for target in (caveat_value, analysis_view_value) if target is not None
+        ]
+        if should_record_pattern:
+            self._preflight_profile_pattern(
+                primary_resource_iri=dataset_value,
+                pattern_map_implications=pattern_implications,
+                profile_metric_sets=(),
+                pattern_confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+            )
+
+        caveat_record: MapResourceRecord | None = None
+        if caveat_requested:
+            assert caveat_value is not None
+            caveat_record = self.record_map_caveat(
+                caveat_value,
+                label=caveat_label,
+                description=(
+                    caveat_description
+                    or (
+                        "Domain-network interpretation depends on sender and "
+                        "recipient extraction coverage; reviewed aggregate "
+                        "counts do not prove missing communications are absent."
+                    )
+                ),
+                severity=caveat_severity,
+                targets=[dataset_value],
+            )
+
+        analysis_view_record: MapResourceRecord | None = None
+        if analysis_view_requested:
+            assert analysis_view_value is not None
+            analysis_view_record = self.record_map_analysis_view(
+                analysis_view_value,
+                label=analysis_view_label,
+                description=analysis_view_description,
+                source_datasets=[dataset_value],
+                row_count_snapshot=analysis_view_row_count_snapshot,
+                caveats=[caveat_value] if caveat_value is not None else None,
+                denominator_description=sample_scope,
+                denominator_row_count_snapshot=sample_size,
+                denominator_basis=extraction_method_value,
+                query_text=analysis_view_query_text,
+                query_language=analysis_view_query_language,
+                query_engine=analysis_view_query_engine,
+            )
+
+        sample_method_value = (
+            f"{sample_method.strip()} Extraction method: {extraction_method_value}"
+        )
+        coverage_profile = self.record_dataset_profile(
+            dataset_value,
+            summary=summary,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            evidence_iri=evidence_value,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method_value,
+            row_count=sample_size if coverage_counts_exhaustive else None,
+            value_frequencies=coverage_values,
+            update_map_snapshot=False,
+        )
+        domain_pair_profile = self._record_optional_domain_network_profile(
+            dataset_value,
+            summary="Domain pair aggregate counts for network profiling.",
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            evidence_iri=evidence_value,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method_value,
+            value_frequencies=pair_values,
+        )
+        sender_domain_profile = self._record_optional_domain_network_profile(
+            dataset_value,
+            summary="Sender domain aggregate counts for network profiling.",
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            evidence_iri=evidence_value,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method_value,
+            value_frequencies=sender_values,
+        )
+        recipient_domain_profile = self._record_optional_domain_network_profile(
+            dataset_value,
+            summary="Recipient domain aggregate counts for network profiling.",
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            evidence_iri=evidence_value,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method_value,
+            value_frequencies=recipient_values,
+        )
+
+        profile_records = [
+            profile
+            for profile in (
+                coverage_profile,
+                domain_pair_profile,
+                sender_domain_profile,
+                recipient_domain_profile,
+            )
+            if profile is not None
+        ]
+        profile_observation_iris = [
+            profile.observation.observation_iri for profile in profile_records
+        ]
+        pattern: PatternRecord | None = None
+        if should_record_pattern:
+            assert pattern_summary is not None
+            assert pattern_text is not None
+            assert pattern_rationale is not None
+            pattern = self.record_pattern(
+                summary=pattern_summary,
+                pattern_text=pattern_text,
+                rationale=pattern_rationale,
+                pattern_targets=[
+                    target
+                    for target in (analysis_view_value, dataset_value)
+                    if target is not None
+                ],
+                supporting_observations=profile_observation_iris,
+                evidence_iri=evidence_value,
+                confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+                map_implications=pattern_implications,
+            )
+
+        suggested_next_actions = [
+            SuggestedNextAction(
+                action_label="Describe profiled dataset",
+                tool_name="describe_dataset",
+                mcp_tool_name="doxabase.describe_dataset",
+                arguments={"iri": dataset_value},
+                reason=(
+                    "Inspect the dataset with the recorded domain-network "
+                    "profile observations and map caveats."
+                ),
+                call=self._suggested_call_string(
+                    "describe_dataset",
+                    {"iri": dataset_value},
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Inspect domain-network profile run",
+                tool_name="describe_profile_run",
+                mcp_tool_name="doxabase.describe_profile_run",
+                arguments={
+                    "dataset_iri": dataset_value,
+                    "evidence_iri": evidence_value,
+                },
+                reason=(
+                    "Review the shared evidence run containing coverage, "
+                    "domain-pair, and domain-frequency aggregates."
+                ),
+                call=self._suggested_call_string(
+                    "describe_profile_run",
+                    {"dataset_iri": dataset_value, "evidence_iri": evidence_value},
+                ),
+            ),
+        ]
+        if analysis_view_value is not None:
+            suggested_next_actions.append(
+                SuggestedNextAction(
+                    action_label="Describe domain-network analysis view",
+                    tool_name="describe_analysis_view",
+                    mcp_tool_name="doxabase.describe_analysis_view",
+                    arguments={"iri": analysis_view_value},
+                    reason=(
+                        "Inspect the named population and denominator for the "
+                        "domain-network aggregate profile."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_analysis_view",
+                        {"iri": analysis_view_value},
+                    ),
+                )
+            )
+        if pattern is not None:
+            suggested_next_actions.append(
+                SuggestedNextAction(
+                    action_label="Describe domain-network coverage pattern",
+                    tool_name="describe_pattern",
+                    mcp_tool_name="doxabase.describe_pattern",
+                    arguments={"iri": pattern.pattern_iri},
+                    reason=(
+                        "Review the synthesis that explains how extraction "
+                        "coverage affects network interpretation."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_pattern",
+                        {"iri": pattern.pattern_iri},
+                    ),
+                )
+            )
+        return DomainNetworkProfileRecord(
+            dataset_iri=dataset_value,
+            evidence_iri=evidence_value,
+            analysis_view=analysis_view_record,
+            caveat=caveat_record,
+            coverage_profile=coverage_profile,
+            domain_pair_profile=domain_pair_profile,
+            sender_domain_profile=sender_domain_profile,
+            recipient_domain_profile=recipient_domain_profile,
+            pattern=pattern,
+            profile_observation_iris=profile_observation_iris,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+        )
+
+    def _record_optional_domain_network_profile(
+        self,
+        dataset_iri: str,
+        *,
+        summary: str,
+        observed_at: datetime | str | None,
+        observed_by: str | None,
+        evidence_summary: str,
+        evidence_sources: Iterable[str] | str | None,
+        evidence_iri: str,
+        sample_size: int,
+        sample_scope: str,
+        sample_method: str,
+        value_frequencies: list[dict[str, Any]],
+    ) -> DatasetProfileRecord | None:
+        if not value_frequencies:
+            return None
+        return self.record_dataset_profile(
+            dataset_iri,
+            summary=summary,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            evidence_iri=evidence_iri,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            value_frequencies=value_frequencies,
+            update_map_snapshot=False,
+        )
+
+    def _domain_network_frequency_values(
+        self,
+        name: str,
+        values: Iterable[Mapping[str, Any]] | None,
+        *,
+        value_fields: tuple[str, ...],
+        required: bool = True,
+    ) -> list[dict[str, Any]]:
+        if values is None:
+            if required:
+                raise DoxaBaseError(f"{name} must contain at least one bucket")
+            return []
+        items = list(values)
+        if required and not items:
+            raise DoxaBaseError(f"{name} must contain at least one bucket")
+        frequencies: list[dict[str, Any]] = []
+        for index, item in enumerate(items, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"{name}[{index}] must be an object")
+            value = self._domain_network_spec_value(
+                name,
+                index,
+                item,
+                value_fields=value_fields,
+            )
+            frequency = self._domain_network_frequency(name, index, item)
+            frequencies.append({"value": value, "frequency": frequency})
+        return frequencies
+
+    def _domain_network_pair_frequency_values(
+        self,
+        values: Iterable[Mapping[str, Any]] | None,
+        *,
+        min_count: int,
+        allow_low_frequency: bool,
+    ) -> list[dict[str, Any]]:
+        if values is None:
+            return []
+        frequencies: list[dict[str, Any]] = []
+        for index, item in enumerate(list(values), start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"domain_pair_counts[{index}] must be an object")
+            if item.get("value") is not None:
+                pair_value = self._domain_network_spec_value(
+                    "domain_pair_counts",
+                    index,
+                    item,
+                    value_fields=("value",),
+                )
+            else:
+                sender = self._domain_network_spec_value(
+                    "domain_pair_counts",
+                    index,
+                    item,
+                    value_fields=("sender_domain",),
+                )
+                recipient = self._domain_network_spec_value(
+                    "domain_pair_counts",
+                    index,
+                    item,
+                    value_fields=("recipient_domain",),
+                )
+                pair_value = f"{sender} -> {recipient}"
+            frequency = self._domain_network_frequency(
+                "domain_pair_counts",
+                index,
+                item,
+            )
+            if frequency < min_count and not allow_low_frequency:
+                raise DoxaBaseError(
+                    f"domain_pair_counts[{index}] frequency {frequency} is "
+                    f"below domain_pair_min_count {min_count}; pass "
+                    "allow_low_frequency_domain_pairs=True only after privacy "
+                    "review confirms the aggregate is safe to preserve."
+                )
+            frequencies.append({"value": pair_value, "frequency": frequency})
+        return frequencies
+
+    def _domain_network_spec_value(
+        self,
+        name: str,
+        index: int,
+        item: Mapping[Any, Any],
+        *,
+        value_fields: tuple[str, ...],
+    ) -> str:
+        field_used = None
+        value = None
+        for field in value_fields:
+            if item.get(field) is not None:
+                field_used = field
+                value = item.get(field)
+                break
+        field_text = " or ".join(value_fields)
+        if not isinstance(value, str) or not value.strip():
+            raise DoxaBaseError(
+                f"{name}[{index}] must include a non-empty string {field_text}"
+            )
+        value_text = value.strip()
+        self._reject_domain_network_raw_address(
+            f"{name}[{index}].{field_used}",
+            value_text,
+        )
+        return value_text
+
+    def _domain_network_frequency(
+        self,
+        name: str,
+        index: int,
+        item: Mapping[Any, Any],
+    ) -> int:
+        field = "frequency" if "frequency" in item else "count"
+        value = item.get(field)
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise DoxaBaseError(f"{name}[{index}].{field} must be an integer")
+        self._ensure_non_negative(f"{name}[{index}].{field}", value)
+        return value
+
+    @staticmethod
+    def _reject_domain_network_raw_address(name: str, value: str) -> None:
+        if "@" in value or value.lower().startswith("mailto:"):
+            raise DoxaBaseError(
+                f"{name} looks like an individual address, not an aggregate "
+                "domain or classification bucket"
+            )
+
+    @staticmethod
+    def _ensure_positive_int(name: str, value: int) -> None:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise DoxaBaseError(f"{name} must be a positive integer")
 
     def _profile_bundle_handoff_entrypoints(
         self,

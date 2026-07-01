@@ -1083,6 +1083,13 @@ availability flags, structured `suggested_next_actions`, and compatibility
 `suggested_next_calls` for the next agent. When both map dataset context and a
 shared evidence run are available, handoff actions include
 `draft_profile_map_updates` before context-slice routes.
+`record_domain_network_profile()` is the aggregate communication-network
+profile helper. It records reviewed sender/recipient extractability buckets,
+optional domain-pair/domain-frequency counts, shared evidence, and optional
+analysis-view/caveat/pattern support. The helper does not read data, parse
+addresses, infer internal-domain rules, or make network-validity claims. Values
+containing `@` are rejected, and low-frequency domain-pair buckets require an
+explicit privacy-review override.
 In `handoff_entrypoints`, `map_column_iris` is a legacy alias for the columns
 whose map facts were written by this bundle call. Prefer
 `updated_map_column_iris` for that meaning, and use

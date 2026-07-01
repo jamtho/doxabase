@@ -23,6 +23,12 @@ Use `record_dataset_profile`, `record_column_profile`, or
 `record_profile_bundle` for one pass that produced dataset-level and column
 profiles together. Pass `shared_evidence_iri` when the profiles all come from
 one run and should be retrievable as a group.
+Use `record_domain_network_profile` when a communication-like dataset has
+reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
+counts, and a named denominator. It records aggregate profile observations and
+can also record an analysis view, caveat, and pattern. It does not parse
+addresses, infer internal/external rules, or decide that a network is valid.
+Do not pass individual addresses, message IDs, subjects, or raw row samples.
 
 Treat scalar `profile_metrics`, value frequencies, physical types, value types,
 null counts, distinct counts, and row counts as observed evidence. They are not
