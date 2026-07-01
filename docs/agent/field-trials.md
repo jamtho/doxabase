@@ -199,6 +199,21 @@ Do not treat a clean staged patch as automatically shareable Markdown: staged
 review exports include live apply-check drift, so current graph content outside
 the patch can still make the generated Markdown dirty.
 
+A July 1, 2026 broad-wave trial found no immediate code gap across three
+previously underexercised surfaces. `export_preflight` plus guarded handoff
+exports blocked synthetic graph and revision-snapshot secrets before writing
+files, while scanner-clean handoff bundles exported and imported cleanly but
+still carried the required shareability-review warning. `project_brief` routed
+a mixed scratch frontier to privacy/export safety first, then exposed staged,
+query, profile, and non-tabular work after explicit frontier expansion instead
+of getting stuck on one visible queue. `record_map_asset_transform` carried a
+realistic non-tabular image/label/pose transform with ordered endpoints,
+conditions, per-output formulas/functions, and dataset/expression tuple-grain
+components through `describe_dataset`, `describe_context_slice`, export, and
+reimport without fake columns. Treat those surfaces as recently validated; run
+new trials there only when the workflow shape changes or a concrete failure
+appears.
+
 ## Safety
 
 Use a scratch capsule, for example:
