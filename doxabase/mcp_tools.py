@@ -553,6 +553,14 @@ def describe_dataset_tool(
     return to_dict(db.describe_dataset(iri=iri, graph=graph))
 
 
+def describe_analysis_view_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "map",
+) -> dict[str, Any]:
+    return to_dict(db.describe_analysis_view(iri=iri, graph=graph))
+
+
 def describe_profile_run_tool(
     db: DoxaBase,
     dataset_iri: str,
@@ -1364,6 +1372,48 @@ def record_map_dataset_tool(
         physical_layouts=physical_layouts,
         companion_datasets=companion_datasets,
         extra_types=extra_types,
+    )
+    return to_dict(result)
+
+
+def record_map_analysis_view_tool(
+    db: DoxaBase,
+    iri: str,
+    label: str | None = None,
+    description: str | None = None,
+    source_datasets: list[str] | None = None,
+    row_count_snapshot: int | None = None,
+    caveats: list[str] | None = None,
+    denominator_iri: str | None = None,
+    denominator_label: str | None = None,
+    denominator_description: str | None = None,
+    denominator_row_count_snapshot: int | None = None,
+    denominator_basis: str | None = None,
+    query_snippet_iri: str | None = None,
+    query_snippet_label: str | None = None,
+    query_snippet_description: str | None = None,
+    query_text: str | None = None,
+    query_language: str | None = None,
+    query_engine: str | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_analysis_view(
+        iri=iri,
+        label=label,
+        description=description,
+        source_datasets=source_datasets,
+        row_count_snapshot=row_count_snapshot,
+        caveats=caveats,
+        denominator_iri=denominator_iri,
+        denominator_label=denominator_label,
+        denominator_description=denominator_description,
+        denominator_row_count_snapshot=denominator_row_count_snapshot,
+        denominator_basis=denominator_basis,
+        query_snippet_iri=query_snippet_iri,
+        query_snippet_label=query_snippet_label,
+        query_snippet_description=query_snippet_description,
+        query_text=query_text,
+        query_language=query_language,
+        query_engine=query_engine,
     )
     return to_dict(result)
 

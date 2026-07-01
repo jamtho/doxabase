@@ -14,6 +14,7 @@ evidence explaining why.
 Use first-class map helpers for routine map writes:
 
 - `doxabase.record_map_dataset`
+- `doxabase.record_map_analysis_view`
 - `doxabase.record_map_column`
 - `doxabase.record_map_caveat`
 - `doxabase.record_map_storage_access`
@@ -80,6 +81,15 @@ real table-like fields. For non-tabular handoffs, prefer
 `describe_resource()` or `describe_context_slice(profile="deep_lore")`; direct
 query-planning helpers return `not_applicable_non_tabular_asset` unless a
 separate queryable table route has been modeled.
+
+For named logical populations, denominator definitions, or reusable reviewed
+query recipes, use `record_map_analysis_view` instead of inventing physical
+storage metadata. It records an `rc:AnalysisView` as a table-like map resource,
+can link source datasets and caveats, and can attach one denominator resource
+plus a reviewed query snippet. `describe_query_context` returns
+`readiness="logical_analysis_view"` for these resources and deliberately does
+not produce missing-storage repair actions unless you separately model a
+materialized physical route.
 
 ## When To Use Map Helpers
 

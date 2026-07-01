@@ -36,6 +36,16 @@ rc:Table a rdfs:Class ;
     rdfs:subClassOf rc:DataAsset ;
     rdfs:comment "A logical tabular structure with rows and columns. SQL tables, views, dataframes, query results, CSV files, and Parquet files may all be tables when appropriate." .
 
+rc:AnalysisView a rdfs:Class ;
+    rdfs:subClassOf rc:Table ;
+    rdfs:comment "A named logical analysis population or view whose denominator, caveats, and query recipe are recorded for interpretation, not as direct physical storage access." .
+
+rc:AnalysisDenominator a rdfs:Class ;
+    rdfs:comment "Reviewed denominator or population semantics for an analysis view, including optional point-in-time row-count context." .
+
+rc:ExecutableQuerySnippet a rdfs:Class ;
+    rdfs:comment "Reviewed query text or pseudo-query text associated with an analysis view. It is a handoff recipe, not proof DoxaBase executed the query." .
+
 rc:DataFrame a rdfs:Class ;
     rdfs:subClassOf rc:Table ;
     rdfs:comment "An in-memory or dataframe-library-backed table." .
@@ -124,6 +134,51 @@ rc:rowCountSnapshot a rdf:Property ;
 rc:pathTemplate a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A path or URI template for locating files, partitions, tables, or other data resources." .
+
+rc:hasAnalysisDenominator a rdf:Property ;
+    rdfs:domain rc:AnalysisView ;
+    rdfs:range rc:AnalysisDenominator ;
+    rdfs:comment "Links a logical analysis view to its reviewed denominator or population definition." .
+
+rc:denominatorDescription a rdf:Property ;
+    rdfs:domain rc:AnalysisDenominator ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed prose describing which rows, entities, or records are in the denominator." .
+
+rc:denominatorRowCountSnapshot a rdf:Property ;
+    rdfs:domain rc:AnalysisDenominator ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Observed row count for the denominator at a point in time. This is a snapshot, not a standing guarantee." .
+
+rc:denominatorBasis a rdf:Property ;
+    rdfs:domain rc:AnalysisDenominator ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Short reviewed note about the filter, source, or counting basis behind the denominator." .
+
+rc:hasQuerySnippet a rdf:Property ;
+    rdfs:domain rc:AnalysisView ;
+    rdfs:range rc:ExecutableQuerySnippet ;
+    rdfs:comment "Links an analysis view to reviewed query text or a query recipe that can reconstruct or inspect it." .
+
+rc:forAnalysisView a rdf:Property ;
+    rdfs:domain rc:ExecutableQuerySnippet ;
+    rdfs:range rc:AnalysisView ;
+    rdfs:comment "The analysis view that a query snippet defines, inspects, or supports." .
+
+rc:queryText a rdf:Property ;
+    rdfs:domain rc:ExecutableQuerySnippet ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed query, view definition, or pseudo-query text." .
+
+rc:queryLanguage a rdf:Property ;
+    rdfs:domain rc:ExecutableQuerySnippet ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The language or notation used by queryText, such as SQL, DuckDB SQL, or reviewed prose." .
+
+rc:queryRuntime a rdf:Property ;
+    rdfs:domain rc:ExecutableQuerySnippet ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Runtime or query engine expected by the snippet, when known." .
 
 # -----------------------------------------------------------------------------
 # Physical and value types

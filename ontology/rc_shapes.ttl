@@ -88,6 +88,74 @@ rc:TableShape a sh:NodeShape ;
         sh:message "snapshotTimestamp should be a named column resource." ;
     ] .
 
+rc:AnalysisViewShape a sh:NodeShape ;
+    sh:targetClass rc:AnalysisView ;
+    sh:property [
+        sh:path rc:sourceDataset ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Analysis view sourceDataset values should be named data assets." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasAnalysisDenominator ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Analysis views should have at most one named analysis denominator." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasQuerySnippet ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Analysis view query snippets should be named resources." ;
+    ] .
+
+rc:AnalysisDenominatorShape a sh:NodeShape ;
+    sh:targetClass rc:AnalysisDenominator ;
+    sh:property [
+        sh:path rc:denominatorDescription ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "denominatorDescription must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:denominatorRowCountSnapshot ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "denominatorRowCountSnapshot must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:denominatorBasis ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "denominatorBasis must be a single string if declared." ;
+    ] .
+
+rc:ExecutableQuerySnippetShape a sh:NodeShape ;
+    sh:targetClass rc:ExecutableQuerySnippet ;
+    sh:property [
+        sh:path rc:forAnalysisView ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "forAnalysisView should point to one named analysis view." ;
+    ] ;
+    sh:property [
+        sh:path rc:queryText ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryText must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:queryLanguage ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryLanguage must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:queryRuntime ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryRuntime must be a single string if declared." ;
+    ] .
+
 rc:ColumnShape a sh:NodeShape ;
     sh:targetClass rc:Column ;
     sh:property [

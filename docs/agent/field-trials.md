@@ -4395,6 +4395,13 @@ few useful gaps:
   S3 route fields, and query planning warns when an `s3://...` storage root
   conflicts with separately recorded `bucket_name` or `key_prefix` facts even
   before a complete path template is executable.
+- The same Enron handoff exposed a separate modeling gap for named analysis
+  populations: agents had denominators and reviewed query recipes, but no
+  first-class map route except prose or fake physical tables. DoxaBase now has
+  `record_map_analysis_view` / `describe_analysis_view`, plus
+  `describe_query_context` readiness `logical_analysis_view`, so logical views
+  can preserve denominator and query-snippet context without triggering
+  missing-storage repair loops.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

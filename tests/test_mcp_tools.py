@@ -13,6 +13,7 @@ from doxabase.mcp_tools import (
     check_staged_revision_apply_tool,
     describe_applied_revision_diff_tool,
     describe_assertion_support_tool,
+    describe_analysis_view_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
     describe_profile_run_tool,
@@ -61,6 +62,7 @@ from doxabase.mcp_tools import (
     record_claim_reconsideration_tool,
     record_column_profile_tool,
     record_dataset_profile_tool,
+    record_map_analysis_view_tool,
     record_map_asset_transform_tool,
     record_map_caveat_tool,
     record_map_column_tool,
@@ -156,6 +158,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.describe_analysis_view" in tool_names
     assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.draft_profile_map_updates" in tool_names
     assert "doxabase.plan_profile_followthrough" in tool_names
@@ -195,6 +198,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_profile_bundle" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
+    assert "doxabase.record_map_analysis_view" in tool_names
     assert "doxabase.record_map_column" in tool_names
     assert "doxabase.record_map_caveat" in tool_names
     assert "doxabase.record_map_storage_access" in tool_names
@@ -6908,6 +6912,60 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         column["column_name"]
         for column in condition_id_reason["related_dataset_columns"]
     ] == ["conditionId"]
+
+
+def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-analysis-view#"
+    source = f"{base}messages"
+    view = f"{base}sent_external_messages"
+    caveat = f"{base}redacted_body_caveat"
+
+    record_map_dataset_tool(db, iri=source, label="Messages", is_table=True)
+    record_map_caveat_tool(
+        db,
+        iri=caveat,
+        label="Redacted body caveat",
+        description="Message bodies may be redacted in the source export.",
+        severity="rc:Moderate",
+    )
+    record_result = record_map_analysis_view_tool(
+        db,
+        iri=view,
+        label="Sent external messages",
+        source_datasets=[source],
+        row_count_snapshot=42,
+        caveats=[caveat],
+        denominator_description="One row per sent message with an external recipient.",
+        denominator_row_count_snapshot=42,
+        denominator_basis="direction = sent and recipient domain is external",
+        query_text="select * from messages where direction = 'sent'",
+        query_language="DuckDB SQL",
+        query_engine="duckdb",
+    )
+
+    assert record_result["resource_type"] == RC + "AnalysisView"
+    description = describe_analysis_view_tool(db, iri=view)
+    assert description["label"] == "Sent external messages"
+    assert description["source_datasets"][0]["iri"] == source
+    assert description["denominator"]["row_count_snapshot"] == 42
+    assert description["denominator"]["basis"] == (
+        "direction = sent and recipient domain is external"
+    )
+    assert description["query_snippets"][0]["query_language"] == "DuckDB SQL"
+    assert description["query_snippets"][0]["query_engine"] == "duckdb"
+    assert description["caveats"][0]["iri"] == caveat
+    assert description["suggested_next_actions"][0]["tool_name"] == (
+        "describe_query_context"
+    )
+
+    context = describe_query_context_tool(db, iri=view)
+    assert context["readiness"] == "logical_analysis_view"
+    assert context["issues"][0]["code"] == "logical_analysis_view_not_physical_route"
+    assert context["suggested_repair_action_group_count"] == 0
+    assert context["query_target_candidates"] == []
+    assert context["query_target_decision"]["status"] == "logical_analysis_view"
+    assert context["suggested_next_actions"][0]["tool_name"] == "describe_analysis_view"
 
 
 def test_describe_query_context_tool_returns_planning_projection(

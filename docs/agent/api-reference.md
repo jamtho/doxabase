@@ -432,6 +432,12 @@ ordered action templates. Each group also reports `action_status_counts`,
 `pending_action_count`, `skippable_action_count`, and
 `pending_action_options` so scripts can triage mixed pending and
 already-satisfied repair groups before reviewing the templates. If
+the dataset is an `rc:AnalysisView`, the query context returns
+`readiness="logical_analysis_view"`, no query target candidates, and no
+storage-repair groups; call `describe_analysis_view()` for the denominator,
+source datasets, caveats, and query snippets before deciding whether to query
+or repair source datasets.
+If
 `action_status="pending_review"`, the option is an actionable review-gated
 repair template; fill its required fields rather than treating the status as
 blocked. If
@@ -1146,7 +1152,8 @@ or sources belong together and explain a more durable pattern or map
 implication.
 
 Map authoring helpers write current-best project facts to `map`:
-`record_map_dataset()`, `record_map_column()`, `record_map_caveat()`,
+`record_map_dataset()`, `record_map_analysis_view()`,
+`record_map_column()`, `record_map_caveat()`,
 `record_map_storage_access()`, `record_map_physical_layout()`,
 `record_map_partition_scheme()`, `record_map_relationship()`, and
 `record_map_asset_transform()`. Use them when observations or patterns are ready
@@ -1179,6 +1186,13 @@ placeholder names such as `date` or `event_date` in `path_template`.
 `rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
 `rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
 `rc:ContradictedLayout`.
+Use `record_map_analysis_view()` for current-best named logical analysis
+populations, denominator definitions, and reviewed query recipes that are not
+physical routes. It writes an `rc:AnalysisView`, optional
+`rc:AnalysisDenominator`, and optional `rc:ExecutableQuerySnippet` in `map`.
+`describe_analysis_view()` reads that logical definition, while
+`describe_query_context()` reports `readiness="logical_analysis_view"` and does
+not offer missing-storage repair groups for the view itself.
 Supplied same-subject fields replace the helper-owned predicates on the
 resource being recorded, but incoming convenience links such as
 `record_map_caveat(targets=...)`, `record_map_storage_access(datasets=...)`,

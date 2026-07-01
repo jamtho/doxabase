@@ -3001,6 +3001,36 @@ column.profile_observations
 `description`. There is no `column.semantic_role` field; use `column.value_type`
 for the semantic value concept when present.
 
+### Analysis Views
+
+`db.describe_analysis_view(view_iri)` returns an `AnalysisViewDescription`:
+
+```python
+view.iri
+view.graph
+view.label
+view.description
+view.types
+view.source_datasets
+view.denominator
+view.query_snippets
+view.caveats
+view.row_count_snapshot
+view.suggested_next_actions
+view.suggested_next_calls
+```
+
+`view.denominator` is either `None` or an `AnalysisDenominatorDescription` with
+`iri`, `label`, `description`, `row_count_snapshot`, and `basis`.
+`view.query_snippets[]` carries `iri`, `label`, `description`, `query_text`,
+`query_language`, and `query_engine`; the RDF predicate for that last field is
+`rc:queryRuntime`, not evidence `rc:queryEngine`.
+
+When the same resource is passed to `describe_query_context`, the planning
+context has `readiness="logical_analysis_view"`,
+`query_target_candidates=[]`, `suggested_repair_action_group_count=0`, and an
+informational issue with code `logical_analysis_view_not_physical_route`.
+
 ### Query Context
 
 `db.describe_query_context(table_iri)` returns a `QueryPlanningContext`:

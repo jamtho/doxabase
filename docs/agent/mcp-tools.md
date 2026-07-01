@@ -980,6 +980,11 @@ dataset/layout verification status and note, caveats, and structured
 `profile_summary` beside `row_count_snapshot`, so a planner can follow profile
 evidence IRIs and `profile_run_candidates` without a separate
 `describe_dataset` call when row counts or metric context came from profiling.
+For an `rc:AnalysisView`, it returns `readiness="logical_analysis_view"` with a
+single informational issue and no storage-repair groups. Follow the
+`describe_analysis_view` action for denominator, source dataset, caveat, and
+query-snippet context before deciding whether to inspect source datasets or
+model a materialized route.
 When profile run candidates exist, `suggested_next_actions` includes
 `describe_profile_run` before query-plan drafting. Several profile-run actions
 can appear before the draft action when candidate row counts disagree, or when a
@@ -1754,6 +1759,26 @@ useful. Use `describe_context_slice(profile="deep_lore")` or
 `describe_resource` for handoff context; `describe_query_context` should report
 `not_applicable_non_tabular_asset` unless a separate queryable table route is
 modeled.
+
+`doxabase.record_map_analysis_view`
+
+Records or updates a logical analysis view in the `map` graph. Use it for
+named populations, denominators, reusable analysis slices, and reviewed query
+recipes that should not be treated as direct physical storage. Resource-valued
+fields such as `source_datasets`, `caveats`, `denominator_iri`, and
+`query_snippet_iri` expect IRIs or CURIEs, not prose. Put denominator prose in
+`denominator_description` / `denominator_basis`, and reviewed SQL or
+pseudo-query text in `query_text`. The MCP/Python argument `query_engine`
+records snippet runtime context with `rc:queryRuntime`; it is separate from
+evidence `rc:queryEngine`, which describes an executed or attempted query.
+
+`doxabase.describe_analysis_view`
+
+Returns bounded logical-view context: label, description, RDF types, source
+datasets, denominator, query snippets, caveats, row-count snapshot, and a
+suggested `describe_query_context` action. Use it before deciding whether an
+analysis question should query source datasets, use a reviewed snippet, or
+model a materialized table route.
 
 `doxabase.record_map_column`
 

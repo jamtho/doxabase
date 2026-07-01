@@ -14,6 +14,14 @@ handoff review, not query-repair work. Use `describe_context_slice` or
 `describe_resource` for those assets unless a separate queryable table route has
 been modeled.
 
+For `rc:AnalysisView` resources recorded with `record_map_analysis_view`,
+`describe_query_context` returns `readiness="logical_analysis_view"` with no
+query target candidates and no storage-repair groups. Treat the view as reviewed
+logical analysis context: inspect `describe_analysis_view` for source datasets,
+denominator, caveats, and query snippets. Query or repair the source datasets
+when needed; only add physical storage/layout metadata to a separate
+materialized table route when that route actually exists.
+
 When starting from a query metadata resource instead of a dataset, such as a
 storage access, physical layout, partition scheme, or mapped column, call
 `describe_context_slice(seed, profile="resource_brief")` first. If the slice

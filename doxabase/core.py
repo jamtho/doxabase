@@ -3314,6 +3314,41 @@ class TransformationDescription:
 
 
 @dataclass(frozen=True)
+class AnalysisDenominatorDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    row_count_snapshot: int | None
+    basis: str | None
+
+
+@dataclass(frozen=True)
+class QuerySnippetDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    query_text: str | None
+    query_language: str | None
+    query_engine: str | None
+
+
+@dataclass(frozen=True)
+class AnalysisViewDescription:
+    iri: str
+    graph: str | None
+    label: str | None
+    description: str | None
+    types: list[str]
+    source_datasets: list[ResourceSummary]
+    denominator: AnalysisDenominatorDescription | None
+    query_snippets: list[QuerySnippetDescription]
+    caveats: list[CaveatDescription]
+    row_count_snapshot: int | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class AggregatedColumnDescription:
     iri: str
     target_column: ResourceSummary | None
@@ -5181,6 +5216,12 @@ class DoxaBase:
 
     def _dataset_description_is_table(self, dataset: DatasetDescription) -> bool:
         return self.expand_iri("rc:Table") in dataset.types
+
+    def _dataset_description_is_analysis_view(
+        self,
+        dataset: DatasetDescription,
+    ) -> bool:
+        return self.expand_iri("rc:AnalysisView") in dataset.types
 
     @staticmethod
     def _project_brief_non_tabular_query_summary() -> ProjectBriefDatasetQuerySummary:
@@ -16564,6 +16605,83 @@ class DoxaBase:
             operational_warnings=self._query_planning_issues(description),
         )
 
+    def describe_analysis_view(
+        self,
+        iri: str,
+        graph: str | None = "map",
+    ) -> AnalysisViewDescription:
+        view_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        if not self._subject_exists(view_iri, data_graphs):
+            graph_label = graph if graph is not None else "all graphs"
+            raise DoxaBaseError(f"Analysis view '{iri}' was not found in {graph_label}")
+        types = self._types_from_graphs(data_graphs, view_iri)
+        if self.expand_iri("rc:AnalysisView") not in types:
+            raise DoxaBaseError(f"Resource '{iri}' is not typed as rc:AnalysisView")
+
+        denominator_iri = self._first_object(
+            data_graphs,
+            view_iri,
+            "rc:hasAnalysisDenominator",
+        )
+        suggested_next_actions = [
+            SuggestedNextAction(
+                action_label="Inspect logical view query context",
+                tool_name="describe_query_context",
+                mcp_tool_name="doxabase.describe_query_context",
+                arguments={"iri": view_iri},
+                reason=(
+                    "Inspect this analysis view as a logical query context. "
+                    "DoxaBase will not treat the view itself as a physical "
+                    "storage route."
+                ),
+                call=self._suggested_call_string(
+                    "describe_query_context",
+                    {"iri": view_iri},
+                ),
+            )
+        ]
+        return AnalysisViewDescription(
+            iri=view_iri,
+            graph=graph,
+            label=self._label_from_graphs(lookup_graphs, view_iri),
+            description=self._description_from_graphs(lookup_graphs, view_iri),
+            types=types,
+            source_datasets=[
+                self._resource_summary(lookup_graphs, source_iri)
+                for source_iri in self._objects(data_graphs, view_iri, "rc:sourceDataset")
+            ],
+            denominator=(
+                self._describe_analysis_denominator(
+                    denominator_iri,
+                    data_graphs,
+                    lookup_graphs,
+                )
+                if denominator_iri is not None
+                else None
+            ),
+            query_snippets=[
+                self._describe_query_snippet(
+                    snippet_iri,
+                    data_graphs,
+                    lookup_graphs,
+                )
+                for snippet_iri in self._objects(data_graphs, view_iri, "rc:hasQuerySnippet")
+            ],
+            caveats=[
+                self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
+                for caveat_iri in self._objects(data_graphs, view_iri, "rc:hasKnownCaveat")
+            ],
+            row_count_snapshot=self._int_object(
+                data_graphs,
+                view_iri,
+                "rc:rowCountSnapshot",
+            ),
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def describe_profile_run(
         self,
         dataset_iri: str,
@@ -20446,6 +20564,8 @@ class DoxaBase:
             label=dataset.label or self._local_name(dataset.iri),
             description=dataset.description,
         )
+        if self._dataset_description_is_analysis_view(dataset):
+            return self._analysis_view_query_context(dataset, dataset_summary)
         if not self._dataset_description_is_table(dataset):
             return self._non_tabular_query_context(dataset, dataset_summary)
         direct_path_templates = self._objects(data_graphs, dataset.iri, "rc:pathTemplate")
@@ -20661,6 +20781,116 @@ class DoxaBase:
             upstream_caveats=dataset.upstream_caveats,
             suggested_next_actions=suggested_next_actions,
             safe_inspection_action_indexes=[0],
+            first_safe_inspection_action_index=0,
+            unattended_recommended_action_indexes=[],
+            first_unattended_action_index=None,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _analysis_view_query_context(
+        self,
+        dataset: DatasetDescription,
+        dataset_summary: ResourceSummary,
+    ) -> QueryPlanningContext:
+        view = self.describe_analysis_view(dataset.iri, graph=dataset.graph)
+        issue = QueryPlanningIssue(
+            code="logical_analysis_view_not_physical_route",
+            severity="info",
+            message=(
+                "This resource is an rc:AnalysisView: a named logical analysis "
+                "population or query recipe, not a physical storage route."
+            ),
+            resource=dataset_summary,
+            details={
+                "dataset_iri": dataset.iri,
+                "query_readiness": "logical_analysis_view",
+                "source_dataset_iris": [
+                    source.iri for source in view.source_datasets
+                ],
+                "denominator_iri": (
+                    view.denominator.iri if view.denominator is not None else None
+                ),
+                "query_snippet_count": len(view.query_snippets),
+                "suggested_profile": "deep_lore",
+            },
+        )
+        describe_view_action = SuggestedNextAction(
+            action_label="Describe analysis view",
+            tool_name="describe_analysis_view",
+            mcp_tool_name="doxabase.describe_analysis_view",
+            arguments={"iri": dataset.iri},
+            reason=(
+                "Read the logical view denominator, source datasets, caveats, "
+                "and query snippet metadata before deciding whether to query "
+                "the source datasets or materialize a new physical route."
+            ),
+            call=self._suggested_call_string(
+                "describe_analysis_view",
+                {"iri": dataset.iri},
+            ),
+        )
+        suggested_next_actions = [
+            describe_view_action,
+            self._project_brief_describe_context_slice_action(dataset.iri),
+        ]
+        return QueryPlanningContext(
+            dataset=dataset_summary,
+            readiness="logical_analysis_view",
+            readiness_note=(
+                "This resource is a logical analysis view. Use its source "
+                "datasets, denominator, caveats, and query snippets as reviewed "
+                "analysis context; do not repair it as missing physical storage "
+                "unless a materialized route is intentionally modeled."
+            ),
+            issues=[issue],
+            analysis_warnings=[],
+            suggested_repair_action_groups=[],
+            suggested_repair_action_group_count=0,
+            planning_notes=[
+                (
+                    "Analysis views preserve denominator and query-recipe context "
+                    "for interpretation; DoxaBase does not execute them."
+                ),
+                (
+                    "Use describe_analysis_view for the logical definition, then "
+                    "inspect source datasets with describe_query_context when an "
+                    "executable handoff is needed."
+                ),
+            ],
+            row_count_snapshot=dataset.row_count_snapshot,
+            profile_summary=dataset.profile_summary,
+            layout_verification_status=dataset.layout_verification_status,
+            layout_verification_note=dataset.layout_verification_note,
+            columns=dataset.columns,
+            path_templates=dataset.path_templates,
+            query_target_decision=QueryTargetDecision(
+                status="logical_analysis_view",
+                summary=(
+                    "Analysis view is logical context, not a physical query "
+                    "target candidate."
+                ),
+                candidate_index=None,
+                candidate_path=None,
+                candidate_path_status=None,
+                direct_review_required=None,
+                selected_candidate_direct_clean=None,
+                reason_codes=[issue.code],
+                selection_reason_codes=["logical_analysis_view"],
+            ),
+            query_target_candidates=[],
+            ready_candidate_indexes=[],
+            unselected_ready_candidate_indexes=[],
+            direct_clean_candidate_indexes=[],
+            unselected_direct_clean_candidate_indexes=[],
+            physical_layouts=dataset.physical_layouts,
+            storage_accesses=dataset.storage_accesses,
+            partition_schemes=dataset.partition_schemes,
+            caveats=dataset.caveats,
+            upstream_caveats=dataset.upstream_caveats,
+            suggested_next_actions=suggested_next_actions,
+            safe_inspection_action_indexes=[0, 1],
             first_safe_inspection_action_index=0,
             unattended_recommended_action_indexes=[],
             first_unattended_action_index=None,
@@ -28417,6 +28647,8 @@ class DoxaBase:
         dataset: DatasetDescription,
     ) -> list[QueryPlanningIssue]:
         issues: list[QueryPlanningIssue] = []
+        if self._dataset_description_is_analysis_view(dataset):
+            return issues
 
         def add_issue(
             code: str,
@@ -36306,6 +36538,274 @@ class DoxaBase:
         return MapResourceRecord(
             iri=dataset_iri,
             resource_type=resource_type,
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_analysis_view(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        source_datasets: Iterable[str] | str | None = None,
+        row_count_snapshot: int | None = None,
+        caveats: Iterable[str] | str | None = None,
+        denominator_iri: str | None = None,
+        denominator_label: str | None = None,
+        denominator_description: str | None = None,
+        denominator_row_count_snapshot: int | None = None,
+        denominator_basis: str | None = None,
+        query_snippet_iri: str | None = None,
+        query_snippet_label: str | None = None,
+        query_snippet_description: str | None = None,
+        query_text: str | None = None,
+        query_language: str | None = None,
+        query_engine: str | None = None,
+    ) -> MapResourceRecord:
+        view_iri = self._required_iri("iri", iri)
+        self._ensure_non_negative("row_count_snapshot", row_count_snapshot)
+        self._ensure_non_negative(
+            "denominator_row_count_snapshot",
+            denominator_row_count_snapshot,
+        )
+        if query_text is not None and not query_text.strip():
+            raise DoxaBaseError("query_text must not be empty when provided")
+        source_dataset_values = self._string_values(
+            "source_datasets",
+            source_datasets,
+        )
+        caveat_values = self._string_values("caveats", caveats)
+        source_dataset_refs = [
+            self._resource_ref("source_datasets", dataset)
+            for dataset in source_dataset_values
+        ]
+        caveat_refs = [self._resource_ref("caveats", caveat) for caveat in caveat_values]
+
+        view_graph = Graph()
+        self._bind_prefixes(view_graph)
+        subject = URIRef(view_iri)
+        for type_iri in (
+            "rc:Dataset",
+            "rc:Table",
+            "rc:AnalysisView",
+        ):
+            view_graph.add((subject, RDF.type, URIRef(self.expand_iri(type_iri))))
+        self._add_optional_literal(view_graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(view_graph, subject, str(RDFS.comment), description)
+        if row_count_snapshot is not None:
+            view_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:rowCountSnapshot")),
+                    Literal(row_count_snapshot, datatype=XSD.integer),
+                )
+            )
+        for dataset_ref in source_dataset_refs:
+            view_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:sourceDataset")),
+                    dataset_ref,
+                )
+            )
+        for caveat_ref in caveat_refs:
+            view_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasKnownCaveat")),
+                    caveat_ref,
+                )
+            )
+
+        denominator_fields_supplied = any(
+            value is not None
+            for value in (
+                denominator_iri,
+                denominator_label,
+                denominator_description,
+                denominator_row_count_snapshot,
+                denominator_basis,
+            )
+        )
+        denominator_value = (
+            str(self._resource_ref("denominator_iri", denominator_iri))
+            if denominator_iri is not None
+            else f"{view_iri}/denominator"
+        )
+        denominator_graph = Graph()
+        self._bind_prefixes(denominator_graph)
+        if denominator_fields_supplied:
+            denominator_ref = URIRef(denominator_value)
+            view_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasAnalysisDenominator")),
+                    denominator_ref,
+                )
+            )
+            denominator_graph.add(
+                (
+                    denominator_ref,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:AnalysisDenominator")),
+                )
+            )
+            self._add_optional_literal(
+                denominator_graph,
+                denominator_ref,
+                str(RDFS.label),
+                denominator_label,
+            )
+            self._add_optional_literal(
+                denominator_graph,
+                denominator_ref,
+                "rc:denominatorDescription",
+                denominator_description,
+            )
+            if denominator_row_count_snapshot is not None:
+                denominator_graph.add(
+                    (
+                        denominator_ref,
+                        URIRef(self.expand_iri("rc:denominatorRowCountSnapshot")),
+                        Literal(
+                            denominator_row_count_snapshot,
+                            datatype=XSD.integer,
+                        ),
+                    )
+                )
+            self._add_optional_literal(
+                denominator_graph,
+                denominator_ref,
+                "rc:denominatorBasis",
+                denominator_basis,
+            )
+
+        query_fields_supplied = any(
+            value is not None
+            for value in (
+                query_snippet_iri,
+                query_snippet_label,
+                query_snippet_description,
+                query_text,
+                query_language,
+                query_engine,
+            )
+        )
+        snippet_value = (
+            str(self._resource_ref("query_snippet_iri", query_snippet_iri))
+            if query_snippet_iri is not None
+            else f"{view_iri}/query-snippet/1"
+        )
+        snippet_graph = Graph()
+        self._bind_prefixes(snippet_graph)
+        if query_fields_supplied:
+            snippet_ref = URIRef(snippet_value)
+            view_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasQuerySnippet")),
+                    snippet_ref,
+                )
+            )
+            snippet_graph.add(
+                (
+                    snippet_ref,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:ExecutableQuerySnippet")),
+                )
+            )
+            snippet_graph.add(
+                (
+                    snippet_ref,
+                    URIRef(self.expand_iri("rc:forAnalysisView")),
+                    subject,
+                )
+            )
+            self._add_optional_literal(
+                snippet_graph,
+                snippet_ref,
+                str(RDFS.label),
+                query_snippet_label,
+            )
+            self._add_optional_literal(
+                snippet_graph,
+                snippet_ref,
+                str(RDFS.comment),
+                query_snippet_description,
+            )
+            self._add_optional_literal(
+                snippet_graph,
+                snippet_ref,
+                "rc:queryText",
+                query_text,
+            )
+            self._add_optional_literal(
+                snippet_graph,
+                snippet_ref,
+                "rc:queryLanguage",
+                query_language,
+            )
+            self._add_optional_literal(
+                snippet_graph,
+                snippet_ref,
+                "rc:queryRuntime",
+                query_engine,
+            )
+
+        predicates: list[str] = [str(RDF.type)]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if row_count_snapshot is not None:
+            predicates.append(self.expand_iri("rc:rowCountSnapshot"))
+        if source_datasets is not None:
+            predicates.append(self.expand_iri("rc:sourceDataset"))
+        if caveats is not None:
+            predicates.append(self.expand_iri("rc:hasKnownCaveat"))
+        if denominator_fields_supplied:
+            predicates.append(self.expand_iri("rc:hasAnalysisDenominator"))
+        if query_fields_supplied:
+            predicates.append(self.expand_iri("rc:hasQuerySnippet"))
+        triples = self._replace_subject_triples(
+            "map",
+            view_iri,
+            predicates,
+            view_graph,
+        )
+
+        if denominator_fields_supplied:
+            triples += self._replace_subject_triples(
+                "map",
+                denominator_value,
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    self.expand_iri("rc:denominatorDescription"),
+                    self.expand_iri("rc:denominatorRowCountSnapshot"),
+                    self.expand_iri("rc:denominatorBasis"),
+                ],
+                denominator_graph,
+            )
+        if query_fields_supplied:
+            triples += self._replace_subject_triples(
+                "map",
+                snippet_value,
+                [
+                    str(RDF.type),
+                    self.expand_iri("rc:forAnalysisView"),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:queryText"),
+                    self.expand_iri("rc:queryLanguage"),
+                    self.expand_iri("rc:queryRuntime"),
+                ],
+                snippet_graph,
+            )
+        return MapResourceRecord(
+            iri=view_iri,
+            resource_type=self.expand_iri("rc:AnalysisView"),
             graph="map",
             triples=triples,
         )
@@ -62992,6 +63492,52 @@ class DoxaBase:
                 layout_iri,
                 "rc:layoutVerificationNote",
             ),
+        )
+
+    def _describe_analysis_denominator(
+        self,
+        denominator_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> AnalysisDenominatorDescription:
+        return AnalysisDenominatorDescription(
+            iri=denominator_iri,
+            label=self._label_from_graphs(lookup_graphs, denominator_iri),
+            description=self._first_object(
+                data_graphs,
+                denominator_iri,
+                "rc:denominatorDescription",
+            )
+            or self._description_from_graphs(lookup_graphs, denominator_iri),
+            row_count_snapshot=self._int_object(
+                data_graphs,
+                denominator_iri,
+                "rc:denominatorRowCountSnapshot",
+            ),
+            basis=self._first_object(
+                data_graphs,
+                denominator_iri,
+                "rc:denominatorBasis",
+            ),
+        )
+
+    def _describe_query_snippet(
+        self,
+        snippet_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> QuerySnippetDescription:
+        return QuerySnippetDescription(
+            iri=snippet_iri,
+            label=self._label_from_graphs(lookup_graphs, snippet_iri),
+            description=self._description_from_graphs(lookup_graphs, snippet_iri),
+            query_text=self._first_object(data_graphs, snippet_iri, "rc:queryText"),
+            query_language=self._first_object(
+                data_graphs,
+                snippet_iri,
+                "rc:queryLanguage",
+            ),
+            query_engine=self._first_object(data_graphs, snippet_iri, "rc:queryRuntime"),
         )
 
     def _describe_storage_access(

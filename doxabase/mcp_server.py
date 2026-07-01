@@ -12,6 +12,7 @@ from doxabase.mcp_tools import (
     check_staged_revision_apply_tool,
     describe_applied_revision_diff_tool,
     describe_assertion_support_tool,
+    describe_analysis_view_tool,
     describe_dataset_tool,
     describe_context_slice_tool,
     describe_graph_revision_tool,
@@ -61,6 +62,7 @@ from doxabase.mcp_tools import (
     record_column_profile_tool,
     record_dataset_profile_tool,
     record_map_caveat_tool,
+    record_map_analysis_view_tool,
     record_map_asset_transform_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -93,7 +95,7 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
+Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_analysis_view, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
 Current V1 tools support inspection, profile-to-map update drafting/staging and profile advisory follow-through planning, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
@@ -210,6 +212,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_analysis_view")
+    def describe_analysis_view(iri: str, graph: str | None = "map") -> dict[str, Any]:
+        """Return denominator, query snippet, and source context for a logical view."""
+
+        return describe_analysis_view_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.describe_profile_run")
     def describe_profile_run(
@@ -1463,6 +1471,49 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             physical_layouts=physical_layouts,
             companion_datasets=companion_datasets,
             extra_types=extra_types,
+        )
+
+    @server.tool(name="doxabase.record_map_analysis_view")
+    def record_map_analysis_view(
+        iri: str,
+        label: str | None = None,
+        description: str | None = None,
+        source_datasets: list[str] | None = None,
+        row_count_snapshot: int | None = None,
+        caveats: list[str] | None = None,
+        denominator_iri: str | None = None,
+        denominator_label: str | None = None,
+        denominator_description: str | None = None,
+        denominator_row_count_snapshot: int | None = None,
+        denominator_basis: str | None = None,
+        query_snippet_iri: str | None = None,
+        query_snippet_label: str | None = None,
+        query_snippet_description: str | None = None,
+        query_text: str | None = None,
+        query_language: str | None = None,
+        query_engine: str | None = None,
+    ) -> dict[str, Any]:
+        """Record or update a logical analysis view in the map graph."""
+
+        return record_map_analysis_view_tool(
+            db,
+            iri=iri,
+            label=label,
+            description=description,
+            source_datasets=source_datasets,
+            row_count_snapshot=row_count_snapshot,
+            caveats=caveats,
+            denominator_iri=denominator_iri,
+            denominator_label=denominator_label,
+            denominator_description=denominator_description,
+            denominator_row_count_snapshot=denominator_row_count_snapshot,
+            denominator_basis=denominator_basis,
+            query_snippet_iri=query_snippet_iri,
+            query_snippet_label=query_snippet_label,
+            query_snippet_description=query_snippet_description,
+            query_text=query_text,
+            query_language=query_language,
+            query_engine=query_engine,
         )
 
     @server.tool(name="doxabase.record_map_column")

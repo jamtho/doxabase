@@ -128,9 +128,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1424
+    assert graphs["base_ontology"].triple_count == 1467
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1407
+    assert graphs["base_shapes"].triple_count == 1462
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -26844,6 +26844,87 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
     assert RC + "Table" in description.types
 
 
+def test_record_map_analysis_view_captures_logical_query_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-view#"
+    source = f"{base}messages"
+    view = f"{base}sent_external_messages"
+    caveat = f"{base}redacted_body_caveat"
+
+    db.record_map_dataset(source, label="Messages", is_table=True)
+    db.record_map_caveat(
+        caveat,
+        label="Redacted body caveat",
+        description="Message bodies may be redacted in the source export.",
+        severity="rc:Moderate",
+    )
+    result = db.record_map_analysis_view(
+        view,
+        label="Sent external messages",
+        description="External sent-message denominator used for analysis.",
+        source_datasets=[source],
+        row_count_snapshot=42,
+        caveats=[caveat],
+        denominator_label="External sent message denominator",
+        denominator_description="One row per sent message with an external recipient.",
+        denominator_row_count_snapshot=42,
+        denominator_basis="direction = sent and recipient domain is outside example.test",
+        query_snippet_label="External sent message SQL",
+        query_snippet_description="Reviewed DuckDB SQL recipe for reconstructing the view.",
+        query_text=(
+            "select * from messages "
+            "where direction = 'sent' and recipient_domain <> 'example.test'"
+        ),
+        query_language="DuckDB SQL",
+        query_engine="duckdb",
+    )
+
+    assert result.resource_type == RC + "AnalysisView"
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+    described = db.describe_analysis_view(view)
+    assert described.label == "Sent external messages"
+    assert set(described.types) == {RC + "Dataset", RC + "Table", RC + "AnalysisView"}
+    assert [source_dataset.iri for source_dataset in described.source_datasets] == [
+        source
+    ]
+    assert described.denominator is not None
+    assert described.denominator.iri == f"{view}/denominator"
+    assert described.denominator.description == (
+        "One row per sent message with an external recipient."
+    )
+    assert described.denominator.row_count_snapshot == 42
+    assert described.denominator.basis == (
+        "direction = sent and recipient domain is outside example.test"
+    )
+    assert len(described.query_snippets) == 1
+    snippet = described.query_snippets[0]
+    assert snippet.iri == f"{view}/query-snippet/1"
+    assert snippet.query_language == "DuckDB SQL"
+    assert snippet.query_engine == "duckdb"
+    assert snippet.query_text is not None
+    assert "recipient_domain" in snippet.query_text
+    assert [item.iri for item in described.caveats] == [caveat]
+    assert described.row_count_snapshot == 42
+
+    dataset_description = db.describe_dataset(view)
+    assert RC + "AnalysisView" in dataset_description.types
+    assert dataset_description.operational_warnings == []
+
+    context = db.describe_query_context(view)
+    assert context.readiness == "logical_analysis_view"
+    assert context.issues[0].code == "logical_analysis_view_not_physical_route"
+    assert context.suggested_repair_action_group_count == 0
+    assert context.query_target_candidates == []
+    assert context.query_target_decision.status == "logical_analysis_view"
+    assert context.suggested_next_actions[0].tool_name == "describe_analysis_view"
+    assert context.safe_inspection_action_indexes == [0, 1]
+    assert context.first_unattended_action_index is None
+
+
 def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     table = "https://example.test/project#messages"
@@ -27328,6 +27409,23 @@ def test_non_tabular_file_formats_have_core_labels(tmp_path: Path) -> None:
             ),
             "extra_types.*not prose",
             id="dataset-extra-type",
+        ),
+        pytest.param(
+            lambda db: db.record_map_analysis_view(
+                "https://example.test/project#sent_external_messages",
+                source_datasets=["messages source table"],
+            ),
+            "source_datasets.*not prose",
+            id="analysis-view-source-dataset",
+        ),
+        pytest.param(
+            lambda db: db.record_map_analysis_view(
+                "https://example.test/project#sent_external_messages",
+                denominator_iri="external message denominator",
+                denominator_description="One row per external sent message.",
+            ),
+            "denominator_iri.*not prose",
+            id="analysis-view-denominator",
         ),
         pytest.param(
             lambda db: db.record_map_column(
