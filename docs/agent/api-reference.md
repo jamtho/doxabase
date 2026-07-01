@@ -626,7 +626,9 @@ so a present `scan.uri_template` or `scan.relation_identifier` is not mistaken
 for execution permission. It may add handoff-only blockers such as
 `query_context_has_other_blockers` for clean selected candidates with bad
 siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
-for the selected storage/layout shape.
+for a selected file/object storage-layout shape. Database relation handoffs
+intentionally keep `scan.function=None`; their execution gate is runtime
+resolution, not missing file-scan inference.
 `physical_layout_path_extension_mismatch` is also a review blocker: it means a
 clear candidate path extension, such as `.csv`, conflicts with the single linked
 or caller-selected physical layout file format, such as `rc:Parquet`.
@@ -634,10 +636,11 @@ or caller-selected physical layout file format, such as `rc:Parquet`.
 the caller explicitly paired a selected storage route with a layout format from
 the wrong route kind, such as database storage plus `rc:CSV` or local file
 storage plus `rc:PostgreSQLTable`. Database-backed storage still uses this
-generic review-draft shape today, so expect `scan.function=None` and review
-gating rather than executable SQL; `scan.uri_template` is intentionally absent
-there, and `scan.relation_identifier` plus `scan.connection_reference` carry the
-recorded database handoff for review. These scan fields mirror the selected
+generic draft shape today, so expect `scan.function=None`,
+`ready_for_execution_attempt=false`, and `runtime_resolution_required` rather
+than executable SQL; `scan.uri_template` is intentionally absent there, and
+`scan.relation_identifier` plus `scan.connection_reference` carry the recorded
+database handoff for review. These scan fields mirror the selected
 candidate's database-specific fields; if the selected database candidate came
 from a dataset or partition path, `scan.relation_identifier` is absent and the
 plan stays metadata-review-required. Root-only database storage

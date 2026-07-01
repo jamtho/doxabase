@@ -882,11 +882,11 @@ def test_project_brief_query_handoff_summary_surfaces_relation_choice(
     assert summary.selected_candidate_selector == task_selector
     assert summary.relation_identifier == "archive.orders_2025"
     assert summary.connection_reference == "warehouse-prod"
-    assert summary.primary_execution_attempt_blocking_reason_code == (
-        "scan_function_not_inferred"
+    assert (
+        summary.primary_execution_attempt_blocking_reason_code
+        == "runtime_resolution_required"
     )
     assert summary.execution_attempt_blocking_reason_codes == [
-        "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
     assert summary.unselected_ready_candidate_indexes == [1]
@@ -21778,32 +21778,30 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     assert "connection, schema, table, or source access" in (
         plan.storage_environment.runtime_resolution_note
     )
-    assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.ready_for_execution_attempt is False
-    assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
+    assert plan.review_gate.blocking_reason_codes == []
     assert plan.review_gate.execution_attempt_blocking_reason_codes == [
-        "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
     assert (
         plan.review_gate.primary_execution_attempt_blocking_reason_code
-        == "scan_function_not_inferred"
+        == "runtime_resolution_required"
     )
     assert plan.scan.execution_attempt_ready is False
     assert plan.scan.execution_attempt_blocking_reason_codes == [
-        "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
     assert (
         plan.scan.primary_execution_attempt_blocking_reason_code
-        == "scan_function_not_inferred"
+        == "runtime_resolution_required"
     )
-    assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
+    assert plan.review_gate.reason_codes == []
     assert plan.handoff_kind == "database_relation_handoff"
     assert "Selected candidate 0 is a direct-clean database relation handoff" in (
         plan.source_context.selected_candidate_note
     )
-    assert "scan_function_not_inferred" in (
+    assert "scan_function_not_inferred" not in (
         plan.source_context.selected_candidate_note
     )
 

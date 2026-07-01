@@ -502,6 +502,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    review-gated and `ready_for_execution_attempt=false`. Treat the scan
    function as review context until either the path/template or the layout file
    format is fixed.
+   Database relation handoffs intentionally leave `scan.function=None`; the
+   relation identifier and connection reference are the handoff, and execution
+   readiness is blocked by runtime resolution rather than by a missing DuckDB
+   file-scan function.
 7. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a
@@ -683,12 +687,15 @@ replacement template or removing the conflicting exact template. Templated
 protocol/location actions name `placeholder_fields` and
 `reviewed_value_fields` for the reviewed value to copy into the call.
 
-Database candidates currently use the generic draft-plan shape. A relation can
-be metadata-ready in `describe_query_context()` while
-`draft_query_plan().review_gate.executable_without_review` is false because the
-generic DuckDB file-scan function is not inferred. Use
-`relation_identifier` and `connection_reference` as the handoff, then verify the
-database connection outside DoxaBase.
+Database candidates use the generic draft-plan shape, but a clean
+storage-access-owned relation can have
+`draft_query_plan().review_gate.executable_without_review=true` while
+`ready_for_execution_attempt=false`. Use `relation_identifier` and
+`connection_reference` as the handoff, then verify the database connection,
+schema, table, credentials, and source access outside DoxaBase. Expect
+`scan.function=None` and `runtime_resolution_required` for this relation
+handoff; missing a DuckDB file-scan function is not the blocker for database
+storage.
 For database storage, only a storage-access-owned path template is treated as a
 relation identifier. Dataset or partition path templates paired with database
 storage are review-only inventory cards with
@@ -722,10 +729,11 @@ storage access. After applying each query-planning metadata repair, rerun
 drafting a plan; apply responses route staged frontier recovery, not the full
 query-context repair checklist.
 
-If `runtime_resolution_required=False` for bare database storage, read the note
-before treating it as reachable. The boolean only says there is no recorded
-endpoint or credential profile left for DoxaBase to resolve; it is not a
-database connectivity guarantee.
+For database storage, `runtime_resolution_required=True` is the normal execution
+gate until an external runtime resolves the connection, schema, table, and
+source access. If older or unusual metadata yields
+`runtime_resolution_required=False`, still read the note before treating it as
+reachable; the boolean is not a database connectivity guarantee.
 
 Current `handoff_kind` values are `no_query_target`,
 `not_applicable_non_tabular_asset`, `metadata_review_required`,

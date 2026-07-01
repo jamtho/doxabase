@@ -22399,10 +22399,7 @@ class DoxaBase:
         blocking_reason_codes = set(review_gate.blocking_reason_codes)
         if "physical_layout_storage_protocol_mismatch" in blocking_reason_codes:
             return "metadata_review_required"
-        if (
-            "scan_function_not_inferred" in blocking_reason_codes
-            and scan.relation_identifier is not None
-        ):
+        if scan.relation_identifier is not None:
             return "database_relation_handoff"
         if (
             "query_context_has_other_blockers" in blocking_reason_codes
@@ -23363,7 +23360,8 @@ class DoxaBase:
             and self._is_database_storage(selected_candidate.storage_protocol)
         )
         runtime_resolution_required = bool(
-            endpoint_profile
+            database_storage
+            or endpoint_profile
             or credential_reference
             or requires_endpoint_profile
             or unresolved_s3_access
@@ -23387,19 +23385,18 @@ class DoxaBase:
                     "in the local runtime, and verify object access before running "
                     "any query."
                 )
+        elif database_storage:
+            runtime_resolution_note = (
+                "Database relation handoff requires an external runtime to "
+                "resolve the connection, schema, table, or source access before "
+                "running any query."
+            )
         else:
-            if database_storage:
-                runtime_resolution_note = (
-                    "No database endpoint or credential profile is recorded or "
-                    "required by the graph; still verify connection, schema, "
-                    "table, or source access before running any query."
-                )
-            else:
-                runtime_resolution_note = (
-                    "No endpoint or credential profile is recorded or required by "
-                    "the graph; still verify local paths or remote object existence "
-                    "before running any query."
-                )
+            runtime_resolution_note = (
+                "No endpoint or credential profile is recorded or required by "
+                "the graph; still verify local paths or remote object existence "
+                "before running any query."
+            )
         return DraftQueryPlanStorageEnvironment(
             storage_protocol=(
                 selected_candidate.storage_protocol
@@ -23575,6 +23572,7 @@ class DoxaBase:
             selected_candidate is not None
             and selected_decision.candidate_path_status == "ready"
             and scan.function is None
+            and not self._is_database_storage(selected_candidate.storage_protocol)
         ):
             codes.append("scan_function_not_inferred")
         return list(dict.fromkeys(codes))

@@ -1153,7 +1153,9 @@ the first item from the ordered blocker list, or `None` when no
 execution-attempt blocker remains. It may add
 handoff-only blockers such as `query_context_has_other_blockers` for clean
 selected candidates with bad siblings, or `scan_function_not_inferred` when
-DuckDB has no file-scan function for the selected storage/layout shape.
+DuckDB has no file-scan function for a selected file/object storage-layout
+shape. Database relation handoffs intentionally keep `scan.function=None`; their
+execution gate is runtime resolution, not missing file-scan inference.
 `physical_layout_storage_protocol_mismatch` means an explicit layout selection
 crossed storage route kinds, such as database storage plus `rc:CSV` or local
 file storage plus `rc:PostgreSQLTable`; keep it review-gated and choose a
@@ -1178,8 +1180,9 @@ execution-ready. The scan card repeats the same gate as
 `scan.execution_attempt_ready`; when it is false, treat URI templates and
 relation identifiers as handoff context rather than execution permission.
 Database-backed storage still uses this generic
-review-draft shape today, so expect `scan.function=None` and review gating
-rather than executable SQL; read `scan.relation_identifier` and
+draft shape today, so expect `scan.function=None`,
+`ready_for_execution_attempt=false`, and `runtime_resolution_required` rather
+than executable SQL; read `scan.relation_identifier` and
 `scan.connection_reference` instead of `scan.uri_template` for the recorded
 database handoff. If the selected database candidate came from a dataset or
 partition path, `scan.relation_identifier` stays absent and the plan remains

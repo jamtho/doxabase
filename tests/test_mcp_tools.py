@@ -7178,12 +7178,12 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["scan"]["composition"] == "database_connection_and_relation"
     assert result["scan"]["execution_attempt_ready"] is False
     assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
-        "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
-    assert result["review_gate"]["blocking_reason_codes"] == [
-        "scan_function_not_inferred"
-    ]
+    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"]["primary_execution_attempt_blocking_reason_code"] == (
+        "runtime_resolution_required"
+    )
     assert result["review_gate"]["binding_values_required"] is False
     assert result["review_gate"]["ready_for_execution_attempt"] is False
     assert result["handoff_kind"] == "database_relation_handoff"
@@ -7415,9 +7415,13 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert result["review_gate"]["context_blocking_reason_codes"] == [
         "query_context_has_other_blockers"
     ]
-    assert result["review_gate"]["blocking_reason_codes"] == [
-        "scan_function_not_inferred"
+    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"]["execution_attempt_blocking_reason_codes"] == [
+        "runtime_resolution_required"
     ]
+    assert result["review_gate"]["primary_execution_attempt_blocking_reason_code"] == (
+        "runtime_resolution_required"
+    )
     assert result["review_gate"]["all_issue_codes"] == [
         "database_relation_template_missing"
     ]
