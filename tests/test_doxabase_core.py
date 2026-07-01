@@ -26947,6 +26947,82 @@ def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
     assert db.triple_count("map") == 6
 
 
+def test_record_map_relationship_accepts_core_class_aliases(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/relationship-aliases#"
+    messages = f"{base}messages"
+    attachments = f"{base}attachments"
+    counts = f"{base}attachment_counts"
+    doc_id = f"{base}messages__doc_id"
+    parent_doc_id = f"{base}attachments__parent_doc_id"
+    body = f"{base}messages__body"
+    body_top = f"{base}messages__body_top"
+    count = f"{base}attachment_counts__attachment_count"
+
+    db.record_map_dataset(messages, label="Messages", is_table=True)
+    db.record_map_dataset(attachments, label="Attachments", is_table=True)
+    db.record_map_dataset(counts, label="Attachment counts", is_table=True)
+    for column_iri, table_iri, column_name in (
+        (doc_id, messages, "doc_id"),
+        (parent_doc_id, attachments, "parent_doc_id"),
+        (body, messages, "body"),
+        (body_top, messages, "body_top"),
+        (count, counts, "attachment_count"),
+    ):
+        db.record_map_column(column_iri, table_iri=table_iri, column_name=column_name)
+
+    records = [
+        db.record_map_relationship(
+            f"{base}attachment_parent_fk",
+            relationship_type="rc:ForeignKey",
+            from_column=parent_doc_id,
+            to_column=doc_id,
+        ),
+        db.record_map_relationship(
+            f"{base}doc_id_shared_identifier",
+            relationship_type=RC + "SharedIdentifier",
+            identifying_columns=[doc_id, parent_doc_id],
+        ),
+        db.record_map_relationship(
+            f"{base}body_preview_derivation",
+            relationship_type="Derivation",
+            source_columns=[body],
+            derived_columns=[body_top],
+        ),
+        db.record_map_relationship(
+            f"{base}attachment_count_rollup",
+            relationship_type="rc:Aggregation",
+            source_dataset=attachments,
+            target_dataset=counts,
+            group_by_columns=[parent_doc_id],
+            aggregated_columns=[
+                {
+                    "target_column": count,
+                    "source_columns": [parent_doc_id],
+                    "aggregation_function": "rc:Count",
+                }
+            ],
+        ),
+    ]
+
+    assert [record.resource_type for record in records] == [
+        RC + "ForeignKey",
+        RC + "SharedIdentifier",
+        RC + "Derivation",
+        RC + "Aggregation",
+    ]
+    relationships = db.describe_dataset(messages).relationships
+    assert {relationship.relationship_type for relationship in relationships} >= {
+        "foreign_key",
+        "shared_identifier",
+        "derivation",
+    }
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_record_map_relationship_rejects_data_assets_in_column_slots(
     tmp_path: Path,
 ) -> None:
@@ -27281,6 +27357,25 @@ def test_record_map_asset_transform_captures_conditions_outputs_and_tuple_grain(
             ],
         )
     assert db.triple_count("map") == before_map_count
+
+
+def test_record_map_asset_transform_accepts_core_class_aliases(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/asset-transform-aliases#"
+    source = f"{base}raw_files"
+    target = f"{base}rollup"
+
+    db.record_map_dataset(source, label="Raw files")
+    db.record_map_dataset(target, label="Rollup")
+    result = db.record_map_asset_transform(
+        f"{base}rollup_from_raw",
+        relationship_type="rc:Aggregation",
+        source_datasets=[source],
+        target_datasets=[target],
+    )
+
+    assert result.resource_type == RC + "Aggregation"
+    assert db.describe_dataset(target).relationships[0].relationship_type == "aggregation"
 
 
 def test_record_map_relationship_rejects_project_specific_derivation_properties(

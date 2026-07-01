@@ -1215,6 +1215,9 @@ precedence matters for asset endpoints, pass `source_endpoints` or
 Endpoint specs also write the compatibility `sourceDataset` / `targetDataset`
 edges. Relationship column fields must point to column
 resources; known data assets, datasets, and tables are rejected in those slots.
+For `relationship_type`, use helper tokens such as `foreign_key` or the
+matching core class CURIE/full IRI such as `rc:ForeignKey`; descriptions always
+return the normalized helper token plus the RDF class IRI.
 Use `record_map_asset_transform()` for asset-level derivations or aggregations
 that need reviewed filters, selection rules, per-output formulas, output
 functions, or tuple grain. Its tuple-grain components accept exactly one of a
@@ -1226,7 +1229,7 @@ compatibility shortcut to the first returned column. Treat `partition_columns`
 as unordered unless a future response explicitly carries ordering metadata.
 Relationship descriptions expose `relationship_kind` as the RDF class IRI and
 `relationship_type` as the helper-style token such as `foreign_key` or
-`aggregation`.
+`aggregation`, even when the write helper received an RDF class alias.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
 roles, included review/export graph roles, rationale, supporting resources,

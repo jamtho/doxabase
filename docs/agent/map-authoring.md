@@ -302,6 +302,10 @@ production/current routes without parsing labels or path names.
 - `relationship_type="derivation"`
 - `relationship_type="aggregation"`
 
+The matching core class CURIEs and full IRIs are accepted too, for example
+`relationship_type="rc:ForeignKey"` or the full `rc:Aggregation` IRI. DoxaBase
+normalizes those aliases back to the helper tokens in descriptions.
+
 Use `foreign_key` for parent/child column relationships, whether declared
 upstream or inferred by checks. Use `shared_identifier` when several columns
 carry IDs from the same logical population. Use `derivation` for transformed

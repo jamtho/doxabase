@@ -205,6 +205,30 @@ DERIVATION_PROPERTIES = (
     "rc:Lossy",
 )
 
+RELATIONSHIP_TYPE_IRIS = {
+    "foreign_key": "rc:ForeignKey",
+    "shared_identifier": "rc:SharedIdentifier",
+    "derivation": "rc:Derivation",
+    "aggregation": "rc:Aggregation",
+}
+
+RELATIONSHIP_TYPE_ALIASES = {
+    token: token for token in RELATIONSHIP_TYPE_IRIS
+} | {
+    "ForeignKey": "foreign_key",
+    "SharedIdentifier": "shared_identifier",
+    "Derivation": "derivation",
+    "Aggregation": "aggregation",
+    "rc:ForeignKey": "foreign_key",
+    "rc:SharedIdentifier": "shared_identifier",
+    "rc:Derivation": "derivation",
+    "rc:Aggregation": "aggregation",
+    f"{PREFIXES['rc']}ForeignKey": "foreign_key",
+    f"{PREFIXES['rc']}SharedIdentifier": "shared_identifier",
+    f"{PREFIXES['rc']}Derivation": "derivation",
+    f"{PREFIXES['rc']}Aggregation": "aggregation",
+}
+
 TRANSFORM_CONDITION_KINDS = (
     "rc:FilterCondition",
     "rc:SelectionCondition",
@@ -37396,12 +37420,7 @@ class DoxaBase:
         self,
         iri: str,
         *,
-        relationship_type: TypingLiteral[
-            "foreign_key",
-            "shared_identifier",
-            "derivation",
-            "aggregation",
-        ],
+        relationship_type: str,
         label: str | None = None,
         description: str | None = None,
         source_dataset: str | None = None,
@@ -37425,6 +37444,7 @@ class DoxaBase:
         derivation_properties: Iterable[str] | str | None = None,
     ) -> MapResourceRecord:
         relationship_iri = self._required_iri("iri", iri)
+        relationship_type = self._normalise_relationship_type(relationship_type)
         identifying_column_values = self._string_values(
             "identifying_columns",
             identifying_columns,
@@ -37488,18 +37508,7 @@ class DoxaBase:
             )
             for value in derivation_property_values
         ]
-        type_map = {
-            "foreign_key": "rc:ForeignKey",
-            "shared_identifier": "rc:SharedIdentifier",
-            "derivation": "rc:Derivation",
-            "aggregation": "rc:Aggregation",
-        }
-        resource_type = type_map.get(relationship_type)
-        if resource_type is None:
-            raise DoxaBaseError(
-                "relationship_type must be 'foreign_key', 'shared_identifier', "
-                "'derivation', or 'aggregation'"
-            )
+        resource_type = RELATIONSHIP_TYPE_IRIS[relationship_type]
         if relationship_type == "foreign_key" and (from_column is None or to_column is None):
             raise DoxaBaseError(
                 "foreign_key relationships require from_column and to_column"
@@ -37807,7 +37816,7 @@ class DoxaBase:
         self,
         iri: str,
         *,
-        relationship_type: TypingLiteral["derivation", "aggregation"],
+        relationship_type: str,
         label: str | None = None,
         description: str | None = None,
         source_dataset: str | None = None,
@@ -37820,10 +37829,11 @@ class DoxaBase:
         conditions: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         outputs: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
     ) -> MapResourceRecord:
-        if relationship_type not in {"derivation", "aggregation"}:
-            raise DoxaBaseError(
-                "relationship_type must be 'derivation' or 'aggregation' for asset transforms"
-            )
+        relationship_type = self._normalise_relationship_type(
+            relationship_type,
+            allowed_tokens=("derivation", "aggregation"),
+            context="asset transform relationship_type",
+        )
         relationship_iri = self._required_iri("iri", iri)
         condition_specs = self._normalise_transform_condition_specs(
             conditions,
@@ -64818,6 +64828,30 @@ class DoxaBase:
             self.expand_iri("rc:Derivation"): "derivation",
             self.expand_iri("rc:Aggregation"): "aggregation",
         }.get(relationship_kind)
+
+    def _normalise_relationship_type(
+        self,
+        relationship_type: str,
+        *,
+        allowed_tokens: Iterable[str] | None = None,
+        context: str = "relationship_type",
+    ) -> str:
+        if not isinstance(relationship_type, str):
+            raise DoxaBaseError(f"{context} must be a string")
+        text = relationship_type.strip()
+        allowed = tuple(allowed_tokens or RELATIONSHIP_TYPE_IRIS)
+        allowed_set = set(allowed)
+        token = RELATIONSHIP_TYPE_ALIASES.get(text)
+        if token is None:
+            token = RELATIONSHIP_TYPE_ALIASES.get(self.expand_iri(text))
+        if token in allowed_set:
+            return token
+        token_list = ", ".join(f"'{value}'" for value in allowed)
+        class_list = ", ".join(RELATIONSHIP_TYPE_IRIS[value] for value in allowed)
+        raise DoxaBaseError(
+            f"{context} must be one of: {token_list}; matching RDF classes are "
+            f"also accepted: {class_list}"
+        )
 
     def _relationship_source_caveats(
         self,

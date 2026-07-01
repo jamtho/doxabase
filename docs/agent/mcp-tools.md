@@ -1864,6 +1864,9 @@ dataset edges. Endpoint datasets, columns, functions, and properties are
 resource-valued fields, so use IRIs or CURIEs rather than prose. Dataset
 relationship descriptions expose `relationship_kind` as the RDF class IRI and
 `relationship_type` as the helper token such as `foreign_key` or `aggregation`.
+The helper also accepts matching core class CURIEs or full IRIs, such as
+`rc:ForeignKey`, `rc:SharedIdentifier`, `rc:Derivation`, and `rc:Aggregation`,
+and normalizes them to the same helper tokens in descriptions.
 Column fields must point to column resources; known data assets, datasets, and
 tables are rejected in those slots.
 
