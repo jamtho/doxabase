@@ -1360,12 +1360,13 @@ The helper is a side-effect-free bridge from query/profile evidence to a staged
 storage-layout overlay. It requires caller-reviewed storage/path/layout values
 and returns ready `stage_graph_revision` arguments rather than writing map
 facts directly. It can consume profile-shaped query results and ordinary
-blocked/failed/partial query-result evidence when that evidence is linked to the
-requested dataset. Use `source_query_evidence` to verify the source query
-result; `source_profile_evidence` is retained as a compatibility alias for the
-same payload. Use `reviewed_overlay` to audit the supplied storage metadata, and
-`stage_arguments` only after confirming the overlay describes the queried source
-data rather than query text, logs, or result output.
+successful, blocked, failed, partial, or cancelled query-result evidence when
+that evidence is linked to the requested dataset. Use `source_query_evidence`
+to verify the source query result; `source_profile_evidence` is retained as a
+compatibility alias for the same payload. Use `reviewed_overlay` to audit the
+supplied storage metadata, and `stage_arguments` only after confirming the
+overlay describes the queried source data rather than query text, logs, or
+result output.
 When the overlay replaces existing dataset, storage-access, or physical-layout
 verification status/note values, `reviewed_overlay` lists the replaced values
 and `stage_arguments.removals` carries the removal graph needed to avoid

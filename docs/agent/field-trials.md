@@ -3942,6 +3942,12 @@ few useful gaps:
   `describe_context_slice(..., profile="resource_brief")` action so relation
   handles, scanned source handles, source spans, and result artifacts remain in
   the immediate unattended route.
+- A query evidence overlay scout then found the overlay primitive already
+  accepted ordinary query-result evidence, but `describe_query_context()` only
+  suggested the overlay skeleton for profile-shaped singleton evidence. Query
+  contexts with physical metadata blockers now also surface ordinary
+  dataset-linked query evidence with `rc:queryExecutionStatus`, preserving
+  scanned source paths/handles in the reviewed storage-overlay route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -21339,6 +21339,90 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_query_context_suggests_overlay_for_ordinary_query_evidence(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n2,pending\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.result.json"
+    result_path.write_text('{"paid": 1}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    result = db.record_query_result(
+        summary="Orders status aggregate scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(tmp_path / "orders_status.sql"),
+        query_hash="sha256:ordinary-query-evidence",
+        result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
+    )
+
+    context = db.describe_query_context(dataset)
+
+    overlay_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_evidence_storage_overlay"
+    ]
+    assert len(overlay_actions) == 1
+    overlay_action = overlay_actions[0]
+    assert overlay_action.arguments["dataset_iri"] == dataset
+    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
+    source = overlay_action.source_query_evidence
+    assert source["profile_observation_count"] == 0
+    assert source["execution_status"] == "succeeded"
+    assert source["query_hash"] == "sha256:ordinary-query-evidence"
+    assert source["result_sources"] == [str(result_path)]
+    assert source["scanned_source_paths"] == [str(csv_path)]
+    assert source["scanned_source_handles"] == [str(csv_path)]
+
+
+def test_query_context_suggests_overlay_for_blocked_candidate_query_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        layout_verification_status="rc:CandidateLayout",
+    )
+    result = db.record_query_result(
+        summary="Orders query was blocked before the reviewed CSV was bundled.",
+        observed_asset=dataset,
+        execution_status="blocked",
+        engine="duckdb",
+        query_source_path=str(tmp_path / "orders_status.sql"),
+        result_sources=["stderr://missing-orders-csv"],
+        scanned_source_paths=["warehouse/orders.csv"],
+        failure_summary="The reviewed CSV was absent from this capsule.",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert "layout_needs_verification" in {issue.code for issue in context.issues}
+    overlay_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_evidence_storage_overlay"
+    ]
+    assert len(overlay_actions) == 1
+    overlay_action = overlay_actions[0]
+    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
+    source = overlay_action.source_query_evidence
+    assert source["profile_observation_count"] == 0
+    assert source["execution_status"] == "blocked"
+    assert source["query_source_paths"] == [str(tmp_path / "orders_status.sql")]
+    assert source["scanned_source_paths"] == ["warehouse/orders.csv"]
+
+
 def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
     tmp_path: Path,
 ) -> None:

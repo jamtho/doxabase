@@ -20512,6 +20512,13 @@ class DoxaBase:
                     issues=issues,
                 )
             )
+        actions.extend(
+            self._query_context_ordinary_query_evidence_actions(
+                dataset,
+                profile_summary,
+                issues=issues,
+            )
+        )
         if (
             decision.candidate_index is None
             or decision.candidate_index < 0
@@ -20753,6 +20760,86 @@ class DoxaBase:
                     )
                 )
         return actions
+
+    def _query_context_ordinary_query_evidence_actions(
+        self,
+        dataset: DatasetDescription,
+        profile_summary: ProfileSummary,
+        *,
+        issues: list[QueryPlanningIssue],
+    ) -> list[SuggestedNextAction]:
+        if not self._query_context_should_suggest_evidence_storage_overlay(
+            issues
+        ):
+            return []
+        excluded_evidence_iris = set(profile_summary.evidence_iris)
+        excluded_evidence_iris.update(
+            candidate.evidence_iri
+            for candidate in profile_summary.profile_run_candidates
+        )
+        evidence_iris = self._query_context_dataset_query_evidence_iris(
+            dataset.iri,
+            exclude_evidence_iris=excluded_evidence_iris,
+        )
+        actions: list[SuggestedNextAction] = []
+        for evidence_iri in evidence_iris[:3]:
+            evidence = self._describe_evidence(
+                evidence_iri,
+                self._expand_graphs(["evidence"]),
+                self._lookup_graphs(self._expand_graphs(["all"])),
+            )
+            source_query_evidence = self._query_context_source_profile_evidence(
+                evidence_iri,
+                [],
+                evidence=evidence,
+            )
+            actions.append(
+                self._query_context_evidence_storage_overlay_action(
+                    dataset_iri=dataset.iri,
+                    evidence_iri=evidence_iri,
+                    source_profile_evidence=source_query_evidence,
+                )
+            )
+        return actions
+
+    def _query_context_dataset_query_evidence_iris(
+        self,
+        dataset_iri: str,
+        *,
+        exclude_evidence_iris: set[str],
+    ) -> list[str]:
+        observation_graphs = self._expand_graphs(["observations"])
+        evidence_graphs = self._expand_graphs(["evidence"])
+        rows: list[tuple[str, str, str]] = []
+        for observation_iri in self._subjects(
+            observation_graphs,
+            "rc:observedAsset",
+            dataset_iri,
+        ):
+            observed_at = self._first_object(
+                observation_graphs,
+                observation_iri,
+                "rc:observedAt",
+            ) or ""
+            for evidence_iri in self._objects(
+                observation_graphs,
+                observation_iri,
+                "rc:evidence",
+            ):
+                if evidence_iri in exclude_evidence_iris:
+                    continue
+                if (
+                    self._first_object(
+                        evidence_graphs,
+                        evidence_iri,
+                        "rc:queryExecutionStatus",
+                    )
+                    is None
+                ):
+                    continue
+                rows.append((observed_at, observation_iri, evidence_iri))
+        rows.sort(reverse=True)
+        return list(dict.fromkeys(evidence_iri for _, _, evidence_iri in rows))
 
     @staticmethod
     def _query_context_should_suggest_evidence_storage_overlay(

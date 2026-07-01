@@ -202,6 +202,11 @@ Start with `describe_query_context(dataset_iri)`:
    labels, route roles, access mode, endpoint/bucket/prefix/region/path-style
    fields, credential reference, compression, and verification fields without
    parsing Turtle patch content.
+   If ordinary non-profile `record_query_result` evidence is linked to the
+   dataset and physical metadata blockers remain, the same overlay skeleton can
+   appear with `source_query_evidence.profile_observation_count == 0`; use its
+   scanned source paths/handles and result sources as provenance, not as
+   automatic storage metadata.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
    They also carry storage-access `route_roles`; use those reviewed route intent

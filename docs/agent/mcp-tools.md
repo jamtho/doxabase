@@ -1236,8 +1236,9 @@ query/profile evidence into storage access and physical layout map metadata.
 Use it after `record_query_result` or `describe_profile_run` shows that an
 external query scanned or attempted a real source, but `describe_query_context`
 is still blocked by missing storage, path, or layout metadata. The evidence may
-be profile-shaped successful query evidence or ordinary blocked/failed/partial
-query-result evidence, as long as it is linked to the requested dataset.
+be profile-shaped successful query evidence or ordinary successful, blocked,
+failed, partial, or cancelled query-result evidence, as long as it is linked to
+the requested dataset.
 `describe_query_context` may suggest this helper directly for singleton
 query/profile evidence with physical blockers; those suggested arguments contain
 review placeholders and must be replaced before use.
