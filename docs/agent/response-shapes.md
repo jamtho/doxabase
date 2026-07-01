@@ -5280,7 +5280,14 @@ opening the nested plan first. If the manifest records nonzero
 sets `recommended_next_step="review_handoff_privacy_before_recovery"`, makes the
 top-level `first_suggested_next_action` and
 `first_safe_review_or_mutation_action` an `export_preflight` privacy review, and
-suppresses `first_mutation_action` until that review is explicit.
+suppresses `first_mutation_action` until that review is explicit. If the
+recovery plan resolves a manifest revision to a current successor whose exact
+snapshot rows are missing, summary snapshot completeness is computed over both
+manifest revisions and resolved recovery targets. In that case
+`recommended_next_step="complete_handoff_preflight_before_recovery_mutation"`,
+`first_safe_review_or_mutation_action` points to the blocking snapshot/preflight
+action, and `first_mutation_action` stays empty until the handoff preflight is
+complete.
 
 `doxabase.import_trig(path, replace=False)` returns:
 

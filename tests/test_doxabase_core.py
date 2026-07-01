@@ -2518,6 +2518,92 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert fake_secret not in json.dumps(to_dict(imported))
 
 
+def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapshots(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = source.stage_graph_revision(
+        summary="Stage orders handoff source",
+        rationale="Create a stale source whose current successor needs snapshots.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersHandoffSource a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    source.record_map_dataset(
+        "https://example.test/project#UnrelatedDrift",
+        label="Unrelated drift",
+        is_table=True,
+    )
+    restaged = source.restage_staged_revision(staged.revision_iri)
+    trig_path = tmp_path / "narrow-project-handoff.trig"
+    snapshot_path = tmp_path / "narrow-revision-snapshots.json"
+    manifest_path = tmp_path / "narrow-handoff-manifest.json"
+    exported = source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[staged.revision_iri],
+        fail_on_sensitive=True,
+    )
+
+    assert exported.revision_iris == [staged.revision_iri]
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(manifest_path)
+
+    assert imported.post_import_snapshot_evidence[0].revision_iri == (
+        staged.revision_iri
+    )
+    assert imported.post_import_snapshot_evidence[0].status == (
+        "history_plus_snapshot_rows"
+    )
+    assert imported.recovery_plan is not None
+    plan = imported.recovery_plan
+    assert plan.mutation_allowed_after == (
+        "handoff_preflight_required_before_mutation"
+    )
+    assert plan.mutation_frontier_iris == [restaged.revision_iri]
+    assert plan.blocking_preflight_actions
+    assert plan.blocking_preflight_actions[0].tool_name == (
+        "import_revision_snapshots"
+    )
+    assert imported.suggested_next_actions[0] == plan.blocking_preflight_actions[0]
+    assert imported.suggested_next_actions[0].arguments == {
+        "path": "/tmp/revision-snapshots.json",
+        "path_is_placeholder": True,
+    }
+    summary = imported.recovery_summary
+    assert summary.recommended_next_step == (
+        "complete_handoff_preflight_before_recovery_mutation"
+    )
+    assert summary.snapshot_evidence_complete is False
+    assert summary.snapshot_evidence_status_counts == {
+        "history_only_count_digest": 1,
+        "history_plus_snapshot_rows": 1,
+    }
+    assert summary.incomplete_snapshot_revision_iris == [restaged.revision_iri]
+    assert summary.mutation_frontier_iris == [restaged.revision_iri]
+    assert summary.first_mutation_frontier_item is None
+    assert summary.first_mutation_action is None
+    assert (
+        summary.first_safe_review_or_mutation_action
+        == plan.blocking_preflight_actions[0]
+    )
+    assert summary.first_safe_review_or_mutation_source == (
+        "recovery_plan_blocking_preflight"
+    )
+    assert summary.first_suggested_next_action == plan.blocking_preflight_actions[0]
+    assert "resolved recovery targets" in summary.note
+
+
 def test_export_preflight_blocks_sensitive_handoff_scope(
     tmp_path: Path,
 ) -> None:

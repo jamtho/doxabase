@@ -2494,12 +2494,18 @@ profile route keys/group counts, the first mutation-frontier action when one is
 available, the first structured follow-up action, and a `recommended_next_step`
 value such as `run_import_handoff_bundle`,
 `continue_imported_recovery_session`, `follow_recovery_plan_mutation_frontier`,
+`complete_handoff_preflight_before_recovery_mutation`,
 `review_handoff_privacy_before_recovery`, or `resume_project_frontier`.
 When the manifest records nonzero `sensitive_literal_count`, the import can
 still be useful locally, but its top-level next action is a redacted
 `doxabase.export_preflight(export_kind="handoff_bundle", ...)` privacy review
 and recovery/mutation actions are not promoted as top-level continuations until
 that review is explicit.
+When a manifest revision resolves to a current staged successor that lacks exact
+snapshot rows, the import promotes the blocking `import_revision_snapshots` or
+preflight action ahead of recovery-session setup and suppresses
+`first_mutation_action`; use the summary's first safe action before following
+any mutation frontier.
 If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is

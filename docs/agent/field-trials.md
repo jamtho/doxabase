@@ -3895,6 +3895,14 @@ few useful gaps:
   top-level continuations through a receiver-side handoff `export_preflight`
   and reports `review_handoff_privacy_before_recovery` before exposing mutation
   as the first safe action.
+- A staged-revision handoff trial found narrowed snapshot handoffs can be
+  recovery-complete for the manifest revision while still missing exact
+  snapshot rows for the current restaged successor that recovery planning
+  resolves as the real mutation target. `import_handoff_bundle()` now computes
+  summary snapshot completeness over manifest revisions plus resolved recovery
+  targets, promotes blocking snapshot/preflight actions before recovery-session
+  setup when `mutation_allowed_after` requires handoff preflight, and leaves
+  `first_mutation_action` empty until that preflight/import step is complete.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

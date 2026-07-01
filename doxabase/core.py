@@ -54938,6 +54938,17 @@ class DoxaBase:
                         ),
                     )
                 ]
+            elif (
+                recovery_plan.mutation_allowed_after
+                == "handoff_preflight_required_before_mutation"
+                and recovery_plan.blocking_preflight_actions
+            ):
+                suggested_next_actions = self._dedupe_suggested_next_actions(
+                    [
+                        *recovery_plan.blocking_preflight_actions,
+                        *recovery_suggested_next_actions,
+                    ]
+                )
             else:
                 suggested_next_actions = recovery_suggested_next_actions
             if not suggested_next_actions and not recovery_plan.processed_revision_iris:
@@ -55005,6 +55016,10 @@ class DoxaBase:
         suggested_next_actions: list[SuggestedNextAction],
         privacy_review_required_before_recovery: bool = False,
     ) -> HandoffBundleRecoverySummary:
+        snapshot_evidence = self._handoff_recovery_summary_snapshot_evidence(
+            snapshot_evidence,
+            recovery_plan=recovery_plan,
+        )
         snapshot_status_counts: dict[str, int] = {}
         for evidence in snapshot_evidence:
             snapshot_status_counts[evidence.status] = (
@@ -55015,8 +55030,17 @@ class DoxaBase:
             for evidence in snapshot_evidence
             if evidence.status != "history_plus_snapshot_rows"
         ]
+        recovery_preflight_required = (
+            recovery_plan is not None
+            and recovery_plan.mutation_allowed_after
+            == "handoff_preflight_required_before_mutation"
+        )
         if privacy_review_required_before_recovery:
             recommended_next_step = "review_handoff_privacy_before_recovery"
+        elif recovery_preflight_required:
+            recommended_next_step = (
+                "complete_handoff_preflight_before_recovery_mutation"
+            )
         elif dry_run:
             recommended_next_step = "run_import_handoff_bundle"
         elif matching_recovery_session_iris:
@@ -55042,6 +55066,7 @@ class DoxaBase:
         first_mutation_action = None
         if (
             not privacy_review_required_before_recovery
+            and not recovery_preflight_required
             and first_mutation_frontier_item is not None
         ):
             first_mutation_action = first_mutation_frontier_item.action
@@ -55056,6 +55081,13 @@ class DoxaBase:
                 if first_safe_action is not None
                 else None
             )
+        elif recovery_preflight_required and recovery_plan is not None:
+            if recovery_plan.blocking_preflight_actions:
+                first_safe_action = recovery_plan.blocking_preflight_actions[0]
+                first_safe_action_source = "recovery_plan_blocking_preflight"
+            elif recovery_plan.suggested_next_actions:
+                first_safe_action = recovery_plan.suggested_next_actions[0]
+                first_safe_action_source = "recovery_plan_suggested_next_action"
         elif (
             recovery_plan is not None
             and recovery_plan.mutation_allowed_after
@@ -55081,18 +55113,34 @@ class DoxaBase:
 
         first_action = suggested_next_actions[0] if suggested_next_actions else None
         snapshot_evidence_complete = not incomplete_snapshot_revision_iris
+        manifest_revision_set = set(revision_iris)
+        has_resolved_targets = any(
+            evidence.revision_iri not in manifest_revision_set
+            for evidence in snapshot_evidence
+        )
         if not revision_iris:
             snapshot_note = "The manifest had no revision rows to recover."
         elif snapshot_evidence_complete:
+            snapshot_subject = (
+                "manifest revisions and resolved recovery targets"
+                if has_resolved_targets
+                else "manifest revisions"
+            )
             snapshot_note = (
-                "All manifest revisions have history RDF and exact stored "
+                f"All {snapshot_subject} have history RDF and exact stored "
                 "snapshot rows."
             )
         else:
+            snapshot_subject = (
+                "manifest revisions or resolved recovery targets"
+                if has_resolved_targets
+                else "manifest revisions"
+            )
             snapshot_note = (
-                "Some manifest revisions still lack complete history/snapshot "
-                "evidence; inspect post_import_snapshot_evidence before relying "
-                "on exact drift or applied-diff rows."
+                f"Some {snapshot_subject} still lack complete history/snapshot "
+                "evidence; inspect post_import_snapshot_evidence and the "
+                "recovery_plan lanes before relying on exact drift or "
+                "applied-diff rows."
             )
         note = (
             f"{snapshot_note} recommended_next_step={recommended_next_step}."
@@ -55148,6 +55196,7 @@ class DoxaBase:
             first_mutation_frontier_item=(
                 None
                 if privacy_review_required_before_recovery
+                or recovery_preflight_required
                 else first_mutation_frontier_item
             ),
             first_mutation_action=first_mutation_action,
@@ -55163,6 +55212,29 @@ class DoxaBase:
             recommended_next_step=recommended_next_step,
             note=note,
         )
+
+    @staticmethod
+    def _handoff_recovery_summary_snapshot_evidence(
+        snapshot_evidence: list[RevisionSnapshotEvidenceStatus],
+        *,
+        recovery_plan: StagedRevisionRecoveryPlan | None,
+    ) -> list[RevisionSnapshotEvidenceStatus]:
+        evidence_by_revision: dict[str, RevisionSnapshotEvidenceStatus] = {}
+        revision_order: list[str] = []
+
+        def add_evidence(evidence: RevisionSnapshotEvidenceStatus) -> None:
+            if evidence.revision_iri not in evidence_by_revision:
+                revision_order.append(evidence.revision_iri)
+            evidence_by_revision[evidence.revision_iri] = evidence
+
+        for evidence in snapshot_evidence:
+            add_evidence(evidence)
+        if recovery_plan is not None:
+            for lane in recovery_plan.lanes:
+                add_evidence(lane.source_snapshot_evidence)
+                add_evidence(lane.current_snapshot_evidence)
+
+        return [evidence_by_revision[revision_iri] for revision_iri in revision_order]
 
     def _recovery_session_iris(self, history_graphs: list[str]) -> list[str]:
         return self._subjects(
