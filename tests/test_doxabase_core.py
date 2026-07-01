@@ -19722,6 +19722,14 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "candidate_existing_storage_accesses_truncated"
     ] is False
     repair_actions = missing_storage.details["repair_hint"]["actions"]
+    optional_storage_fields = [
+        "endpoint_profile",
+        "bucket_name",
+        "key_prefix",
+        "region",
+        "path_style_access",
+        "credential_reference",
+    ]
     assert [action["action_type"] for action in repair_actions] == [
         "stage_reviewed_storage_access",
         "record_reviewed_storage_access",
@@ -19746,6 +19754,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "storage_access_iri",
         "storage_protocol",
         "storage_root",
+        *optional_storage_fields,
         "rationale",
         "location_kind",
         "path_templates",
@@ -19761,8 +19770,14 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "storage_root",
     ]
     assert repair_actions[1]["arguments_template"]["datasets"] == [dataset]
-    assert repair_actions[1]["placeholder_fields"] == ["path_templates"]
-    assert repair_actions[1]["reviewed_value_fields"] == ["path_templates"]
+    assert repair_actions[1]["placeholder_fields"] == [
+        *optional_storage_fields,
+        "path_templates",
+    ]
+    assert repair_actions[1]["reviewed_value_fields"] == [
+        *optional_storage_fields,
+        "path_templates",
+    ]
     assert "Omit this optional field" in repair_actions[1]["condition"]
     assert "duplicating it can create equivalent query target candidates" in (
         repair_actions[1]["condition"]
@@ -19834,6 +19849,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -19844,6 +19860,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -19865,8 +19882,8 @@ def test_describe_query_context_reports_missing_planning_metadata(
             "storage_protocol",
             "storage_root",
         ],
-        placeholder_fields=["path_templates"],
-        reviewed_value_fields=["path_templates"],
+        placeholder_fields=[*optional_storage_fields, "path_templates"],
+        reviewed_value_fields=[*optional_storage_fields, "path_templates"],
     )
     assert "non-secret storage protocol" in storage_option["reason"]
     assert "Database relation identifiers" in storage_option["condition"]
@@ -20366,6 +20383,14 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         staged.revision_iri
     ]
     assert len(pending_repair_group.pending_action_options) == 2
+    optional_storage_fields = [
+        "endpoint_profile",
+        "bucket_name",
+        "key_prefix",
+        "region",
+        "path_style_access",
+        "credential_reference",
+    ]
     pending_staged_storage_option = pending_repair_group.pending_action_options[0]
     _assert_repair_action_option(
         pending_staged_storage_option,
@@ -20384,6 +20409,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -20394,6 +20420,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -20414,8 +20441,8 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
             "storage_protocol",
             "storage_root",
         ],
-        placeholder_fields=["path_templates"],
-        reviewed_value_fields=["path_templates"],
+        placeholder_fields=[*optional_storage_fields, "path_templates"],
+        reviewed_value_fields=[*optional_storage_fields, "path_templates"],
     )
     assert "non-secret storage protocol" in pending_storage_option["reason"]
     assert "Database relation identifiers" in pending_storage_option["condition"]
@@ -26112,6 +26139,69 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
         ].candidate_selector,
         "allow_context_blocked_candidate": True,
     }
+
+
+def test_describe_query_context_warns_when_s3_root_conflicts_with_bucket_prefix(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://orders-lake/raw/orders",
+        bucket_name="events-lake",
+        key_prefix="curated",
+        credential_reference="profile:orders-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    issue = next(
+        issue
+        for issue in context.issues
+        if issue.code == "storage_protocol_location_mismatch"
+        and issue.resource is not None
+        and issue.resource.iri == storage.iri
+    )
+    assert issue.details is not None
+    assert issue.details["storage_root"] == "s3://orders-lake/raw/orders"
+    assert issue.details["bucket_name"] == "events-lake"
+    assert issue.details["key_prefix"] == "curated"
+    mismatch_reasons = issue.details["mismatch_reasons"]
+    assert any(
+        "storage_root bucket does not match recorded bucket_name" in reason
+        for reason in mismatch_reasons
+    )
+    assert any(
+        "storage_root key does not start with recorded key_prefix" in reason
+        for reason in mismatch_reasons
+    )
+    action_types = {
+        action["action_type"]
+        for action in issue.details["repair_hint"]["actions"]
+    }
+    assert {
+        "set_reviewed_storage_root",
+        "set_reviewed_bucket_name",
+        "set_reviewed_key_prefix",
+    } <= action_types
 
 
 def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(

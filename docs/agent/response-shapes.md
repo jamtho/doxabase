@@ -3441,7 +3441,10 @@ bucket/prefix metadata. A complete S3 template outside the recorded S3
 `storage_root`, or an absolute local template outside a recorded absolute local
 `storage_root`, is review-only. Relative templates that repeat the recorded key
 prefix are also review-only because the composed path would duplicate that
-prefix.
+prefix. S3 storage roots are checked against separately recorded `bucket_name`
+and `key_prefix` values even when no complete template is present, so
+root/bucket-prefix disagreement appears as a storage-access-level
+`storage_protocol_location_mismatch`.
 When `template_source == "storage_access_location"`, no path template was
 recorded and the storage root itself is the candidate location. Treat that as
 executable only when `candidate.location_kind == "object"` and the root is known

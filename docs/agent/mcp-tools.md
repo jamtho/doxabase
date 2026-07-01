@@ -1174,7 +1174,11 @@ relation identifiers are
 the important storage-owned exception: for
 `storage_protocol="rc:DatabaseStorage"`, `path_templates` are reviewed database
 relation identifiers such as `schema.table`, and `storage_root` is the
-connection reference. After direct database-storage repair,
+connection reference. Staged and direct new-storage templates also expose
+optional S3/object-store route fields: `bucket_name`, `key_prefix`, `region`,
+`endpoint_profile`, `path_style_access`, and `credential_reference`. Fill those
+only with reviewed non-secret metadata; do not infer credentials or bucket
+prefixes from path strings alone. After direct database-storage repair,
 rerun `describe_query_context`; if the same relation-like value remains on the
 dataset or partition, follow the `database_relation_template_source_mismatch`
 repair group. The direct `record_map_storage_access` template carries

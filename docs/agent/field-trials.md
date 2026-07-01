@@ -4389,6 +4389,12 @@ few useful gaps:
   `draft_profile_map_updates` inspection hop to the top-level route when
   `profile_review` is the selected frontier task, while keeping the task-level
   stage action available for after draft review.
+- An Enron case-study handoff found object-store routes were usable but agents
+  still had to infer too much from S3-shaped roots, buckets, and prefixes.
+  Missing-storage staged/direct repair templates now expose optional non-secret
+  S3 route fields, and query planning warns when an `s3://...` storage root
+  conflicts with separately recorded `bucket_name` or `key_prefix` facts even
+  before a complete path template is executable.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

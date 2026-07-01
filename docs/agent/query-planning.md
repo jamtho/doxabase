@@ -737,6 +737,10 @@ facts; it does not store secrets or prove the object exists.
 Complete S3 templates are checked against recorded S3 `storage_root` as well as
 bucket/prefix fields; a template that escapes the reviewed root remains
 orientation-only even when endpoint and credential references are present.
+S3 `storage_root` values are also compared with separately recorded
+`bucket_name`/`key_prefix` facts, so a root such as `s3://lake/raw` beside a
+different reviewed bucket or prefix surfaces
+`storage_protocol_location_mismatch` before a candidate template is executable.
 When `storage_protocol_location_mismatch` appears, read
 `details.repair_hint` before hand-authoring a repair. It offers reviewed
 `stage_map_assertion_change` templates for fixing protocol/root metadata, S3

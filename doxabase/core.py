@@ -22280,6 +22280,12 @@ class DoxaBase:
             "evidence_iri": evidence_iri,
             "storage_protocol": "REVIEWED_STORAGE_PROTOCOL",
             "storage_root": "REVIEWED_STORAGE_ROOT_OR_URI",
+            "endpoint_profile": "<optional reviewed endpoint profile>",
+            "bucket_name": "<optional reviewed S3 bucket name>",
+            "key_prefix": "<optional reviewed S3 key prefix>",
+            "region": "<optional reviewed S3 region>",
+            "path_style_access": "<optional reviewed boolean>",
+            "credential_reference": "<optional non-secret credential reference>",
             "location_kind": "REVIEWED_LOCATION_KIND",
             "path_templates": ["REVIEWED_PATH_TEMPLATE"],
             "file_format": "REVIEWED_FILE_FORMAT",
@@ -22294,6 +22300,12 @@ class DoxaBase:
         placeholders = [
             "storage_protocol",
             "storage_root",
+            "endpoint_profile",
+            "bucket_name",
+            "key_prefix",
+            "region",
+            "path_style_access",
+            "credential_reference",
             "location_kind",
             "path_templates",
             "file_format",
@@ -28369,6 +28381,26 @@ class DoxaBase:
         if self._is_s3_storage(access.storage_protocol):
             if self._looks_like_absolute_local_path(access.storage_root):
                 reasons.append("storage_root looks like a local filesystem path")
+            root_location = self._s3_template_location(access.storage_root or "")
+            if root_location is not None:
+                root_bucket, root_key = root_location
+                bucket_name = (access.bucket_name or "").strip().strip("/")
+                if bucket_name and root_bucket != bucket_name:
+                    reasons.append(
+                        "S3 storage_root bucket does not match recorded "
+                        f"bucket_name '{bucket_name}'"
+                    )
+                key_prefix = (access.key_prefix or "").strip().strip("/")
+                if (
+                    key_prefix
+                    and root_key
+                    and root_key != key_prefix
+                    and not root_key.startswith(f"{key_prefix}/")
+                ):
+                    reasons.append(
+                        "S3 storage_root key does not start with recorded "
+                        f"key_prefix '{key_prefix}'"
+                    )
         elif self._is_https_storage(access.storage_protocol):
             if scheme in {"s3", "s3a", "s3n", "file"} or (
                 scheme is None
@@ -28755,6 +28787,14 @@ class DoxaBase:
                 candidate_existing_storage_access_route_intent_caution_indexes.append(
                     index
                 )
+        optional_storage_fields = [
+            "endpoint_profile",
+            "bucket_name",
+            "key_prefix",
+            "region",
+            "path_style_access",
+            "credential_reference",
+        ]
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "stage_reviewed_storage_access",
@@ -28779,6 +28819,14 @@ class DoxaBase:
                     "storage_root": (
                         "<reviewed root, URL, bucket URI, or connection>"
                     ),
+                    "endpoint_profile": "<optional reviewed endpoint profile>",
+                    "bucket_name": "<optional reviewed S3 bucket name>",
+                    "key_prefix": "<optional reviewed S3 key prefix>",
+                    "region": "<optional reviewed S3 region>",
+                    "path_style_access": "<optional reviewed boolean>",
+                    "credential_reference": (
+                        "<optional non-secret credential reference>"
+                    ),
                     "rationale": (
                         "<reviewed rationale for adding this storage route>"
                     ),
@@ -28798,6 +28846,7 @@ class DoxaBase:
                     "storage_access_iri",
                     "storage_protocol",
                     "storage_root",
+                    *optional_storage_fields,
                     "rationale",
                     "location_kind",
                     "path_templates",
@@ -28808,6 +28857,7 @@ class DoxaBase:
                     "storage_access_iri",
                     "storage_protocol",
                     "storage_root",
+                    *optional_storage_fields,
                     "rationale",
                     "location_kind",
                     "path_templates",
@@ -28827,6 +28877,12 @@ class DoxaBase:
                     "file_or_object_storage": (
                         "Omit storage-owned path_templates when the dataset or "
                         "partition already owns the reviewed file/object template."
+                    ),
+                    "rc:S3CompatibleStorage": (
+                        "Use optional bucket_name, key_prefix, region, "
+                        "endpoint_profile, path_style_access, and "
+                        "credential_reference only when they are reviewed "
+                        "non-secret route metadata for the object store."
                     ),
                     "rc:DatabaseStorage": (
                         "Use storage-owned path_templates for reviewed database "
@@ -28864,12 +28920,20 @@ class DoxaBase:
                     "storage_root": (
                         "<reviewed root, URL, bucket URI, or connection>"
                     ),
+                    "endpoint_profile": "<optional reviewed endpoint profile>",
+                    "bucket_name": "<optional reviewed S3 bucket name>",
+                    "key_prefix": "<optional reviewed S3 key prefix>",
+                    "region": "<optional reviewed S3 region>",
+                    "path_style_access": "<optional reviewed boolean>",
+                    "credential_reference": (
+                        "<optional non-secret credential reference>"
+                    ),
                     "path_templates": [
                         "<optional storage-owned path or relation template>"
                     ],
                 },
-                "placeholder_fields": ["path_templates"],
-                "reviewed_value_fields": ["path_templates"],
+                "placeholder_fields": [*optional_storage_fields, "path_templates"],
+                "reviewed_value_fields": [*optional_storage_fields, "path_templates"],
                 "condition": (
                     "Include path_templates only when the storage access "
                     "itself owns the path or database relation template. "
@@ -28890,6 +28954,12 @@ class DoxaBase:
                         "Omit storage-owned path_templates when the "
                         "dataset or partition already owns the reviewed "
                         "file/object template."
+                    ),
+                    "rc:S3CompatibleStorage": (
+                        "Use optional bucket_name, key_prefix, region, "
+                        "endpoint_profile, path_style_access, and "
+                        "credential_reference only when they are reviewed "
+                        "non-secret route metadata for the object store."
                     ),
                     "rc:DatabaseStorage": (
                         "Use storage-owned path_templates for reviewed "

@@ -8903,6 +8903,14 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     assert repair_group["pending_action_count"] == 3
     assert repair_group["skippable_action_count"] == 0
     assert repair_group["already_satisfied_action_count"] == 0
+    optional_storage_fields = [
+        "endpoint_profile",
+        "bucket_name",
+        "key_prefix",
+        "region",
+        "path_style_access",
+        "credential_reference",
+    ]
     assert repair_group["pending_required_extra_arguments"] == [
         "storage_access_iri",
         "storage_protocol",
@@ -8930,6 +8938,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -8940,6 +8949,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
             "storage_access_iri",
             "storage_protocol",
             "storage_root",
+            *optional_storage_fields,
             "rationale",
             "location_kind",
             "path_templates",
@@ -8961,8 +8971,8 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
             "storage_protocol",
             "storage_root",
         ],
-        placeholder_fields=["path_templates"],
-        reviewed_value_fields=["path_templates"],
+        placeholder_fields=[*optional_storage_fields, "path_templates"],
+        reviewed_value_fields=[*optional_storage_fields, "path_templates"],
     )
     assert "non-secret storage protocol" in storage_option["reason"]
     assert "Database relation identifiers" in storage_option["condition"]

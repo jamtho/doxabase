@@ -570,13 +570,15 @@ that the selected candidate lacks; inspect those cards and pass their
 from sibling metadata as well as protocol/location warnings, for example
 S3-compatible access without endpoint/credential/region cues, non-S3 access
 with bucket/prefix metadata, or a storage root that does not match the declared
-protocol. Complete path templates are checked too: an `s3://...` template under
-HTTP/local access, an S3 template whose bucket/prefix conflicts with recorded
-access metadata, or a relative template that repeats the recorded key prefix
-will demote the candidate to review-only. A root-only storage-access candidate
-is ready only when `location_kind == "object"`; absent, directory, prefix, or
-connection location kinds are review-only until a path template narrows the
-dataset location. For non-database storage, an exact object root remains
+protocol. For S3-compatible access, a recorded `s3://...` storage root is also
+checked against separately recorded `bucket_name` and `key_prefix` facts.
+Complete path templates are checked too: an `s3://...` template under HTTP/local
+access, an S3 template whose bucket/prefix conflicts with recorded access
+metadata, or a relative template that repeats the recorded key prefix will demote
+the candidate to review-only. A root-only storage-access candidate is ready only
+when `location_kind == "object"`; absent, directory, prefix, or connection
+location kinds are review-only until a path template narrows the dataset
+location. For non-database storage, an exact object root remains
 available as a `storage_access_location` candidate even when dataset or
 partition templates are present; candidates that would append those templates to
 the object root are review-only with `storage_object_location_has_path_template`.
