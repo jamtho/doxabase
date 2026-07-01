@@ -484,6 +484,10 @@ as custom profile metric kinds. When an unscoped search page is dominated by
 immutable seed graph hits, the response includes `scope_hint` and scoped retry
 `suggested_next_actions`; follow those before concluding project map,
 observation, pattern, or evidence facts are absent.
+When `matches` is empty, the response can still include top-level
+`suggested_next_actions` for shorter project-graph retries, entity browsing,
+and current staged-payload search. Follow these before treating remembered lore
+or proposed vocabulary as absent.
 The result has `matches`; there is no `count` field. Use
 `len(result.matches)` when scripting against the Python API.
 

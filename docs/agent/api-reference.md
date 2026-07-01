@@ -1917,6 +1917,10 @@ descriptions, path templates, observations, evidence, and exact project
 vocabulary tokens before deciding what to trust or inspect next.
 The result object has `matches`, not `count`; use `len(result.matches)` for the
 returned match count.
+Empty search results may still carry `suggested_next_actions` for shorter
+project-graph searches, `list_entities` browsing, and current staged-payload
+search. Treat those as bounded recovery routes before concluding that lore or a
+proposed term is absent.
 
 ## Validate
 

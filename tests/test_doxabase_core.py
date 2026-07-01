@@ -25830,6 +25830,56 @@ def test_unscoped_seed_heavy_search_suggests_project_graph_retries(
     assert {match.graph for match in scoped.matches} == {"map"}
 
 
+def test_zero_match_search_suggests_bounded_retrieval_fallbacks(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#ForeshoreMaskBundle"
+    db.record_map_dataset(
+        dataset,
+        label="Foreshore confidence mask bundle",
+        description=(
+            "Derived raster masks for harbor-margin QA, produced from "
+            "phase-normalized tide correction."
+        ),
+        is_table=False,
+    )
+
+    query = "derived harbor QA mask shifted inland water-level adjustment"
+    result = db.search(query, limit=5)
+
+    assert result.matches == []
+    assert result.scope_hint is None
+    assert result.suggested_next_calls == [
+        action.call for action in result.suggested_next_actions
+    ]
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "search",
+        "search",
+        "search",
+        "list_entities",
+        "search_staged_patch_payloads",
+    ]
+    assert [action.arguments for action in result.suggested_next_actions[:3]] == [
+        {"query": "derived", "graph": "map", "limit": 5, "offset": 0},
+        {"query": "harbor", "graph": "map", "limit": 5, "offset": 0},
+        {"query": "qa", "graph": "map", "limit": 5, "offset": 0},
+    ]
+    assert result.suggested_next_actions[3].arguments == {
+        "graph": "map",
+        "text": "derived",
+        "limit": 5,
+        "offset": 0,
+    }
+    assert result.suggested_next_actions[4].arguments == {
+        "query": query,
+        "graph": "history",
+        "current_staged_work_only": True,
+        "limit": 5,
+        "offset": 0,
+    }
+
+
 def test_search_falls_back_to_same_dataset_co_mentions(
     tmp_path: Path,
 ) -> None:

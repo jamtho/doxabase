@@ -3633,6 +3633,16 @@ few useful gaps:
   `selection_reason_codes`, `peer_ready_requires_intent_review`, and
   `selection_caution` so unattended agents can distinguish precedence from
   project intent and pass `candidate_index` deliberately.
+- A meaning-first retrieval trial seeded a scratch capsule with lore split
+  across map caveats, observations, evidence, patterns, ontology, shapes, and
+  staged proposals. Cold agents could recover the answer once they found a seed,
+  and `dataset_brief` / `pattern_brief` preserved the support chain well. The
+  weak point was the first no-hit natural-language search: terms such as
+  "inland" and "water-level adjustment" did not bridge to stored wording such
+  as "landward" and "phase-normalized tide correction." Empty `search()`
+  results now return bounded recovery actions for shorter scoped searches, map
+  entity browsing, and current staged-payload search instead of leaving agents
+  at an empty dead end.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -11247,6 +11247,56 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
     )
 
 
+def test_search_tool_serializes_zero_match_retrieval_fallbacks(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#ForeshoreMaskBundle",
+        label="Foreshore confidence mask bundle",
+        description=(
+            "Derived raster masks for harbor-margin QA, produced from "
+            "phase-normalized tide correction."
+        ),
+        is_table=False,
+    )
+
+    result = search_tool(
+        db,
+        query="derived harbor QA mask shifted inland water-level adjustment",
+        limit=5,
+    )
+
+    assert result["count"] == 0
+    assert result["scope_hint"] is None
+    assert result["suggested_next_calls"] == [
+        action["call"] for action in result["suggested_next_actions"]
+    ]
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "search",
+        "search",
+        "search",
+        "list_entities",
+        "search_staged_patch_payloads",
+    ]
+    assert result["suggested_next_actions"][1]["arguments"] == {
+        "query": "harbor",
+        "graph": "map",
+        "limit": 5,
+        "offset": 0,
+    }
+    assert result["suggested_next_actions"][3]["arguments"] == {
+        "graph": "map",
+        "text": "derived",
+        "limit": 5,
+        "offset": 0,
+    }
+    assert result["suggested_next_actions"][4]["mcp_tool_name"] == (
+        "doxabase.search_staged_patch_payloads"
+    )
+
+
 def test_search_staged_patch_payloads_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

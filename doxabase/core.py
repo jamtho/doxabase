@@ -14274,9 +14274,16 @@ class DoxaBase:
             matches=matches,
             limit=limit,
         )
-        suggested_next_actions = (
-            scope_hint.suggested_next_actions if scope_hint is not None else []
-        )
+        if scope_hint is not None:
+            suggested_next_actions = scope_hint.suggested_next_actions
+        elif not matches:
+            suggested_next_actions = self._search_no_match_actions(
+                query=query,
+                graph=graph,
+                limit=limit,
+            )
+        else:
+            suggested_next_actions = []
         return SearchResults(
             query=query,
             graph=graph,
@@ -14642,6 +14649,239 @@ class DoxaBase:
                 "evidence without seed ontology noise."
             ),
             call=self._suggested_call_string("search", arguments),
+        )
+
+    def _search_no_match_actions(
+        self,
+        *,
+        query: str,
+        graph: str | None,
+        limit: int,
+    ) -> list[SuggestedNextAction]:
+        retry_graph = graph or "map"
+        actions: list[SuggestedNextAction] = []
+        seen: set[tuple[str, str]] = set()
+
+        for retry_query in self._search_no_match_retry_queries(query):
+            if retry_query == query.strip().lower() and graph == retry_graph:
+                continue
+            self._append_unique_suggested_action(
+                actions,
+                seen,
+                self._search_no_match_retry_action(
+                    query=retry_query,
+                    graph=retry_graph,
+                    limit=limit,
+                ),
+            )
+
+        browse_text = self._search_no_match_browse_text(query)
+        if browse_text is not None:
+            self._append_unique_suggested_action(
+                actions,
+                seen,
+                self._search_no_match_entity_browse_action(
+                    text=browse_text,
+                    graph=retry_graph,
+                    limit=limit,
+                ),
+            )
+
+        if graph is not None:
+            self._append_unique_suggested_action(
+                actions,
+                seen,
+                self._search_no_match_unscoped_retry_action(
+                    query=query,
+                    limit=limit,
+                ),
+            )
+
+        if graph != "history":
+            self._append_unique_suggested_action(
+                actions,
+                seen,
+                self._search_no_match_staged_payload_action(
+                    query=query,
+                    limit=limit,
+                ),
+            )
+        return actions
+
+    @staticmethod
+    def _append_unique_suggested_action(
+        actions: list[SuggestedNextAction],
+        seen: set[tuple[str, str]],
+        action: SuggestedNextAction,
+    ) -> None:
+        action_key = (
+            action.tool_name,
+            json.dumps(to_jsonable(action.arguments), sort_keys=True),
+        )
+        if action_key in seen:
+            return
+        seen.add(action_key)
+        actions.append(action)
+
+    @staticmethod
+    def _search_no_match_retry_queries(query: str) -> list[str]:
+        stop_tokens = {
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "ask",
+            "asks",
+            "be",
+            "but",
+            "by",
+            "can",
+            "do",
+            "does",
+            "for",
+            "from",
+            "how",
+            "in",
+            "into",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "or",
+            "that",
+            "the",
+            "this",
+            "to",
+            "user",
+            "what",
+            "when",
+            "where",
+            "which",
+            "why",
+            "with",
+            "without",
+        }
+        retry_queries: list[str] = []
+        for token in _search_tokens(query):
+            if token in stop_tokens or len(token) < 2:
+                continue
+            if token not in retry_queries:
+                retry_queries.append(token)
+            if len(retry_queries) >= 3:
+                break
+        return retry_queries
+
+    @classmethod
+    def _search_no_match_browse_text(cls, query: str) -> str | None:
+        retry_queries = cls._search_no_match_retry_queries(query)
+        return retry_queries[0] if retry_queries else None
+
+    def _search_no_match_retry_action(
+        self,
+        *,
+        query: str,
+        graph: str,
+        limit: int,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "query": query,
+            "graph": graph,
+            "limit": limit,
+            "offset": 0,
+        }
+        return SuggestedNextAction(
+            action_label=f"Search {graph} for {query!r}",
+            tool_name="search",
+            mcp_tool_name="doxabase.search",
+            arguments=arguments,
+            reason=(
+                "No lexical matches were found for the full query. Retrying a "
+                "shorter distinctive term in a project graph can find resources "
+                "whose stored wording uses different synonyms."
+            ),
+            call=self._suggested_call_string("search", arguments),
+        )
+
+    def _search_no_match_entity_browse_action(
+        self,
+        *,
+        text: str,
+        graph: str,
+        limit: int,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "graph": graph,
+            "text": text,
+            "limit": limit,
+            "offset": 0,
+        }
+        return SuggestedNextAction(
+            action_label=f"Browse {graph} entities for {text!r}",
+            tool_name="list_entities",
+            mcp_tool_name="doxabase.list_entities",
+            arguments=arguments,
+            reason=(
+                "No search match was found; browsing resource labels, IRIs, and "
+                "literal-bearing subjects by one distinctive term can identify a "
+                "seed for describe_dataset, describe_resource, or a context slice."
+            ),
+            call=self._suggested_call_string("list_entities", arguments),
+        )
+
+    def _search_no_match_unscoped_retry_action(
+        self,
+        *,
+        query: str,
+        limit: int,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "query": query,
+            "graph": None,
+            "limit": limit,
+            "offset": 0,
+        }
+        return SuggestedNextAction(
+            action_label="Retry search across all graphs",
+            tool_name="search",
+            mcp_tool_name="doxabase.search",
+            arguments=arguments,
+            reason=(
+                "The scoped search had no matches. An unscoped retry can reveal "
+                "observations, patterns, evidence, ontology, or history matches "
+                "outside the requested graph."
+            ),
+            call=self._suggested_call_string("search", arguments),
+        )
+
+    def _search_no_match_staged_payload_action(
+        self,
+        *,
+        query: str,
+        limit: int,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "query": query,
+            "graph": "history",
+            "current_staged_work_only": True,
+            "limit": limit,
+            "offset": 0,
+        }
+        return SuggestedNextAction(
+            action_label="Search current staged patch payloads",
+            tool_name="search_staged_patch_payloads",
+            mcp_tool_name="doxabase.search_staged_patch_payloads",
+            arguments=arguments,
+            reason=(
+                "The term may exist only inside a current staged proposal. "
+                "Search patch payloads before treating proposed ontology, shape, "
+                "or map resources as absent."
+            ),
+            call=self._suggested_call_string(
+                "search_staged_patch_payloads",
+                arguments,
+            ),
         )
 
     def _co_mentioned_search_rows(

@@ -562,6 +562,10 @@ seed/project match counts, seed graph names, `suggested_graphs`, and scoped
 `suggested_next_calls` to retry `graph="map"`, `graph="observations"`,
 `graph="patterns"`, or `graph="evidence"` before concluding project facts are
 absent. Scoped searches do not carry this hint.
+When `matches` is empty, `suggested_next_actions` can still be populated even
+when `scope_hint is None`. These actions are bounded recovery routes: shorter
+project-graph searches, `list_entities` browsing by a distinctive term, and
+`search_staged_patch_payloads` for proposed-only vocabulary or map facts.
 
 ## Assertion Support
 

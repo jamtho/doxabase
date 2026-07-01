@@ -62,6 +62,10 @@ shape, while a shorter query such as "inspection events permit_number" can find
 it. If you know the resource type, pair search with `list_entities` and then
 inspect candidates through `describe_resource`, `describe_pattern`, or
 `describe_context_slice`.
+When a search returns no matches, read `suggested_next_actions` before
+inventing a fallback. The actions propose bounded shorter-term project searches,
+map entity browsing, and current staged-payload search so you can find a seed or
+check proposed-only vocabulary without dumping whole graphs.
 
 ## Observation And Systematisation
 
@@ -98,6 +102,8 @@ by seed graphs, the result carries `scope_hint.status =
 "seed_heavy_unscoped_results"` plus scoped retry actions. Follow those actions,
 usually starting with `graph="map"`, before deciding project facts are absent.
 Scoped searches such as `graph="map"` omit the hint.
+Zero-match searches can still include top-level `suggested_next_actions`.
+These actions are recovery routes, not evidence that the requested fact exists.
 
 ## Examples
 
