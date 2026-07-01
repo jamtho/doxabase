@@ -2658,7 +2658,11 @@ When semantic moves are present, Markdown also includes a `Semantic Move
 Closure` summary and the open-lane table repeats closed and remaining moves.
 Markdown also includes a `Semantic Apply Gate` table whenever profile candidates
 are exported; scripts should use the JSON fields above, but the table gives
-Markdown-only reviewers the same role/cardinality warning.
+Markdown-only reviewers the same role/cardinality warning. Its `Profile gate`
+and `Generic queue caution` columns make explicit that later generic staged
+queues are mechanical; a row marked `blocked_by_profile_gate` should not be
+applied from a generic `apply_after_review` queue until the profile gate is
+resolved.
 When open lanes exist, the summary also includes an `Open Profile Review Lanes`
 table before the bridge.
 The bridge includes the grouped bundle row number and candidate summary beside
@@ -3154,11 +3158,12 @@ When `decision.peer_ready_requires_intent_review` is true, read
 executing unattended. Automatic selection among peer ready candidates is
 DoxaBase precedence, not project intent.
 When `decision.route_intent_review_candidate_indexes` is non-empty, those ready
-or direct-clean peer cards carry production/current/canonical route-role intent
-that the selected candidate lacks; inspect them and pass their
+or direct-clean peer cards, or review-gated peer cards whose only direct blocker
+is physical-layout ambiguity, carry production/current/canonical route-role
+intent that the selected candidate lacks; inspect them and pass their
 `candidate_selector` when that route is intended. These indexes can be non-empty
-even when `ready_candidate_indexes` is empty because sibling metadata blocks the
-overall context.
+even when `ready_candidate_indexes` is empty because sibling metadata or
+physical-layout ambiguity blocks the overall context.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:

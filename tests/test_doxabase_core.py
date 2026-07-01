@@ -23604,6 +23604,81 @@ def test_query_target_candidates_expose_storage_route_roles(
     assert production_plan.handoff_summary.route_intent_review_candidate_indexes == []
 
 
+def test_review_gated_query_target_decision_flags_unselected_route_intent(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    sample_storage = db.record_map_storage_access(
+        "https://example.test/project#aaa_orders_sample_storage",
+        label="Orders sample relation",
+        route_roles=["rc:SampleRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-dev",
+        path_templates=["scratch.orders_sample"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    production_storage = db.record_map_storage_access(
+        "https://example.test/project#zzz_orders_production_storage",
+        label="Orders production relation",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders_current"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    postgres_layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_postgres_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    sqlite_layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_sqlite_layout",
+        file_format="rc:SQLiteTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[sample_storage.iri, production_storage.iri],
+        physical_layouts=[postgres_layout.iri, sqlite_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    production_candidate = next(
+        candidate
+        for candidate in context.query_target_candidates
+        if candidate.storage_access is not None
+        and candidate.storage_access.iri == production_storage.iri
+    )
+    production_index = context.query_target_candidates.index(production_candidate)
+    assert context.query_target_decision.candidate_index is not None
+    automatic_candidate = context.query_target_candidates[
+        context.query_target_decision.candidate_index
+    ]
+    assert automatic_candidate.storage_access is not None
+    assert automatic_candidate.storage_access.iri == sample_storage.iri
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.route_intent_review_candidate_indexes == [
+        production_index
+    ]
+    assert context.query_target_decision.route_intent_caution is not None
+    assert "production/current/canonical route role intent" in (
+        context.query_target_decision.route_intent_caution
+    )
+    assert context.query_target_decision.selection_caution == (
+        context.query_target_decision.route_intent_caution
+    )
+    assert "route_intent_review_candidates_present" in (
+        context.query_target_decision.selection_reason_codes
+    )
+
+
 def test_database_storage_does_not_treat_dataset_template_as_relation(
     tmp_path: Path,
 ) -> None:
@@ -32124,6 +32199,9 @@ def test_profile_insight_review_bundle_marks_plain_map_update_safe_single(
     )
     assert "### Semantic Apply Gate" in exported
     assert "Bulk application is mechanically allowed" in exported
+    assert "Generic staged review queues below are mechanical" in exported
+    assert "bulk_allowed_after_review" in exported
+    assert "generic queues may be followed after profile review" in exported
 
 
 def test_profile_insight_route_bridge_groups_repeated_lane_labels(

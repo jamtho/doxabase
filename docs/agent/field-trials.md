@@ -58,6 +58,11 @@ The slowest individual test was about 7 seconds, and the slow tail was mostly
 staged-revision, project-brief, and example integration coverage. Treat slow
 serial pytest as expected suite breadth unless a future duration table shows a
 new outlier.
+A July 1 follow-up in the active YOLO container found 616 serial tests passing
+in about 330 seconds, while `uv run pytest -q -n auto --maxprocesses=8` passed
+in about 51 seconds. The container exposed 24 CPUs, no cgroup CPU quota, and no
+memory cap, so future loop slowdowns should first check whether pytest was run
+serially before changing container resources.
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
 testing the developer environment. Sandboxed agents may not have access to the

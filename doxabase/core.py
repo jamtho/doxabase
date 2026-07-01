@@ -25268,6 +25268,20 @@ class DoxaBase:
             indexed_candidates,
             key=self._query_target_candidate_decision_rank,
         )
+        route_intent_review_candidate_indexes = (
+            self._query_target_route_intent_review_candidate_indexes(
+                candidate,
+                candidates,
+                [
+                    item_index
+                    for item_index, item_candidate in indexed_candidates
+                    if item_index != index
+                    and self._query_context_candidate_only_layout_blocked(
+                        item_candidate
+                    )
+                ],
+            )
+        )
         return self._query_target_decision_for_candidate(
             candidate,
             index=index,
@@ -25277,6 +25291,16 @@ class DoxaBase:
                 "review target to inspect before executable query use."
             ),
             selection_mode="automatic",
+            selection_caution=self._query_target_selection_caution(
+                [],
+                selection_mode="automatic",
+                route_intent_review_candidate_indexes=(
+                    route_intent_review_candidate_indexes
+                ),
+            ),
+            route_intent_review_candidate_indexes=(
+                route_intent_review_candidate_indexes
+            ),
         )
 
     def _query_target_decision_for_candidate(
@@ -47033,12 +47057,17 @@ class DoxaBase:
             return ""
         lines = [
             semantic_apply_gate_summary,
+            (
+                "Generic staged review queues below are mechanical. Use this "
+                "profile gate before applying profile-linked rows."
+            ),
             "",
             (
-                "| Row | Candidate | Role | Cardinality | Safe single | "
-                "Bulk candidate | Choice group | Profile basis | Evidence caution |"
+                "| Row | Candidate | Role | Cardinality | Profile gate | "
+                "Generic queue caution | Safe single | Bulk candidate | "
+                "Choice group | Profile basis | Evidence caution |"
             ),
-            "|---|---|---|---|---|---|---|---|---|",
+            "|---|---|---|---|---|---|---|---|---|---|---|",
         ]
         for index, candidate in enumerate(candidates, start=1):
             lines.append(
@@ -47053,6 +47082,16 @@ class DoxaBase:
                             candidate.semantic_apply_role
                         ),
                         self._markdown_table_cell(candidate.apply_cardinality),
+                        self._markdown_table_cell(
+                            self._profile_insight_candidate_profile_gate_label(
+                                candidate
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            self._profile_insight_candidate_generic_queue_caution(
+                                candidate
+                            )
+                        ),
                         "yes" if candidate.safe_single_apply_candidate else "no",
                         "yes" if candidate.bulk_apply_allowed else "no",
                         self._markdown_table_cell(
@@ -47071,6 +47110,35 @@ class DoxaBase:
                 + " |"
             )
         return "\n".join(lines)
+
+    @staticmethod
+    def _profile_insight_candidate_profile_gate_label(
+        candidate: ProfileInsightReviewCandidate,
+    ) -> str:
+        if candidate.bulk_apply_allowed:
+            return "bulk_allowed_after_review"
+        if candidate.safe_single_apply_candidate:
+            return "safe_single_after_review"
+        return "blocked_by_profile_gate"
+
+    @staticmethod
+    def _profile_insight_candidate_generic_queue_caution(
+        candidate: ProfileInsightReviewCandidate,
+    ) -> str:
+        if candidate.bulk_apply_allowed:
+            return (
+                "generic queues may be followed after profile review; "
+                "rerun after mutation"
+            )
+        if candidate.safe_single_apply_candidate:
+            return (
+                "apply at most this row after profile review; "
+                "rerun after mutation"
+            )
+        return (
+            "do not follow generic apply_after_review until profile gate is "
+            "resolved"
+        )
 
     @staticmethod
     def _profile_quality_basis_markdown(

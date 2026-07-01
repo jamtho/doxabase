@@ -890,6 +890,11 @@ candidate rows. Bundle and candidate `profile_quality_summary` /
 `sampled_evidence_caution` fields call out sampled profile evidence that may be
 mechanically ready without full-scan scope. The summary is derived from the same
 gate fields and does not replace semantic review.
+The Markdown `Semantic Apply Gate` table also includes profile-gate labels such
+as `bulk_allowed_after_review`, `safe_single_after_review`, and
+`blocked_by_profile_gate`, plus a generic-queue caution. Treat the later generic
+staged review queues as mechanical status only when this table says the profile
+gate is blocked.
 Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. The bridge's `Row` column uses the same `Revision N`
 row number as the later grouped bundle sections, and `Candidate` repeats the

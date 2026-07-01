@@ -8045,6 +8045,82 @@ def test_describe_query_context_tool_flags_unselected_route_intent(
     )
 
 
+def test_describe_query_context_tool_flags_review_gated_route_intent(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    sample_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#aaa_orders_sample_storage",
+        label="Orders sample relation",
+        route_roles=["rc:SampleRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-dev",
+        path_templates=["scratch.orders_sample"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    production_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#zzz_orders_production_storage",
+        label="Orders production relation",
+        route_roles=["rc:ProductionRoute", "rc:CurrentRoute"],
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders_current"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    postgres_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_postgres_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    sqlite_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_sqlite_layout",
+        file_format="rc:SQLiteTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[sample_storage["iri"], production_storage["iri"]],
+        physical_layouts=[postgres_layout["iri"], sqlite_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    production_candidate = next(
+        candidate
+        for candidate in result["query_target_candidates"]
+        if candidate["storage_access"]["iri"] == production_storage["iri"]
+    )
+    production_index = result["query_target_candidates"].index(production_candidate)
+    selected_candidate = result["query_target_candidates"][
+        result["query_target_decision"]["candidate_index"]
+    ]
+    assert selected_candidate["storage_access"]["iri"] == sample_storage["iri"]
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"][
+        "route_intent_review_candidate_indexes"
+    ] == [production_index]
+    assert "production/current/canonical route role intent" in (
+        result["query_target_decision"]["route_intent_caution"]
+    )
+    assert result["query_target_decision"]["selection_caution"] == (
+        result["query_target_decision"]["route_intent_caution"]
+    )
+    assert "route_intent_review_candidates_present" in (
+        result["query_target_decision"]["selection_reason_codes"]
+    )
+
+
 def test_describe_query_context_tool_lifts_repair_action_groups(
     tmp_path: Path,
 ) -> None:
@@ -11418,6 +11494,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
     assert "expected scalar conflict" in result["review_note"]
 
     exported = export_path.read_text(encoding="utf-8")
+    assert "Generic staged review queues below are mechanical" in exported
+    assert "blocked_by_profile_gate" in exported
+    assert "do not follow generic apply_after_review" in exported
     assert "### Open Profile Review Lanes" in exported
     assert "### Profile Route Bridge" in exported
     open_section = exported.split("### Open Profile Review Lanes", 1)[1].split(

@@ -252,6 +252,11 @@ took about 325 seconds. The slowest individual test was about 7 seconds and the
 slow tail was mostly staged-revision, project-brief, and example integration
 coverage, so this did not point to a single pathological test or container
 resource limit.
+Another July 1 check on the active YOLO container saw 616 tests pass serially in
+about 330 seconds, while `uv run pytest -q -n auto --maxprocesses=8` passed in
+about 51 seconds. Use the capped parallel form when leaving CPU headroom matters;
+raising container CPU or memory limits is unlikely to help unless cgroup files
+show an actual quota.
 
 Before a query-planning fixture trial against the active MCP capsule, check
 `graph_overview.key_counts` for storage access counts. If AIS or Polymarket
