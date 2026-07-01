@@ -3786,6 +3786,17 @@ few useful gaps:
   `rc:ArchiveRoute`, `rc:BackfillRoute`, and `rc:CanonicalRoute`; query target
   candidates inherit those role summaries for reviewed `candidate_selector`
   selection without changing automatic precedence.
+- Route-role, profile-followthrough, and mixed staged-revision trials passed on
+  scratch capsules. Route roles were sufficient for a cold agent to choose the
+  intended production/current/canonical database route, but database relation
+  handoffs should be read as runtime-resolution work rather than missing DuckDB
+  file-scan inference. Mixed staged-revision recovery showed that executors need
+  choose-one context on `mutation_frontier_items`, not only
+  `next_action_queue_items`; frontier revision-target items now copy grouped
+  semantic-risk and alternative-set fields. The profile-followthrough trial
+  completed full-scan/sample/advisory lanes and safe map apply, but left a
+  response-shape affordance gap: direct Python calls and MCP JSON wrappers still
+  differ for a few convenience aliases such as staged revision IRIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1755,6 +1755,8 @@ class StagedRevisionResolvedTargetGroup:
     applied_event_iris: list[str]
     row_is_target_all: bool
     row_is_target_any: bool
+    semantic_risk_level: str | None
+    semantic_risk_reasons: list[str]
     alternative_set_iris: list[str]
     alternative_set_source_iri: str | None
     alternative_set_roles: list[str]
@@ -1772,6 +1774,12 @@ class StagedRevisionMutationFrontierItem:
     row_iris: list[str]
     action: SuggestedNextAction | RevisionNextAction | None
     call: str | None
+    semantic_risk_level: str | None
+    semantic_risk_reasons: list[str]
+    alternative_set_iris: list[str]
+    alternative_set_source_iri: str | None
+    alternative_set_roles: list[str]
+    alternative_gate_statuses: list[str]
     requires_semantic_review_before_mutation: bool
     reason: str
 
@@ -38371,6 +38379,16 @@ class DoxaBase:
             if value is not None:
                 self._append_unique(values, value)
 
+        risk_rank = {None: 0, "none": 1, "attention": 2, "high": 3}
+
+        def higher_risk(
+            current: str | None,
+            candidate: str | None,
+        ) -> str | None:
+            if risk_rank.get(candidate, 0) > risk_rank.get(current, 0):
+                return candidate
+            return current
+
         for lane in lanes:
             item = lane.next_action_queue_item
             queue = item.queue if item is not None else lane.lane
@@ -38422,6 +38440,8 @@ class DoxaBase:
                     "applied_event_iris": [],
                     "row_is_target_all": True,
                     "row_is_target_any": False,
+                    "semantic_risk_level": None,
+                    "semantic_risk_reasons": [],
                     "alternative_set_iris": [],
                     "alternative_set_source_iri": None,
                     "alternative_set_roles": [],
@@ -38458,6 +38478,12 @@ class DoxaBase:
                     group["applied_event_iris"],
                     item.alternative_applied_revision_iri,
                 )
+                group["semantic_risk_level"] = higher_risk(
+                    group["semantic_risk_level"],
+                    item.semantic_risk_level,
+                )
+                for reason in item.semantic_risk_reasons:
+                    add_unique(group["semantic_risk_reasons"], reason)
                 for alternative_iri in item.alternative_set_iris:
                     add_unique(group["alternative_set_iris"], alternative_iri)
                 if group["alternative_set_source_iri"] is None:
@@ -38508,6 +38534,8 @@ class DoxaBase:
                 applied_event_iris=group["applied_event_iris"],
                 row_is_target_all=group["row_is_target_all"],
                 row_is_target_any=group["row_is_target_any"],
+                semantic_risk_level=group["semantic_risk_level"],
+                semantic_risk_reasons=group["semantic_risk_reasons"],
                 alternative_set_iris=group["alternative_set_iris"],
                 alternative_set_source_iri=group["alternative_set_source_iri"],
                 alternative_set_roles=group["alternative_set_roles"],
@@ -38588,6 +38616,12 @@ class DoxaBase:
                     row_iris=list(group.row_iris),
                     action=action,
                     call=action.call if action is not None else None,
+                    semantic_risk_level=group.semantic_risk_level,
+                    semantic_risk_reasons=list(group.semantic_risk_reasons),
+                    alternative_set_iris=list(group.alternative_set_iris),
+                    alternative_set_source_iri=group.alternative_set_source_iri,
+                    alternative_set_roles=list(group.alternative_set_roles),
+                    alternative_gate_statuses=list(group.alternative_gate_statuses),
                     requires_semantic_review_before_mutation=(
                         group.alternative_semantic_review_required
                     ),
@@ -38614,6 +38648,12 @@ class DoxaBase:
                     row_iris=[],
                     action=action,
                     call=action.call,
+                    semantic_risk_level=None,
+                    semantic_risk_reasons=[],
+                    alternative_set_iris=[],
+                    alternative_set_source_iri=None,
+                    alternative_set_roles=[],
+                    alternative_gate_statuses=[],
                     requires_semantic_review_before_mutation=False,
                     reason=(
                         "Repair helper mutation for a staged recovery lane "

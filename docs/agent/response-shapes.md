@@ -6053,6 +6053,12 @@ Serialized items look like this:
         "arguments": {"iri": "https://example.test/project#staged-revision"},
     },
     "call": "apply_staged_revision(iri='https://example.test/project#staged-revision')",
+    "semantic_risk_level": "none",
+    "semantic_risk_reasons": [],
+    "alternative_set_iris": [],
+    "alternative_set_source_iri": None,
+    "alternative_set_roles": [],
+    "alternative_gate_statuses": ["not_applicable"],
     "requires_semantic_review_before_mutation": False,
     "reason": "Resolved staged-revision mutation target...",
 }
@@ -6061,6 +6067,10 @@ Serialized items look like this:
 Do not assume `mutation_frontier_items[]` has top-level `revision_iri` or
 `tool_name` fields; use `target_iri` for an existing target and
 `action.tool_name` / `action.arguments` for the executable call.
+For revision targets, the semantic-risk and alternative-set fields are copied
+from the grouped queue rows. Check them before restaging or applying, especially
+when `alternative_set_iris` is non-empty or
+`requires_semantic_review_before_mutation` is true.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
 apply/restage queues plus mutating repair targets; it intentionally excludes
 informational rows, already-applied inspection targets, diagnostic

@@ -2086,7 +2086,11 @@ Use `mutation_frontier_items` as the complete unattended mutation worklist. It
 combines existing apply/restage/repair targets with same-slot helper actions
 that create a successor and therefore cannot appear in `mutation_frontier_iris`.
 Keep `mutation_frontier_iris` for compatibility or when a script only accepts
-existing revision targets.
+existing revision targets. Revision-target items include grouped
+`semantic_risk_level` / `semantic_risk_reasons`, `alternative_set_iris`,
+`alternative_set_source_iri`, `alternative_set_roles`, and
+`alternative_gate_statuses`, so an executor can see choose-one and
+semantic-review context before restaging or applying.
 `repair_first_revision_iris` and lanes with `lane="repair_or_replace"` should be
 inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one

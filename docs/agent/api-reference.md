@@ -1818,7 +1818,11 @@ For scripts that intend to mutate, use `mutation_frontier_items` as the complete
 worklist. It includes existing apply/restage targets, repair targets only when
 the selected repair action is mutating, and same-slot repair helper actions that
 create a successor; `mutation_frontier_iris` is the compatibility list for
-existing resolved target IRIs only.
+existing resolved target IRIs only. Revision-target items carry grouped
+`semantic_risk_level` / `semantic_risk_reasons`, `alternative_set_iris`,
+`alternative_set_source_iri`, `alternative_set_roles`, and
+`alternative_gate_statuses` so mutation scripts do not need to reconstruct
+choose-one or semantic-review context from separate queue rows.
 Before using that worklist, check `mutation_allowed_after`. If it is
 `handoff_preflight_required_before_mutation`, run the imports in
 `blocking_preflight_actions` / `blocking_preflight_calls` and rerun the plan

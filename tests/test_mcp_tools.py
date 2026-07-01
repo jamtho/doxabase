@@ -2874,6 +2874,12 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
             "row_iris": [staged["revision_iri"]],
             "action": lane["next_action"],
             "call": lane["next_action"]["call"],
+            "semantic_risk_level": "none",
+            "semantic_risk_reasons": [],
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": None,
+            "alternative_set_roles": [],
+            "alternative_gate_statuses": ["not_applicable"],
             "requires_semantic_review_before_mutation": False,
             "reason": (
                 "Resolved staged-revision mutation target. Review the row and "

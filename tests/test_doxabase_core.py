@@ -9684,6 +9684,17 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert semantic_item.alternative_semantic_review_required is True
     frontier_item = final_plan.mutation_frontier_items[0]
     assert frontier_item.target_iri == repair.staged_revision.revision_iri
+    assert frontier_item.semantic_risk_level == semantic_item.semantic_risk_level
+    assert frontier_item.semantic_risk_reasons == semantic_item.semantic_risk_reasons
+    assert frontier_item.alternative_set_iris == semantic_item.alternative_set_iris
+    assert (
+        frontier_item.alternative_set_source_iri
+        == semantic_item.alternative_set_source_iri
+    )
+    assert frontier_item.alternative_set_roles == []
+    assert frontier_item.alternative_gate_statuses == [
+        semantic_item.alternative_gate_status
+    ]
     assert frontier_item.requires_semantic_review_before_mutation is True
 
 
@@ -15377,6 +15388,16 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert [
         item.alternative_set_iris for item in recovery.next_action_queue_items
     ] == [revision_iris, revision_iris]
+    assert [
+        item.alternative_set_iris for item in recovery.mutation_frontier_items
+    ] == [revision_iris, revision_iris]
+    assert [
+        item.alternative_set_source_iri
+        for item in recovery.mutation_frontier_items
+    ] == [revision_iris[0], revision_iris[0]]
+    assert [
+        item.alternative_set_roles for item in recovery.mutation_frontier_items
+    ] == [["source"], ["alternative"]]
     assert [
         lane.next_action_queue_item.alternative_set_role
         for lane in recovery.lanes
