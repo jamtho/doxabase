@@ -3960,6 +3960,12 @@ few useful gaps:
   applied sibling set members and report
   `alternative_gate.status == "alternative_set_member_applied"` with the
   applied source/event before exposing the apply route.
+- A query-planning storage scout found `resource_brief` context slices could
+  show multiple clean owner tables for a shared storage access but return no
+  structured follow-up, even though each owner was query-ready. Metadata-seed
+  slices now include bounded `describe_query_context` actions for clean
+  queryable owners as well as repair/warning owners, so agents choose the table
+  explicitly before drafting a query plan.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1351,7 +1351,10 @@ dataset-owned operational warnings or query-context repair groups are present.
 This includes storage access, physical-layout, partition-scheme, and mapped
 column handoffs whose incoming/reference routes identify an owning table. It
 catches query-only metadata issues such as misplaced database relation templates
-that are not stored in `dataset_contexts[].operational_warnings`.
+that are not stored in `dataset_contexts[].operational_warnings`. For
+storage/layout/partition metadata seeds, clean queryable owner tables are also
+surfaced as bounded `describe_query_context` actions, including the common case
+where a shared storage access owns multiple ready tables.
 
 `doxabase.preflight_context_slice_export`
 

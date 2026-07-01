@@ -13592,14 +13592,14 @@ class DoxaBase:
             self.expand_iri("rc:PartitionScheme"),
             self.expand_iri("rc:CompositePartitionScheme"),
         }
-        metadata_seed_has_single_queryable_owner = (
+        metadata_seed_has_queryable_owner = (
             profile == "resource_brief"
             and any(
                 set(self._types_from_graphs(lookup_graphs, seed_iri))
                 & metadata_seed_type_iris
                 for seed_iri in seed_iris
             )
-            and len(queryable_owner_iris) == 1
+            and bool(queryable_owner_iris)
         )
 
         seen_dataset_iris: set[str] = set()
@@ -13628,7 +13628,7 @@ class DoxaBase:
                 {*operational_issue_codes, *repair_issue_codes}
             )
             owner_route_without_issues = (
-                metadata_seed_has_single_queryable_owner
+                metadata_seed_has_queryable_owner
                 and dataset.iri in queryable_owner_iris
             )
             if not issue_codes and not owner_route_without_issues:
@@ -13651,9 +13651,14 @@ class DoxaBase:
                 )
             if not issue_reason_parts:
                 if owner_route_without_issues:
+                    owner_count_label = (
+                        "a single queryable owner table"
+                        if len(queryable_owner_iris) == 1
+                        else "multiple queryable owner tables"
+                    )
                     issue_reason_parts.append(
-                        "a single queryable owner table reached from storage, "
-                        "layout, or partition metadata"
+                        f"{owner_count_label} reached from storage, layout, "
+                        "or partition metadata"
                     )
                 else:
                     issue_reason_parts.append(

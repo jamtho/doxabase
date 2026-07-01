@@ -26245,6 +26245,69 @@ def test_resource_brief_storage_seed_suggests_clean_owner_query_context(
     assert query_context.suggested_repair_action_groups == []
 
 
+def test_resource_brief_storage_seed_suggests_multiple_clean_owner_query_contexts(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#shared_local_storage",
+        label="Shared local object storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="prefix",
+        storage_root=str(tmp_path / "warehouse"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#warehouse_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    owners = [
+        ("https://example.test/project#Orders", "orders"),
+        ("https://example.test/project#Refunds", "refunds"),
+    ]
+    for dataset, relation in owners:
+        db.record_map_dataset(
+            dataset,
+            label=relation.title(),
+            is_table=True,
+            path_templates=[f"{relation}/part-*.parquet"],
+            storage_accesses=[storage.iri],
+            physical_layouts=[layout.iri],
+            layout_verification_status="rc:VerifiedByQueryLayout",
+        )
+
+    context_slice = db.describe_context_slice(
+        storage.iri,
+        profile="resource_brief",
+    )
+
+    assert {
+        resource.iri
+        for resource in context_slice.resources
+        if any(route.route == "incoming_reference" for route in resource.routes)
+    } >= {dataset for dataset, _ in owners}
+    query_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    ]
+    assert [action.arguments for action in query_actions] == [
+        {"iri": dataset} for dataset, _ in owners
+    ]
+    assert all(
+        "multiple queryable owner tables" in action.reason
+        for action in query_actions
+    )
+    assert [
+        db.describe_query_context(**action.arguments).readiness
+        for action in query_actions
+    ] == [
+        "ready_for_query_planning",
+        "ready_for_query_planning",
+    ]
+
+
 def test_resource_brief_query_context_action_separates_repairs_from_warnings(
     tmp_path: Path,
 ) -> None:
