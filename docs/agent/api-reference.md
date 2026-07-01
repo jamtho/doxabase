@@ -506,6 +506,10 @@ bounded `describe_profile_run` action before query-plan drafting. Its
 query-source paths, structured execution status/engine/query hash from
 `record_query_result()` evidence metadata, old summary-parsing fallback values,
 and short profile summaries.
+`safe_inspection_action_indexes` and `first_safe_inspection_action_index` point
+at read-only inspection actions such as `describe_profile_run`. Prefer that
+first safe inspection hop before using `first_unattended_action_index`, which
+continues to choose among draft-query-plan actions.
 If physical metadata blockers remain, the same context can also include a
 `draft_query_evidence_storage_overlay` skeleton action. Treat the skeleton as a
 review checklist: replace placeholder values named in `placeholder_fields` /

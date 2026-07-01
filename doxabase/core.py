@@ -2782,6 +2782,8 @@ class QueryPlanningContext:
     caveats: list[CaveatDescription]
     upstream_caveats: list[CaveatDescription]
     suggested_next_actions: list[SuggestedNextAction]
+    safe_inspection_action_indexes: list[int]
+    first_safe_inspection_action_index: int | None
     unattended_recommended_action_indexes: list[int]
     first_unattended_action_index: int | None
     suggested_next_calls: list[str]
@@ -19523,6 +19525,11 @@ class DoxaBase:
                 unselected_direct_clean_candidate_indexes
             ),
         )
+        safe_inspection_action_indexes = (
+            self._query_context_safe_inspection_action_indexes(
+                suggested_next_actions
+            )
+        )
         unattended_recommended_action_indexes = (
             self._unattended_recommended_action_indexes(suggested_next_actions)
         )
@@ -19570,6 +19577,12 @@ class DoxaBase:
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
             suggested_next_actions=suggested_next_actions,
+            safe_inspection_action_indexes=safe_inspection_action_indexes,
+            first_safe_inspection_action_index=(
+                safe_inspection_action_indexes[0]
+                if safe_inspection_action_indexes
+                else None
+            ),
             unattended_recommended_action_indexes=(
                 unattended_recommended_action_indexes
             ),
@@ -19660,6 +19673,8 @@ class DoxaBase:
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
             suggested_next_actions=suggested_next_actions,
+            safe_inspection_action_indexes=[0],
+            first_safe_inspection_action_index=0,
             unattended_recommended_action_indexes=[],
             first_unattended_action_index=None,
             suggested_next_calls=[
@@ -19675,6 +19690,20 @@ class DoxaBase:
             index
             for index, action in enumerate(actions)
             if getattr(action, "unattended_recommended", False) is True
+        ]
+
+    @staticmethod
+    def _query_context_safe_inspection_action_indexes(
+        actions: Iterable[SuggestedNextAction],
+    ) -> list[int]:
+        safe_inspection_tools = {
+            "describe_context_slice",
+            "describe_profile_run",
+        }
+        return [
+            index
+            for index, action in enumerate(actions)
+            if action.tool_name in safe_inspection_tools
         ]
 
     def _query_repair_action_groups(

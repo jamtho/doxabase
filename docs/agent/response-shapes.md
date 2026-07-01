@@ -2907,10 +2907,20 @@ query.partition_schemes
 query.caveats
 query.upstream_caveats
 query.suggested_next_actions
+query.safe_inspection_action_indexes
+query.first_safe_inspection_action_index
 query.unattended_recommended_action_indexes
 query.first_unattended_action_index
 query.suggested_next_calls
 ```
+
+Repair templates retain their call-shape fields in both
+`query.suggested_repair_action_groups` and nested issue hints, including
+`repair_hint.actions[].required_extra_arguments`,
+`repair_hint.actions[].placeholder_fields`, and
+`repair_hint.actions[].reviewed_value_fields`,
+`repair_hint.actions[].arguments_template`, and
+`repair_hint.actions[].arguments`.
 
 `query.profile_summary` has the same shape as `dataset.profile_summary`.
 Use it with `row_count_snapshot` when query planning depends on profiler output:
@@ -2927,6 +2937,12 @@ profile history, match the dataset-profile
 profile-derived count, and check
 `profile_summary.profile_run_candidates[].row_count_snapshot_basis` before
 treating the matching count as full-scan evidence.
+Use `safe_inspection_action_indexes` /
+`first_safe_inspection_action_index` for read-only evidence inspection actions,
+such as `describe_profile_run`, before following a draft-plan action. Use
+`unattended_recommended_action_indexes` /
+`first_unattended_action_index` for choosing among draft-query-plan actions
+after that inspection context is understood.
 When `query.profile_summary.evidence_iris` is non-empty but
 `profile_run_candidates` is empty, `suggested_next_actions` includes a bounded
 singleton `describe_profile_run` action. That action has the normal

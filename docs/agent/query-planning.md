@@ -172,6 +172,10 @@ Start with `describe_query_context(dataset_iri)`:
    `first_unattended_action_index` or
    `unattended_recommended_action_indexes[]` over following the first draft
    action blindly.
+   If `safe_inspection_action_indexes[]` is non-empty, follow
+   `first_safe_inspection_action_index` first for read-only evidence inspection
+   such as `describe_profile_run`; then use the unattended draft-plan indexes
+   after the evidence context is understood.
    These indexes are candidate-local direct cleanliness or resolvable layout
    ambiguity, so they can be non-empty even when strict
    `ready_candidate_indexes` is empty because sibling metadata or physical

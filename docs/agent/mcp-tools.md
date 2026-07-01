@@ -945,6 +945,9 @@ When `profile_summary.evidence_iris` is non-empty but there are no
 `source_profile_evidence` with the evidence summary, query-source paths, result
 sources, parsed execution status/engine/query hash when available, and short
 profile summaries.
+Use `safe_inspection_action_indexes` / `first_safe_inspection_action_index` to
+follow read-only evidence inspection, such as `describe_profile_run`, before
+using `first_unattended_action_index` to choose among draft-query-plan actions.
 If that singleton evidence coexists with missing storage, path, layout, format,
 protocol, location, or layout-verification blockers, the context can also add a
 `draft_query_evidence_storage_overlay` skeleton action. Treat its placeholder

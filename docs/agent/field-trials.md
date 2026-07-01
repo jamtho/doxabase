@@ -4094,6 +4094,13 @@ few useful gaps:
   field like `project_brief.first_unattended_action`. Recovery plans now expose
   `first_safe_review_or_mutation_action` / call / source and keep
   `first_mutation_action` empty while handoff preflight blocks mutation.
+- A storage-metadata query-planning trial found evidence-backed
+  `missing_storage_access` contexts could expose useful `describe_profile_run`
+  inspection before draft-query-plan actions, while unattended indexes still
+  pointed at the draft plan. `describe_query_context` now exposes
+  `safe_inspection_action_indexes` and `first_safe_inspection_action_index` so
+  unattended scripts can inspect evidence first without changing draft-plan
+  recommendation semantics.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

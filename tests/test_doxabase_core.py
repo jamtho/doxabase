@@ -21831,6 +21831,10 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         "describe_profile_run",
         "draft_query_evidence_storage_overlay",
     ]
+    assert before_context.safe_inspection_action_indexes == [0]
+    assert before_context.first_safe_inspection_action_index == 0
+    assert before_context.unattended_recommended_action_indexes == []
+    assert before_context.first_unattended_action_index is None
     overlay_action = before_context.suggested_next_actions[1]
     assert overlay_action.arguments["dataset_iri"] == dataset
     assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
@@ -31150,6 +31154,10 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
         "describe_profile_run",
         "draft_query_plan",
     ]
+    assert context.safe_inspection_action_indexes == [0, 1]
+    assert context.first_safe_inspection_action_index == 0
+    assert context.unattended_recommended_action_indexes == [2]
+    assert context.first_unattended_action_index == 2
     assert context.suggested_next_actions[1].action_label == (
         "Inspect additional profile run evidence"
     )

@@ -1432,6 +1432,10 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
         "describe_profile_run",
         "draft_query_plan",
     ]
+    assert context["safe_inspection_action_indexes"] == [0]
+    assert context["first_safe_inspection_action_index"] == 0
+    assert context["unattended_recommended_action_indexes"] == [1]
+    assert context["first_unattended_action_index"] == 1
     profile_action = context["suggested_next_actions"][0]
     assert profile_action["action_label"] == "Inspect singleton profile evidence"
     assert profile_action["arguments"] == {
@@ -1515,6 +1519,10 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         "describe_profile_run",
         "draft_query_evidence_storage_overlay",
     ]
+    assert before_context["safe_inspection_action_indexes"] == [0]
+    assert before_context["first_safe_inspection_action_index"] == 0
+    assert before_context["unattended_recommended_action_indexes"] == []
+    assert before_context["first_unattended_action_index"] is None
     overlay_action = before_context["suggested_next_actions"][1]
     assert overlay_action["arguments"]["dataset_iri"] == dataset
     assert overlay_action["arguments"]["evidence_iri"] == result["evidence_iri"]
