@@ -3460,6 +3460,10 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
         "revision_iris": [staged["revision_iri"]],
         "dry_run": True,
     }
+    assert batch_action["mutation_scope"] == "none"
+    assert batch_action["mutates_project_graph"] is False
+    assert batch_action["writes_history"] is False
+    assert batch_action["writes_files"] is False
     assert any(
         action["tool_name"] == "restage_staged_revision"
         and action["arguments"] == {"iri": staged["revision_iri"]}

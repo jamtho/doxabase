@@ -6353,9 +6353,12 @@ handoff evidence is complete and `would_restage_revision_iris` is non-empty,
 `plan.suggested_next_actions[0]` is a batch
 `restage_staged_revisions` dry-run action with
 `arguments.revision_iris == would_restage_revision_iris` and
-`arguments.dry_run == True`. Keep the row-level restage actions for focused
-single-row review, but prefer the batch dry-run before creating restage
-successors in unattended loops.
+`arguments.dry_run == True`. This suggestion also carries
+`mutation_scope == "none"`, `mutates_project_graph == False`,
+`writes_history == False`, and `writes_files == False`; use those structured
+effect fields rather than inferring safety from the mutating-looking tool name
+alone. Keep the row-level restage actions for focused single-row review, but
+prefer the batch dry-run before creating restage successors in unattended loops.
 
 ### Staged Revision Rebase Draft
 

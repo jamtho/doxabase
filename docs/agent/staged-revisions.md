@@ -328,8 +328,12 @@ plan no longer reports blocking preflight actions. After those preflight
 actions, when `would_restage_revision_iris` is non-empty, top-level
 `suggested_next_actions` includes a batch
 `restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
-worklist. Use it before creating successors; row-level `restage_staged_revision`
-actions remain available for focused single-row review.
+worklist. This dry-run action is effect-annotated with
+`mutation_scope="none"`, `mutates_project_graph=false`, `writes_history=false`,
+and `writes_files=false`, so unattended scripts can distinguish the safe review
+step from the later real restage call without parsing prose. Use it before
+creating successors; row-level `restage_staged_revision` actions remain
+available for focused single-row review.
 `project_brief` surfaces this route as `staged_frontier_review` whenever current
 staged work exists; follow it before adding new profile-map or query-repair
 staged revisions for the same frontier.

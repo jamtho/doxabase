@@ -9192,6 +9192,10 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         "revision_iris": [stale.revision_iri],
         "dry_run": True,
     }
+    assert batch_dry_run_action.mutation_scope == "none"
+    assert batch_dry_run_action.mutates_project_graph is False
+    assert batch_dry_run_action.writes_history is False
+    assert batch_dry_run_action.writes_files is False
     assert any(
         action.tool_name == "restage_staged_revision"
         and action.arguments == {"iri": stale.revision_iri}

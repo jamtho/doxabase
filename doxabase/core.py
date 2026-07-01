@@ -3954,6 +3954,14 @@ class TemplatedSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class EffectAnnotatedSuggestedNextAction(SuggestedNextAction):
+    mutation_scope: str
+    mutates_project_graph: bool
+    writes_history: bool
+    writes_files: bool
+
+
+@dataclass(frozen=True)
 class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
     source_profile_advisory: dict[str, Any]
     review_lane: str | None = None
@@ -40991,7 +40999,7 @@ class DoxaBase:
             "revision_iris": list(revision_iris),
             "dry_run": True,
         }
-        return SuggestedNextAction(
+        return EffectAnnotatedSuggestedNextAction(
             action_label="Dry-run batch restage",
             tool_name="restage_staged_revisions",
             mcp_tool_name="doxabase.restage_staged_revisions",
@@ -41005,6 +41013,10 @@ class DoxaBase:
                 "restage_staged_revisions",
                 arguments,
             ),
+            mutation_scope="none",
+            mutates_project_graph=False,
+            writes_history=False,
+            writes_files=False,
         )
 
     def _batch_restage_not_restageable_reason(

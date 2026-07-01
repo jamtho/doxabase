@@ -4056,6 +4056,13 @@ few useful gaps:
   binding-dependent moves. Profile advisory suggested actions now hoist
   `review_lane`, `route_group_key`, `route_step_key`, `semantic_move`,
   `unattended_choice_role`, and `unattended_recommended` for first-pass routing.
+- A staged recovery trial found the first safe mixed-queue action was a
+  `restage_staged_revisions` dry-run, but the mutating-looking tool name made
+  unattended scripts depend on noticing `arguments.dry_run`. The batch dry-run
+  suggestion now exposes `mutation_scope="none"`,
+  `mutates_project_graph=false`, `writes_history=false`, and
+  `writes_files=false` so agents can route it as read-only review before the
+  real restage mutation.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
