@@ -383,7 +383,7 @@ arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.
 
-`doxabase.list_graph_versions`
+### doxabase.list_graph_versions
 
 Lists stored graph-version snapshots for one graph role, newest first. Use this
 when a workflow needs the timeline of `map`, `ontology`, `patterns`, or another
@@ -399,7 +399,7 @@ hide RDF-only count/digest snapshots, and `include_current=False` when a caller
 only wants historical snapshot rows. This is stored-snapshot timeline browsing,
 not temporal checkout or replay.
 
-`doxabase.describe_graph_version_diff`
+### doxabase.describe_graph_version_diff
 
 Compares one stored graph-version snapshot with either another stored version
 or the current live graph for the same graph role. Call it after
@@ -2546,7 +2546,9 @@ recovery lane and next-action queue counts, mutation-frontier IRIs, preserved
 profile route keys/group counts, the first mutation-frontier action when one is
 available, the first structured follow-up action, and a `recommended_next_step`
 value such as `run_import_handoff_bundle`,
-`continue_imported_recovery_session`, `follow_recovery_plan_mutation_frontier`,
+`continue_imported_recovery_session`,
+`start_receiver_local_recovery_session`,
+`follow_recovery_plan_mutation_frontier`,
 `complete_handoff_preflight_before_recovery_mutation`,
 `review_handoff_privacy_before_recovery`, or `resume_project_frontier`.
 When the manifest records nonzero `sensitive_literal_count`, the import can
@@ -2573,7 +2575,11 @@ the manifest revisions, the result exposes `imported_recovery_session_iris` and
 session over starting a duplicate receiver-local one. When no matching imported
 session exists, the import prepends a
 `doxabase.start_staged_revision_recovery_session` action for the processed
-revision IRIs before the direct recovery-plan actions.
+revision IRIs before the direct recovery-plan actions. In that receiver-local
+session case, `recovery_summary.recommended_next_step` is
+`start_receiver_local_recovery_session`, the first safe action is the session
+starter, and direct first-mutation shortcuts are suppressed until the session is
+created.
 
 `doxabase.export_graph`
 

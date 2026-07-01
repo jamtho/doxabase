@@ -55864,6 +55864,13 @@ class DoxaBase:
             and recovery_plan.mutation_allowed_after
             == "handoff_preflight_required_before_mutation"
         )
+        first_action = suggested_next_actions[0] if suggested_next_actions else None
+        receiver_session_start_required = (
+            not dry_run
+            and not matching_recovery_session_iris
+            and first_action is not None
+            and first_action.tool_name == "start_staged_revision_recovery_session"
+        )
         if privacy_review_required_before_recovery:
             recommended_next_step = "review_handoff_privacy_before_recovery"
         elif recovery_preflight_required:
@@ -55874,6 +55881,8 @@ class DoxaBase:
             recommended_next_step = "run_import_handoff_bundle"
         elif matching_recovery_session_iris:
             recommended_next_step = "continue_imported_recovery_session"
+        elif receiver_session_start_required:
+            recommended_next_step = "start_receiver_local_recovery_session"
         elif recovery_plan is not None and recovery_plan.mutation_frontier_iris:
             recommended_next_step = "follow_recovery_plan_mutation_frontier"
         elif recovery_plan is not None and recovery_plan.processed_revision_iris:
@@ -55900,6 +55909,7 @@ class DoxaBase:
             not privacy_review_required_before_recovery
             and not recovery_preflight_required
             and not imported_session_continuation_required
+            and not receiver_session_start_required
             and first_mutation_frontier_item is not None
         ):
             first_mutation_action = first_mutation_frontier_item.action
@@ -55923,6 +55933,9 @@ class DoxaBase:
                 if first_safe_action is not None
                 else None
             )
+        elif receiver_session_start_required:
+            first_safe_action = first_action
+            first_safe_action_source = "receiver_local_recovery_session"
         elif recovery_preflight_required and recovery_plan is not None:
             if recovery_plan.blocking_preflight_actions:
                 first_safe_action = recovery_plan.blocking_preflight_actions[0]
@@ -55953,7 +55966,6 @@ class DoxaBase:
                     if key not in profile_route_keys:
                         profile_route_keys.append(key)
 
-        first_action = suggested_next_actions[0] if suggested_next_actions else None
         snapshot_evidence_complete = not incomplete_snapshot_revision_iris
         manifest_revision_set = set(revision_iris)
         has_resolved_targets = any(
@@ -55997,6 +56009,11 @@ class DoxaBase:
             note = (
                 "Continue the imported source recovery session before following "
                 f"receiver-local mutation-frontier actions. {note}"
+            )
+        elif receiver_session_start_required:
+            note = (
+                "Start a receiver-local recovery session before following "
+                f"direct mutation-frontier actions. {note}"
             )
         return HandoffBundleRecoverySummary(
             result_kind="handoff_bundle_recovery_summary",
@@ -56045,6 +56062,7 @@ class DoxaBase:
                 if privacy_review_required_before_recovery
                 or recovery_preflight_required
                 or imported_session_continuation_required
+                or receiver_session_start_required
                 else first_mutation_frontier_item
             ),
             first_mutation_action=first_mutation_action,

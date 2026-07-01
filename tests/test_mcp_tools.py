@@ -2443,26 +2443,31 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     assert imported["imported_recovery_session_iris"] == []
     assert imported["matching_recovery_session_iris"] == []
     assert imported["recovery_summary"]["recommended_next_step"] == (
-        "follow_recovery_plan_mutation_frontier"
+        "start_receiver_local_recovery_session"
     )
     assert imported["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
-    assert imported["recovery_summary"]["first_mutation_action"]["tool_name"] == (
-        "apply_staged_revision"
-    )
+    assert imported["recovery_summary"]["first_mutation_action"] is None
+    assert imported["recovery_summary"]["first_mutation_frontier_item"] is None
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool_name"] == "apply_staged_revision"
+    ]["tool_name"] == "start_staged_revision_recovery_session"
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["arguments"] == {"iri": staged["revision_iri"]}
+    ]["arguments"]["revision_iris"] == [staged["revision_iri"]]
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_source"
-    ] == "mutation_frontier"
+    ] == "receiver_local_recovery_session"
     assert imported["recovery_summary"]["first_suggested_next_action"][
         "tool_name"
     ] == "start_staged_revision_recovery_session"
+    assert imported["recovery_summary"]["first_safe_review_or_mutation_call"] == (
+        imported["suggested_next_calls"][0]
+    )
+    assert "Start a receiver-local recovery session" in (
+        imported["recovery_summary"]["note"]
+    )
     assert imported["recovery_plan"]["processed_revision_iris"] == [
         staged["revision_iri"]
     ]

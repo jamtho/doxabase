@@ -5333,6 +5333,12 @@ frontier counts visible but suppresses `first_mutation_action` and points
 `describe_staged_revision_recovery_session`. Continue the source session first,
 then rerun receiver-local recovery planning before applying any exposed
 frontier row.
+When no matching imported source session exists but the import prepends a
+`start_staged_revision_recovery_session` action,
+`recommended_next_step="start_receiver_local_recovery_session"`. The summary
+keeps mutation-frontier counts visible, but
+`first_safe_review_or_mutation_action` points at the session starter and
+`first_mutation_action` stays empty until the receiver-local session exists.
 
 `doxabase.import_trig(path, replace=False)` returns:
 

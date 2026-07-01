@@ -592,6 +592,23 @@ For scratch trials that need a disposable capsule path, use the Python helpers.
 The MCP server tools operate on the configured server capsule; a local
 `DoxaBase.create(...)` gives a trial its own temporary store.
 
+Staged drift recovery smoke test:
+
+- Unrelated count/digest drift: stage a harmless `map` addition, mutate the
+  current `map` with an unrelated dataset, then run
+  `check_staged_revision_apply`, `plan_staged_revision_recovery`,
+  `restage_staged_revision`, a fresh apply check on the successor, and finally
+  `apply_staged_revision` only after review. The stale source should then route
+  to the refreshed successor or applied event.
+- Same-slot semantic drift: record a dataset, stage
+  `rc:rowSemantics rc:SnapshotRow`, mutate the current map to
+  `rc:rowSemantics rc:EventRow`, then follow the
+  `routing_decision="stage_same_slot_replacement"` /
+  `draft_staged_revision_rebase` route. Do not mechanically restage this row;
+  review the draft's `stage_map_assertion_change(..., restages_revision=...)`
+  action, stage the repaired successor, then check and apply it after review.
+  Direct apply results expose `applied_revision_iri`, not `revision_iri`.
+
 ```python
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (

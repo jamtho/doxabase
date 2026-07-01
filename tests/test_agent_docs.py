@@ -62,6 +62,17 @@ def test_project_strategy_names_broad_trial_priorities() -> None:
     assert "Do not add these priorities to `project_brief.queue_counts`" in content
 
 
+def test_staged_revisions_doc_includes_drift_recovery_smoke_test() -> None:
+    doc = get_agent_doc("staged_revisions", max_chars=80_000)
+    content = str(doc["content"])
+
+    assert "Staged drift recovery smoke test" in content
+    assert "Unrelated count/digest drift" in content
+    assert "Same-slot semantic drift" in content
+    assert "draft_staged_revision_rebase" in content
+    assert "applied_revision_iri" in content
+
+
 def test_revision_docs_include_handoff_recovery_cookbook() -> None:
     doc = get_agent_doc(
         "revisions",
@@ -154,6 +165,30 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
         "doxabase.plan_staged_revision_recovery"
     )
     assert "read-only recovery routes" in str(recovery_mcp_doc["content"])
+
+    graph_versions_mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.list_graph_versions",
+        max_chars=2_000,
+    )
+    assert graph_versions_mcp_doc["selected_section"]["heading"] == (
+        "doxabase.list_graph_versions"
+    )
+    assert "stored graph-version snapshots" in str(
+        graph_versions_mcp_doc["content"]
+    )
+
+    graph_version_diff_mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.describe_graph_version_diff",
+        max_chars=2_000,
+    )
+    assert graph_version_diff_mcp_doc["selected_section"]["heading"] == (
+        "doxabase.describe_graph_version_diff"
+    )
+    assert "compare two stored snapshots" in str(
+        graph_version_diff_mcp_doc["content"]
+    )
 
     profile_run_mcp_doc = get_agent_doc(
         "mcp_tools",

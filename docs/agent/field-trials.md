@@ -3997,6 +3997,13 @@ few useful gaps:
   imported recovery sessions now gate the summary's first safe action to
   `describe_staged_revision_recovery_session` and suppress the first mutation
   shortcut, while keeping mutation-frontier counts visible for orientation.
+- A staged handoff/drift scout found the receiver-local import path had a
+  similar first-step mismatch when no source recovery session was imported:
+  top-level actions started `start_staged_revision_recovery_session`, while the
+  compact summary pointed straight at mutation. Handoff recovery summaries now
+  use `recommended_next_step="start_receiver_local_recovery_session"`, make the
+  session starter the first safe action, and suppress direct first-mutation
+  shortcuts until the receiver has a session.
 - A query/profile bridge scout found mixed profile-run and ordinary query
   evidence could hide the `draft_query_evidence_storage_overlay` route because
   query-result evidence was excluded as profile-summary evidence. Query
