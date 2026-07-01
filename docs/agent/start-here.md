@@ -133,6 +133,10 @@ trials, use Python MCP helper functions against
 `DoxaBase.create(path, overwrite=True)`, or start a fresh MCP server with
 `--capsule /tmp/...` before calling mutable tools such as
 `load_example_fixtures`, staging helpers, or apply helpers.
+In direct Python scratch scripts, fixture loading is
+`from doxabase.mcp_tools import load_example_fixtures_tool` followed by
+`load_example_fixtures_tool(db, replace=True)`; alternatively call
+`db.import_trig(...)` on specific fixture files.
 
 If you are scripting directly against the Python API, read `response_shapes`
 before assuming returned field names. Large docs expose section headings through
