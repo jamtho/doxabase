@@ -10098,6 +10098,12 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     )
     assert missing_result["missing_binding_keys"] == [binding_key]
     assert missing_result["missing_binding_action_count"] >= 1
+    assert "missing_binding_prerequisites" in missing_result[
+        "action_resolution_groups"
+    ]
+    assert "missing_binding_prerequisites" not in missing_result[
+        "suggested_next_action_groups"
+    ]
 
     result = plan_profile_followthrough_tool(
         db,
@@ -10114,6 +10120,24 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     assert result["produced_binding_count"] >= 1
     assert result["binding_resolution_count"] == 2
     assert result["resolved_action_count"] == 2
+    assert [
+        resolution["tool_name"]
+        for resolution in result["action_resolution_groups"][
+            "ready_resolved_mutations"
+        ]
+    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    assert [
+        action["tool_name"]
+        for action in result["suggested_next_action_groups"][
+            "ready_resolved_mutations"
+        ]
+    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    assert result["suggested_next_call_groups"]["ready_resolved_mutations"] == [
+        action["call"]
+        for action in result["suggested_next_action_groups"][
+            "ready_resolved_mutations"
+        ]
+    ]
     value_type_resolution = [
         resolution
         for resolution in result["action_resolutions"]

@@ -32213,6 +32213,32 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
     assert {
         resolution.target_argument for resolution in plan.binding_resolutions
     } == {"supporting_patterns"}
+    assert [
+        resolution.tool_name
+        for resolution in plan.action_resolution_groups[
+            "ready_resolved_mutations"
+        ]
+    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    assert [
+        action.tool_name
+        for action in plan.suggested_next_action_groups[
+            "ready_resolved_mutations"
+        ]
+    ] == ["stage_map_assertion_change", "stage_map_assertion_change"]
+    assert "missing_binding_prerequisites" not in (
+        plan.action_resolution_groups
+    )
+    assert "missing_binding_prerequisites" not in (
+        plan.suggested_next_action_groups
+    )
+    assert plan.suggested_next_call_groups[
+        "ready_resolved_mutations"
+    ] == [
+        action.call
+        for action in plan.suggested_next_action_groups[
+            "ready_resolved_mutations"
+        ]
+    ]
     value_type_action_resolution = [
         resolution
         for resolution in plan.action_resolutions
@@ -32327,6 +32353,14 @@ def test_plan_profile_followthrough_rechecks_and_restages_stale_sibling(
     assert dry_plan.revision_checks[0].suggested_next_actions[-1].tool_name == (
         "restage_staged_revision"
     )
+    assert dry_plan.suggested_next_action_groups[
+        "staged_revision_recheck"
+    ][-1].tool_name == "restage_staged_revision"
+    assert dry_plan.suggested_next_call_groups[
+        "staged_revision_recheck"
+    ][-1] == dry_plan.suggested_next_action_groups[
+        "staged_revision_recheck"
+    ][-1].call
 
     restage_plan = db.plan_profile_followthrough(
         dataset,
@@ -32347,6 +32381,9 @@ def test_plan_profile_followthrough_rechecks_and_restages_stale_sibling(
     assert restage_plan.suggested_next_actions[-1].tool_name == (
         "apply_staged_revision"
     )
+    assert restage_plan.suggested_next_action_groups[
+        "staged_revision_recheck"
+    ][-1].tool_name == "apply_staged_revision"
     assert db.validate_graph(scope="all").conforms
 
 

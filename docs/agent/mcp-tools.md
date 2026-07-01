@@ -764,7 +764,13 @@ for example `{binding_key: pattern_iri}` after `record_pattern`. The result
 includes `binding_resolutions`, `action_resolutions`, `produced_bindings`, and
 fresh `suggested_next_actions`. Use top-level `missing_binding_keys` as the
 compact worklist when a first pass needs prior action results before some
-actions can be called. A resolved paired
+actions can be called. Prefer `suggested_next_action_groups` and
+`suggested_next_call_groups` over the flat action list when running unattended:
+the grouped queues separate `ready_resolved_mutations`, `binding_producers`,
+`independent_mutation_reviews`, `inspection`, and `staged_revision_recheck`.
+`action_resolution_groups` also includes non-callable
+`missing_binding_prerequisites`, so scripts can show what is blocked without
+trying to execute it. A resolved paired
 `stage_map_assertion_change` action has the bound `pattern_iri` appended to
 `arguments.supporting_patterns` and annotated under
 `arguments.profile_route_sources[].resolved_result_bindings`, preserving the

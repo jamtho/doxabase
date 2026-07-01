@@ -3461,6 +3461,7 @@ class ProfileFollowthroughPlan:
     binding_resolution_count: int
     binding_resolutions: list[ProfileFollowthroughBindingResolution]
     action_resolutions: list[ProfileFollowthroughActionResolution]
+    action_resolution_groups: dict[str, list[ProfileFollowthroughActionResolution]]
     resolved_action_count: int
     missing_binding_keys: list[str]
     missing_binding_action_count: int
@@ -3472,6 +3473,8 @@ class ProfileFollowthroughPlan:
     restaged_revision_iris: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
+    suggested_next_call_groups: dict[str, list[str]]
     review_note: str
 
 
@@ -16284,6 +16287,17 @@ class DoxaBase:
             for check in revision_checks
             if check.restaged_revision_iri is not None
         ]
+        action_resolution_groups = (
+            self._profile_followthrough_action_resolution_groups(
+                action_resolutions
+            )
+        )
+        suggested_next_action_groups = (
+            self._profile_followthrough_suggested_next_action_groups(
+                action_resolutions,
+                revision_checks=revision_checks,
+            )
+        )
         suggested_next_actions = [
             resolution.action
             for resolution in action_resolutions
@@ -16310,6 +16324,7 @@ class DoxaBase:
             binding_resolution_count=len(binding_resolutions),
             binding_resolutions=binding_resolutions,
             action_resolutions=action_resolutions,
+            action_resolution_groups=action_resolution_groups,
             resolved_action_count=sum(
                 1
                 for resolution in action_resolutions
@@ -16329,6 +16344,11 @@ class DoxaBase:
             restaged_revision_iris=restaged_revision_iris,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=suggested_next_calls,
+            suggested_next_action_groups=suggested_next_action_groups,
+            suggested_next_call_groups={
+                group_name: [action.call for action in actions if action.call]
+                for group_name, actions in suggested_next_action_groups.items()
+            },
             review_note=(
                 "Rerun draft_profile_map_updates through this coordinator after "
                 "recording profile-support patterns or applying related staged "
@@ -16338,6 +16358,67 @@ class DoxaBase:
                 "graph changes."
             ),
         )
+
+    def _profile_followthrough_action_resolution_groups(
+        self,
+        action_resolutions: list[ProfileFollowthroughActionResolution],
+    ) -> dict[str, list[ProfileFollowthroughActionResolution]]:
+        groups: dict[str, list[ProfileFollowthroughActionResolution]] = {}
+        for resolution in action_resolutions:
+            group_name = self._profile_followthrough_resolution_group(resolution)
+            groups.setdefault(group_name, []).append(resolution)
+        return groups
+
+    def _profile_followthrough_suggested_next_action_groups(
+        self,
+        action_resolutions: list[ProfileFollowthroughActionResolution],
+        *,
+        revision_checks: list[ProfileFollowthroughRevisionCheck],
+    ) -> dict[str, list[SuggestedNextAction]]:
+        groups: dict[str, list[SuggestedNextAction]] = {}
+        for resolution in action_resolutions:
+            if resolution.binding_status == "missing_bindings":
+                continue
+            group_name = self._profile_followthrough_resolution_group(resolution)
+            groups.setdefault(group_name, []).append(resolution.action)
+        recheck_actions: list[SuggestedNextAction] = []
+        for check in revision_checks:
+            recheck_actions.extend(check.suggested_next_actions)
+        if recheck_actions:
+            groups["staged_revision_recheck"] = (
+                self._dedupe_suggested_next_actions(recheck_actions)
+            )
+        return groups
+
+    @staticmethod
+    def _profile_followthrough_resolution_group(
+        resolution: ProfileFollowthroughActionResolution,
+    ) -> str:
+        if resolution.binding_status == "missing_bindings":
+            return "missing_binding_prerequisites"
+        action_kind = DoxaBase._profile_followthrough_primary_action_kind(
+            resolution.tool_name
+        )
+        if (
+            resolution.binding_status == "resolved"
+            and action_kind
+            in {
+                "stage_reviewable_change",
+                "direct_graph_write",
+            }
+        ):
+            return "ready_resolved_mutations"
+        if resolution.binding_status == "resolved":
+            return "ready_resolved_actions"
+        if resolution.binding_status == "produces_bindings":
+            return "binding_producers"
+        if action_kind in {"stage_reviewable_change", "direct_graph_write"}:
+            return "independent_mutation_reviews"
+        if action_kind == "inspect_context":
+            return "inspection"
+        if action_kind == "export_artifact":
+            return "export_review_artifacts"
+        return "other_followthrough"
 
     def _profile_followthrough_resolve_action_bindings(
         self,

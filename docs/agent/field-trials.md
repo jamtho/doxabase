@@ -3903,6 +3903,14 @@ few useful gaps:
   targets, promotes blocking snapshot/preflight actions before recovery-session
   setup when `mutation_allowed_after` requires handoff preflight, and leaves
   `first_mutation_action` empty until that preflight/import step is complete.
+- A profile follow-through trial found the map, metric, type-review, sampled
+  caution, and pattern-binding behavior worked, but unattended agents had to
+  hand-filter a flat `plan_profile_followthrough.suggested_next_actions` list
+  containing inspections, binding producers, missing-binding consumers, and
+  ready mutating actions. The plan now exposes grouped resolution and
+  suggested-action queues, so callers can follow `ready_resolved_mutations`,
+  `binding_producers`, `inspection`, or `staged_revision_recheck` without
+  parsing source advisory metadata first.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

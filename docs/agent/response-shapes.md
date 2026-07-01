@@ -1837,6 +1837,7 @@ plan.result_binding_keys
 plan.binding_resolution_count
 plan.binding_resolutions
 plan.action_resolutions
+plan.action_resolution_groups
 plan.resolved_action_count
 plan.missing_binding_keys
 plan.missing_binding_action_count
@@ -1848,6 +1849,8 @@ plan.restage_stale_revisions
 plan.restaged_revision_iris
 plan.suggested_next_actions
 plan.suggested_next_calls
+plan.suggested_next_action_groups
+plan.suggested_next_call_groups
 plan.review_note
 ```
 
@@ -1861,6 +1864,12 @@ Use `missing_binding_keys` as the compact script-facing worklist when the first
 follow-through call says some actions still need a prior result such as a
 `record_pattern().pattern_iri`. The detailed `action_resolutions[]` rows still
 show which route groups and tools consume each key.
+Use `action_resolution_groups` and `suggested_next_action_groups` for unattended
+routing instead of filtering the flat action list by hand. Resolution groups can
+include non-callable `missing_binding_prerequisites`; suggested-action groups
+only include call-ready actions and use buckets such as
+`ready_resolved_mutations`, `binding_producers`, `independent_mutation_reviews`,
+`inspection`, `export_review_artifacts`, and `staged_revision_recheck`.
 When serializing a nested field directly, such as
 `draft.advisory_followthrough_plan` or `plan.action_resolutions`, use
 `to_jsonable(...)` rather than `to_dict(...)`; `to_dict(...)` is for a single
