@@ -242,8 +242,9 @@ shareable handoff bundle.
 Context-slice export records include preflight-style routing fields:
 `decision`, `scanner_clean`, `shareability_review_required`,
 `shareability_review_status`, `would_block_sensitive_export`, and
-`handoff_fit`. Use them for unattended routing instead of inferring shareability
-from `sensitive_literal_count` alone.
+`handoff_fit`. They also include `shareability_hints`,
+`artifact_disposition`, and `git_safe`; use these fields for unattended routing
+instead of inferring shareability from `sensitive_literal_count` alone.
 When `decision="block"`, the preflight does not suggest a direct
 `export_context_slice` write. Follow the read-only suggested actions first:
 inspect the selected slice locally with `describe_context_slice`, narrow to

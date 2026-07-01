@@ -138,7 +138,10 @@ preflight reports `decision="clean_by_scanner_only"` and still sets
 `shareability_review_required=True` plus
 `shareability_review_status="required_not_completed"`; agents must separately
 decide whether paths, endpoints, history payloads, or project facts are
-appropriate to share.
+appropriate to share. Non-credential hygiene signals such as absolute local
+home/private paths appear in `shareability_hints`, and export records expose
+`artifact_disposition` plus `git_safe`; with the current incomplete review
+status, `git_safe` remains false.
 When a broad graph/TriG/handoff preflight blocks and the task has a known target
 resource, follow the suggested
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])` route to
@@ -1575,7 +1578,9 @@ Returned staged Markdown export records also set
 `shareability_review_required=True` and
 `shareability_review_status="required_not_completed"`; scanner-clean review
 Markdown still needs explicit shareability review before it leaves the intended
-project context.
+project context. They also expose preflight-style `decision`, `scanner_clean`,
+`would_block_sensitive_export`, `shareability_hints`, `artifact_disposition`,
+and `git_safe` fields.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

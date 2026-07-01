@@ -1084,6 +1084,9 @@ context.privacy_scan_limit
 context.matches
 context.privacy_warnings
 context.scanner_note
+context.shareability_hints
+context.artifact_disposition
+context.git_safe
 context.seed_profile_observations
 context.dataset_contexts
 context.pattern_contexts
@@ -1115,6 +1118,9 @@ export.scanner_clean
 export.shareability_review_required
 export.shareability_review_status
 export.would_block_sensitive_export
+export.shareability_hints
+export.artifact_disposition
+export.git_safe
 export.handoff_fit
 export.profile
 export.seeds
@@ -2602,6 +2608,14 @@ result.safe_single_apply_candidate_revision_iris
 result.semantic_apply_gate_counts
 result.semantic_apply_gate_blocking_reasons
 result.executor_decision_summary
+result.decision
+result.scanner_clean
+result.would_block_sensitive_export
+result.shareability_review_required
+result.shareability_review_status
+result.shareability_hints
+result.artifact_disposition
+result.git_safe
 ```
 
 `result_kind` is `profile_insight_review_bundle`. `export` is the nested
@@ -5294,6 +5308,9 @@ preflight.scanner_clean
 preflight.shareability_review_required
 preflight.shareability_review_status
 preflight.would_block_sensitive_export
+preflight.shareability_hints
+preflight.artifact_disposition
+preflight.git_safe
 preflight.graphs
 preflight.graph_counts
 preflight.revision_iris
@@ -5373,6 +5390,11 @@ export.bytes_written
 export.sensitive_literal_count
 export.privacy_warnings
 export.warnings
+export.shareability_review_required
+export.shareability_review_status
+export.shareability_hints
+export.artifact_disposition
+export.git_safe
 export.artifact_kind
 export.importable
 export.recommended_import_tool
@@ -5418,6 +5440,11 @@ bundle.quad_count
 bundle.bytes_written
 bundle.sensitive_literal_count
 bundle.privacy_warnings
+bundle.shareability_review_required
+bundle.shareability_review_status
+bundle.shareability_hints
+bundle.artifact_disposition
+bundle.git_safe
 bundle.artifact_kind
 bundle.importable
 bundle.recommended_import_tool
@@ -5453,6 +5480,9 @@ handoff.scanner_clean
 handoff.shareability_review_required
 handoff.shareability_review_status
 handoff.would_block_sensitive_export
+handoff.shareability_hints
+handoff.artifact_disposition
+handoff.git_safe
 handoff.sensitive_literal_count
 handoff.graph_sensitive_literal_count
 handoff.snapshot_sensitive_literal_count
@@ -6813,8 +6843,14 @@ export.revision_summaries
 export.bundle_summary
 export.sensitive_literal_count
 export.privacy_warnings
+export.decision
+export.scanner_clean
+export.would_block_sensitive_export
 export.shareability_review_required
 export.shareability_review_status
+export.shareability_hints
+export.artifact_disposition
+export.git_safe
 export.artifact_kind
 export.importable
 export.recommended_import_tool

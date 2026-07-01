@@ -2037,6 +2037,42 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     assert fake_secret not in json.dumps(result)
 
 
+def test_export_preflight_tool_reports_shareability_hints_for_home_paths(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_home_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/Users/example/private/orders.csv",
+    )
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+    )
+
+    result = export_preflight_tool(db, export_kind="graph", graphs=["map"])
+
+    assert result["decision"] == "clean_by_scanner_only"
+    assert result["scanner_clean"] is True
+    assert result["would_block_sensitive_export"] is False
+    assert result["sensitive_literal_count"] == 0
+    assert result["privacy_warnings"] == []
+    assert result["shareability_hints"] == ["absolute_local_home_path"]
+    assert result["artifact_disposition"] == (
+        "local_only_pending_shareability_review"
+    )
+    assert result["git_safe"] is False
+    assert any(
+        "absolute local home/private path" in warning
+        for warning in result["warnings"]
+    )
+
+
 def test_export_preflight_tool_marks_handoff_path_placeholders(
     tmp_path: Path,
 ) -> None:
@@ -12113,6 +12149,18 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["export"]["shareability_review_status"] == (
         "required_not_completed"
     )
+    assert result["export"]["artifact_disposition"] == (
+        "local_only_pending_shareability_review"
+    )
+    assert result["export"]["git_safe"] is False
+    assert result["decision"] == result["export"]["decision"]
+    assert result["scanner_clean"] == result["export"]["scanner_clean"]
+    assert result["would_block_sensitive_export"] == (
+        result["export"]["would_block_sensitive_export"]
+    )
+    assert result["shareability_hints"] == result["export"]["shareability_hints"]
+    assert result["artifact_disposition"] == result["export"]["artifact_disposition"]
+    assert result["git_safe"] is False
     assert result["candidates"][0]["relation_reasons"]
     assert export_path.exists()
     exported = export_path.read_text(encoding="utf-8")

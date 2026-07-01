@@ -4339,6 +4339,13 @@ few useful gaps:
   `first_mutation_action` empty whenever any mutation-frontier item requires
   semantic review, while preserving the post-review restage/apply actions in
   `mutation_frontier_items[]`.
+- A privacy/export hygiene trial found the remaining scanner-clean false
+  negative class was not credentials but user-specific local paths and similar
+  non-secret shareability risks. Export preflights, context slices, handoff
+  manifests, graph/snapshot exports, staged Markdown, and profile insight
+  review records now expose `shareability_hints`, `artifact_disposition`, and
+  `git_safe` so agents can keep scanner-clean-but-unreviewed artifacts local
+  without inferring from `sensitive_literal_count` alone.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

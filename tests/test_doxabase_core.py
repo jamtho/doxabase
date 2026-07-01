@@ -4268,6 +4268,142 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     assert not blocked_grouped_path.exists()
 
 
+def test_shareability_hints_flag_scanner_clean_local_home_paths(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    local_path = "/Users/example/private/orders.csv"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=local_path,
+    )
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+    )
+
+    preflight = db.export_preflight(export_kind="graph", graphs=["map"])
+
+    assert preflight.decision == "clean_by_scanner_only"
+    assert preflight.scanner_clean is True
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.sensitive_literal_count == 0
+    assert preflight.privacy_warnings == []
+    assert preflight.shareability_hints == ["absolute_local_home_path"]
+    assert preflight.artifact_disposition == (
+        "local_only_pending_shareability_review"
+    )
+    assert preflight.git_safe is False
+    assert any(
+        "absolute local home/private path" in warning
+        for warning in preflight.warnings
+    )
+
+    graph_export = db.export_graph(
+        tmp_path / "orders-map.ttl",
+        graphs=["map"],
+        fail_on_sensitive=True,
+    )
+    assert graph_export.sensitive_literal_count == 0
+    assert graph_export.shareability_hints == ["absolute_local_home_path"]
+    assert graph_export.artifact_disposition == (
+        "local_only_pending_shareability_review"
+    )
+    assert graph_export.git_safe is False
+
+    context = db.describe_context_slice(dataset, profile="resource_brief")
+    assert context.sensitive_literal_count == 0
+    assert context.shareability_hints == ["absolute_local_home_path"]
+    assert any(
+        "absolute local home/private path" in warning
+        for warning in context.warnings
+    )
+
+    context_preflight = db.preflight_context_slice_export(
+        dataset,
+        profile="resource_brief",
+    )
+    assert context_preflight.scanner_clean is True
+    assert context_preflight.shareability_hints == ["absolute_local_home_path"]
+    assert context_preflight.git_safe is False
+
+    context_export = db.export_context_slice(
+        tmp_path / "orders-context.trig",
+        dataset,
+        profile="resource_brief",
+        fail_on_sensitive=True,
+    )
+    assert context_export.scanner_clean is True
+    assert context_export.shareability_hints == ["absolute_local_home_path"]
+    assert context_export.artifact_disposition == (
+        "local_only_pending_shareability_review"
+    )
+
+    handoff = db.export_handoff_bundle(
+        tmp_path / "project-handoff.trig",
+        tmp_path / "revision-snapshots.json",
+        manifest_path=tmp_path / "handoff-manifest.json",
+        fail_on_sensitive=True,
+    )
+    assert handoff.scanner_clean is True
+    assert handoff.shareability_hints == ["absolute_local_home_path"]
+    assert handoff.git_safe is False
+    assert handoff.trig.shareability_hints == ["absolute_local_home_path"]
+    assert handoff.revision_snapshots.shareability_hints == []
+    assert handoff.manifest["shareability_hints"] == ["absolute_local_home_path"]
+    assert handoff.manifest["artifact_disposition"] == (
+        "local_only_pending_shareability_review"
+    )
+    assert handoff.manifest["git_safe"] is False
+    assert handoff.manifest["artifacts"]["trig"]["shareability_hints"] == [
+        "absolute_local_home_path"
+    ]
+
+    staged = db.stage_graph_revision(
+        summary="Add local path caveat",
+        rationale="Review scanner-clean local path shareability hints.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:hasCaveat [
+                        a rc:KnownCaveat ;
+                        rc:caveatDescription "Reviewed local path {local_path}." ;
+                    ] .
+                """,
+            }
+        ],
+    )
+    single_export = db.export_staged_revision(
+        staged.revision_iri,
+        tmp_path / "single-review.md",
+        fail_on_sensitive=True,
+    )
+    assert single_export.scanner_clean is True
+    assert single_export.would_block_sensitive_export is False
+    assert single_export.sensitive_literal_count == 0
+    assert single_export.shareability_hints == ["absolute_local_home_path"]
+    assert single_export.git_safe is False
+
+    grouped_export = db.export_staged_revisions(
+        [staged.revision_iri],
+        tmp_path / "grouped-review.md",
+        fail_on_sensitive=True,
+    )
+    assert grouped_export.scanner_clean is True
+    assert grouped_export.shareability_hints == ["absolute_local_home_path"]
+    assert grouped_export.artifact_disposition == (
+        "local_only_pending_shareability_review"
+    )
+
 @pytest.mark.parametrize(
     "key_mode",
     [

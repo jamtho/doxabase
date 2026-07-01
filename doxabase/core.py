@@ -104,6 +104,25 @@ SENSITIVE_LITERAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
+SHAREABILITY_HINT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "absolute_local_home_path",
+        re.compile(
+            r"(?i)(^|[\s'\"=:(])(?:~[/\\]|/(?:Users|home)/[^\s'\"<>]+|[A-Z]:\\Users\\[^\s'\"<>]+)"
+        ),
+    ),
+)
+
+SHAREABILITY_HINT_MESSAGES: dict[str, str] = {
+    "absolute_local_home_path": (
+        "Selected export content contains an absolute local home/private path. "
+        "This is not a credential match, but the artifact should stay local "
+        "until a shareability review decides whether that path is appropriate."
+    ),
+}
+
+DEFAULT_ARTIFACT_DISPOSITION = "local_only_pending_shareability_review"
+
 MISSING_STORAGE_GENERIC_TOKENS = {
     "archive",
     "archives",
@@ -718,6 +737,9 @@ class ExportPreflightRecord:
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -735,6 +757,11 @@ class GraphExportRecord:
     importable: bool = True
     recommended_import_tool: str | None = "DoxaBase.import_turtle"
     recovery_complete: bool = False
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -772,6 +799,9 @@ class ContextSliceExportRecord:
     importable: bool = True
     recommended_import_tool: str | None = "doxabase.import_trig"
     recovery_complete: bool = False
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -844,6 +874,11 @@ class RevisionSnapshotBundleExportRecord:
     importable: bool = True
     recommended_import_tool: str | None = "doxabase.import_revision_snapshots"
     recovery_complete: bool = False
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -873,6 +908,9 @@ class HandoffBundleExportRecord:
         "is shareable or free of user-specific paths, endpoint details, or "
         "confidential project facts."
     )
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
     artifact_kind: str = "handoff_bundle"
     importable: bool = True
     recommended_import_tool: str | None = (
@@ -1482,8 +1520,14 @@ class StagedGraphRevisionExportRecord:
     bytes_written: int
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    decision: str = "clean_by_scanner_only"
+    scanner_clean: bool = True
+    would_block_sensitive_export: bool = False
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
     artifact_kind: str = "staged_revision_review_markdown"
     importable: bool = False
     recommended_import_tool: str | None = None
@@ -1662,8 +1706,14 @@ class StagedGraphRevisionsExportRecord:
     bundle_summary: StagedGraphRevisionBundleSummary
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    decision: str = "clean_by_scanner_only"
+    scanner_clean: bool = True
+    would_block_sensitive_export: bool = False
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
     artifact_kind: str = "staged_revisions_review_markdown"
     importable: bool = False
     recommended_import_tool: str | None = None
@@ -1761,6 +1811,14 @@ class ProfileInsightReviewBundleRecord:
     semantic_apply_gate_counts: dict[str, int] = field(default_factory=dict)
     semantic_apply_gate_blocking_reasons: list[str] = field(default_factory=list)
     executor_decision_summary: dict[str, Any] = field(default_factory=dict)
+    decision: str = "clean_by_scanner_only"
+    scanner_clean: bool = True
+    would_block_sensitive_export: bool = False
+    shareability_review_required: bool = True
+    shareability_review_status: str = "required_not_completed"
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -4501,6 +4559,9 @@ class ContextSlice:
     warnings: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    shareability_hints: list[str] = field(default_factory=list)
+    artifact_disposition: str = DEFAULT_ARTIFACT_DISPOSITION
+    git_safe: bool = False
 
 
 @dataclass(frozen=True)
@@ -13824,6 +13885,7 @@ class DoxaBase:
                 limit=privacy_scan_limit,
             )
         )
+        shareability_hints = self._shareability_hints_for_context_triples(triples)
         privacy_warnings = self._sensitive_literal_warnings(
             match_count=sensitive_literal_count,
             omitted_match_count=omitted_match_count,
@@ -13852,6 +13914,7 @@ class DoxaBase:
                 truncated=truncated,
             )
         )
+        warnings.extend(self._shareability_hint_warnings(shareability_hints))
         warnings.extend(privacy_warnings)
         if scanner_note is not None:
             warnings.append(scanner_note)
@@ -13921,6 +13984,7 @@ class DoxaBase:
             matches=matches,
             privacy_warnings=privacy_warnings,
             scanner_note=scanner_note,
+            shareability_hints=shareability_hints,
             seed_profile_observations=list(seed_profile_observations.values()),
             dataset_contexts=list(dataset_contexts.values()),
             pattern_contexts=list(pattern_contexts.values()),
@@ -47032,6 +47096,7 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=True,
             )
         )
+        shareability_hints = self._shareability_hints_for_text(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -47046,6 +47111,14 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            decision=(
+                "block"
+                if sensitive_literal_count
+                else "clean_by_scanner_only"
+            ),
+            scanner_clean=sensitive_literal_count == 0,
+            would_block_sensitive_export=sensitive_literal_count > 0,
+            shareability_hints=shareability_hints,
         )
 
     def export_profile_insight_review_bundle(
@@ -47311,6 +47384,22 @@ class DoxaBase:
                 semantic_apply_gate_blocking_reasons
             ),
             executor_decision_summary=executor_decision_summary,
+            decision=(
+                export.decision if export is not None else "clean_by_scanner_only"
+            ),
+            scanner_clean=export.scanner_clean if export is not None else True,
+            would_block_sensitive_export=(
+                export.would_block_sensitive_export if export is not None else False
+            ),
+            shareability_hints=(
+                export.shareability_hints if export is not None else []
+            ),
+            artifact_disposition=(
+                export.artifact_disposition
+                if export is not None
+                else DEFAULT_ARTIFACT_DISPOSITION
+            ),
+            git_safe=export.git_safe if export is not None else False,
         )
 
     def _profile_insight_applied_source_candidate_iris(
@@ -49352,6 +49441,7 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=True,
             )
         )
+        shareability_hints = self._shareability_hints_for_text(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -49369,6 +49459,14 @@ class DoxaBase:
             bundle_summary=bundle_summary,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            decision=(
+                "block"
+                if sensitive_literal_count
+                else "clean_by_scanner_only"
+            ),
+            scanner_clean=sensitive_literal_count == 0,
+            would_block_sensitive_export=sensitive_literal_count > 0,
+            shareability_hints=shareability_hints,
         )
 
     def _ensure_staged_revision_exportable(self, iri: str) -> None:
@@ -56675,6 +56773,9 @@ class DoxaBase:
         sensitive_literal_count, matches, omitted_match_count = (
             self._context_slice_sensitive_matches(export_triples, limit=limit)
         )
+        shareability_hints = self._shareability_hints_for_context_triples(
+            export_triples
+        )
         privacy_warnings = self._sensitive_literal_warnings(
             match_count=sensitive_literal_count,
             omitted_match_count=omitted_match_count,
@@ -56692,6 +56793,7 @@ class DoxaBase:
         )
         warnings = [
             *privacy_warnings,
+            *self._shareability_hint_warnings(shareability_hints),
             *context.warnings,
             *truncation_warnings,
             scanner_note,
@@ -56794,6 +56896,7 @@ class DoxaBase:
             scanner_note=scanner_note,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
+            shareability_hints=shareability_hints,
         )
 
     def _context_slice_export_history_validation_closure(
@@ -57278,11 +57381,15 @@ class DoxaBase:
         graph_matches: list[ExportPreflightMatch] = []
         graph_sensitive_count = 0
         graph_privacy_warnings: list[str] = []
+        graph_shareability_hints: list[str] = []
         if graph_names:
             graph_scan = self.scan_sensitive_literals(graph_names, limit=limit)
             graph_matches = self._export_preflight_graph_matches(graph_scan.matches)
             graph_sensitive_count, graph_privacy_warnings = (
                 self._export_privacy_warnings(graph_names)
+            )
+            graph_shareability_hints = self._shareability_hints_for_graphs(
+                graph_names
             )
 
         snapshot_match_limit = max(0, limit - len(graph_matches))
@@ -57295,6 +57402,9 @@ class DoxaBase:
         _snapshot_warning_count, snapshot_privacy_warnings = (
             self._revision_snapshot_export_privacy_warnings(snapshot_entries)
         )
+        snapshot_shareability_hints = self._shareability_hints_for_snapshot_entries(
+            snapshot_entries
+        )
 
         matches = [*graph_matches, *snapshot_matches]
         sensitive_literal_count = graph_sensitive_count + snapshot_sensitive_count
@@ -57302,6 +57412,9 @@ class DoxaBase:
             *graph_privacy_warnings,
             *snapshot_privacy_warnings,
         ]
+        shareability_hints = list(
+            dict.fromkeys([*graph_shareability_hints, *snapshot_shareability_hints])
+        )
         scanner_note = (
             "Scanner-clean means no selected export content matched DoxaBase's "
             "credential-like graph-term patterns; it is not proof that an artifact "
@@ -57313,6 +57426,7 @@ class DoxaBase:
             graph_names=graph_names,
         )
         warnings = [*privacy_warnings, *export_scope_warnings, scanner_note]
+        warnings[0:0] = self._shareability_hint_warnings(shareability_hints)
         snapshot_revision_iris = list(
             dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
         )
@@ -57348,6 +57462,7 @@ class DoxaBase:
             scanner_note=scanner_note,
             suggested_next_actions=[],
             suggested_next_calls=[],
+            shareability_hints=shareability_hints,
         )
         actions = self._export_preflight_suggested_actions(record)
         return replace(
@@ -57381,6 +57496,7 @@ class DoxaBase:
         sensitive_literal_count, privacy_warnings = (
             self._revision_snapshot_export_privacy_warnings(entries)
         )
+        shareability_hints = self._shareability_hints_for_snapshot_entries(entries)
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -57403,6 +57519,7 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            shareability_hints=shareability_hints,
         )
 
     @staticmethod
@@ -57474,14 +57591,21 @@ class DoxaBase:
         trig_sensitive_count, trig_privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
+        trig_shareability_hints = self._shareability_hints_for_graphs(graph_names)
         snapshot_sensitive_count, snapshot_privacy_warnings = (
             self._revision_snapshot_export_privacy_warnings(snapshot_entries)
+        )
+        snapshot_shareability_hints = self._shareability_hints_for_snapshot_entries(
+            snapshot_entries
         )
         sensitive_literal_count = trig_sensitive_count + snapshot_sensitive_count
         privacy_warnings = [
             *trig_privacy_warnings,
             *snapshot_privacy_warnings,
         ]
+        shareability_hints = list(
+            dict.fromkeys([*trig_shareability_hints, *snapshot_shareability_hints])
+        )
         decision = (
             "block"
             if sensitive_literal_count
@@ -57497,7 +57621,11 @@ class DoxaBase:
             "is shareable or free of user-specific paths, endpoint details, or "
             "confidential project facts."
         )
-        warnings = [*privacy_warnings, scanner_note]
+        warnings = [
+            *privacy_warnings,
+            *self._shareability_hint_warnings(shareability_hints),
+            scanner_note,
+        ]
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -57531,9 +57659,14 @@ class DoxaBase:
             bytes_written=trig_bytes_written,
             sensitive_literal_count=trig_sensitive_count,
             privacy_warnings=trig_privacy_warnings,
+            warnings=[
+                *trig_privacy_warnings,
+                *self._shareability_hint_warnings(trig_shareability_hints),
+            ],
             artifact_kind="handoff_trig",
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,
+            shareability_hints=trig_shareability_hints,
         )
         snapshot_record = RevisionSnapshotBundleExportRecord(
             path=str(revision_snapshot_path),
@@ -57545,6 +57678,7 @@ class DoxaBase:
             bytes_written=snapshot_bytes_written,
             sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=snapshot_privacy_warnings,
+            shareability_hints=snapshot_shareability_hints,
         )
         recommended_import_tool = (
             "doxabase.import_handoff_bundle"
@@ -57565,6 +57699,7 @@ class DoxaBase:
             privacy_warnings=privacy_warnings,
             warnings=warnings,
             scanner_note=scanner_note,
+            shareability_hints=shareability_hints,
             recommended_import_tool=recommended_import_tool,
         )
         manifest_bytes_written = None
@@ -57604,6 +57739,7 @@ class DoxaBase:
             privacy_warnings=privacy_warnings,
             warnings=warnings,
             scanner_note=scanner_note,
+            shareability_hints=shareability_hints,
             recommended_import_tool=recommended_import_tool,
         )
 
@@ -57623,6 +57759,7 @@ class DoxaBase:
         privacy_warnings: list[str],
         warnings: list[str],
         scanner_note: str,
+        shareability_hints: list[str],
         recommended_import_tool: str,
     ) -> dict[str, Any]:
         return {
@@ -57642,6 +57779,9 @@ class DoxaBase:
                     "bytes_written": trig.bytes_written,
                     "sensitive_literal_count": trig.sensitive_literal_count,
                     "privacy_warnings": trig.privacy_warnings,
+                    "shareability_hints": trig.shareability_hints,
+                    "artifact_disposition": trig.artifact_disposition,
+                    "git_safe": trig.git_safe,
                 },
                 "revision_snapshots": {
                     "path": revision_snapshots.path,
@@ -57661,6 +57801,11 @@ class DoxaBase:
                         revision_snapshots.sensitive_literal_count
                     ),
                     "privacy_warnings": revision_snapshots.privacy_warnings,
+                    "shareability_hints": revision_snapshots.shareability_hints,
+                    "artifact_disposition": (
+                        revision_snapshots.artifact_disposition
+                    ),
+                    "git_safe": revision_snapshots.git_safe,
                 },
             },
             "recommended_import_sequence": [
@@ -57702,6 +57847,9 @@ class DoxaBase:
             "privacy_warnings": privacy_warnings,
             "warnings": warnings,
             "scanner_note": scanner_note,
+            "shareability_hints": shareability_hints,
+            "artifact_disposition": DEFAULT_ARTIFACT_DISPOSITION,
+            "git_safe": False,
         }
 
     def import_handoff_bundle(
@@ -59385,6 +59533,7 @@ class DoxaBase:
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
+        shareability_hints = self._shareability_hints_for_graphs(graph_names)
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -59402,7 +59551,11 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
-            warnings=privacy_warnings,
+            warnings=[
+                *privacy_warnings,
+                *self._shareability_hint_warnings(shareability_hints),
+            ],
+            shareability_hints=shareability_hints,
         )
 
     def export_trig(
@@ -59418,6 +59571,7 @@ class DoxaBase:
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
+        shareability_hints = self._shareability_hints_for_graphs(graph_names)
         export_scope_warnings = self._export_scope_warnings(
             export_kind="trig",
             graph_names=graph_names,
@@ -59439,10 +59593,15 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
-            warnings=[*privacy_warnings, *export_scope_warnings],
+            warnings=[
+                *privacy_warnings,
+                *self._shareability_hint_warnings(shareability_hints),
+                *export_scope_warnings,
+            ],
             artifact_kind=self._trig_export_artifact_kind(graph_names),
             recommended_import_tool="doxabase.import_trig",
             recovery_complete=False,
+            shareability_hints=shareability_hints,
         )
 
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:
@@ -59598,6 +59757,69 @@ class DoxaBase:
                 match_kind,
             )
         return None, None
+
+    @staticmethod
+    def _shareability_hint_codes_for_value(value: str) -> list[str]:
+        return [
+            hint_code
+            for hint_code, pattern in SHAREABILITY_HINT_PATTERNS
+            if pattern.search(value)
+        ]
+
+    def _shareability_hints_for_values(
+        self,
+        values: Iterable[str | None],
+    ) -> list[str]:
+        hints: list[str] = []
+        for value in values:
+            if value is None:
+                continue
+            hints.extend(self._shareability_hint_codes_for_value(str(value)))
+        return list(dict.fromkeys(hints))
+
+    def _shareability_hints_for_graphs(self, graph_names: list[str]) -> list[str]:
+        return self._shareability_hints_for_values(
+            str(row["term_value"]) for row in self._sensitive_literal_rows(graph_names)
+        )
+
+    def _shareability_hints_for_snapshot_entries(
+        self,
+        entries: Iterable[Mapping[str, Any]],
+    ) -> list[str]:
+        values: list[str] = []
+        for entry in entries:
+            for quad in entry.get("quads", []):
+                if not isinstance(quad, MappingABC):
+                    continue
+                for key in ("subject", "predicate", "object"):
+                    value = quad.get(key)
+                    if value is not None:
+                        values.append(str(value))
+        return self._shareability_hints_for_values(values)
+
+    def _shareability_hints_for_context_triples(
+        self,
+        triples: Iterable[ResourceTriple],
+    ) -> list[str]:
+        values: list[str] = []
+        for triple in triples:
+            if triple.subject_kind == "uri":
+                values.append(triple.subject)
+            values.append(triple.predicate)
+            if triple.object_kind in {"literal", "uri"}:
+                values.append(triple.object)
+        return self._shareability_hints_for_values(values)
+
+    def _shareability_hints_for_text(self, text: str) -> list[str]:
+        return self._shareability_hints_for_values([text])
+
+    @staticmethod
+    def _shareability_hint_warnings(hints: Iterable[str]) -> list[str]:
+        return [
+            SHAREABILITY_HINT_MESSAGES[hint]
+            for hint in dict.fromkeys(hints)
+            if hint in SHAREABILITY_HINT_MESSAGES
+        ]
 
     def _redact_sensitive_context_value(self, value: str) -> str:
         match_kind, redacted_snippet = self._sensitive_literal_match(value)

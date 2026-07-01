@@ -86,8 +86,11 @@ write. When no credential-like terms match, the decision is
 `clean_by_scanner_only`; this still sets `shareability_review_required=true`
 and `shareability_review_status="required_not_completed"` because scanner-clean
 is not proof that paths, endpoints, project facts, or history payloads are
-appropriate to share. Follow the suggested export action with
-`fail_on_sensitive=true` after that separate review.
+appropriate to share. It also reports `shareability_hints` for non-credential
+risks such as absolute local home/private paths, plus
+`artifact_disposition` and `git_safe`; while review status is incomplete,
+`git_safe=false` means keep the artifact local. Follow the suggested export
+action with `fail_on_sensitive=true` after that separate review.
 When a broader graph or handoff preflight blocks but the intended handoff only
 needs clean context around known resources, the blocked response suggests
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])`. Use that
@@ -893,7 +896,10 @@ Markdown file is written; use `warnings` and `open_profile_review_lanes` as the
 handoff signal. The nested `export` includes
 `shareability_review_required` and `shareability_review_status`; treat
 scanner-clean profile Markdown as requiring explicit shareability review. It
-also includes
+also includes `decision`, `scanner_clean`, `would_block_sensitive_export`,
+`shareability_hints`, `artifact_disposition`, and `git_safe`; the profile
+bundle lifts those fields to the top-level response when a Markdown export is
+written. It also includes
 `open_profile_review_lanes`: live draft route groups that still lack a
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a
@@ -1442,11 +1448,12 @@ selection, omits immutable seed graphs by default, scans only the selected
 export triples for credential-like graph terms, and returns the same
 `decision`, `scanner_clean`, `shareability_review_required`,
 `shareability_review_status`, `would_block_sensitive_export`,
-`sensitive_literal_count`, `privacy_warnings`, `warnings`, and suggested-action
-style used by broader export preflights. `scanner_clean=true` is still not a
-shareability proof; local paths, endpoints, and confidential project facts need
-human review. `handoff_fit` is `resource_scoped_review_context` for ordinary
-slice exports and `resource_scoped_review_context_not_recovery_complete` when
+`sensitive_literal_count`, `privacy_warnings`, `shareability_hints`,
+`artifact_disposition`, `git_safe`, `warnings`, and suggested-action style used
+by broader export preflights. `scanner_clean=true` is still not a shareability
+proof; local paths, endpoints, and confidential project facts need human review.
+`handoff_fit` is `resource_scoped_review_context` for ordinary slice exports and
+`resource_scoped_review_context_not_recovery_complete` when
 history graph triples are included. If the selected slice includes `history`, the
 preflight warning and suggested actions also point to
 `export_handoff_bundle`; context slices can import revision review context but
@@ -2487,7 +2494,9 @@ secret-looking literals. The returned record also sets
 `shareability_review_required=true` and
 `shareability_review_status="required_not_completed"` even when
 `sensitive_literal_count=0`; scanner-clean review Markdown still needs explicit
-shareability review.
+shareability review. Markdown export records also carry `decision`,
+`scanner_clean`, `would_block_sensitive_export`, `shareability_hints`,
+`artifact_disposition`, and `git_safe`.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs and include
 `fail_on_sensitive=true` by default; callers may override the path. This is for
@@ -2770,8 +2779,8 @@ it should preserve mutable graphs and return an empty staged-recovery plan. The
 result contains nested `trig` and `revision_snapshots` export records, the
 manifest payload, optional manifest write metadata, plus combined
 `sensitive_literal_count`, graph/snapshot sensitive counts, `decision`,
-`scanner_clean`,
-`shareability_review_status`, `privacy_warnings`, and `warnings`.
+`scanner_clean`, `shareability_review_status`, `privacy_warnings`,
+`shareability_hints`, `artifact_disposition`, `git_safe`, and `warnings`.
 `scanner_clean=true` still means scanner-clean only; receivers should treat
 `shareability_review_status="required_not_completed"` as a live sharing gate.
 Read `recovery_complete` at the paired handoff level for the bundle as a whole;
