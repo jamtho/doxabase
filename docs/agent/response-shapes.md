@@ -1463,6 +1463,12 @@ supported by the dataset profile observation only. Use
 dataset profile plus every bundled column profile. If the synthesis also needs
 claims or hand-picked observations, call `describe_profile_run(...)` and pass
 `profile_observation_iris` plus the extra support to `record_pattern` manually.
+When `pattern_map_implications` is omitted, helper-created patterns include the
+profiled dataset or column plus project-specific profile metric kind IRIs; column
+profile patterns also include observed project-specific value-type IRIs, and
+bundle patterns include column value types only with
+`pattern_support_scope="all_profiles"`. Built-in `rc:` terms stay
+evidence-only.
 
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 

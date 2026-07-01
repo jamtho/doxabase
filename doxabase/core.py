@@ -33618,6 +33618,7 @@ class DoxaBase:
                 primary_resource_iri=column_value,
                 pattern_map_implications=pattern_map_implications,
                 profile_metric_sets=(("profile_metrics", profile_metric_items),),
+                profile_value_type_fields=(("value_type", value_type),),
                 pattern_confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
@@ -33839,6 +33840,7 @@ class DoxaBase:
             metric_sets: list[tuple[str, Iterable[Mapping[str, Any]] | None]] = [
                 ("profile_metrics", profile_metric_items)
             ]
+            value_type_fields: list[tuple[str, str | None]] = []
             if pattern_support_scope_value == "all_profiles":
                 metric_sets.extend(
                     (
@@ -33847,10 +33849,18 @@ class DoxaBase:
                     )
                     for index, column_kwargs in enumerate(prepared_column_profiles)
                 )
+                value_type_fields.extend(
+                    (
+                        f"column_profiles[{index}].value_type",
+                        column_kwargs.get("value_type"),
+                    )
+                    for index, column_kwargs in enumerate(prepared_column_profiles)
+                )
             bundle_pattern_implications = self._preflight_profile_pattern(
                 primary_resource_iri=dataset_value,
                 pattern_map_implications=pattern_map_implications,
                 profile_metric_sets=metric_sets,
+                profile_value_type_fields=value_type_fields,
                 pattern_confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
@@ -34302,6 +34312,12 @@ class DoxaBase:
                         column_kwargs.get("profile_metrics"),
                     ),
                 ),
+                profile_value_type_fields=(
+                    (
+                        f"column_profiles[{index}].value_type",
+                        column_kwargs.get("value_type"),
+                    ),
+                ),
                 pattern_confidence=column_kwargs.get("pattern_confidence"),
                 pattern_status=column_kwargs.get("pattern_status"),
                 pattern_stability=column_kwargs.get("pattern_stability"),
@@ -34315,6 +34331,7 @@ class DoxaBase:
         profile_metric_sets: Iterable[
             tuple[str, Iterable[Mapping[str, Any]] | None]
         ],
+        profile_value_type_fields: Iterable[tuple[str, str | None]] = (),
         pattern_confidence: str | None,
         pattern_status: str | None,
         pattern_stability: str | None,
@@ -34322,7 +34339,8 @@ class DoxaBase:
         implication_values = self._profile_pattern_map_implications(
             primary_resource_iri,
             pattern_map_implications,
-            *tuple(profile_metric_sets),
+            profile_metric_sets=profile_metric_sets,
+            profile_value_type_fields=profile_value_type_fields,
         )
         self._validate_resource_values(
             "pattern_map_implications",
@@ -63777,10 +63795,11 @@ class DoxaBase:
         self,
         primary_resource_iri: str,
         pattern_map_implications: Iterable[str] | str | None,
-        *profile_metric_sets: tuple[
-            str,
-            Iterable[Mapping[str, Any]] | None,
+        *,
+        profile_metric_sets: Iterable[
+            tuple[str, Iterable[Mapping[str, Any]] | None]
         ],
+        profile_value_type_fields: Iterable[tuple[str, str | None]] = (),
     ) -> list[str]:
         explicit_implications = self._string_values(
             "pattern_map_implications",
@@ -63802,6 +63821,16 @@ class DoxaBase:
                     continue
                 implications.append(metric_iri)
                 seen.add(metric_iri)
+        for field_name, value_type in profile_value_type_fields:
+            if value_type is None:
+                continue
+            value_type_iri = str(self._resource_ref(field_name, value_type))
+            if value_type_iri.startswith(PREFIXES["rc"]):
+                continue
+            if value_type_iri in seen:
+                continue
+            implications.append(value_type_iri)
+            seen.add(value_type_iri)
         return implications
 
     def _string_values(

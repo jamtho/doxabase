@@ -31,6 +31,13 @@ document, object, endpoint, or model artifact rather than table rows.
 Bundled column-profile rows use `physical_type` and `value_type` for observed
 type findings. The `observed_physical_type` and `observed_value_type` field
 names belong to `record_observation`, not to `record_profile_bundle` rows.
+When profile helpers create a linked pattern and `pattern_map_implications` is
+omitted, the default implications point at the profiled dataset or column plus
+project-specific vocabulary observed in the profile: project profile metric
+kinds, and for column profile patterns, project value types. Bundle-created
+patterns include column profile metric kinds and value types only with
+`pattern_support_scope="all_profiles"`. Built-in `rc:` metric kinds and
+`rc:` value types remain observed evidence only.
 
 ```python
 db.record_profile_bundle(

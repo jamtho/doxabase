@@ -4180,6 +4180,15 @@ few useful gaps:
   `is_current_staged_work`, `not_current_staged_work_reason`, and
   `review_resolution`, so version-first agents can tell closed no-effect rows
   from unresolved stale work.
+- A profile metric/type trial found helper-created profile patterns carried
+  project metric IRIs into `rc:mapImplication`, but omitted observed project
+  value-type IRIs. That made automatic bundle patterns support
+  `define_metric` while leaving `define_value_type` routes without the same
+  promotion pattern unless the caller supplied explicit
+  `pattern_map_implications`. Profile helper defaults now include
+  project-specific observed value types for column profile patterns, and for
+  bundle patterns when `pattern_support_scope="all_profiles"`; built-in `rc:`
+  metric and value-type terms remain evidence-only.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

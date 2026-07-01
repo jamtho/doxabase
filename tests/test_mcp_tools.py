@@ -11600,6 +11600,13 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
                 "datatype": "xsd:decimal",
             }
         ],
+        pattern_summary="Status profile needs metric and value type vocabulary.",
+        pattern_text=(
+            "StatusCompletenessScore measures populated status values, while "
+            "StatusCodeValue names the reviewed status domain."
+        ),
+        pattern_rationale="The same profile evidence supports both review lanes.",
+        pattern_support_scope="all_profiles",
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -11611,21 +11618,13 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
             }
         ],
     )
-    pattern = record_pattern_tool(
-        db,
-        summary="Status profile needs metric and value type vocabulary.",
-        pattern_text=(
-            "StatusCompletenessScore measures populated status values, while "
-            "StatusCodeValue names the reviewed status domain."
-        ),
-        rationale="The same profile evidence supports both review lanes.",
-        pattern_targets=[project_metric, value_type],
-        supporting_observations=(
-            bundle["handoff_entrypoints"]["profile_observation_iris"]
-        ),
-        evidence_iri=shared_evidence,
-        map_implications=[project_metric, value_type],
-    )
+    pattern_iri = bundle["dataset_profile"]["pattern"]["pattern_iri"]
+    pattern = describe_pattern_tool(db, pattern_iri)
+    assert {item["iri"] for item in pattern["map_implications"]} == {
+        table,
+        project_metric,
+        value_type,
+    }
 
     result = draft_profile_map_updates_tool(
         db,
@@ -11635,11 +11634,17 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
 
     metric_advisory = result["metric_advisories"][0]
     type_advisory = result["type_advisories"][0]
+    assert [item["iri"] for item in metric_advisory["promotion_patterns"]] == [
+        pattern_iri
+    ]
+    assert [item["iri"] for item in type_advisory["promotion_patterns"]] == [
+        pattern_iri
+    ]
     assert [item["iri"] for item in metric_advisory["mixed_support_patterns"]] == [
-        pattern["pattern_iri"]
+        pattern_iri
     ]
     assert [item["iri"] for item in type_advisory["mixed_support_patterns"]] == [
-        pattern["pattern_iri"]
+        pattern_iri
     ]
     assert metric_advisory["mixed_support_pattern_count"] == 1
     assert type_advisory["mixed_support_pattern_count"] == 1
@@ -11658,10 +11663,10 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     ][0]
     assert grouped_metric_action["source_profile_advisory"]["mixed_support"][
         "pattern_iris"
-    ] == [pattern["pattern_iri"]]
+    ] == [pattern_iri]
     assert grouped_type_action["source_profile_advisory"]["mixed_support"][
         "pattern_iris"
-    ] == [pattern["pattern_iri"]]
+    ] == [pattern_iri]
     assert grouped_metric_action["arguments"]["profile_route_sources"] == [
         grouped_metric_action["source_profile_advisory"]
     ]
@@ -11672,7 +11677,7 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     assert "Mixed support" in grouped_type_action["arguments"]["review_note"]
     assert result["mixed_support_review_group_count"] == 1
     mixed_group = result["mixed_support_review_groups"][0]
-    assert mixed_group["pattern_iris"] == [pattern["pattern_iri"]]
+    assert mixed_group["pattern_iris"] == [pattern_iri]
     assert mixed_group["review_lanes"] == [
         "metric_vocabulary_review",
         "profile_type_review",

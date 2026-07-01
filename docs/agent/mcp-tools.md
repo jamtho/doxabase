@@ -1611,8 +1611,9 @@ plus the extra support, and pass the shared `evidence_iri` to reuse the
 profile-run evidence. When `pattern_map_implications` is omitted, bundle-created
 patterns default to the dataset plus project-specific top-level profile metric
 kind IRIs; with `pattern_support_scope="all_profiles"`, project-specific column
-metric kind IRIs are included too. Built-in `rc:` metric kinds remain observed
-profile evidence only.
+metric kind IRIs and project-specific column value-type IRIs are included too.
+Built-in `rc:` metric kinds and `rc:` value types remain observed profile
+evidence only.
 
 `doxabase.record_column_profile`
 
@@ -1628,9 +1629,10 @@ without parsing the evidence prose.
 Scalar `profile_metrics` are observed evidence, not constraints, shapes, allowed
 values, or durable map semantics by themselves. When a column helper creates a
 pattern and `pattern_map_implications` is omitted, project-specific metric kind
-IRIs from `profile_metrics` become map implications alongside the column so
-draft vocabulary-promotion routes can find the supporting pattern. Built-in
-`rc:` metric kinds stay evidence-only.
+IRIs from `profile_metrics` and the observed project-specific `value_type` IRI
+become map implications alongside the column so draft vocabulary-promotion
+routes can find the supporting pattern. Built-in `rc:` metric kinds and
+`rc:` value types stay evidence-only.
 `update_map_column` defaults to true; set it to false when counts or observed
 values are only sample evidence. For value-frequency guardrails, record the
 profile, then add a `record_claim_observation` and synthesize both with

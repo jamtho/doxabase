@@ -1074,8 +1074,8 @@ also needs claims or a hand-picked support set, collect
 When `pattern_map_implications` is omitted, bundle-created patterns default to
 the dataset plus project-specific top-level profile metric kind IRIs; with
 `pattern_support_scope="all_profiles"`, project-specific column metric kind
-IRIs are included too. Built-in `rc:` metric kinds remain observed profile
-evidence only.
+IRIs and project-specific column value-type IRIs are included too. Built-in
+`rc:` metric kinds and `rc:` value types remain observed profile evidence only.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
@@ -1087,9 +1087,10 @@ for example, a full-column scan from a top-N value-frequency sample.
 Scalar `profile_metrics` remain observed evidence unless a later claim, pattern,
 or map update interprets them. When a column helper creates a pattern and
 `pattern_map_implications` is omitted, project-specific metric kind IRIs from
-`profile_metrics` become map implications alongside the column so draft
-vocabulary-promotion routes can find the supporting pattern. Built-in `rc:`
-metric kinds stay evidence-only.
+`profile_metrics` and the observed project-specific `value_type` IRI become
+map implications alongside the column so draft vocabulary-promotion routes can
+find the supporting pattern. Built-in `rc:` metric kinds and `rc:` value types
+stay evidence-only.
 `update_map_column` defaults to true, so pass `false` when observed values or
 counts should stay observation-only. For a profile such as "BUY/SELL appeared in
 this sample, but that is not an allowed-value domain", combine

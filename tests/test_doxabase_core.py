@@ -34612,6 +34612,13 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
                 "datatype": "xsd:decimal",
             }
         ],
+        pattern_summary="Status profile needs metric and value type vocabulary.",
+        pattern_text=(
+            "StatusCompletenessScore measures populated status values, while "
+            "StatusCodeValue names the reviewed status domain."
+        ),
+        pattern_rationale="The same profile evidence supports both review lanes.",
+        pattern_support_scope="all_profiles",
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -34623,18 +34630,14 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
             }
         ],
     )
-    pattern = db.record_pattern(
-        summary="Status profile needs metric and value type vocabulary.",
-        pattern_text=(
-            "StatusCompletenessScore measures populated status values, while "
-            "StatusCodeValue names the reviewed status domain."
-        ),
-        rationale="The same profile evidence supports both review lanes.",
-        pattern_targets=[project_metric, status_value_type],
-        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
-        evidence_iri=evidence,
-        map_implications=[project_metric, status_value_type],
-    )
+    assert bundle.dataset_profile.pattern is not None
+    pattern_iri = bundle.dataset_profile.pattern.pattern_iri
+    pattern_description = db.describe_pattern(pattern_iri)
+    assert {item.iri for item in pattern_description.map_implications} == {
+        dataset,
+        project_metric,
+        status_value_type,
+    }
 
     draft = db.draft_profile_map_updates(dataset, evidence)
 
@@ -34642,19 +34645,15 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
     assert draft.type_advisory_count == 1
     metric_advisory = draft.metric_advisories[0]
     type_advisory = draft.type_advisories[0]
-    assert [item.iri for item in metric_advisory.promotion_patterns] == [
-        pattern.pattern_iri
-    ]
-    assert [item.iri for item in type_advisory.promotion_patterns] == [
-        pattern.pattern_iri
-    ]
+    assert [item.iri for item in metric_advisory.promotion_patterns] == [pattern_iri]
+    assert [item.iri for item in type_advisory.promotion_patterns] == [pattern_iri]
     assert metric_advisory.mixed_support_pattern_count == 1
     assert type_advisory.mixed_support_pattern_count == 1
     assert [item.iri for item in metric_advisory.mixed_support_patterns] == [
-        pattern.pattern_iri
+        pattern_iri
     ]
     assert [item.iri for item in type_advisory.mixed_support_patterns] == [
-        pattern.pattern_iri
+        pattern_iri
     ]
     assert metric_advisory.mixed_support_note is not None
     assert "profile type review" in metric_advisory.mixed_support_note
@@ -34708,20 +34707,20 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
     ][0]
 
     assert grouped_metric_action.source_profile_advisory["mixed_support"] == {
-        "pattern_iris": [pattern.pattern_iri],
+        "pattern_iris": [pattern_iri],
         "pattern_count": 1,
         "other_review_lanes": ["profile_type_review"],
         "note": metric_advisory.mixed_support_note,
     }
     assert grouped_type_action.source_profile_advisory["mixed_support"] == {
-        "pattern_iris": [pattern.pattern_iri],
+        "pattern_iris": [pattern_iri],
         "pattern_count": 1,
         "other_review_lanes": ["metric_vocabulary_review"],
         "note": type_advisory.mixed_support_note,
     }
     assert draft.mixed_support_review_group_count == 1
     mixed_group = draft.mixed_support_review_groups[0]
-    assert mixed_group.pattern_iris == [pattern.pattern_iri]
+    assert mixed_group.pattern_iris == [pattern_iri]
     assert mixed_group.pattern_count == 1
     assert mixed_group.review_lanes == [
         "metric_vocabulary_review",
@@ -36826,6 +36825,64 @@ def test_profile_helper_pattern_defaults_include_project_metric_implications(
     assert "stage_pattern_promotion" in [
         action.tool_name for action in advisory.suggested_next_actions
     ]
+
+
+def test_column_profile_helper_pattern_defaults_include_project_value_type_implication(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+
+    profile = db.record_column_profile(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        summary="Status profile observed a project value type.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        physical_type="rc:Varchar",
+        value_type=status_value_type,
+        update_map_column=False,
+        pattern_summary="Status code value needs vocabulary.",
+        pattern_text=(
+            "StatusCodeValue names the reviewed order lifecycle domain and "
+            "needs a project value type definition before map assertion."
+        ),
+        pattern_rationale=(
+            "The helper-created column pattern should point at the profiled "
+            "column and the project value type it interprets."
+        ),
+    )
+
+    assert profile.pattern is not None
+    pattern_iri = profile.pattern.pattern_iri
+    pattern_description = db.describe_pattern(pattern_iri)
+    assert {item.iri for item in pattern_description.map_implications} == {
+        status_column,
+        status_value_type,
+    }
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = draft.type_advisories[0]
+    assert advisory.promotion_pattern_count == 1
+    assert [item.iri for item in advisory.promotion_patterns] == [pattern_iri]
+    assert "stage_pattern_promotion" in [
+        action.tool_name for action in advisory.suggested_next_actions
+    ]
+    assert "define_value_type" in {
+        item.semantic_move for item in draft.advisory_followthrough_plan
+    }
 
 
 def test_profile_bundle_all_profiles_pattern_defaults_include_column_metrics(
