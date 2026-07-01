@@ -10051,6 +10051,73 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == "describe_context_slice"
 
 
+def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/profile-direct#Orders"
+    amount_column = f"{table}Amount"
+    money_value_type = "https://example.test/profile-direct#MoneyAmountValue"
+    shared_evidence = f"{table}ProfileEvidence"
+
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled and amount was mapped directly.",
+        evidence_summary="Synthetic amount profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_profiles=[
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Amount was observed as decimal money.",
+                "physical_type": "rc:Decimal",
+                "value_type": money_value_type,
+                "update_map_column": True,
+            }
+        ],
+    )
+
+    result = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+
+    assert result["recommendation_count"] == 0
+    assert result["type_advisory_count"] == 1
+    assert result["type_advisory_status_counts"] == {
+        "type_finding_current_map_undefined_value_type": 1,
+    }
+    advisory = result["type_advisories"][0]
+    assert advisory["observed_value_type"]["iri"] == money_value_type
+    assert advisory["current_value_type"]["iri"] == money_value_type
+    assert "not defined as rc:ValueType" in advisory["rationale"]
+    assert list(result["suggested_next_action_groups"]) == [
+        "profile_type_review"
+    ]
+    assert [
+        action["tool_name"]
+        for action in result["suggested_next_action_groups"]["profile_type_review"]
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_systematisation",
+    ]
+    grouped_actions = result["suggested_next_action_groups"]["profile_type_review"]
+    assert "semantic_move" not in grouped_actions[0]["source_profile_advisory"]
+    assert (
+        "produces_result_bindings"
+        not in grouped_actions[1]["source_profile_advisory"]
+    )
+    assert [
+        item["semantic_move"] for item in result["advisory_followthrough_plan"]
+    ] == ["caveat_fallback"]
+
+
 def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     tmp_path: Path,
 ) -> None:

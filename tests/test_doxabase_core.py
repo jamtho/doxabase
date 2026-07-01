@@ -32577,6 +32577,86 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    amount_column = "https://example.test/project#OrdersAmount"
+    money_value_type = "https://example.test/project#MoneyAmountValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled and amount was mapped directly.",
+        evidence_summary="Synthetic amount profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_profiles=[
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Amount was observed as decimal money.",
+                "physical_type": "rc:Decimal",
+                "value_type": money_value_type,
+                "update_map_column": True,
+            }
+        ],
+    )
+
+    assert bundle.column_profiles[0].map_column is not None
+    column = db.describe_dataset(dataset).columns[0]
+    assert column.value_type is not None
+    assert column.value_type.iri == money_value_type
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 0
+    assert draft.type_advisory_count == 1
+    assert draft.type_advisory_status_counts == {
+        "type_finding_current_map_undefined_value_type": 1,
+    }
+    advisory = draft.type_advisories[0]
+    assert advisory.observed_value_type is not None
+    assert advisory.observed_value_type.iri == money_value_type
+    assert advisory.current_value_type is not None
+    assert advisory.current_value_type.iri == money_value_type
+    assert advisory.promotion_pattern_count == 0
+    assert "not defined as rc:ValueType" in advisory.rationale
+    assert "not defined in ontology" in advisory.routing_note
+    assert [
+        action.tool_name for action in advisory.suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_systematisation",
+    ]
+    assert "profile_type_review" in draft.suggested_next_action_groups
+    assert [
+        action.tool_name
+        for action in draft.suggested_next_action_groups["profile_type_review"]
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_systematisation",
+    ]
+    grouped_actions = draft.suggested_next_action_groups["profile_type_review"]
+    context_action = grouped_actions[0]
+    pattern_action = grouped_actions[1]
+    assert "semantic_move" not in context_action.source_profile_advisory
+    assert (
+        "produces_result_bindings"
+        not in pattern_action.source_profile_advisory
+    )
+    plan_by_move = {
+        item.semantic_move: item for item in draft.advisory_followthrough_plan
+    }
+    assert set(plan_by_move) == {"caveat_fallback"}
+    assert plan_by_move["caveat_fallback"].review_lane == "profile_type_review"
+
+
 def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
     tmp_path: Path,
 ) -> None:

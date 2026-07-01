@@ -648,6 +648,13 @@ observed project value type has not been defined yet, it is omitted from the
 context-slice seed list so the suggested action remains runnable, but it still
 appears in the `record_pattern` map implications and the focused
 `stage_map_assertion_change` value-type assertion payload.
+If `record_profile_bundle` or `record_column_profile` wrote the same
+project-specific `value_type` directly into the current map, but that IRI is
+not defined as `rc:ValueType` in ontology, the draft still returns a
+`profile_type_review` advisory with
+`type_finding_current_map_undefined_value_type`. That lane is a vocabulary
+review; its followthrough plan should not expose `assert_map_type` unless there
+is a real staged assertion action to run.
 When an undefined or not-yet-typed project value type has a same-evidence
 pattern naming it as a target or map implication, the type advisory also
 suggests `describe_pattern` and a reviewable `stage_pattern_promotion` skeleton
@@ -1529,6 +1536,11 @@ In `handoff_entrypoints`, prefer `updated_map_column_iris` for columns whose map
 facts were written by this bundle call, and `mapped_profiled_column_iris` for
 all bundled column profiles that are mapped after the call. `map_column_iris`
 remains as a legacy alias for `updated_map_column_iris`.
+When a column profile writes a project-specific `value_type` into the map,
+rerun `draft_profile_map_updates` before treating the profile route as closed.
+The direct map assertion can be current while the value-type IRI is still
+undefined ontology vocabulary; that case remains visible as
+`type_finding_current_map_undefined_value_type`.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,

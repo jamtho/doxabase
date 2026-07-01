@@ -17119,6 +17119,10 @@ class DoxaBase:
             return "define_metric"
         if review_lane != "profile_type_review":
             return None
+        current_map_undefined_value_type_only = (
+            DoxaBase._profile_advisory_status_set(source_profile_advisory)
+            == {"type_finding_current_map_undefined_value_type"}
+        )
         if action.tool_name == "stage_pattern_promotion":
             return "define_value_type"
         if action.tool_name == "describe_pattern" and "value type" in action_label:
@@ -17126,10 +17130,21 @@ class DoxaBase:
         if action.tool_name == "stage_map_assertion_change":
             return "assert_map_type"
         if action.tool_name == "describe_context_slice":
+            if current_map_undefined_value_type_only:
+                return None
             return "assert_map_type"
         if action.tool_name == "record_pattern":
             return "caveat_fallback"
         return None
+
+    @staticmethod
+    def _profile_advisory_status_set(
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> set[str]:
+        statuses = source_profile_advisory.get("advisory_statuses")
+        if not isinstance(statuses, list):
+            return set()
+        return {status for status in statuses if isinstance(status, str)}
 
     @staticmethod
     def _append_profile_followthrough_source_fields(
@@ -28572,17 +28587,31 @@ class DoxaBase:
             column = columns_by_iri.get(profile.observed_column.iri)
             current_physical_type = column.physical_type if column is not None else None
             current_value_type = column.value_type if column is not None else None
-            if column is not None and self._profile_type_finding_matches_current_map(
-                profile,
-                current_physical_type=current_physical_type,
-                current_value_type=current_value_type,
-            ):
+            matches_current_map = (
+                column is not None
+                and self._profile_type_finding_matches_current_map(
+                    profile,
+                    current_physical_type=current_physical_type,
+                    current_value_type=current_value_type,
+                )
+            )
+            current_map_undefined_value_type = (
+                matches_current_map
+                and profile.observed_value_type is not None
+                and self._profile_value_type_needs_ontology_skeleton(
+                    profile.observed_value_type.iri
+                )
+            )
+            if matches_current_map and not current_map_undefined_value_type:
                 continue
             advisory_status = self._profile_type_advisory_status(
                 profile,
                 map_column_found=column is not None,
                 current_physical_type=current_physical_type,
                 current_value_type=current_value_type,
+                current_map_undefined_value_type=(
+                    current_map_undefined_value_type
+                ),
             )
             related_recommendations = (
                 self._profile_type_related_recommendations(
@@ -28717,9 +28746,12 @@ class DoxaBase:
         map_column_found: bool,
         current_physical_type: ResourceSummary | None,
         current_value_type: ResourceSummary | None,
+        current_map_undefined_value_type: bool = False,
     ) -> str:
         if not map_column_found:
             return "type_finding_unmapped_column"
+        if current_map_undefined_value_type:
+            return "type_finding_current_map_undefined_value_type"
         conflicts = False
         missing = False
         if profile.observed_physical_type is not None:
@@ -28994,17 +29026,25 @@ class DoxaBase:
             profile.observed_column.iri,
             *self._profile_type_existing_type_seed_iris(profile),
         ]
+        if advisory_status == "type_finding_current_map_undefined_value_type":
+            context_reason = (
+                "Load bounded lore around the profile observation, column, "
+                "and current value-type resource before reviewing the "
+                "undefined project value-type vocabulary."
+            )
+        else:
+            context_reason = (
+                "Load bounded lore around the profile observation, column, and "
+                "observed type resources before turning the type finding into "
+                "a current map assertion."
+            )
         add_action(
             "describe_context_slice",
             {
                 "seed_iris": list(dict.fromkeys(seed_iris)),
                 "profile": "dataset_brief",
             },
-            (
-                "Load bounded lore around the profile observation, column, and "
-                "observed type resources before turning the type finding into "
-                "a current map assertion."
-            ),
+            context_reason,
             action_label="Inspect profile type context",
         )
         column_label = (
@@ -29435,6 +29475,13 @@ class DoxaBase:
                 "the current map lacks one or more corresponding type facts. "
                 "Review before recording them as durable map context."
             )
+        if advisory_status == "type_finding_current_map_undefined_value_type":
+            return (
+                f"The profile observed a project value type for {column_label} "
+                "that already matches the current map, but that value type is "
+                "not defined as rc:ValueType in ontology. Review the vocabulary "
+                "meaning before treating the map assertion as fully resolved."
+            )
         return (
             f"The profile observed type information for {column_label}. Review "
             "the profile evidence and modelling intent before recording map "
@@ -29477,6 +29524,13 @@ class DoxaBase:
             return (
                 "Inspect current map context before staging missing type facts "
                 "as durable map assertions."
+            )
+        if advisory_status == "type_finding_current_map_undefined_value_type":
+            return (
+                "The current map already carries the observed project value "
+                "type, but the value type is not defined in ontology; keep the "
+                "profile type review open until the vocabulary term is reviewed "
+                "or promoted."
             )
         return (
             "Inspect the profile evidence and modelling intent before recording "
@@ -30129,6 +30183,10 @@ class DoxaBase:
             return
         route_group_key = source_profile_advisory.get("route_group_key")
         if not isinstance(route_group_key, str):
+            return
+        if DoxaBase._profile_advisory_status_set(source_profile_advisory) == {
+            "type_finding_current_map_undefined_value_type"
+        }:
             return
         binding_key = f"{route_group_key}:profile-type-support-pattern"
         if action.tool_name == "record_pattern":

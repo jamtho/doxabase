@@ -82,6 +82,12 @@ with current map state and separates:
 - `metric_vocabulary_review` for project-specific metric vocabulary;
 - `profile_type_review` for observed physical/value type evidence.
 
+Direct profile-map writes do not automatically close every type review. If a
+bundle wrote a project-specific `value_type` into the map but that IRI is not
+defined as `rc:ValueType` in ontology, `profile_type_review` remains open with
+`type_finding_current_map_undefined_value_type`. Treat that as a vocabulary
+meaning review, not as a missing map assertion.
+
 Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call

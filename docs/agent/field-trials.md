@@ -3966,6 +3966,12 @@ few useful gaps:
   slices now include bounded `describe_query_context` actions for clean
   queryable owners as well as repair/warning owners, so agents choose the table
   explicitly before drafting a query plan.
+- A profile/type scout found direct profile bundle map writes could make an
+  undefined project value type look resolved because the current map assertion
+  matched the observation. `draft_profile_map_updates` now keeps that case open
+  as `type_finding_current_map_undefined_value_type`, and the followthrough
+  plan avoids an `assert_map_type` move unless a real map assertion action is
+  present.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
