@@ -237,8 +237,10 @@ the graph revision.
 
 `graph_overview()` returns `named_graphs`; it does not expose a `.graph_counts`
 attribute. Derive per-graph counts from each card's `triple_count`.
-`search()` returns `SearchResults` with `.matches`; it does not expose a
-`.count` attribute.
+`search()` returns `SearchResults` with `.matches`, `.returned_count`,
+`.total_count`, `.omitted_count`, `.has_more`, and `.next_offset`; it does not
+expose a `.count` attribute. `list_entities()` exposes the same explicit
+pagination fields on `EntityList`.
 
 ```python
 overview = db.graph_overview(limit=100)

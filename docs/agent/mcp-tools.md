@@ -238,7 +238,10 @@ visible at normal priority.
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
 For type-aware retrieval, use types such as `rc:Pattern`, `rc:Claim`,
 `rc:Evidence`, or `rc:SourceSpan`; the text filter searches literal and
-URI-valued facts attached to each resource, not only labels.
+URI-valued facts attached to each resource, not only labels. The response keeps
+legacy page-length `count` and also exposes `returned_count`, `total_count`,
+`omitted_count`, `has_more`, `next_offset`, and next-page
+`suggested_next_actions` when more matching entities exist.
 
 `doxabase.describe_resource`
 
@@ -508,9 +511,11 @@ observation, pattern, or evidence facts are absent.
 When `matches` is empty, the response can still include top-level
 `suggested_next_actions` for shorter project-graph retries, entity browsing,
 and current staged-payload search. Follow these before treating remembered lore
-or proposed vocabulary as absent.
-The result has `matches`; there is no `count` field. Use
-`len(result.matches)` when scripting against the Python API.
+or proposed vocabulary as absent. The response keeps legacy page-length `count`
+and also exposes
+`returned_count`, `total_count`, `omitted_count`, `has_more`, `next_offset`, and
+next-page `suggested_next_actions` when more matches exist and no higher-priority
+scoped retry hint is present.
 
 `doxabase.describe_dataset`
 

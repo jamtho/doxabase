@@ -108,6 +108,15 @@ def list_entities_tool(
         "limit": result.limit,
         "offset": result.offset,
         "count": len(result.entities),
+        "returned_count": result.returned_count,
+        "total_count": result.total_count,
+        "omitted_count": result.omitted_count,
+        "has_more": result.has_more,
+        "next_offset": result.next_offset,
+        "suggested_next_actions": [
+            to_dict(action) for action in result.suggested_next_actions
+        ],
+        "suggested_next_calls": list(result.suggested_next_calls),
     }
 
 
@@ -1596,6 +1605,11 @@ def search_tool(
         "limit": result.limit,
         "offset": result.offset,
         "count": len(result.matches),
+        "returned_count": result.returned_count,
+        "total_count": result.total_count,
+        "omitted_count": result.omitted_count,
+        "has_more": result.has_more,
+        "next_offset": result.next_offset,
         "scope_hint": (
             to_dict(result.scope_hint) if result.scope_hint is not None else None
         ),

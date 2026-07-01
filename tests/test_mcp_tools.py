@@ -12911,10 +12911,83 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert result["graph"] == "map"
     assert result["limit"] == 5
     assert result["count"] >= 1
+    assert result["returned_count"] == result["count"]
+    assert result["total_count"] >= result["returned_count"]
+    assert result["omitted_count"] >= 0
+    assert result["has_more"] == (result["next_offset"] is not None)
     assert any(
         "Parquet schemas are inferred" in match["text"]
         for match in result["matches"]
     )
+
+
+def test_search_tool_serializes_pagination_metadata(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(3):
+        db.record_map_dataset(
+            f"https://example.test/project#SearchToolPageDataset{index}",
+            label=f"Search tool page dataset {index}",
+            description=f"SearchToolPageProbe marker {index}",
+            is_table=True,
+        )
+
+    result = search_tool(db, query="SearchToolPageProbe", graph="map", limit=2)
+
+    assert result["count"] == 2
+    assert result["returned_count"] == 2
+    assert result["total_count"] == 3
+    assert result["omitted_count"] == 1
+    assert result["has_more"] is True
+    assert result["next_offset"] == 2
+    assert result["suggested_next_actions"][0]["tool_name"] == "search"
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "query": "SearchToolPageProbe",
+        "limit": 2,
+        "offset": 2,
+        "graph": "map",
+    }
+    assert result["suggested_next_calls"] == [
+        action["call"] for action in result["suggested_next_actions"]
+    ]
+
+
+def test_list_entities_tool_serializes_pagination_metadata(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(3):
+        db.record_map_dataset(
+            f"https://example.test/project#EntityToolPageDataset{index}",
+            label=f"Entity tool page dataset {index}",
+            description=f"EntityToolPageProbe marker {index}",
+            is_table=True,
+        )
+
+    result = list_entities_tool(
+        db,
+        type="rc:Dataset",
+        graph="map",
+        text="EntityToolPageProbe",
+        limit=2,
+    )
+
+    assert result["count"] == 2
+    assert result["returned_count"] == 2
+    assert result["total_count"] == 3
+    assert result["omitted_count"] == 1
+    assert result["has_more"] is True
+    assert result["next_offset"] == 2
+    assert result["suggested_next_actions"][0]["tool_name"] == "list_entities"
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "limit": 2,
+        "offset": 2,
+        "type": "rc:Dataset",
+        "graph": "map",
+        "text": "EntityToolPageProbe",
+    }
+    assert result["suggested_next_calls"] == [
+        action["call"] for action in result["suggested_next_actions"]
+    ]
 
 
 def test_search_tool_serializes_zero_match_retrieval_fallbacks(

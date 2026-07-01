@@ -2693,6 +2693,13 @@ class EntityList:
     entities: list[EntityRow]
     limit: int
     offset: int
+    returned_count: int
+    total_count: int
+    omitted_count: int
+    has_more: bool
+    next_offset: int | None
+    suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
+    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -4517,6 +4524,11 @@ class SearchResults:
     matches: list[SearchMatch]
     limit: int
     offset: int
+    returned_count: int
+    total_count: int
+    omitted_count: int
+    has_more: bool
+    next_offset: int | None
     scope_hint: SearchScopeHint | None = None
     suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
     suggested_next_calls: list[str] = field(default_factory=list)
@@ -6531,6 +6543,11 @@ class DoxaBase:
         limit: int = 100,
         offset: int = 0,
     ) -> EntityList:
+        if limit < 1:
+            raise DoxaBaseError("Entity list limit must be at least 1")
+        if offset < 0:
+            raise DoxaBaseError("Entity list offset must be non-negative")
+
         graphs = self._expand_graphs([graph] if graph else None)
         params: list[Any] = []
         graph_filter = ""
@@ -6570,7 +6587,24 @@ class DoxaBase:
             needle = f"%{text.lower()}%"
             params.extend([needle, needle])
 
-        params.extend([limit, offset])
+        total_count = int(
+            self._conn.execute(
+                f"""
+                SELECT COUNT(*) AS count
+                FROM (
+                    SELECT q.graph, q.subject
+                    FROM quads q
+                    WHERE q.subject_kind IN ('uri', 'bnode')
+                      {graph_filter}
+                      {type_filter}
+                      {text_filter}
+                    GROUP BY q.graph, q.subject
+                ) AS grouped_entities
+                """,
+                params,
+            ).fetchone()["count"]
+        )
+
         rows = self._conn.execute(
             f"""
             SELECT q.graph, q.subject
@@ -6583,7 +6617,7 @@ class DoxaBase:
             ORDER BY q.subject
             LIMIT ? OFFSET ?
             """,
-            params,
+            [*params, limit, offset],
         ).fetchall()
 
         entities = [
@@ -6598,7 +6632,64 @@ class DoxaBase:
             )
             for row in rows
         ]
-        return EntityList(entities=entities, limit=limit, offset=offset)
+        returned_count = len(entities)
+        next_offset = (
+            offset + returned_count
+            if offset + returned_count < total_count
+            else None
+        )
+        suggested_next_actions = (
+            [
+                self._list_entities_next_page_action(
+                    type=type,
+                    graph=graph,
+                    text=text,
+                    limit=limit,
+                    offset=next_offset,
+                )
+            ]
+            if next_offset is not None
+            else []
+        )
+        return EntityList(
+            entities=entities,
+            limit=limit,
+            offset=offset,
+            returned_count=returned_count,
+            total_count=total_count,
+            omitted_count=max(total_count - offset - returned_count, 0),
+            has_more=next_offset is not None,
+            next_offset=next_offset,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _list_entities_next_page_action(
+        self,
+        *,
+        type: str | None,
+        graph: str | None,
+        text: str | None,
+        limit: int,
+        offset: int,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {"limit": limit, "offset": offset}
+        if type is not None:
+            arguments["type"] = type
+        if graph is not None:
+            arguments["graph"] = graph
+        if text is not None:
+            arguments["text"] = text
+        return SuggestedNextAction(
+            action_label="List next entity page",
+            tool_name="list_entities",
+            mcp_tool_name="doxabase.list_entities",
+            arguments=arguments,
+            reason="More matching entities exist beyond the returned page.",
+            call=self._suggested_call_string("list_entities", arguments),
+        )
 
     def describe_resource(
         self,
@@ -15172,6 +15263,17 @@ class DoxaBase:
         fts_query = _fts_query_from_tokens(search_tokens)
         graphs = self._expand_graphs([graph] if graph else None)
         graph_filter, graph_params = self._graph_filter(graphs)
+        total_count = int(
+            self._conn.execute(
+                f"""
+                SELECT COUNT(*) AS count
+                FROM literal_search
+                WHERE literal_search MATCH ?
+                  {graph_filter}
+                """,
+                [fts_query, *graph_params],
+            ).fetchone()["count"]
+        )
         rows = self._conn.execute(
             f"""
             SELECT
@@ -15188,12 +15290,16 @@ class DoxaBase:
             """,
             [fts_query, *graph_params, limit, offset],
         ).fetchall()
-        if not rows and len(search_tokens) > 1:
+        if total_count == 0 and len(search_tokens) > 1:
             rows = self._co_mentioned_search_rows(
                 search_tokens,
                 graphs,
                 limit=limit,
                 offset=offset,
+            )
+            total_count = self._co_mentioned_search_row_count(
+                search_tokens,
+                graphs,
             )
 
         ontology_graphs = self._expand_graphs(["ontology"])
@@ -15216,6 +15322,12 @@ class DoxaBase:
             )
             for row in rows
         ]
+        returned_count = len(matches)
+        next_offset = (
+            offset + returned_count
+            if offset + returned_count < total_count
+            else None
+        )
         scope_hint = self._search_scope_hint(
             query=query,
             graph=graph,
@@ -15232,12 +15344,27 @@ class DoxaBase:
             )
         else:
             suggested_next_actions = []
+        if next_offset is not None and scope_hint is None:
+            suggested_next_actions = [
+                *suggested_next_actions,
+                self._search_next_page_action(
+                    query=query,
+                    graph=graph,
+                    limit=limit,
+                    offset=next_offset,
+                ),
+            ]
         return SearchResults(
             query=query,
             graph=graph,
             matches=matches,
             limit=limit,
             offset=offset,
+            returned_count=returned_count,
+            total_count=total_count,
+            omitted_count=max(total_count - offset - returned_count, 0),
+            has_more=next_offset is not None,
+            next_offset=next_offset,
             scope_hint=scope_hint,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
@@ -15832,6 +15959,30 @@ class DoxaBase:
             ),
         )
 
+    def _search_next_page_action(
+        self,
+        *,
+        query: str,
+        graph: str | None,
+        limit: int,
+        offset: int,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "query": query,
+            "limit": limit,
+            "offset": offset,
+        }
+        if graph is not None:
+            arguments["graph"] = graph
+        return SuggestedNextAction(
+            action_label="Search next result page",
+            tool_name="search",
+            mcp_tool_name="doxabase.search",
+            arguments=arguments,
+            reason="More search matches exist beyond the returned page.",
+            call=self._suggested_call_string("search", arguments),
+        )
+
     def _co_mentioned_search_rows(
         self,
         tokens: list[str],
@@ -15840,9 +15991,25 @@ class DoxaBase:
         limit: int,
         offset: int,
     ) -> list[sqlite3.Row]:
+        return self._co_mentioned_search_selected_rows(
+            tokens,
+            graphs,
+        )[offset : offset + limit]
+
+    def _co_mentioned_search_row_count(
+        self,
+        tokens: list[str],
+        graphs: list[str],
+    ) -> int:
+        return len(self._co_mentioned_search_selected_rows(tokens, graphs))
+
+    def _co_mentioned_search_selected_rows(
+        self,
+        tokens: list[str],
+        graphs: list[str],
+    ) -> list[sqlite3.Row]:
         graph_filter, graph_params = self._graph_filter(graphs)
         fts_query = _fts_or_query_from_tokens(tokens)
-        candidate_limit = max((limit + offset) * 20, 100)
         rows = self._conn.execute(
             f"""
             SELECT
@@ -15855,9 +16022,8 @@ class DoxaBase:
             WHERE literal_search MATCH ?
               {graph_filter}
             ORDER BY graph, subject, predicate
-            LIMIT ?
             """,
-            [fts_query, *graph_params, candidate_limit],
+            [fts_query, *graph_params],
         ).fetchall()
         grouped: dict[str, tuple[set[str], list[sqlite3.Row]]] = {}
         for row in rows:
@@ -15888,7 +16054,7 @@ class DoxaBase:
                     continue
                 seen.add(row_key)
                 selected_rows.append(row)
-        return selected_rows[offset : offset + limit]
+        return selected_rows
 
     def _search_context_key(self, graphs: list[str], subject: str) -> str:
         return self._first_owner_dataset_iri(graphs, subject) or subject

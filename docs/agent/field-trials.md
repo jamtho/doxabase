@@ -4268,6 +4268,13 @@ few useful gaps:
   table/column helpers. Complete context slices can truthfully return no
   suggested next actions; treat that quiet state as "inspect or export as
   needed" rather than a missing workflow.
+- A scale/truncation trial found broad `project_brief`, context slices, profile
+  descriptions, and staged revision listings were already bounded enough, but
+  successful `list_entities` and `search` pages exposed only page length. Entity
+  and search responses now report explicit `returned_count`, `total_count`,
+  `omitted_count`, `has_more`, `next_offset`, and next-page suggested calls, so
+  broad exploration scripts can keep paging instead of silently stopping at a
+  full first page.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

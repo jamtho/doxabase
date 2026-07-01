@@ -18073,6 +18073,88 @@ def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
     assert "Trade Events" in labels
 
 
+def test_list_entities_reports_pagination_metadata(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(3):
+        db.record_map_dataset(
+            f"https://example.test/project#EntityPageDataset{index}",
+            label=f"Entity page dataset {index}",
+            description=f"EntityPageProbe marker {index}",
+            is_table=True,
+        )
+
+    page = db.list_entities(
+        type="rc:Dataset",
+        graph="map",
+        text="EntityPageProbe",
+        limit=2,
+    )
+
+    assert page.returned_count == 2
+    assert page.total_count == 3
+    assert page.omitted_count == 1
+    assert page.has_more is True
+    assert page.next_offset == 2
+    assert page.suggested_next_actions[0].tool_name == "list_entities"
+    assert page.suggested_next_actions[0].arguments == {
+        "limit": 2,
+        "offset": 2,
+        "type": "rc:Dataset",
+        "graph": "map",
+        "text": "EntityPageProbe",
+    }
+
+    final_page = db.list_entities(
+        type="rc:Dataset",
+        graph="map",
+        text="EntityPageProbe",
+        limit=2,
+        offset=2,
+    )
+
+    assert final_page.returned_count == 1
+    assert final_page.total_count == 3
+    assert final_page.omitted_count == 0
+    assert final_page.has_more is False
+    assert final_page.next_offset is None
+    assert final_page.suggested_next_actions == []
+
+
+def test_search_reports_pagination_metadata(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(3):
+        db.record_map_dataset(
+            f"https://example.test/project#SearchPageDataset{index}",
+            label=f"Search page dataset {index}",
+            description=f"SearchPageProbe marker {index}",
+            is_table=True,
+        )
+
+    page = db.search("SearchPageProbe", graph="map", limit=2)
+
+    assert page.returned_count == 2
+    assert page.total_count == 3
+    assert page.omitted_count == 1
+    assert page.has_more is True
+    assert page.next_offset == 2
+    assert page.suggested_next_actions[0].tool_name == "search"
+    assert page.suggested_next_actions[0].arguments == {
+        "query": "SearchPageProbe",
+        "limit": 2,
+        "offset": 2,
+        "graph": "map",
+    }
+
+    final_page = db.search("SearchPageProbe", graph="map", limit=2, offset=2)
+
+    assert final_page.returned_count == 1
+    assert final_page.total_count == 3
+    assert final_page.omitted_count == 0
+    assert final_page.has_more is False
+    assert final_page.next_offset is None
+    assert final_page.suggested_next_actions == []
+
+
 def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

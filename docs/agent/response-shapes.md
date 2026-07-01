@@ -519,6 +519,36 @@ mutation after accounting for current graph state. With the default
 Use `total_imported` when you want the total fixture triple count. Per-graph
 counts live under `totals`.
 
+## Entity Lists
+
+`db.list_entities(...)` returns an `EntityList` with:
+
+```python
+result.entities
+result.limit
+result.offset
+result.returned_count
+result.total_count
+result.omitted_count
+result.has_more
+result.next_offset
+result.suggested_next_actions
+result.suggested_next_calls
+```
+
+Each `EntityRow` has:
+
+```python
+entity.iri
+entity.label
+entity.types
+entity.graph
+```
+
+Use `total_count > offset + returned_count` or `has_more` to detect another
+page. MCP `list_entities_tool()` keeps the legacy page-length `count` while also
+exposing these explicit pagination fields and a next-page suggested action.
+
 ## Search
 
 `db.search(...)` returns a `SearchResults` with:
@@ -529,6 +559,11 @@ result.graph
 result.matches
 result.limit
 result.offset
+result.returned_count
+result.total_count
+result.omitted_count
+result.has_more
+result.next_offset
 result.scope_hint
 result.suggested_next_actions
 result.suggested_next_calls
@@ -548,6 +583,10 @@ match.snippet
 ```
 
 Use `match.iri` for the matched resource. There is no `match.subject` field.
+Use `total_count > offset + returned_count` or `has_more` to detect another
+page. MCP `search_tool()` keeps the legacy page-length `count` while also
+exposing these explicit pagination fields. It adds a next-page suggested action
+when more matches exist and no higher-priority scoped retry hint is present.
 There is no top-level `result.count`; use `len(result.matches)` when you need
 the number returned, and compare it with `result.limit` / `result.offset` before
 assuming the search was exhaustive.
