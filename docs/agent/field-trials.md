@@ -2680,6 +2680,12 @@ few useful gaps:
   export. Profile insight bundles now expose `open_profile_review_lanes` and an
   `Open Profile Review Lanes` Markdown table for live draft route groups that
   lack a direct-action candidate.
+- A profile-to-map followthrough trial applied a value-type vocabulary skeleton
+  and then continued the same profile type lane. The lane correctly stayed open,
+  but `remaining_semantic_moves=["assert_map_type"]` was too coarse for an
+  unattended agent to see which exact assertion predicates remained. Open
+  profile review lanes now include `remaining_actions[]` rows with route step,
+  tool, call, arguments, and compact source details.
 - A project-brief frontier trial showed low `limit` omissions were already
   visible through `omitted_queue_counts`, `limit_crowded_queue_types`, and
   `health_tasks`, but low `profile_candidate_limit` could hide profile evidence

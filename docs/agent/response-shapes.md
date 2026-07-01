@@ -2618,6 +2618,7 @@ lane.closed_route_step_keys
 lane.route_step_keys
 lane.closed_semantic_moves
 lane.remaining_semantic_moves
+lane.remaining_actions
 lane.action_count
 lane.matched_candidate_revision_iris
 lane.matched_candidate_count
@@ -2632,6 +2633,13 @@ satisfied unless the lane is absent from `open_profile_review_lanes`. Read
 `next_step` as the lane-specific handoff cue; for `query_context_review`, it
 points agents back through `describe_query_context` and a query/storage repair
 before applying profile-derived map updates.
+Use `lane.remaining_actions[]` for unattended continuation before falling back
+to semantic-move labels. Each row carries the exact `route_step_key`,
+`semantic_move`, `tool_name`, `mcp_tool_name`, `action_label`, callable
+`arguments`, `suggested_next_call`, `source_origin`, and compact
+`source_summary`. This matters when one semantic move such as
+`assert_map_type` contains several concrete route steps, for example separate
+`rc:valueType` and `rc:physicalType` assertion actions.
 `closed_semantic_moves`, `remaining_semantic_moves`, and
 `semantic_move_closure_summary` are bundle-level rollups over direct candidate
 route groups and open lanes. `closed_route_step_keys` and

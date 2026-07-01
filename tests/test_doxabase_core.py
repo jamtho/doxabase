@@ -33833,6 +33833,25 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         value_type_plan.route_step_keys
     )
     assert open_lanes["profile_type_review"].action_count == 5
+    assert len(open_lanes["profile_type_review"].remaining_actions) == 5
+    assert {
+        action.route_step_key
+        for action in open_lanes["profile_type_review"].remaining_actions
+    } == set(open_lanes["profile_type_review"].route_step_keys)
+    remaining_type_assertions = [
+        action
+        for action in open_lanes["profile_type_review"].remaining_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.semantic_move == "assert_map_type"
+    ]
+    assert {
+        action.arguments["predicate"] for action in remaining_type_assertions
+    } == {"rc:physicalType", "rc:valueType"}
+    assert all(action.suggested_next_call for action in remaining_type_assertions)
+    assert all(
+        action.source_summary["advisory_kind"] == "profile_type_review"
+        for action in remaining_type_assertions
+    )
     assert review.closed_semantic_moves == ["define_value_type"]
     assert "assert_map_type" in review.remaining_semantic_moves
     assert review.closed_route_step_keys == [
@@ -33860,6 +33879,14 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert review.executor_decision_summary["open_review_lanes"][0][
         "closed_route_step_keys"
     ] == [value_type_route_source["route_step_key"]]
+    executor_remaining_actions = review.executor_decision_summary[
+        "open_review_lanes"
+    ][0]["remaining_actions"]
+    assert {
+        action["arguments"]["predicate"]
+        for action in executor_remaining_actions
+        if action["tool_name"] == "stage_map_assertion_change"
+    } == {"rc:physicalType", "rc:valueType"}
     assert set(
         review.executor_decision_summary["open_review_lanes"][0][
             "remaining_route_step_keys"

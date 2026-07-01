@@ -272,6 +272,12 @@ definition move, not the later map assertion. The bundle-level
 scripts. Use `closed_route_step_keys` and `remaining_route_step_keys` when
 semantic moves are too broad for exact progress tracking. The Markdown review
 summary renders a `Semantic Move Closure` section before the open-lane table.
+When continuing an open lane unattended, inspect
+`open_profile_review_lanes[].remaining_actions[]` before choosing the next
+mutation. Those rows preserve the exact route step, tool, arguments, call
+string, and compact source summary for each remaining live action. This avoids
+guessing from a coarse semantic move such as `assert_map_type`, which can cover
+both `rc:valueType` and `rc:physicalType` assertion steps in the same lane.
 Use the profile bundle's semantic apply-gate fields for executor decisions:
 `bulk_apply_allowed`, `safe_single_apply_candidate_revision_iris`,
 `semantic_apply_gate_summary`, `semantic_apply_gate_counts`,

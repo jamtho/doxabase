@@ -11798,6 +11798,16 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         "matched_candidate_revision_iris"
     ] == [staged_iri]
     assert all(lane["route_step_keys"] for lane in open_lanes.values())
+    assert all(lane["remaining_actions"] for lane in open_lanes.values())
+    assert {
+        action["route_step_key"]
+        for action in open_lanes["profile_type_review"]["remaining_actions"]
+    } == set(open_lanes["profile_type_review"]["route_step_keys"])
+    assert {
+        action["arguments"]["predicate"]
+        for action in open_lanes["profile_type_review"]["remaining_actions"]
+        if action["tool_name"] == "stage_map_assertion_change"
+    } == {"rc:valueType"}
     assert result["executor_decision_summary"]["decision"] == (
         "review_or_stage_open_lanes"
     )
@@ -11813,6 +11823,15 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
     assert result["executor_decision_summary"]["mutation_policy"] == (
         "do_not_bulk_apply"
     )
+    executor_lanes = {
+        lane["review_lane"]: lane
+        for lane in result["executor_decision_summary"]["open_review_lanes"]
+    }
+    assert {
+        action["arguments"]["predicate"]
+        for action in executor_lanes["profile_type_review"]["remaining_actions"]
+        if action["tool_name"] == "stage_map_assertion_change"
+    } == {"rc:valueType"}
 
     candidate_groups = {
         group["review_lane"]: group
@@ -11842,7 +11861,7 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
     assert "| profile_scalar_conflict_review | 1 | 2 | none |" in open_section
     assert "metric_vocabulary_review" in open_section
     assert "profile_type_review" in open_section
-    assert "profile_map_updates" not in open_section
+    assert "\n| profile_map_updates |" not in open_section
 
 
 def test_stage_profile_map_updates_tool_marks_rerun_precondition(

@@ -1586,6 +1586,21 @@ class ProfileInsightReviewCandidate:
 
 
 @dataclass(frozen=True)
+class ProfileInsightOpenReviewAction:
+    review_lane: str
+    route_group_key: str
+    route_step_key: str
+    semantic_move: str | None
+    tool_name: str | None
+    mcp_tool_name: str | None
+    action_label: str | None
+    arguments: dict[str, Any]
+    suggested_next_call: str | None
+    source_origin: str | None
+    source_summary: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class ProfileInsightOpenReviewLane:
     review_lane: str
     route_group_count: int
@@ -1594,6 +1609,7 @@ class ProfileInsightOpenReviewLane:
     route_step_keys: list[str]
     closed_semantic_moves: list[str]
     remaining_semantic_moves: list[str]
+    remaining_actions: list[ProfileInsightOpenReviewAction]
     action_count: int
     matched_candidate_revision_iris: list[str]
     matched_candidate_count: int
@@ -46411,8 +46427,27 @@ class DoxaBase:
                 route_step_key = source.get("route_step_key")
                 if not isinstance(route_step_key, str):
                     continue
-                sources.append(source)
+                sources.append(
+                    DoxaBase._profile_insight_route_source_with_action_metadata(
+                        source,
+                        action,
+                    )
+                )
         return DoxaBase._dedupe_profile_route_sources(sources)
+
+    @staticmethod
+    def _profile_insight_route_source_with_action_metadata(
+        source: MappingABC[str, Any],
+        action: SuggestedNextAction,
+    ) -> dict[str, Any]:
+        enriched = dict(source)
+        enriched["_profile_action_label"] = action.action_label
+        enriched["_profile_action_tool_name"] = action.tool_name
+        enriched["_profile_action_mcp_tool_name"] = action.mcp_tool_name
+        enriched["_profile_action_arguments"] = to_jsonable(action.arguments)
+        enriched["_profile_action_call"] = action.call
+        enriched.setdefault("_profile_route_source_origin", "live_draft")
+        return enriched
 
     @staticmethod
     def _dedupe_profile_route_sources(
@@ -47187,6 +47222,78 @@ class DoxaBase:
         )
 
     @staticmethod
+    def _profile_insight_open_review_action(
+        source: MappingABC[str, Any],
+    ) -> ProfileInsightOpenReviewAction | None:
+        review_lane = source.get("review_lane")
+        route_group_key = source.get("route_group_key")
+        route_step_key = source.get("route_step_key")
+        if not isinstance(review_lane, str) or not isinstance(
+            route_group_key,
+            str,
+        ):
+            return None
+        if not isinstance(route_step_key, str):
+            return None
+        arguments = source.get("_profile_action_arguments")
+        if not isinstance(arguments, MappingABC):
+            arguments = {}
+        return ProfileInsightOpenReviewAction(
+            review_lane=review_lane,
+            route_group_key=route_group_key,
+            route_step_key=route_step_key,
+            semantic_move=DoxaBase._optional_string_field(
+                source,
+                "semantic_move",
+            ),
+            tool_name=DoxaBase._optional_string_field(
+                source,
+                "_profile_action_tool_name",
+            ),
+            mcp_tool_name=DoxaBase._optional_string_field(
+                source,
+                "_profile_action_mcp_tool_name",
+            ),
+            action_label=DoxaBase._optional_string_field(
+                source,
+                "_profile_action_label",
+            ),
+            arguments=copy.deepcopy(dict(arguments)),
+            suggested_next_call=DoxaBase._optional_string_field(
+                source,
+                "_profile_action_call",
+            ),
+            source_origin=DoxaBase._optional_string_field(
+                source,
+                "_profile_route_source_origin",
+            ),
+            source_summary=(
+                DoxaBase._profile_insight_open_review_action_source_summary(
+                    source
+                )
+            ),
+        )
+
+    @staticmethod
+    def _profile_insight_open_review_action_source_summary(
+        source: MappingABC[str, Any],
+    ) -> dict[str, Any]:
+        excluded_fields = {
+            "review_lane",
+            "route_group_key",
+            "route_step_key",
+            "semantic_move",
+        }
+        summary: dict[str, Any] = {}
+        for key, value in source.items():
+            if not isinstance(key, str):
+                continue
+            if key in excluded_fields or key.startswith("_profile_"):
+                continue
+            summary[key] = to_jsonable(value)
+        return summary
+
+    @staticmethod
     def _profile_insight_open_review_lanes(
         profile_route_sources: Iterable[MappingABC[str, Any]],
         candidates: list[ProfileInsightReviewCandidate],
@@ -47294,6 +47401,7 @@ class DoxaBase:
                     "route_step_keys": [],
                     "closed_semantic_moves": [],
                     "remaining_semantic_moves": [],
+                    "remaining_actions": [],
                     "action_count": 0,
                 }
                 by_lane[review_lane] = lane
@@ -47322,6 +47430,12 @@ class DoxaBase:
                 )
             if isinstance(route_step_key, str):
                 DoxaBase._append_unique(lane["route_step_keys"], route_step_key)
+            open_action = DoxaBase._profile_insight_open_review_action(source)
+            if open_action is not None:
+                DoxaBase._append_unique(
+                    lane["remaining_actions"],
+                    open_action,
+                )
             lane["action_count"] += 1
 
         open_lanes: list[ProfileInsightOpenReviewLane] = []
@@ -47346,6 +47460,7 @@ class DoxaBase:
                     route_step_keys=lane["route_step_keys"],
                     closed_semantic_moves=lane["closed_semantic_moves"],
                     remaining_semantic_moves=lane["remaining_semantic_moves"],
+                    remaining_actions=lane["remaining_actions"],
                     action_count=lane["action_count"],
                     matched_candidate_revision_iris=(
                         matched_candidate_revision_iris
@@ -47559,6 +47674,7 @@ class DoxaBase:
                 "closed_route_step_keys": list(lane.closed_route_step_keys),
                 "remaining_route_step_keys": list(lane.route_step_keys),
                 "remaining_semantic_moves": list(lane.remaining_semantic_moves),
+                "remaining_actions": to_jsonable(lane.remaining_actions),
                 "action_count": lane.action_count,
                 "matched_candidate_revision_iris": list(
                     lane.matched_candidate_revision_iris
@@ -47896,16 +48012,25 @@ class DoxaBase:
             "",
             (
                 "| Review lane | Route groups | Actions | "
-                "Closed moves | Remaining moves | Matched exported revisions | "
-                "Next step |"
+                "Closed moves | Remaining moves | Remaining route steps | "
+                "First remaining action | Matched exported revisions | Next step |"
             ),
-            "|---|---:|---:|---|---|---|---|",
+            "|---|---:|---:|---|---|---|---|---|---|",
         ]
         for lane in open_profile_review_lanes:
             matched_revisions = ", ".join(
                 f"`{revision_iri}`"
                 for revision_iri in lane.matched_candidate_revision_iris
             )
+            first_action = (
+                lane.remaining_actions[0] if lane.remaining_actions else None
+            )
+            first_action_label = "none"
+            if first_action is not None:
+                first_action_label = (
+                    f"{first_action.tool_name or 'unknown_tool'}: "
+                    f"{first_action.action_label or first_action.route_step_key}"
+                )
             lines.append(
                 "| "
                 + " | ".join(
@@ -47919,6 +48044,10 @@ class DoxaBase:
                         self._markdown_table_cell(
                             ", ".join(lane.remaining_semantic_moves) or "none"
                         ),
+                        self._markdown_table_cell(
+                            ", ".join(lane.route_step_keys) or "none"
+                        ),
+                        self._markdown_table_cell(first_action_label),
                         self._markdown_table_cell(
                             matched_revisions or "none"
                         ),

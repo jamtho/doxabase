@@ -880,8 +880,11 @@ handoff signal. It also includes
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a
 metric or type lane while that lane remains open. Each lane includes
-`next_step`; for `query_context_review`, run `describe_query_context` and stage
-or record the query/storage repair before applying profile-derived map updates.
+`remaining_actions` and `next_step`; for `query_context_review`, run
+`describe_query_context` and stage or record the query/storage repair before
+applying profile-derived map updates. Prefer `remaining_actions[]` over
+semantic-move labels for unattended continuation, because a single remaining
+semantic move can contain multiple exact tool calls or predicates.
 The grouped
 payload also includes `executor_decision_summary`, a compact routing object over
 the semantic apply gate. Read its `decision`, `mutation_policy`,
