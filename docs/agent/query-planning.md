@@ -217,7 +217,11 @@ Start with `describe_query_context(dataset_iri)`:
    `draft_query_evidence_storage_overlay` skeleton action. Replace every
    placeholder named in its `placeholder_fields` / `reviewed_value_fields` and
    supply `required_extra_arguments` after reviewing the actual source; the
-   helper does not infer storage values from query artifacts. After the draft,
+   helper does not apply storage values automatically from query artifacts.
+   When evidence includes reviewed scanned source paths or handles, the action
+   can include `evidence_storage_route_candidates[]` with review-only S3, local
+   path, or database-relation argument drafts; use those structured fields as a
+   starting point, not as map facts. After the draft,
    use `reviewed_overlay` to audit the supplied non-secret storage/layout IRIs,
    labels, route roles, access mode, endpoint/bucket/prefix/region/path-style
    fields, credential reference, compression, and verification fields without
@@ -657,7 +661,11 @@ metadata yet, use this sequence:
 2. Follow the returned `describe_query_context` action.
 3. If the context suggests `draft_query_evidence_storage_overlay`, copy that
    action as a skeleton only. Replace every placeholder with reviewed
-   non-secret storage/layout values from the actual source.
+   non-secret storage/layout values from the actual source. If
+   `evidence_storage_route_candidates[]` is present, prefer its
+   `draft_query_evidence_storage_overlay_candidate_arguments` or
+   `stage_query_storage_access_repair_candidate_arguments` over splitting S3
+   URIs, local paths, or database relation handles yourself.
 4. Call `draft_query_evidence_storage_overlay`, then stage its
    `stage_arguments` with `stage_graph_revision`.
    If it returns `query_evidence_storage_overlay_blocker`, follow the returned

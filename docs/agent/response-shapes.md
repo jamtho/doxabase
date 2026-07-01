@@ -1413,6 +1413,10 @@ draft.source_query_context_readiness
 draft.source_query_context_issue_codes
 draft.source_profile_evidence
 draft.source_query_evidence
+draft.evidence_storage_route_candidates
+draft.evidence_storage_route_candidate_count
+draft.evidence_storage_route_candidate_total_count
+draft.evidence_storage_route_candidates_truncated
 draft.profile_observation_iris
 draft.storage_access_iri
 draft.physical_layout_iri
@@ -1443,6 +1447,13 @@ compatibility alias for the same payload. Use `reviewed_overlay` to audit the
 supplied storage metadata, and `stage_arguments` only after confirming the
 overlay describes the queried source data rather than query text, logs, or
 result output.
+`evidence_storage_route_candidates[]` is a capped review-only list parsed from
+scanned source paths/handles on the selected evidence. Candidate kinds include
+`s3_path_from_query_evidence`, `local_path_from_query_evidence`, and
+`database_relation_from_query_evidence`. Each candidate carries source fields,
+review notes, `stage_query_storage_access_repair_candidate_arguments`, and
+`draft_query_evidence_storage_overlay_candidate_arguments`; use them as argument
+drafts after review, not as applied map facts.
 If the capsule's immutable seed ontology is stale and missing current staging
 terms, the helper returns `result_kind="query_evidence_storage_overlay_blocker"`
 instead of `stage_arguments`. The blocker preserves `dataset`, `evidence`,
@@ -3163,6 +3174,10 @@ action.source_profile_evidence["scanned_source_handles"]
 action.source_profile_evidence["scanned_source_paths"]
 action.source_profile_evidence["query_source_spans"]
 action.source_profile_evidence["handoff_note"]
+action.evidence_storage_route_candidates
+action.evidence_storage_route_candidate_count
+action.evidence_storage_route_candidate_total_count
+action.evidence_storage_route_candidates_truncated
 ```
 
 For `draft_query_evidence_storage_overlay` actions, the same payload is also
@@ -3628,7 +3643,10 @@ reviewed compact database handles, the repair hint can also carry
 `database_relation_candidates[]` with `requires_review=true`,
 `connection_reference`, `relation_identifier`, `storage_root`, `path_templates`,
 and `stage_query_storage_access_repair_candidate_arguments`. Prefer these
-structured fields over parsing `scanned_source_handles` yourself. A fixture
+structured fields over parsing `scanned_source_handles` yourself. Newer repair
+hints also expose generalized `evidence_storage_route_candidates[]` for
+database relation handles, S3 URIs, and local-looking paths, with draft overlay
+and staged storage-repair candidate arguments. A fixture
 staleness hint means
 known AIS or Polymarket fixture tables are present without linked
 `rc:StorageAccess` resources; use a fresh scratch fixture load before drawing

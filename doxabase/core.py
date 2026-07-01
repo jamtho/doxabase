@@ -15,6 +15,7 @@ from difflib import SequenceMatcher
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal as TypingLiteral, Mapping
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from pyshacl import validate
@@ -4035,6 +4036,10 @@ class QueryEvidenceStorageOverlayDraft:
     source_query_context_issue_codes: list[str]
     source_profile_evidence: dict[str, Any]
     source_query_evidence: dict[str, Any]
+    evidence_storage_route_candidates: list[dict[str, Any]]
+    evidence_storage_route_candidate_count: int
+    evidence_storage_route_candidate_total_count: int
+    evidence_storage_route_candidates_truncated: bool
     profile_observation_iris: list[str]
     storage_access_iri: str
     physical_layout_iri: str
@@ -4066,6 +4071,10 @@ class QueryEvidenceStorageOverlayBlocker:
     source_query_context_issue_codes: list[str]
     source_profile_evidence: dict[str, Any]
     source_query_evidence: dict[str, Any]
+    evidence_storage_route_candidates: list[dict[str, Any]]
+    evidence_storage_route_candidate_count: int
+    evidence_storage_route_candidate_total_count: int
+    evidence_storage_route_candidates_truncated: bool
     missing_seed_terms: list[str]
     mutation_allowed_after: str
     note: str
@@ -4414,6 +4423,10 @@ class ProfileEvidenceSuggestedNextAction(SuggestedNextAction):
 class QueryEvidenceOverlaySuggestedNextAction(SuggestedNextAction):
     source_profile_evidence: dict[str, Any]
     source_query_evidence: dict[str, Any]
+    evidence_storage_route_candidates: list[dict[str, Any]]
+    evidence_storage_route_candidate_count: int
+    evidence_storage_route_candidate_total_count: int
+    evidence_storage_route_candidates_truncated: bool
     required_extra_arguments: list[str]
     placeholder_fields: list[str]
     reviewed_value_fields: list[str]
@@ -22574,6 +22587,346 @@ class DoxaBase:
                 )
         return candidates, total_count
 
+    def _query_context_evidence_storage_route_candidates_from_evidence(
+        self,
+        dataset: DatasetDescription,
+        *,
+        limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        evidence_iris = self._query_context_dataset_query_evidence_iris(
+            dataset.iri,
+            exclude_evidence_iris=set(),
+        )
+        candidates: list[dict[str, Any]] = []
+        seen_candidates: set[tuple[Any, ...]] = set()
+        total_count = 0
+        for evidence_iri in evidence_iris:
+            evidence = self._describe_evidence(
+                evidence_iri,
+                self._expand_graphs(["evidence"]),
+                self._lookup_graphs(self._expand_graphs(["all"])),
+            )
+            evidence_candidates = self._evidence_storage_route_candidates_for_evidence(
+                evidence,
+                limit=limit,
+                seen_candidates=seen_candidates,
+                start_rank=len(candidates) + 1,
+            )
+            total_count += evidence_candidates[1]
+            for candidate in evidence_candidates[0]:
+                if len(candidates) >= limit:
+                    break
+                candidate["candidate_rank"] = len(candidates) + 1
+                candidates.append(candidate)
+        return candidates, total_count
+
+    def _query_context_evidence_storage_route_candidates_for_evidence(
+        self,
+        evidence_iri: str,
+        *,
+        limit: int,
+        evidence: EvidenceDescription | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        evidence_description = evidence or self._describe_evidence(
+            evidence_iri,
+            self._expand_graphs(["evidence"]),
+            self._lookup_graphs(self._expand_graphs(["all"])),
+        )
+        return self._evidence_storage_route_candidates_for_evidence(
+            evidence_description,
+            limit=limit,
+            seen_candidates=set(),
+            start_rank=1,
+        )
+
+    def _evidence_storage_route_candidates_for_evidence(
+        self,
+        evidence: EvidenceDescription,
+        *,
+        limit: int,
+        seen_candidates: set[tuple[Any, ...]],
+        start_rank: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        candidates: list[dict[str, Any]] = []
+        total_count = 0
+        scanned_source_kind = self.expand_iri("rc:DataSampleSource")
+        source_values: list[tuple[str, str]] = []
+        for span in evidence.source_spans:
+            if span.source_kind == scanned_source_kind and span.source_path:
+                source_values.append(("scanned_source_paths", span.source_path))
+        existing_values = {value for _, value in source_values}
+        for handle in evidence.scanned_source_handles:
+            if handle not in existing_values:
+                source_values.append(("scanned_source_handles", handle))
+                existing_values.add(handle)
+        for source_field, source_value in source_values:
+            candidate = self._evidence_storage_route_candidate_from_value(
+                evidence_iri=evidence.iri,
+                source_field=source_field,
+                source_value=source_value,
+            )
+            if candidate is None:
+                continue
+            candidate_key = self._evidence_storage_route_candidate_key(candidate)
+            if candidate_key in seen_candidates:
+                continue
+            seen_candidates.add(candidate_key)
+            total_count += 1
+            candidates.append(candidate)
+        candidates = sorted(
+            candidates,
+            key=self._evidence_storage_route_candidate_sort_key,
+        )
+        candidates = candidates[:limit]
+        for index, candidate in enumerate(candidates):
+            candidate["candidate_rank"] = start_rank + index
+        return candidates, total_count
+
+    @staticmethod
+    def _evidence_storage_route_candidate_sort_key(
+        candidate: Mapping[str, Any],
+    ) -> tuple[int, str, str]:
+        priority = {
+            "database_relation_from_query_evidence": 0,
+            "s3_path_from_query_evidence": 1,
+            "local_path_from_query_evidence": 2,
+        }
+        return (
+            priority.get(str(candidate.get("candidate_kind")), 99),
+            str(candidate.get("source_field") or ""),
+            str(candidate.get("source_value") or ""),
+        )
+
+    @staticmethod
+    def _evidence_storage_route_candidate_key(
+        candidate: Mapping[str, Any],
+    ) -> tuple[Any, ...]:
+        return (
+            candidate.get("candidate_kind"),
+            candidate.get("storage_protocol"),
+            candidate.get("storage_root"),
+            candidate.get("location_kind"),
+            tuple(candidate.get("path_templates") or []),
+            candidate.get("bucket_name"),
+            candidate.get("key_prefix"),
+        )
+
+    def _evidence_storage_route_candidate_from_value(
+        self,
+        *,
+        evidence_iri: str,
+        source_field: str,
+        source_value: str,
+    ) -> dict[str, Any] | None:
+        value = source_value.strip()
+        if not value:
+            return None
+        parsed_database = self._query_database_relation_candidate_from_handle(value)
+        if parsed_database is not None and source_field == "scanned_source_handles":
+            connection_reference, relation_identifier = parsed_database
+            storage_arguments = {
+                "storage_protocol": "rc:DatabaseStorage",
+                "storage_root": connection_reference,
+                "location_kind": "connection",
+                "path_templates": [relation_identifier],
+            }
+            overlay_arguments = {
+                **storage_arguments,
+                "file_format": "REVIEWED_DATABASE_TABLE_FILE_FORMAT",
+            }
+            return self._evidence_storage_route_candidate(
+                candidate_kind="database_relation_from_query_evidence",
+                evidence_iri=evidence_iri,
+                source_field=source_field,
+                source_value=value,
+                storage_arguments=storage_arguments,
+                overlay_arguments=overlay_arguments,
+                candidate_value_fields=[
+                    "storage_protocol",
+                    "storage_root",
+                    "location_kind",
+                    "path_templates",
+                ],
+                review_note=(
+                    "Parsed from a query-result scanned_source_handle. Review "
+                    "the handle as a non-secret database relation route before "
+                    "using the candidate arguments."
+                ),
+                extra_fields={
+                    "connection_reference": connection_reference,
+                    "relation_identifier": relation_identifier,
+                    "scanned_source_handle": value,
+                },
+            )
+        s3_candidate = self._s3_storage_route_candidate_from_value(
+            evidence_iri=evidence_iri,
+            source_field=source_field,
+            source_value=value,
+        )
+        if s3_candidate is not None:
+            return s3_candidate
+        return self._local_storage_route_candidate_from_value(
+            evidence_iri=evidence_iri,
+            source_field=source_field,
+            source_value=value,
+        )
+
+    def _s3_storage_route_candidate_from_value(
+        self,
+        *,
+        evidence_iri: str,
+        source_field: str,
+        source_value: str,
+    ) -> dict[str, Any] | None:
+        parsed = urlparse(source_value)
+        if parsed.scheme.lower() != "s3" or not parsed.netloc:
+            return None
+        key = parsed.path.lstrip("/")
+        if not key:
+            return None
+        bucket = parsed.netloc
+        file_format = self._query_file_format_from_path(key)
+        storage_arguments: dict[str, Any] = {
+            "storage_protocol": "rc:S3CompatibleStorage",
+            "storage_root": f"s3://{bucket}",
+            "location_kind": "prefix",
+            "bucket_name": bucket,
+            "key_prefix": self._query_path_prefix_before_leaf_or_glob(key),
+            "path_templates": [key],
+        }
+        overlay_arguments = dict(storage_arguments)
+        if file_format is not None:
+            overlay_arguments["file_format"] = file_format
+        return self._evidence_storage_route_candidate(
+            candidate_kind="s3_path_from_query_evidence",
+            evidence_iri=evidence_iri,
+            source_field=source_field,
+            source_value=source_value,
+            storage_arguments=storage_arguments,
+            overlay_arguments=overlay_arguments,
+            candidate_value_fields=[
+                "storage_protocol",
+                "storage_root",
+                "location_kind",
+                "bucket_name",
+                "key_prefix",
+                "path_templates",
+                *([] if file_format is None else ["file_format"]),
+            ],
+            review_note=(
+                "Parsed from query-result source evidence. Review the S3 path "
+                "as non-secret route metadata; endpoint profiles, regions, "
+                "path-style access, and credential references are not inferred "
+                "from the URI."
+            ),
+            extra_fields={
+                "bucket_name": bucket,
+                "key_prefix": storage_arguments["key_prefix"],
+                "path_templates": [key],
+                "file_format": file_format,
+            },
+        )
+
+    def _local_storage_route_candidate_from_value(
+        self,
+        *,
+        evidence_iri: str,
+        source_field: str,
+        source_value: str,
+    ) -> dict[str, Any] | None:
+        if "://" in source_value:
+            return None
+        if self._query_database_relation_candidate_from_handle(source_value) is not None:
+            return None
+        if not self._query_value_looks_like_local_path(source_value):
+            return None
+        normalized = source_value.replace("\\", "/")
+        directory = posixpath.dirname(normalized)
+        leaf = posixpath.basename(normalized)
+        if not leaf:
+            return None
+        if directory:
+            storage_root = directory
+            path_templates = [leaf]
+            location_kind = "directory"
+        else:
+            storage_root = source_value
+            path_templates = []
+            location_kind = "object"
+        file_format = self._query_file_format_from_path(source_value)
+        storage_arguments: dict[str, Any] = {
+            "storage_protocol": "rc:LocalFilesystemStorage",
+            "storage_root": storage_root,
+            "location_kind": location_kind,
+        }
+        if path_templates:
+            storage_arguments["path_templates"] = path_templates
+        overlay_arguments = dict(storage_arguments)
+        if file_format is not None:
+            overlay_arguments["file_format"] = file_format
+        return self._evidence_storage_route_candidate(
+            candidate_kind="local_path_from_query_evidence",
+            evidence_iri=evidence_iri,
+            source_field=source_field,
+            source_value=source_value,
+            storage_arguments=storage_arguments,
+            overlay_arguments=overlay_arguments,
+            candidate_value_fields=[
+                "storage_protocol",
+                "storage_root",
+                "location_kind",
+                *(["path_templates"] if path_templates else []),
+                *([] if file_format is None else ["file_format"]),
+            ],
+            review_note=(
+                "Parsed from query-result source evidence. Review the local "
+                "path as collaborator-safe route metadata before using the "
+                "candidate arguments."
+            ),
+            extra_fields={
+                "path_templates": path_templates,
+                "file_format": file_format,
+            },
+        )
+
+    def _evidence_storage_route_candidate(
+        self,
+        *,
+        candidate_kind: str,
+        evidence_iri: str,
+        source_field: str,
+        source_value: str,
+        storage_arguments: dict[str, Any],
+        overlay_arguments: dict[str, Any],
+        candidate_value_fields: list[str],
+        review_note: str,
+        extra_fields: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        candidate = {
+            "candidate_rank": 0,
+            "candidate_kind": candidate_kind,
+            "requires_review": True,
+            "review_status": "review_required",
+            "evidence_iri": evidence_iri,
+            "source_field": source_field,
+            "source_value": source_value,
+            "storage_protocol": storage_arguments.get("storage_protocol"),
+            "storage_root": storage_arguments.get("storage_root"),
+            "location_kind": storage_arguments.get("location_kind"),
+            "path_templates": storage_arguments.get("path_templates", []),
+            "stage_query_storage_access_repair_candidate_arguments": (
+                storage_arguments
+            ),
+            "draft_query_evidence_storage_overlay_candidate_arguments": (
+                overlay_arguments
+            ),
+            "candidate_value_fields": candidate_value_fields,
+            "review_note": review_note,
+        }
+        if extra_fields:
+            candidate.update(extra_fields)
+        return candidate
+
     @staticmethod
     def _query_database_relation_candidate_from_handle(
         handle: str,
@@ -22603,6 +22956,49 @@ class DoxaBase:
         return connection_reference, relation_identifier
 
     @staticmethod
+    def _query_value_looks_like_local_path(value: str) -> bool:
+        stripped = value.strip()
+        if not stripped:
+            return False
+        if "/" in stripped or "\\" in stripped:
+            return True
+        return DoxaBase._query_file_format_from_path(stripped) is not None
+
+    @staticmethod
+    def _query_path_prefix_before_leaf_or_glob(path: str) -> str | None:
+        wildcard_indexes = [
+            index for index in (path.find("*"), path.find("?"), path.find("["))
+            if index >= 0
+        ]
+        prefix_source = path[: min(wildcard_indexes)] if wildcard_indexes else path
+        if "/" not in prefix_source:
+            return None
+        return prefix_source.rsplit("/", 1)[0] + "/"
+
+    @staticmethod
+    def _query_file_format_from_path(path: str) -> str | None:
+        clean = path.split("?", 1)[0].split("#", 1)[0].lower()
+        for compression_suffix in (".gz", ".gzip", ".bz2", ".xz", ".zst", ".zip"):
+            if clean.endswith(compression_suffix):
+                clean = clean[: -len(compression_suffix)]
+                break
+        suffix_map = {
+            ".parquet": "rc:Parquet",
+            ".csv": "rc:CSV",
+            ".tsv": "rc:TSV",
+            ".orc": "rc:ORC",
+            ".json": "rc:JSON",
+            ".jsonl": "rc:JSONL",
+            ".ndjson": "rc:NDJSON",
+            ".txt": "rc:PlainText",
+            ".md": "rc:Markdown",
+        }
+        for suffix, file_format in suffix_map.items():
+            if clean.endswith(suffix):
+                return file_format
+        return None
+
+    @staticmethod
     def _query_context_should_suggest_evidence_storage_overlay(
         issues: Iterable[QueryPlanningIssue],
     ) -> bool:
@@ -22624,6 +23020,13 @@ class DoxaBase:
         evidence_iri: str,
         source_profile_evidence: dict[str, Any],
     ) -> QueryEvidenceOverlaySuggestedNextAction:
+        (
+            evidence_storage_route_candidates,
+            evidence_storage_route_candidate_total,
+        ) = self._query_context_evidence_storage_route_candidates_for_evidence(
+            evidence_iri,
+            limit=6,
+        )
         arguments = {
             "dataset_iri": dataset_iri,
             "evidence_iri": evidence_iri,
@@ -22678,13 +23081,25 @@ class DoxaBase:
             ),
             source_profile_evidence=source_profile_evidence,
             source_query_evidence=source_profile_evidence,
+            evidence_storage_route_candidates=evidence_storage_route_candidates,
+            evidence_storage_route_candidate_count=len(
+                evidence_storage_route_candidates
+            ),
+            evidence_storage_route_candidate_total_count=(
+                evidence_storage_route_candidate_total
+            ),
+            evidence_storage_route_candidates_truncated=(
+                evidence_storage_route_candidate_total
+                > len(evidence_storage_route_candidates)
+            ),
             required_extra_arguments=required,
             placeholder_fields=placeholders,
             reviewed_value_fields=placeholders,
             template_note=(
-                "Placeholders are not inferred from query artifacts. Replace "
-                "them with reviewed storage, path, and layout values before "
-                "calling the helper."
+                "Placeholders are not automatically applied from query artifacts. "
+                "Use evidence_storage_route_candidates as review-only drafts "
+                "when present, then replace placeholders with reviewed storage, "
+                "path, and layout values before calling the helper."
             ),
         )
 
@@ -23486,6 +23901,14 @@ class DoxaBase:
             all_profiles,
             evidence=profile_run.evidence,
         )
+        (
+            evidence_storage_route_candidates,
+            evidence_storage_route_candidate_total,
+        ) = self._query_context_evidence_storage_route_candidates_for_evidence(
+            evidence_value,
+            limit=6,
+            evidence=profile_run.evidence,
+        )
         if (
             profile_run.total_profile_count == 0
             and not source_query_evidence.get("execution_status")
@@ -23579,6 +24002,10 @@ class DoxaBase:
                 source_query_context=source_query_context,
                 source_profile_evidence=source_profile_evidence,
                 source_query_evidence=source_query_evidence,
+                evidence_storage_route_candidates=evidence_storage_route_candidates,
+                evidence_storage_route_candidate_total=(
+                    evidence_storage_route_candidate_total
+                ),
             )
         )
         if stale_seed_blocker is not None:
@@ -23736,6 +24163,17 @@ class DoxaBase:
             ),
             source_profile_evidence=source_profile_evidence,
             source_query_evidence=source_query_evidence,
+            evidence_storage_route_candidates=evidence_storage_route_candidates,
+            evidence_storage_route_candidate_count=len(
+                evidence_storage_route_candidates
+            ),
+            evidence_storage_route_candidate_total_count=(
+                evidence_storage_route_candidate_total
+            ),
+            evidence_storage_route_candidates_truncated=(
+                evidence_storage_route_candidate_total
+                > len(evidence_storage_route_candidates)
+            ),
             profile_observation_iris=list(profile_run.profile_observation_iris),
             storage_access_iri=storage_access_value,
             physical_layout_iri=physical_layout_value,
@@ -23764,6 +24202,8 @@ class DoxaBase:
         source_query_context: QueryPlanningContext,
         source_profile_evidence: dict[str, Any],
         source_query_evidence: dict[str, Any],
+        evidence_storage_route_candidates: list[dict[str, Any]],
+        evidence_storage_route_candidate_total: int,
     ) -> QueryEvidenceStorageOverlayBlocker | None:
         missing_seed_terms = self._missing_base_ontology_terms(
             REQUIRED_STAGING_ONTOLOGY_TERMS,
@@ -23801,6 +24241,17 @@ class DoxaBase:
             ),
             source_profile_evidence=source_profile_evidence,
             source_query_evidence=source_query_evidence,
+            evidence_storage_route_candidates=evidence_storage_route_candidates,
+            evidence_storage_route_candidate_count=len(
+                evidence_storage_route_candidates
+            ),
+            evidence_storage_route_candidate_total_count=(
+                evidence_storage_route_candidate_total
+            ),
+            evidence_storage_route_candidates_truncated=(
+                evidence_storage_route_candidate_total
+                > len(evidence_storage_route_candidates)
+            ),
             missing_seed_terms=missing_seed_terms,
             mutation_allowed_after="stale_seed_recovery_required_before_staging",
             note=self._stale_seed_recovery_message(missing_seed_terms),
@@ -29109,6 +29560,13 @@ class DoxaBase:
             dataset,
             limit=3,
         )
+        (
+            evidence_storage_route_candidates,
+            evidence_storage_route_candidate_total,
+        ) = self._query_context_evidence_storage_route_candidates_from_evidence(
+            dataset,
+            limit=6,
+        )
         route_intent_preferred_roles = {
             self.expand_iri("rc:ProductionRoute"),
             self.expand_iri("rc:CurrentRoute"),
@@ -29464,9 +29922,32 @@ class DoxaBase:
                     database_relation_candidate_total
                     > len(database_relation_candidates)
                 ),
+                "evidence_storage_route_candidates": (
+                    evidence_storage_route_candidates
+                ),
+                "evidence_storage_route_candidate_count": len(
+                    evidence_storage_route_candidates
+                ),
+                "evidence_storage_route_candidate_total_count": (
+                    evidence_storage_route_candidate_total
+                ),
+                "evidence_storage_route_candidates_truncated": (
+                    evidence_storage_route_candidate_total
+                    > len(evidence_storage_route_candidates)
+                ),
                 "actions": actions,
             },
         }
+        if evidence_storage_route_candidates:
+            details["repair_hint"]["evidence_storage_route_candidate_source"] = (
+                "query_result_scanned_source_paths_and_handles"
+            )
+            details["repair_hint"]["evidence_storage_route_candidate_review_note"] = (
+                "These candidates are parsed from query-result scanned source "
+                "paths and handles and remain review-only. Use the candidate "
+                "argument fields to fill reviewed storage-overlay or staged "
+                "storage-repair calls; do not treat them as applied map facts."
+            )
         if database_relation_candidates:
             details["repair_hint"]["database_relation_candidate_source"] = (
                 "query_result_scanned_source_handles"

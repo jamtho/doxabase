@@ -20043,12 +20043,54 @@ def test_missing_storage_access_lifts_database_relation_candidate_from_query_evi
         "location_kind": "connection",
         "path_templates": ["analytics.support_ticket_daily"],
     }
+    assert repair_hint["evidence_storage_route_candidate_source"] == (
+        "query_result_scanned_source_paths_and_handles"
+    )
+    assert repair_hint["evidence_storage_route_candidate_count"] == 3
+    assert repair_hint["evidence_storage_route_candidate_total_count"] == 3
+    route_candidates = repair_hint["evidence_storage_route_candidates"]
+    assert [item["candidate_kind"] for item in route_candidates] == [
+        "database_relation_from_query_evidence",
+        "s3_path_from_query_evidence",
+        "local_path_from_query_evidence",
+    ]
+    assert route_candidates[0][
+        "stage_query_storage_access_repair_candidate_arguments"
+    ] == {
+        "storage_protocol": "rc:DatabaseStorage",
+        "storage_root": "warehouse-prod",
+        "location_kind": "connection",
+        "path_templates": ["analytics.support_ticket_daily"],
+    }
+    assert route_candidates[0][
+        "draft_query_evidence_storage_overlay_candidate_arguments"
+    ] == {
+        "storage_protocol": "rc:DatabaseStorage",
+        "storage_root": "warehouse-prod",
+        "location_kind": "connection",
+        "path_templates": ["analytics.support_ticket_daily"],
+        "file_format": "REVIEWED_DATABASE_TABLE_FILE_FORMAT",
+    }
+    assert route_candidates[1]["storage_protocol"] == "rc:S3CompatibleStorage"
+    assert route_candidates[1]["storage_root"] == "s3://warehouse"
+    assert route_candidates[1]["bucket_name"] == "warehouse"
+    assert route_candidates[1]["path_templates"] == [
+        "support_ticket_daily.parquet"
+    ]
+    assert route_candidates[1]["file_format"] == "rc:Parquet"
+    assert route_candidates[2]["storage_protocol"] == "rc:LocalFilesystemStorage"
+    assert route_candidates[2]["storage_root"] == "warehouse"
+    assert route_candidates[2]["path_templates"] == ["support_ticket_daily.csv"]
+    assert route_candidates[2]["file_format"] == "rc:CSV"
 
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.issue_code == "missing_storage_access"
     assert repair_group.repair_context["database_relation_candidates"] == [
         candidate
     ]
+    assert repair_group.repair_context["evidence_storage_route_candidates"] == (
+        route_candidates
+    )
     assert repair_group.repair_context[
         "database_relation_candidate_review_note"
     ].startswith("These candidates are parsed")
@@ -23293,6 +23335,26 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert getattr(overlay_action, "source_profile_evidence")[
         "scanned_source_handles"
     ] == [str(csv_path)]
+    assert overlay_action.evidence_storage_route_candidate_count == 1
+    assert overlay_action.evidence_storage_route_candidate_total_count == 1
+    local_candidate = overlay_action.evidence_storage_route_candidates[0]
+    assert local_candidate["candidate_kind"] == "local_path_from_query_evidence"
+    assert local_candidate["source_field"] == "scanned_source_paths"
+    assert local_candidate["source_value"] == str(csv_path)
+    assert local_candidate["storage_protocol"] == "rc:LocalFilesystemStorage"
+    assert local_candidate["storage_root"] == str(warehouse)
+    assert local_candidate["location_kind"] == "directory"
+    assert local_candidate["path_templates"] == ["orders.csv"]
+    assert local_candidate["file_format"] == "rc:CSV"
+    assert local_candidate[
+        "draft_query_evidence_storage_overlay_candidate_arguments"
+    ] == {
+        "storage_protocol": "rc:LocalFilesystemStorage",
+        "storage_root": str(warehouse),
+        "location_kind": "directory",
+        "path_templates": ["orders.csv"],
+        "file_format": "rc:CSV",
+    }
 
     draft = db.draft_query_evidence_storage_overlay(
         dataset,
@@ -23324,6 +23386,9 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
     assert draft.source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
     assert draft.source_profile_evidence["scanned_source_handles"] == [str(csv_path)]
+    assert draft.evidence_storage_route_candidates == (
+        overlay_action.evidence_storage_route_candidates
+    )
     assert draft.reviewed_overlay["storage_access_iri"] == draft.storage_access_iri
     assert draft.reviewed_overlay["physical_layout_iri"] == draft.physical_layout_iri
     assert draft.reviewed_overlay["storage_label"] == "Reviewed Orders storage route"
@@ -23536,6 +23601,37 @@ def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
         sample_method="External read-only DuckDB aggregate query.",
         row_count=12,
     )
+    context = db.describe_query_context(dataset)
+    overlay_action = next(
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_evidence_storage_overlay"
+    )
+    assert overlay_action.evidence_storage_route_candidate_count == 1
+    s3_candidate = overlay_action.evidence_storage_route_candidates[0]
+    assert s3_candidate["candidate_kind"] == "s3_path_from_query_evidence"
+    assert s3_candidate["source_field"] == "scanned_source_paths"
+    assert s3_candidate["source_value"] == (
+        "s3://orders-reviewed/warehouse/orders/*.parquet"
+    )
+    assert s3_candidate["storage_protocol"] == "rc:S3CompatibleStorage"
+    assert s3_candidate["storage_root"] == "s3://orders-reviewed"
+    assert s3_candidate["location_kind"] == "prefix"
+    assert s3_candidate["bucket_name"] == "orders-reviewed"
+    assert s3_candidate["key_prefix"] == "warehouse/orders/"
+    assert s3_candidate["path_templates"] == ["warehouse/orders/*.parquet"]
+    assert s3_candidate["file_format"] == "rc:Parquet"
+    assert s3_candidate[
+        "draft_query_evidence_storage_overlay_candidate_arguments"
+    ] == {
+        "storage_protocol": "rc:S3CompatibleStorage",
+        "storage_root": "s3://orders-reviewed",
+        "location_kind": "prefix",
+        "bucket_name": "orders-reviewed",
+        "key_prefix": "warehouse/orders/",
+        "path_templates": ["warehouse/orders/*.parquet"],
+        "file_format": "rc:Parquet",
+    }
 
     draft = db.draft_query_evidence_storage_overlay(
         dataset,

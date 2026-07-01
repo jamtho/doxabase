@@ -341,7 +341,9 @@ inputs that should become data-sample source spans, and use
 `scanned_source_handles` for reviewed runtime handles. For a database relation
 handoff, record a reviewed relation handle such as
 `warehouse-prod:mart.orders` rather than forcing the value into a fake file
-path. The structured `sample_size`,
+path. Later query-context repair hints can turn scanned S3 URIs, local paths,
+and database handles into review-only storage route candidate arguments; review
+them before staging or drafting an overlay. The structured `sample_size`,
 `row_count`, `null_count`, `distinct_count`, value-frequency, and metric fields
 are profile-shaped observation fields; only fill them when their meaning is
 clear in `summary`, `sample_scope`, and `sample_method`. For filtered or grouped

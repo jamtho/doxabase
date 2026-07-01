@@ -1008,7 +1008,9 @@ protocol, location, or layout-verification blockers, the context can also add a
 `draft_query_evidence_storage_overlay` skeleton action. Treat its placeholder
 arguments as a review checklist, not inferred truth: replace the fields listed
 in `placeholder_fields` / `reviewed_value_fields` and supply
-`required_extra_arguments` before calling the helper.
+`required_extra_arguments` before calling the helper. When available,
+`evidence_storage_route_candidates[]` gives review-only S3, local path, or
+database-relation argument drafts parsed from scanned source paths/handles.
 Use `dataset_profile_row_counts`, `dataset_profile_row_count_bases`,
 `row_count_snapshot_matches`, and `row_count_snapshot_basis` on
 `describe_profile_run` results to preserve that normalized row-count context
@@ -1165,6 +1167,9 @@ carry `connection_reference`, `relation_identifier`, `storage_root`,
 `stage_query_storage_access_repair_candidate_arguments`. Use those structured
 fields as reviewed input for `stage_query_storage_access_repair`; do not split
 the scanned handle in caller code or treat the candidate as an applied map fact.
+The same repair context can expose `evidence_storage_route_candidates[]` for
+database handles, S3 URIs, and local paths, including
+`draft_query_evidence_storage_overlay_candidate_arguments` for the overlay path.
 In `project_brief`, top-level
 `pending_staged_repair_iris` is limited to current staged rows that change
 query-planning metadata on the dataset or linked query resources such as storage
@@ -1346,7 +1351,7 @@ In mixed profile-plus-query contexts, `describe_query_context` may return both
 the profile action preserves semantic/profile context, while the overlay action
 uses ordinary query evidence to stage reviewed storage and layout metadata.
 
-The helper does not infer storage values from query text, result artifacts, or
+The helper does not apply storage values from query text, result artifacts, or
 logs. The caller supplies reviewed values such as `storage_protocol`,
 `storage_root`, `location_kind`, `path_templates`, `file_format`, optional
 endpoint/credential hints, compression, and a layout verification note. The
@@ -1361,7 +1366,9 @@ validation for the Turtle addition, and returns `stage_arguments` plus a
 `source_query_evidence.scanned_source_paths` as reviewed provenance context for
 choosing those values, not as an automatically accepted storage root.
 `source_profile_evidence` is retained as a compatibility alias for the same
-payload.
+payload. `evidence_storage_route_candidates[]` is preserved on suggested
+overlay actions, overlay drafts, and stale-seed blockers as argument guidance
+only.
 If the capsule's immutable `base_ontology` is missing current staging
 vocabulary, the helper returns
 `result_kind="query_evidence_storage_overlay_blocker"` with

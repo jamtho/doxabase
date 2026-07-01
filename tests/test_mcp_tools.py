@@ -1615,6 +1615,19 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert overlay_action["source_profile_evidence"]["scanned_source_handles"] == [
         str(csv_path)
     ]
+    assert overlay_action["evidence_storage_route_candidate_count"] == 1
+    assert overlay_action["evidence_storage_route_candidate_total_count"] == 1
+    route_candidate = overlay_action["evidence_storage_route_candidates"][0]
+    assert route_candidate["candidate_kind"] == "local_path_from_query_evidence"
+    assert route_candidate[
+        "draft_query_evidence_storage_overlay_candidate_arguments"
+    ] == {
+        "storage_protocol": "rc:LocalFilesystemStorage",
+        "storage_root": str(warehouse),
+        "location_kind": "directory",
+        "path_templates": ["orders.csv"],
+        "file_format": "rc:CSV",
+    }
 
     draft = draft_query_evidence_storage_overlay_tool(
         db,
@@ -1646,6 +1659,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     ]
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
     assert draft["source_query_evidence"] == draft["source_profile_evidence"]
+    assert draft["evidence_storage_route_candidates"] == (
+        overlay_action["evidence_storage_route_candidates"]
+    )
     assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
     assert draft["reviewed_overlay"]["route_roles"] == [RC + "CurrentRoute"]
     assert draft["reviewed_overlay"]["path_templates"] == ["orders.csv"]
@@ -1728,6 +1744,10 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stale_seed_blocker(
     assert result_payload["mutation_allowed_after"] == (
         "stale_seed_recovery_required_before_staging"
     )
+    assert result_payload["evidence_storage_route_candidate_count"] == 1
+    assert result_payload["evidence_storage_route_candidates"][0][
+        "candidate_kind"
+    ] == "local_path_from_query_evidence"
     assert "stage_arguments" not in result_payload
     assert result_payload["suggested_next_actions"][0]["tool_name"] == (
         "export_preflight"
