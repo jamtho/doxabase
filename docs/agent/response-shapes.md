@@ -1580,6 +1580,31 @@ aggregate count lists were supplied, otherwise `None`. `analysis_view`,
 `profile_observation_iris` with `describe_profile_run(dataset_iri,
 evidence_iri)` to retrieve the aggregate run after handoff.
 
+`db.record_profiled_parquet_table(...)` returns a
+`ProfiledParquetTableRecord`:
+
+```python
+record.dataset_iri
+record.shared_evidence_iri
+record.table_bundle
+record.profile_bundle
+record.profile_observation_count
+record.profile_draft_recommendation_count
+record.query_readiness
+record.query_issue_codes
+record.suggested_next_actions
+record.suggested_next_calls
+```
+
+`table_bundle` has the `MapTableBundleRecord` shape and always records a
+Parquet physical layout. `profile_bundle` has the `ProfileBundleRecord` shape
+with map writes disabled for the profile pass because the table bundle already
+records reviewed map facts. `shared_evidence_iri` is the caller-supplied value
+or a stable dataset-derived `/profile-evidence/parquet` IRI. Use it with
+`describe_profile_run(record.dataset_iri, record.shared_evidence_iri)`. The
+helper does no Parquet I/O; its counts, frequencies, physical types, and
+storage/layout metadata are caller-reviewed facts.
+
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 
 ```python
@@ -3102,6 +3127,9 @@ ordinary `MapResourceRecord` objects. `storage_access` and `physical_layout` are
 `None` when the call did not include fields that request those resources. Use
 `column_iris` for the deterministic column IRIs generated from omitted
 `column_iri` values.
+When the same reviewed Parquet manifest also contains aggregate profile facts,
+prefer `record_profiled_parquet_table` so this table bundle and the shared
+profile bundle are returned together.
 
 ### Query Context
 

@@ -1806,6 +1806,27 @@ require `column_name`; `column_iri` is optional and otherwise defaults to a
 stable dataset-derived IRI. Resource-valued fields still require IRIs or CURIEs.
 The helper does not infer physical types and does not execute I/O.
 
+`doxabase.record_profiled_parquet_table`
+
+Records reviewed Parquet table context without reading data: a table map
+bundle, Parquet physical layout, optional storage access, and a shared profile
+bundle from caller-supplied aggregate facts. Use it when a profiler, Parquet
+footer inspection, warehouse/catalog export, or case-study script has already
+reviewed the schema and profile values. The helper defaults `file_format` to
+`rc:Parquet`, generates a stable shared evidence IRI when
+`shared_evidence_iri` is omitted, sets profile map writes off because the map
+bundle already records reviewed facts, and returns profile/query follow-up
+actions. It does not install Parquet dependencies, scan files, infer physical
+types, or preserve raw row samples.
+
+Column specs combine the usual table-bundle fields (`column_name`,
+`column_iri`, `physical_type`, `value_type`, `nullable`, label/description)
+with optional profile fields such as `summary`, `row_count`, `null_count`,
+`distinct_count`, `value_frequencies`, and `profile_metrics`. Resource-valued
+fields still require IRIs or CURIEs. Treat `value_frequencies` as reviewed
+aggregate facts; do not include raw message bodies, individual addresses,
+tokens, or other row-level samples.
+
 `doxabase.record_map_analysis_view`
 
 Records or updates a logical analysis view in the `map` graph. Use it for

@@ -1083,6 +1083,15 @@ availability flags, structured `suggested_next_actions`, and compatibility
 `suggested_next_calls` for the next agent. When both map dataset context and a
 shared evidence run are available, handoff actions include
 `draft_profile_map_updates` before context-slice routes.
+`record_profiled_parquet_table()` records one reviewed Parquet table handoff in
+one no-I/O call. It composes `record_map_table_bundle()` and
+`record_profile_bundle()`, defaults the physical layout to `rc:Parquet`, creates
+a stable shared evidence IRI when none is supplied, and returns the table
+bundle, profile bundle, profile observation count, profile draft recommendation
+count, query readiness, issue codes, and suggested next actions. Use it when an
+external profiler or case-study script has already produced reviewed schema,
+storage/layout, and aggregate profile facts; do not use it as a Parquet scanner
+or a place to preserve raw row samples.
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,
 optional domain-pair/domain-frequency counts, shared evidence, and optional
@@ -1206,6 +1215,9 @@ catalog. It is a no-I/O convenience wrapper over the ordinary map helpers: it
 records the table, columns, optional storage access, and optional physical
 layout, then returns `describe_dataset` and `describe_query_context` follow-up
 actions. It does not infer physical types or replace profile evidence helpers.
+When the same reviewed Parquet manifest also contains aggregate profile facts,
+prefer `record_profiled_parquet_table()` so the map facts, shared profile run,
+and profile/query follow-up actions stay connected.
 Supplied same-subject fields replace the helper-owned predicates on the
 resource being recorded, but incoming convenience links such as
 `record_map_caveat(targets=...)`, `record_map_storage_access(datasets=...)`,

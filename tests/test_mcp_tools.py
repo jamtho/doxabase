@@ -73,6 +73,7 @@ from doxabase.mcp_tools import (
     record_map_physical_layout_tool,
     record_map_relationship_tool,
     record_map_storage_access_tool,
+    record_profiled_parquet_table_tool,
     record_graph_revision_tool,
     record_staged_revision_review_decision_tool,
     record_observation_tool,
@@ -203,6 +204,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_analysis_view" in tool_names
     assert "doxabase.record_map_table_bundle" in tool_names
+    assert "doxabase.record_profiled_parquet_table" in tool_names
     assert "doxabase.record_map_column" in tool_names
     assert "doxabase.record_map_caveat" in tool_names
     assert "doxabase.record_map_storage_access" in tool_names
@@ -7077,6 +7079,75 @@ def test_record_map_table_bundle_tool_returns_json_like_records(
         "status",
     }
     assert description["physical_layouts"][0]["file_format"]["iri"] == RC + "Parquet"
+
+
+def test_record_profiled_parquet_table_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-profiled-parquet#"
+    table = f"{base}orders"
+
+    result = record_profiled_parquet_table_tool(
+        db,
+        iri=table,
+        label="Orders",
+        dataset_summary="Orders profile captured reviewed aggregate counts.",
+        evidence_summary="Reviewed no-I/O Parquet profile manifest.",
+        evidence_sources=["scratch://orders-profile.json"],
+        columns=[
+            {
+                "column_name": "order_id",
+                "physical_type": "rc:Varchar",
+                "nullable": False,
+                "null_count": 0,
+                "distinct_count": 12,
+            },
+            {
+                "column_name": "status",
+                "physical_type": "rc:Varchar",
+                "null_count": 0,
+                "distinct_count": 3,
+            },
+        ],
+        path_templates=["orders/current.parquet"],
+        row_count=12,
+        storage_access_iri=f"{base}orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        physical_layout_iri=f"{base}orders_layout",
+        compression_codec="rc:ZstdCompression",
+    )
+
+    assert result["dataset_iri"] == table
+    assert result["shared_evidence_iri"] == f"{table}/profile-evidence/parquet"
+    assert result["table_bundle"]["physical_layout"]["iri"] == (
+        f"{base}orders_layout"
+    )
+    assert result["table_bundle"]["column_iris"] == [
+        f"{table}__order_id",
+        f"{table}__status",
+    ]
+    assert result["profile_observation_count"] == 3
+    assert result["profile_bundle"]["handoff_entrypoints"][
+        "profile_run_available"
+    ] is True
+    assert isinstance(result["profile_draft_recommendation_count"], int)
+    assert isinstance(result["query_readiness"], str)
+    assert "describe_profile_run" in {
+        action["tool_name"] for action in result["suggested_next_actions"]
+    }
+
+    profile_run = describe_profile_run_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=result["shared_evidence_iri"],
+        limit=None,
+    )
+    assert profile_run["total_profile_count"] == 3
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_record_domain_network_profile_tool_returns_handoff_payload(

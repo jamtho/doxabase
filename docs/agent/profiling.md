@@ -23,6 +23,12 @@ Use `record_dataset_profile`, `record_column_profile`, or
 `record_profile_bundle` for one pass that produced dataset-level and column
 profiles together. Pass `shared_evidence_iri` when the profiles all come from
 one run and should be retrievable as a group.
+Use `record_profiled_parquet_table` when an external profiler, Parquet footer
+inspection, catalog dump, or case-study script has already produced reviewed
+Parquet schema/storage/layout metadata and aggregate profile facts for one
+table. It records the table map bundle and shared profile bundle together,
+defaults the physical layout to `rc:Parquet`, returns profile/query follow-up
+actions, and still performs no Parquet I/O.
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and
@@ -72,6 +78,35 @@ db.record_profile_bundle(
     ],
 )
 ```
+
+For reviewed Parquet manifests, prefer the composed helper:
+
+```python
+record = db.record_profiled_parquet_table(
+    "https://example.test/project#orders",
+    label="Orders",
+    dataset_summary="Orders profile captured reviewed aggregate counts.",
+    evidence_summary="Reviewed no-I/O Parquet profile manifest.",
+    evidence_sources=["scratch://orders-profile.json"],
+    row_count=1000,
+    columns=[
+        {
+            "column_name": "status",
+            "physical_type": "rc:Varchar",
+            "null_count": 0,
+            "distinct_count": 3,
+        }
+    ],
+    storage_protocol="rc:LocalFilesystemStorage",
+    access_mode="rc:ReadOnlyAccess",
+    location_kind="object",
+    storage_root="/data/orders/current.parquet",
+    compression_codec="rc:ZstdCompression",
+)
+```
+
+Use `record.shared_evidence_iri` with `describe_profile_run`, and inspect
+`record.suggested_next_actions` before promoting profile-derived findings.
 
 ## Retrieve The Run
 

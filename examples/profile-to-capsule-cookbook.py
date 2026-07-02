@@ -145,22 +145,42 @@ def _record_reviewed_capsule(db: DoxaBase) -> dict[str, Any]:
             "column_name": "order_id",
             "physical_type": "rc:Integer",
             "nullable": False,
+            "summary": "order_id was populated in every reviewed row.",
+            "null_count": 0,
+            "distinct_count": 6,
         },
         {
             "column_name": "status",
             "physical_type": "rc:Varchar",
+            "summary": "status had three reviewed values.",
+            "null_count": 0,
+            "distinct_count": 3,
+            "value_frequencies": [
+                {"value": "paid", "frequency": 3},
+                {"value": "pending", "frequency": 2},
+                {"value": "refunded", "frequency": 1},
+            ],
         },
         {
             "column_name": "amount_cents",
             "physical_type": "rc:Integer",
+            "summary": "amount_cents was populated in every reviewed row.",
+            "null_count": 0,
+            "distinct_count": 6,
         },
         {
             "column_name": "customer_state",
             "physical_type": "rc:Varchar",
+            "summary": "customer_state had three reviewed values.",
+            "null_count": 0,
+            "distinct_count": 3,
         },
         {
             "column_name": "order_date",
             "physical_type": "rc:Date",
+            "summary": "order_date covered four reviewed order dates.",
+            "null_count": 0,
+            "distinct_count": 4,
         },
     ]
     caveat = db.record_map_caveat(
@@ -173,13 +193,24 @@ def _record_reviewed_capsule(db: DoxaBase) -> dict[str, Any]:
         severity="rc:Minor",
         targets=[dataset_iri],
     )
-    table_bundle = db.record_map_table_bundle(
+    profiled_table = db.record_profiled_parquet_table(
         dataset_iri,
         label="Orders reviewed table",
         description="Synthetic reviewed order table used by the cookbook.",
+        dataset_summary="Orders table profile captured reviewed aggregate counts.",
+        evidence_summary=(
+            "Reviewed synthetic profiler output for the profile-to-capsule "
+            "cookbook."
+        ),
+        evidence_sources=["scratch://profile-to-capsule/orders-profile.json"],
+        shared_evidence_iri=evidence_iri,
+        observed_by=AGENT,
         columns=columns,
         path_templates=["orders/current.parquet"],
-        row_count_snapshot=6,
+        row_count=6,
+        sample_size=6,
+        sample_scope="All rows in the reviewed synthetic Orders snapshot.",
+        sample_method="Caller-supplied aggregate profile; DoxaBase did no I/O.",
         row_semantics="rc:EventRow",
         schema_stability="rc:FixedSchema",
         layout_verification_status="rc:VerifiedByQueryLayout",
@@ -200,68 +231,8 @@ def _record_reviewed_capsule(db: DoxaBase) -> dict[str, Any]:
         ),
         physical_layout_iri=f"{BASE}orders_parquet_layout",
         physical_layout_label="Orders Parquet layout",
-        file_format="rc:Parquet",
         compression_codec="rc:ZstdCompression",
         physical_layout_verification_status="rc:VerifiedByQueryLayout",
-    )
-    profile_bundle = db.record_profile_bundle(
-        dataset_iri,
-        dataset_summary="Orders table profile captured reviewed aggregate counts.",
-        evidence_summary=(
-            "Reviewed synthetic profiler output for the profile-to-capsule "
-            "cookbook."
-        ),
-        evidence_sources=["scratch://profile-to-capsule/orders-profile.json"],
-        shared_evidence_iri=evidence_iri,
-        observed_by=AGENT,
-        sample_size=6,
-        sample_scope="All rows in the reviewed synthetic Orders snapshot.",
-        sample_method="Caller-supplied aggregate profile; DoxaBase did no I/O.",
-        row_count=6,
-        update_map_snapshot=False,
-        column_defaults={"update_map_column": False},
-        column_profiles=[
-            {
-                "column_iri": f"{dataset_iri}__order_id",
-                "column_name": "order_id",
-                "summary": "order_id was populated in every reviewed row.",
-                "null_count": 0,
-                "distinct_count": 6,
-            },
-            {
-                "column_iri": f"{dataset_iri}__status",
-                "column_name": "status",
-                "summary": "status had three reviewed values.",
-                "null_count": 0,
-                "distinct_count": 3,
-                "value_frequencies": [
-                    {"value": "paid", "frequency": 3},
-                    {"value": "pending", "frequency": 2},
-                    {"value": "refunded", "frequency": 1},
-                ],
-            },
-            {
-                "column_iri": f"{dataset_iri}__amount_cents",
-                "column_name": "amount_cents",
-                "summary": "amount_cents was populated in every reviewed row.",
-                "null_count": 0,
-                "distinct_count": 6,
-            },
-            {
-                "column_iri": f"{dataset_iri}__customer_state",
-                "column_name": "customer_state",
-                "summary": "customer_state had three reviewed values.",
-                "null_count": 0,
-                "distinct_count": 3,
-            },
-            {
-                "column_iri": f"{dataset_iri}__order_date",
-                "column_name": "order_date",
-                "summary": "order_date covered four reviewed order dates.",
-                "null_count": 0,
-                "distinct_count": 4,
-            },
-        ],
         pattern_summary="Orders cookbook profile is a full reviewed aggregate.",
         pattern_text=(
             "The table schema, row count, column profiles, and paid-order "
@@ -273,6 +244,8 @@ def _record_reviewed_capsule(db: DoxaBase) -> dict[str, Any]:
         ),
         pattern_support_scope="all_profiles",
     )
+    table_bundle = profiled_table.table_bundle
+    profile_bundle = profiled_table.profile_bundle
     analysis_view = db.record_map_analysis_view(
         analysis_view_iri,
         label="Paid orders logical view",

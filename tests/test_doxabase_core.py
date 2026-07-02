@@ -27333,6 +27333,131 @@ def test_record_map_table_bundle_preflights_column_specs(tmp_path: Path) -> None
     assert _mutable_graph_counts(db) == before_counts
 
 
+def test_record_profiled_parquet_table_records_map_and_profile_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profiled-parquet#"
+    table = f"{base}orders"
+
+    result = db.record_profiled_parquet_table(
+        table,
+        label="Orders",
+        description="Orders table from reviewed Parquet metadata.",
+        dataset_summary="Orders Parquet profile captured reviewed aggregate counts.",
+        evidence_summary="Reviewed no-I/O Parquet profile manifest.",
+        evidence_sources=["scratch://orders-profile.json"],
+        columns=[
+            {
+                "column_name": "order_id",
+                "physical_type": "rc:Varchar",
+                "nullable": False,
+                "null_count": 0,
+                "distinct_count": 12,
+            },
+            {
+                "column_name": "status",
+                "physical_type": "rc:Varchar",
+                "null_count": 0,
+                "distinct_count": 3,
+                "value_frequencies": [
+                    {"value": "paid", "frequency": 7},
+                    {"value": "pending", "frequency": 5},
+                ],
+            },
+        ],
+        path_templates=["orders/current.parquet"],
+        row_count=12,
+        row_semantics="rc:EventRow",
+        schema_stability="rc:FixedSchema",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        storage_access_iri=f"{base}orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        storage_path_templates=["orders/current.parquet"],
+        physical_layout_iri=f"{base}orders_layout",
+        compression_codec="rc:ZstdCompression",
+        physical_layout_verification_status="rc:VerifiedByQueryLayout",
+        pattern_summary="Orders profile is reviewed aggregate evidence.",
+        pattern_text=(
+            "Orders map facts and profile observations come from the same "
+            "reviewed Parquet profile manifest."
+        ),
+        pattern_rationale=(
+            "Agents can inspect one shared profile run before promoting or "
+            "questioning profile-derived findings."
+        ),
+    )
+
+    assert result.dataset_iri == table
+    assert result.shared_evidence_iri == f"{table}/profile-evidence/parquet"
+    assert result.table_bundle.dataset.resource_type == RC + "Table"
+    assert result.table_bundle.physical_layout is not None
+    assert result.profile_observation_count == 3
+    assert result.profile_bundle.handoff_entrypoints.profile_run_available is True
+    assert result.profile_draft_recommendation_count == db.draft_profile_map_updates(
+        table,
+        result.shared_evidence_iri,
+    ).recommendation_count
+    assert result.query_readiness == db.describe_query_context(table).readiness
+    assert "describe_query_context" in [
+        action.tool_name for action in result.suggested_next_actions
+    ]
+    assert "describe_profile_run" in [
+        action.tool_name for action in result.suggested_next_actions
+    ]
+
+    description = db.describe_dataset(table)
+    assert description.row_count_snapshot == 12
+    assert [column.column_name for column in description.columns] == [
+        "order_id",
+        "status",
+    ]
+    assert description.physical_layouts[0].file_format is not None
+    assert description.physical_layouts[0].file_format.iri == RC + "Parquet"
+
+    profile_run = db.describe_profile_run(
+        table,
+        result.shared_evidence_iri,
+        limit=None,
+    )
+    assert profile_run.total_profile_count == 3
+    assert {
+        profile.observed_column_name
+        for profile in profile_run.mapped_column_profile_observations
+    } == {
+        "order_id",
+        "status",
+    }
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_profiled_parquet_table_preflights_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="unsupported field"):
+        db.record_profiled_parquet_table(
+            "https://example.test/profiled-parquet#orders",
+            dataset_summary="Orders Parquet profile.",
+            evidence_summary="Reviewed no-I/O profile manifest.",
+            columns=[
+                {
+                    "column_name": "order_id",
+                    "unexpected": "not supported",
+                }
+            ],
+            row_count=12,
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_record_domain_network_profile_records_reviewed_aggregates(
     tmp_path: Path,
 ) -> None:

@@ -4456,6 +4456,13 @@ few useful gaps:
   staged/profile Markdown review exports now expose bounded
   `shareability_hint_matches` with stable IDs and non-secret locators while
   preserving the original hint-code list.
+- A deeper Enron handoff review showed that reviewed Parquet schema/profile
+  manifests still required agents to manually compose `record_map_table_bundle`
+  and `record_profile_bundle` for every table. `record_profiled_parquet_table`
+  now records the no-I/O table map bundle, Parquet layout, shared profile
+  bundle, and profile/query follow-up handles together; use it when the
+  profile facts are already reviewed aggregate metadata, not when DoxaBase
+  should read Parquet files or preserve raw row samples.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

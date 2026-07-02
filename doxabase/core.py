@@ -4343,6 +4343,20 @@ class MapTableBundleRecord:
 
 
 @dataclass(frozen=True)
+class ProfiledParquetTableRecord:
+    dataset_iri: str
+    shared_evidence_iri: str
+    table_bundle: MapTableBundleRecord
+    profile_bundle: ProfileBundleRecord
+    profile_observation_count: int
+    profile_draft_recommendation_count: int
+    query_readiness: str
+    query_issue_codes: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ResourceTriple:
     graph: str
     subject: str
@@ -38149,6 +38163,269 @@ class DoxaBase:
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
 
+    def record_profiled_parquet_table(
+        self,
+        iri: str,
+        *,
+        dataset_summary: str,
+        evidence_summary: str,
+        columns: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        label: str | None = None,
+        description: str | None = None,
+        path_templates: Iterable[str] | str | None = None,
+        row_count: int | None = None,
+        sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        shared_evidence_iri: str | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
+        row_semantics: str | None = None,
+        entity_key: str | None = None,
+        schema_stability: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        caveats: Iterable[str] | str | None = None,
+        companion_datasets: Iterable[str] | str | None = None,
+        extra_types: Iterable[str] | str | None = None,
+        storage_access_iri: str | None = None,
+        storage_label: str | None = None,
+        storage_description: str | None = None,
+        route_roles: Iterable[str] | str | None = None,
+        storage_protocol: str | None = None,
+        access_mode: str | None = None,
+        location_kind: str | None = None,
+        storage_root: str | None = None,
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        storage_path_templates: Iterable[str] | str | None = None,
+        storage_layout_verification_status: str | None = None,
+        storage_layout_verification_note: str | None = None,
+        physical_layout_iri: str | None = None,
+        physical_layout_label: str | None = None,
+        physical_layout_description: str | None = None,
+        compression_codec: str | None = None,
+        physical_layout_verification_status: str | None = None,
+        physical_layout_verification_note: str | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        pattern_map_implications: Iterable[str] | str | None = None,
+        pattern_support_scope: TypingLiteral["dataset_profile", "all_profiles"]
+        | str = "all_profiles",
+    ) -> ProfiledParquetTableRecord:
+        dataset_iri = self._required_iri("iri", iri)
+        if not isinstance(dataset_summary, str) or not dataset_summary.strip():
+            raise DoxaBaseError("dataset_summary must be a non-empty string")
+        if not isinstance(evidence_summary, str) or not evidence_summary.strip():
+            raise DoxaBaseError("evidence_summary must be a non-empty string")
+        self._ensure_non_negative("row_count", row_count)
+        self._ensure_non_negative("sample_size", sample_size)
+        self._ensure_non_negative("null_count", null_count)
+        self._ensure_non_negative("distinct_count", distinct_count)
+        if observed_at is not None:
+            self._datetime_literal(observed_at, name="observed_at")
+        for name, value in (
+            ("sample_scope", sample_scope),
+            ("sample_method", sample_method),
+            ("observed_by", observed_by),
+        ):
+            self._preflight_optional_string(name, value)
+        value_frequency_items = (
+            list(value_frequencies) if value_frequencies is not None else None
+        )
+        profile_metric_items = (
+            list(profile_metrics) if profile_metrics is not None else None
+        )
+        self._profile_value_frequency_values(
+            value_frequency_items,
+            field_name="value_frequencies",
+        )
+        self._profile_metric_values(
+            profile_metric_items,
+            field_name="profile_metrics",
+        )
+        profile_sample_size = sample_size if sample_size is not None else row_count
+        profile_sample_scope = sample_scope
+        profile_sample_method = sample_method or (
+            "Caller-supplied reviewed Parquet metadata/profile; DoxaBase did no I/O."
+        )
+        evidence_value = (
+            str(self._resource_ref("shared_evidence_iri", shared_evidence_iri))
+            if shared_evidence_iri is not None
+            else f"{dataset_iri}/profile-evidence/parquet"
+        )
+        map_columns, profile_columns = self._normalise_profiled_parquet_columns(
+            dataset_iri=dataset_iri,
+            columns=columns,
+            row_count=row_count,
+            sample_size=profile_sample_size,
+            sample_scope=profile_sample_scope,
+            sample_method=profile_sample_method,
+            observed_at=observed_at,
+            observed_by=observed_by,
+        )
+
+        self._preflight_map_table_bundle(
+            label=label,
+            description=description,
+            path_templates=path_templates,
+            row_count_snapshot=row_count,
+            row_semantics=row_semantics,
+            entity_key=entity_key,
+            schema_stability=schema_stability,
+            layout_verification_status=layout_verification_status,
+            layout_verification_note=layout_verification_note,
+            caveats=caveats,
+            companion_datasets=companion_datasets,
+            extra_types=extra_types,
+            storage_label=storage_label,
+            storage_description=storage_description,
+            route_roles=route_roles,
+            storage_protocol=storage_protocol,
+            access_mode=access_mode,
+            location_kind=location_kind,
+            storage_root=storage_root,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            storage_path_templates=storage_path_templates,
+            storage_layout_verification_status=storage_layout_verification_status,
+            storage_layout_verification_note=storage_layout_verification_note,
+            physical_layout_label=physical_layout_label,
+            physical_layout_description=physical_layout_description,
+            file_format="rc:Parquet",
+            compression_codec=compression_codec,
+            physical_layout_verification_status=physical_layout_verification_status,
+            physical_layout_verification_note=physical_layout_verification_note,
+        )
+        self._preflight_profiled_parquet_profile_bundle(
+            dataset_iri=dataset_iri,
+            dataset_summary=dataset_summary,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            shared_evidence_iri=evidence_value,
+            sample_size=profile_sample_size,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequency_items,
+            profile_metrics=profile_metric_items,
+            column_profiles=profile_columns,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
+            pattern_support_scope=pattern_support_scope,
+        )
+
+        table_bundle = self.record_map_table_bundle(
+            dataset_iri,
+            label=label,
+            description=description,
+            columns=map_columns,
+            path_templates=path_templates,
+            row_count_snapshot=row_count,
+            row_semantics=row_semantics,
+            entity_key=entity_key,
+            schema_stability=schema_stability,
+            layout_verification_status=layout_verification_status,
+            layout_verification_note=layout_verification_note,
+            caveats=caveats,
+            companion_datasets=companion_datasets,
+            extra_types=extra_types,
+            storage_access_iri=storage_access_iri,
+            storage_label=storage_label,
+            storage_description=storage_description,
+            route_roles=route_roles,
+            storage_protocol=storage_protocol,
+            access_mode=access_mode,
+            location_kind=location_kind,
+            storage_root=storage_root,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            storage_path_templates=storage_path_templates,
+            storage_layout_verification_status=storage_layout_verification_status,
+            storage_layout_verification_note=storage_layout_verification_note,
+            physical_layout_iri=physical_layout_iri,
+            physical_layout_label=physical_layout_label,
+            physical_layout_description=physical_layout_description,
+            file_format="rc:Parquet",
+            compression_codec=compression_codec,
+            physical_layout_verification_status=physical_layout_verification_status,
+            physical_layout_verification_note=physical_layout_verification_note,
+        )
+        profile_bundle = self.record_profile_bundle(
+            dataset_iri,
+            dataset_summary=dataset_summary,
+            column_profiles=profile_columns,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=profile_sample_size,
+            sample_scope=profile_sample_scope,
+            sample_method=profile_sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequency_items,
+            profile_metrics=profile_metric_items,
+            update_map_snapshot=False,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
+            pattern_support_scope=pattern_support_scope,
+            shared_evidence_iri=evidence_value,
+            column_defaults={"update_map_column": False},
+        )
+        profile_draft = self.draft_profile_map_updates(dataset_iri, evidence_value)
+        query_context = self.describe_query_context(dataset_iri)
+        suggested_next_actions = self._profiled_table_suggested_next_actions(
+            table_bundle.suggested_next_actions,
+            profile_bundle.handoff_entrypoints.suggested_next_actions,
+        )
+        return ProfiledParquetTableRecord(
+            dataset_iri=dataset_iri,
+            shared_evidence_iri=evidence_value,
+            table_bundle=table_bundle,
+            profile_bundle=profile_bundle,
+            profile_observation_count=len(
+                profile_bundle.handoff_entrypoints.profile_observation_iris
+            ),
+            profile_draft_recommendation_count=profile_draft.recommendation_count,
+            query_readiness=query_context.readiness,
+            query_issue_codes=[issue.code for issue in query_context.issues],
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def record_map_analysis_view(
         self,
         iri: str,
@@ -68203,6 +68480,291 @@ class DoxaBase:
     def _validate_resource_values(self, name: str, values: Iterable[str]) -> None:
         for value in values:
             self._resource_ref(name, value)
+
+    def _normalise_profiled_parquet_columns(
+        self,
+        *,
+        dataset_iri: str,
+        columns: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        row_count: int | None,
+        sample_size: int | None,
+        sample_scope: str | None,
+        sample_method: str | None,
+        observed_at: datetime | str | None,
+        observed_by: str | None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        if columns is None:
+            column_values: list[Mapping[str, Any]] = []
+        elif isinstance(columns, MappingABC):
+            column_values = [columns]
+        else:
+            column_values = list(columns)
+        allowed_fields = {
+            "iri",
+            "column_iri",
+            "column_name",
+            "label",
+            "description",
+            "physical_type",
+            "value_type",
+            "nullable",
+            "summary",
+            "row_count",
+            "null_count",
+            "distinct_count",
+            "value_frequencies",
+            "profile_metrics",
+            "sample_size",
+            "sample_scope",
+            "sample_method",
+            "observed_at",
+            "observed_by",
+            "pattern_summary",
+            "pattern_text",
+            "pattern_rationale",
+            "pattern_confidence",
+            "pattern_status",
+            "pattern_stability",
+            "pattern_map_implications",
+            "observation_iri",
+            "pattern_iri",
+        }
+        map_columns: list[dict[str, Any]] = []
+        profile_columns: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(column_values, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"columns[{index}] must be an object")
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"columns[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            column_name = item.get("column_name")
+            if not isinstance(column_name, str) or not column_name.strip():
+                raise DoxaBaseError(
+                    f"columns[{index}].column_name must be a non-empty string"
+                )
+            column_name_value = column_name.strip()
+            column_iri_value = item.get("column_iri", item.get("iri"))
+            if column_iri_value is None:
+                column_iri = self._default_table_bundle_column_iri(
+                    dataset_iri,
+                    column_name_value,
+                )
+            elif isinstance(column_iri_value, str):
+                column_iri = str(
+                    self._resource_ref(
+                        f"columns[{index}].column_iri",
+                        column_iri_value,
+                    )
+                )
+            else:
+                raise DoxaBaseError(
+                    f"columns[{index}].column_iri must be a string when provided"
+                )
+            if column_iri in seen_iris:
+                raise DoxaBaseError(f"columns[{index}].column_iri duplicates {column_iri}")
+            seen_iris.add(column_iri)
+
+            def optional_string(field: str) -> str | None:
+                value = item.get(field)
+                if value is None:
+                    return None
+                if not isinstance(value, str):
+                    raise DoxaBaseError(f"columns[{index}].{field} must be a string")
+                return value
+
+            physical_type = optional_string("physical_type")
+            value_type = optional_string("value_type")
+            nullable = item.get("nullable")
+            if nullable is not None and not isinstance(nullable, bool):
+                raise DoxaBaseError(f"columns[{index}].nullable must be a boolean")
+            if physical_type is not None:
+                self._resource_ref(f"columns[{index}].physical_type", physical_type)
+            if value_type is not None:
+                self._resource_ref(f"columns[{index}].value_type", value_type)
+            observed_at_value = item.get("observed_at", observed_at)
+            if observed_at_value is not None:
+                self._datetime_literal(
+                    observed_at_value,
+                    name=f"columns[{index}].observed_at",
+                )
+            observed_by_value = optional_string("observed_by") or observed_by
+            sample_scope_value = optional_string("sample_scope") or sample_scope
+            sample_method_value = optional_string("sample_method") or sample_method
+            observation_iri = optional_string("observation_iri")
+            pattern_iri = optional_string("pattern_iri")
+            if observation_iri is not None:
+                self._resource_ref(f"columns[{index}].observation_iri", observation_iri)
+            if pattern_iri is not None:
+                self._resource_ref(f"columns[{index}].pattern_iri", pattern_iri)
+
+            map_columns.append(
+                {
+                    "column_iri": column_iri,
+                    "column_name": column_name_value,
+                    "label": optional_string("label"),
+                    "description": optional_string("description"),
+                    "physical_type": physical_type,
+                    "value_type": value_type,
+                    "nullable": nullable,
+                }
+            )
+            value_frequencies = item.get("value_frequencies")
+            profile_metrics = item.get("profile_metrics")
+            profile_column = {
+                "column_iri": column_iri,
+                "column_name": column_name_value,
+                "summary": optional_string("summary")
+                or (
+                    f"{column_name_value} profile captured from reviewed "
+                    "Parquet metadata."
+                ),
+                "table_iri": dataset_iri,
+                "observed_at": observed_at_value,
+                "observed_by": observed_by_value,
+                "sample_size": item.get("sample_size", sample_size),
+                "sample_scope": sample_scope_value,
+                "sample_method": sample_method_value,
+                "row_count": item.get("row_count", row_count),
+                "null_count": item.get("null_count"),
+                "distinct_count": item.get("distinct_count"),
+                "value_frequencies": (
+                    list(value_frequencies)
+                    if value_frequencies is not None
+                    else None
+                ),
+                "profile_metrics": (
+                    list(profile_metrics) if profile_metrics is not None else None
+                ),
+                "update_map_column": False,
+                "physical_type": physical_type,
+                "value_type": value_type,
+                "pattern_summary": optional_string("pattern_summary"),
+                "pattern_text": optional_string("pattern_text"),
+                "pattern_rationale": optional_string("pattern_rationale"),
+                "pattern_confidence": item.get(
+                    "pattern_confidence",
+                    "rc:MediumConfidence",
+                ),
+                "pattern_status": item.get("pattern_status", "rc:Tentative"),
+                "pattern_stability": item.get(
+                    "pattern_stability",
+                    "rc:EmergingPattern",
+                ),
+                "pattern_map_implications": item.get("pattern_map_implications"),
+                "observation_iri": observation_iri,
+                "pattern_iri": pattern_iri,
+            }
+            profile_columns.append(
+                {key: value for key, value in profile_column.items() if value is not None}
+            )
+        return map_columns, profile_columns
+
+    def _preflight_profiled_parquet_profile_bundle(
+        self,
+        *,
+        dataset_iri: str,
+        dataset_summary: str,
+        evidence_summary: str,
+        evidence_sources: Iterable[str] | str | None,
+        shared_evidence_iri: str,
+        sample_size: int | None,
+        row_count: int | None,
+        null_count: int | None,
+        distinct_count: int | None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None,
+        column_profiles: list[dict[str, Any]],
+        pattern_summary: str | None,
+        pattern_text: str | None,
+        pattern_rationale: str | None,
+        pattern_confidence: str | None,
+        pattern_status: str | None,
+        pattern_stability: str | None,
+        pattern_map_implications: Iterable[str] | str | None,
+        pattern_support_scope: str,
+    ) -> None:
+        if not dataset_summary.strip():
+            raise DoxaBaseError("dataset_summary must not be empty")
+        if not evidence_summary.strip():
+            raise DoxaBaseError("evidence_summary must not be empty")
+        if isinstance(evidence_sources, str):
+            evidence_source_values = [evidence_sources]
+        else:
+            evidence_source_values = list(evidence_sources or [])
+        if any(not isinstance(source, str) for source in evidence_source_values):
+            raise DoxaBaseError("evidence_sources must contain strings")
+        for name, value in (
+            ("sample_size", sample_size),
+            ("row_count", row_count),
+            ("null_count", null_count),
+            ("distinct_count", distinct_count),
+        ):
+            self._ensure_non_negative(name, value)
+        self._profile_value_frequency_values(value_frequencies)
+        self._profile_metric_values(profile_metrics)
+        pattern_support_scope_value = self._profile_bundle_pattern_support_scope(
+            pattern_support_scope
+        )
+        should_record_pattern = self._profile_pattern_requested(
+            pattern_summary,
+            pattern_text,
+            pattern_rationale,
+        )
+        for index, column_kwargs in enumerate(column_profiles):
+            self._preflight_profile_bundle_column(index, column_kwargs)
+        self._preflight_profile_bundle_evidence_summaries(
+            shared_evidence_iri=shared_evidence_iri,
+            dataset_evidence_summary=evidence_summary,
+            column_profiles=column_profiles,
+        )
+        if should_record_pattern:
+            metric_sets: list[tuple[str, Iterable[Mapping[str, Any]] | None]] = [
+                ("profile_metrics", profile_metrics)
+            ]
+            value_type_fields: list[tuple[str, str | None]] = []
+            if pattern_support_scope_value == "all_profiles":
+                metric_sets.extend(
+                    (
+                        f"columns[{index}].profile_metrics",
+                        column_kwargs.get("profile_metrics"),
+                    )
+                    for index, column_kwargs in enumerate(column_profiles, start=1)
+                )
+                value_type_fields.extend(
+                    (
+                        f"columns[{index}].value_type",
+                        column_kwargs.get("value_type"),
+                    )
+                    for index, column_kwargs in enumerate(column_profiles, start=1)
+                )
+            self._preflight_profile_pattern(
+                primary_resource_iri=dataset_iri,
+                pattern_map_implications=pattern_map_implications,
+                profile_metric_sets=metric_sets,
+                profile_value_type_fields=value_type_fields,
+                pattern_confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+            )
+
+    @staticmethod
+    def _profiled_table_suggested_next_actions(
+        *action_groups: Iterable[SuggestedNextAction],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        seen: set[str] = set()
+        for group in action_groups:
+            for action in group:
+                key = action.call or f"{action.tool_name}:{action.arguments!r}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                actions.append(action)
+        return actions
 
     def _normalise_table_bundle_column_specs(
         self,

@@ -104,6 +104,9 @@ Implemented:
 - `record_profile_bundle()` for recording one dataset profile plus related
   column profiles from the same profiling pass, with shared run metadata,
   sample context, and optional shared evidence.
+- `record_profiled_parquet_table()` for recording reviewed Parquet schema,
+  storage/layout metadata, and aggregate profile observations together without
+  reading the Parquet files.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
@@ -309,13 +312,15 @@ Useful first tool calls for an agent:
     write an observation and optionally update map/pattern context together
 21. `doxabase.record_profile_bundle` for a dataset profile plus related column
     profiles from one profiling pass
-22. `doxabase.record_pattern` for syntheses over related findings
-23. `doxabase.stage_graph_revision` for reviewable additions/removals that
+22. `doxabase.record_profiled_parquet_table` when reviewed Parquet schema,
+    storage/layout metadata, and aggregate profiles should be recorded together
+23. `doxabase.record_pattern` for syntheses over related findings
+24. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-24. `doxabase.stage_systematisation` for alternative RDF framings of one
+25. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-25. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+26. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
 26. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
 27. `doxabase.check_staged_revision_apply` before turning a staged proposal
