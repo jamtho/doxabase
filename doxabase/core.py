@@ -3496,6 +3496,13 @@ class AnalysisArtifactRecord:
 
 
 @dataclass(frozen=True)
+class AnalysisQueryRecipeRecord:
+    iri: str
+    graph: str
+    triples: int
+
+
+@dataclass(frozen=True)
 class AnalysisFollowupTaskRecord:
     iri: str
     graph: str
@@ -3512,6 +3519,8 @@ class AnalysisPacketRecord:
     analysis_view_iris: list[str]
     artifact_records: list[AnalysisArtifactRecord]
     artifact_iris: list[str]
+    query_recipe_records: list[AnalysisQueryRecipeRecord]
+    query_recipe_iris: list[str]
     followup_task_records: list[AnalysisFollowupTaskRecord]
     followup_task_iris: list[str]
     pattern: PatternRecord | None
@@ -39139,6 +39148,7 @@ class DoxaBase:
         evidence_sources: Iterable[str] | str | None = None,
         analysis_views: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         analysis_view_iris: Iterable[str] | str | None = None,
+        query_recipes: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         artifacts: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         followup_tasks: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
         pattern_summary: str | None = None,
@@ -39159,6 +39169,7 @@ class DoxaBase:
             evidence_sources=evidence_sources,
             analysis_views=analysis_views,
             analysis_view_iris=analysis_view_iris,
+            query_recipes=query_recipes,
             artifacts=artifacts,
             followup_tasks=followup_tasks,
             pattern_summary=pattern_summary,
@@ -39189,6 +39200,10 @@ class DoxaBase:
             packet_iri=spec["iri"],
             artifacts=spec["artifacts"],
         )
+        query_recipe_records = self._record_analysis_packet_query_recipes(
+            packet_iri=spec["iri"],
+            query_recipes=spec["query_recipes"],
+        )
         followup_task_records = self._record_analysis_packet_followup_tasks(
             packet_iri=spec["iri"],
             followup_tasks=spec["followup_tasks"],
@@ -39200,6 +39215,7 @@ class DoxaBase:
             evidence_sources=spec["evidence_sources"],
             analysis_view_iris=analysis_view_iris,
             artifact_iris=[record.iri for record in artifact_records],
+            query_recipe_iris=[record.iri for record in query_recipe_records],
             followup_task_iris=[record.iri for record in followup_task_records],
         )
         pattern = None
@@ -39209,7 +39225,15 @@ class DoxaBase:
                 pattern_spec["summary"],
                 pattern_text=pattern_spec["pattern_text"],
                 rationale=pattern_spec["rationale"],
-                pattern_targets=list(dict.fromkeys([spec["iri"], *analysis_view_iris])),
+                pattern_targets=list(
+                    dict.fromkeys(
+                        [
+                            spec["iri"],
+                            *analysis_view_iris,
+                            *[record.iri for record in query_recipe_records],
+                        ]
+                    )
+                ),
                 evidence_iri=spec["iri"],
                 map_implications=analysis_view_iris,
                 pattern_iri=pattern_spec["iri"],
@@ -39226,8 +39250,8 @@ class DoxaBase:
                     },
                     reason=(
                         "Inspect the packet, linked analysis views, artifacts, "
-                        "follow-up tasks, and supporting evidence as a bounded "
-                        "resource handoff."
+                        "query recipes, follow-up tasks, and supporting "
+                        "evidence as a bounded resource handoff."
                     ),
                     call=self._suggested_call_string(
                         "describe_context_slice",
@@ -39253,6 +39277,8 @@ class DoxaBase:
             analysis_view_iris=analysis_view_iris,
             artifact_records=artifact_records,
             artifact_iris=[record.iri for record in artifact_records],
+            query_recipe_records=query_recipe_records,
+            query_recipe_iris=[record.iri for record in query_recipe_records],
             followup_task_records=followup_task_records,
             followup_task_iris=[record.iri for record in followup_task_records],
             pattern=pattern,
@@ -69219,6 +69245,7 @@ class DoxaBase:
         evidence_sources: Iterable[str] | str | None,
         analysis_views: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
         analysis_view_iris: Iterable[str] | str | None,
+        query_recipes: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
         artifacts: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
         followup_tasks: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
         pattern_summary: str | None,
@@ -69253,6 +69280,10 @@ class DoxaBase:
                     "analysis_view_iris must name existing rc:AnalysisView "
                     f"resources unless they are also supplied in analysis_views: {view_iri}"
                 )
+        query_recipe_specs = self._normalise_analysis_packet_query_recipes(
+            packet_iri,
+            query_recipes,
+        )
         artifacts_specs = self._normalise_analysis_packet_artifacts(
             packet_iri,
             artifacts,
@@ -69288,6 +69319,7 @@ class DoxaBase:
         used_iris = {packet_iri}
         for collection_name, specs in (
             ("analysis_views", view_specs),
+            ("query_recipes", query_recipe_specs),
             ("artifacts", artifacts_specs),
             ("followup_tasks", task_specs),
         ):
@@ -69306,10 +69338,97 @@ class DoxaBase:
             "evidence_sources": source_values,
             "analysis_views": view_specs,
             "analysis_view_iris": existing_view_iris,
+            "query_recipes": query_recipe_specs,
             "artifacts": artifacts_specs,
             "followup_tasks": task_specs,
             "pattern": pattern_spec,
         }
+
+    def _normalise_analysis_packet_query_recipes(
+        self,
+        packet_iri: str,
+        query_recipes: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        recipe_values = self._normalise_manifest_object_list(
+            "query_recipes",
+            query_recipes,
+        )
+        allowed_fields = {
+            "iri",
+            "query_recipe_iri",
+            "label",
+            "query_recipe_label",
+            "description",
+            "query_recipe_description",
+            "query_text",
+            "query_language",
+            "query_engine",
+            "targets",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(recipe_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"query_recipes[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            query_text = self._analysis_packet_required_string(
+                item,
+                index=index,
+                item_name="query_recipes",
+                fields=("query_text",),
+            )
+            iri_value = item.get("iri", item.get("query_recipe_iri"))
+            recipe_iri = (
+                str(self._resource_ref(f"query_recipes[{index}].iri", iri_value))
+                if isinstance(iri_value, str) and iri_value.strip()
+                else f"{packet_iri}/query-recipe/{index}"
+            )
+            if recipe_iri in seen_iris:
+                raise DoxaBaseError(
+                    f"query_recipes[{index}].iri duplicates {recipe_iri}"
+                )
+            seen_iris.add(recipe_iri)
+            targets = [
+                str(self._resource_ref(f"query_recipes[{index}].targets", value))
+                for value in self._string_values("targets", item.get("targets"))
+            ]
+            specs.append(
+                {
+                    "iri": recipe_iri,
+                    "label": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="query_recipes",
+                        field="label",
+                        aliases=("query_recipe_label",),
+                    ),
+                    "description": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="query_recipes",
+                        field="description",
+                        aliases=("query_recipe_description",),
+                    ),
+                    "query_text": query_text,
+                    "query_language": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="query_recipes",
+                        field="query_language",
+                    ),
+                    "query_engine": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="query_recipes",
+                        field="query_engine",
+                    ),
+                    "targets": targets,
+                }
+            )
+        return specs
 
     def _normalise_analysis_packet_artifacts(
         self,
@@ -69536,6 +69655,7 @@ class DoxaBase:
         evidence_sources: Iterable[str],
         analysis_view_iris: Iterable[str],
         artifact_iris: Iterable[str],
+        query_recipe_iris: Iterable[str],
         followup_task_iris: Iterable[str],
     ) -> int:
         graph = Graph()
@@ -69563,6 +69683,14 @@ class DoxaBase:
                     URIRef(artifact_iri),
                 )
             )
+        for query_recipe_iri in query_recipe_iris:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasQueryRecipe")),
+                    URIRef(query_recipe_iri),
+                )
+            )
         for task_iri in followup_task_iris:
             graph.add(
                 (
@@ -69581,6 +69709,7 @@ class DoxaBase:
                 str(DCTERMS.source),
                 self.expand_iri("rc:packetAnalysisView"),
                 self.expand_iri("rc:hasAnalysisArtifact"),
+                self.expand_iri("rc:hasQueryRecipe"),
                 self.expand_iri("rc:hasFollowupTask"),
             ],
             graph,
@@ -69670,6 +69799,82 @@ class DoxaBase:
             records.append(
                 AnalysisArtifactRecord(
                     iri=artifact["iri"],
+                    graph="evidence",
+                    triples=triples,
+                )
+            )
+        return records
+
+    def _record_analysis_packet_query_recipes(
+        self,
+        *,
+        packet_iri: str,
+        query_recipes: Iterable[Mapping[str, Any]],
+    ) -> list[AnalysisQueryRecipeRecord]:
+        records: list[AnalysisQueryRecipeRecord] = []
+        for recipe in query_recipes:
+            graph = Graph()
+            self._bind_prefixes(graph)
+            subject = URIRef(recipe["iri"])
+            graph.add(
+                (
+                    subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:ExecutableQuerySnippet")),
+                )
+            )
+            self._add_optional_literal(graph, subject, str(RDFS.label), recipe["label"])
+            self._add_optional_literal(
+                graph,
+                subject,
+                str(RDFS.comment),
+                recipe["description"],
+            )
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:queryText")),
+                    Literal(recipe["query_text"]),
+                )
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:queryLanguage",
+                recipe["query_language"],
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:queryRuntime",
+                recipe["query_engine"],
+            )
+            graph.add((subject, URIRef(self.expand_iri("rc:supports")), URIRef(packet_iri)))
+            for target in recipe["targets"]:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:supports")),
+                        URIRef(target),
+                    )
+                )
+            triples = self._replace_subject_triples(
+                "evidence",
+                recipe["iri"],
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(RDFS.comment),
+                    self.expand_iri("rc:queryText"),
+                    self.expand_iri("rc:queryLanguage"),
+                    self.expand_iri("rc:queryRuntime"),
+                    self.expand_iri("rc:supports"),
+                ],
+                graph,
+            )
+            records.append(
+                AnalysisQueryRecipeRecord(
+                    iri=recipe["iri"],
                     graph="evidence",
                     triples=triples,
                 )

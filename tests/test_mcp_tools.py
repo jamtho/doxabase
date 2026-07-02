@@ -7147,6 +7147,7 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     packet = f"{base}packet"
     view = f"{base}message_like_rows"
     artifact = f"{base}lane_chart"
+    recipe = f"{base}attachment_join_recipe"
 
     record_map_dataset_tool(db, iri=source, label="Messages", is_table=True)
     result = record_analysis_packet_tool(
@@ -7173,6 +7174,20 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
                 "supports": [view],
             }
         ],
+        query_recipes=[
+            {
+                "iri": recipe,
+                "label": "Join attachments by parent document",
+                "description": "Reusable cookbook query for message attachment joins.",
+                "query_text": (
+                    "select * from eml_messages m "
+                    "left join eml_attachments a on a.parent_doc_id = m.doc_id"
+                ),
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+                "targets": [view],
+            }
+        ],
         followup_tasks=[
             {
                 "task_text": "Inspect the top week in the message-like lane.",
@@ -7185,6 +7200,8 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     assert result["evidence_iri"] == packet
     assert result["analysis_view_iris"] == [view]
     assert result["artifact_iris"] == [artifact]
+    assert result["query_recipe_iris"] == [recipe]
+    assert result["query_recipe_records"][0]["iri"] == recipe
     assert len(result["followup_task_iris"]) == 1
     assert result["analysis_view_bundle"]["view_count"] == 1
     assert result["suggested_next_actions"][0]["tool_name"] == (
@@ -7194,6 +7211,25 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
         describe_query_context_tool(db, iri=view)["readiness"]
         == "logical_analysis_view"
     )
+    context = describe_context_slice_tool(
+        db,
+        seed_iris=[packet],
+        profile="resource_brief",
+    )
+    assert recipe in {resource["iri"] for resource in context["resources"]}
+    assert "parent_doc_id" in json.dumps(context)
+    export_path = tmp_path / "analysis-packet-slice.trig"
+    export = export_context_slice_tool(
+        db,
+        path=str(export_path),
+        seed_iris=[packet],
+        profile="resource_brief",
+        fail_on_sensitive=True,
+    )
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = import_trig_tool(receiver, path=str(export_path))
+    assert imported["total_imported"] == export["triples"]
+    assert validate_graph_tool(receiver, scope="all")["conforms"] is True
     assert db.validate_graph(scope="all").conforms
 
 

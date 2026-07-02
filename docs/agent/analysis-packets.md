@@ -2,13 +2,13 @@
 
 Use `record_analysis_packet` when an external analysis pass has already
 produced reviewed logical populations, aggregate artifact locators, visual
-outputs, caveats, or follow-up tasks, and the next agent needs one graph-native
-handoff node to inspect.
+outputs, reusable query recipes, caveats, or follow-up tasks, and the next
+agent needs one graph-native handoff node to inspect.
 
 This helper is intentionally no-I/O and locator-only. It records paths,
-artifact metadata, analysis-view links, and task text, but it does not read
-files, parse JSON or Markdown, store image bytes, preserve raw rows, or decide
-whether an analysis is valid.
+artifact metadata, analysis-view links, query recipes, and task text, but it
+does not read files, parse JSON or Markdown, store image bytes, preserve raw
+rows, or decide whether an analysis is valid.
 
 ## What It Records
 
@@ -26,6 +26,9 @@ The helper can also:
   recorded `rc:AnalysisView` resources unless the same call creates them;
 - record `rc:AnalysisArtifact` evidence resources with source locators,
   roles, media types, hashes, byte sizes, image dimensions, and support links;
+- record packet-level `query_recipes` as `rc:ExecutableQuerySnippet` resources
+  for reusable cookbook snippets that are not themselves analysis
+  populations;
 - record `rc:AnalysisFollowupTask` resources with task text, priority, and
   target links;
 - optionally create a `record_pattern` synthesis supported by the packet and
@@ -58,6 +61,14 @@ Follow-up task specs accept:
 - `task_text` or `text`;
 - optional `label`, `priority`, and `targets`.
 
+Query recipe specs accept:
+
+- `iri` or `query_recipe_iri`, otherwise DoxaBase uses
+  `{packet_iri}/query-recipe/{index}`;
+- `query_text`;
+- optional `label` or `query_recipe_label`, `description` or
+  `query_recipe_description`, `query_language`, `query_engine`, and `targets`.
+
 Use `analysis_views=[...]` for reviewed structured view specs. Use
 `analysis_view_iris=[...]` only for views already present in the capsule or
 created by the same packet call. Inside `analysis_views`, the `caveats` field
@@ -69,15 +80,16 @@ unless the caveat has already been recorded as `rc:KnownCaveat`.
 ## Choosing The Helper
 
 Use `record_analysis_packet` for analysis handoffs that need one durable
-inspection seed across named subcorpora, reviewed view definitions, aggregate
-artifacts, visual outputs, and next tasks.
+inspection seed across named subcorpora, reviewed view definitions, reusable
+query cookbook entries, aggregate artifacts, visual outputs, and next tasks.
 
 Use `record_profile_to_capsule_manifest` instead when the input is a reviewed
 table/profile ingestion sidecar. Use `record_map_analysis_view_bundle` when the
-only durable output is a set of logical views. Use `record_query_result` for a
-single executed query attempt or failure.
+only durable output is a set of logical views. Use packet `query_recipes` for
+starter SQL or setup snippets that are not denominators. Use
+`record_query_result` for a single executed query attempt or failure.
 
 After recording a packet, follow the returned
 `describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
 action to review the packet, linked views, artifacts, tasks, and optional
-pattern as bounded handoff context.
+query recipes, pattern, and other bounded handoff context.

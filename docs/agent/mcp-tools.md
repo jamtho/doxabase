@@ -1877,13 +1877,17 @@ view.
 
 Records one graph-native analysis handoff packet. Use it after an external
 analysis pass has already produced reviewed logical populations, aggregate
-artifact locators, visual outputs, and follow-up tasks that should travel
-together. The packet is an `rc:Evidence` / `rc:AnalysisPacket` resource in the
-`evidence` graph. It can create logical analysis views from `analysis_views`,
-link existing `analysis_view_iris`, record locator-only `rc:AnalysisArtifact`
-resources, record `rc:AnalysisFollowupTask` resources, and optionally create a
-supporting pattern. The helper does not read files, parse Markdown or JSON,
-store raw artifact content, or execute queries. Follow the returned
+artifact locators, visual outputs, reusable query recipes, and follow-up tasks
+that should travel together. The packet is an `rc:Evidence` /
+`rc:AnalysisPacket` resource in the `evidence` graph. It can create logical
+analysis views from `analysis_views`, link existing `analysis_view_iris`, record
+packet-level `query_recipes` as `rc:ExecutableQuerySnippet` resources, record
+locator-only `rc:AnalysisArtifact` resources, record `rc:AnalysisFollowupTask`
+resources, and optionally create a supporting pattern. Use `analysis_views` for
+named populations and denominators; use `query_recipes` for starter SQL,
+registration snippets, joins, or cookbook steps that should not be modeled as
+views. The helper does not read files, parse Markdown or JSON, store raw
+artifact content, or execute queries. Follow the returned
 `describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
 action to inspect the bounded handoff.
 

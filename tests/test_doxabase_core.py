@@ -129,9 +129,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1523
+    assert graphs["base_ontology"].triple_count == 1527
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1530
+    assert graphs["base_shapes"].triple_count == 1535
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -27624,6 +27624,8 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     parent_view = f"{base}western_power_policy"
     lane_view = f"{base}western_power_policy_operational_lane"
     aggregate_json = f"{base}western_power_lanes_json"
+    register_tables_recipe = f"{base}register_tables_recipe"
+    attachment_join_recipe = f"{base}attachment_join_recipe"
     lane_chart = f"{base}operational_lane_chart"
 
     db.record_map_dataset(source, label="Messages", is_table=True)
@@ -27685,6 +27687,28 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
                 "supports": [lane_view],
             },
         ],
+        query_recipes=[
+            {
+                "iri": register_tables_recipe,
+                "label": "Register Enron message tables",
+                "description": "DuckDB setup snippet for the packet cookbook.",
+                "query_text": "create view eml_messages as select * from read_parquet(?)",
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+                "targets": [source],
+            },
+            {
+                "query_recipe_iri": attachment_join_recipe,
+                "label": "Join attachments by document identity",
+                "query_text": (
+                    "select * from eml_messages m "
+                    "left join eml_attachments a on a.parent_doc_id = m.doc_id"
+                ),
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+                "targets": [parent_view],
+            },
+        ],
         followup_tasks=[
             {
                 "label": "Inspect April 2001 operational spike",
@@ -27711,6 +27735,11 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert result.evidence_iri == packet
     assert result.analysis_view_iris == [parent_view, lane_view]
     assert result.artifact_iris == [aggregate_json, lane_chart]
+    assert result.query_recipe_iris == [
+        register_tables_recipe,
+        attachment_join_recipe,
+    ]
+    assert len(result.query_recipe_records) == 2
     assert len(result.followup_task_iris) == 1
     assert result.pattern_iri is not None
     assert {action.tool_name for action in result.suggested_next_actions} >= {
@@ -27720,9 +27749,17 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
 
     packet_resource = to_dict(db.describe_resource(packet, graph="evidence"))
     assert RC + "AnalysisPacket" in packet_resource["types"]
+    recipe_resource = to_dict(
+        db.describe_resource(register_tables_recipe, graph="evidence")
+    )
+    assert RC + "ExecutableQuerySnippet" in recipe_resource["types"]
     assert db.describe_query_context(parent_view).readiness == "logical_analysis_view"
     context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
     assert packet in {resource["iri"] for resource in context["resources"]}
+    assert register_tables_recipe in {
+        resource["iri"] for resource in context["resources"]
+    }
+    assert "read_parquet" in json.dumps(context)
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
 
@@ -27741,6 +27778,51 @@ def test_record_analysis_packet_requires_existing_linked_analysis_views(
             analysis_view_iris=[
                 "https://example.test/analysis-packet#missing_view",
             ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
+@pytest.mark.parametrize(
+    ("query_recipes", "match"),
+    [
+        (
+            [{"query_text": ""}],
+            "query_recipes\\[1\\]\\.query_text",
+        ),
+        (
+            [{"query_text": "select 1", "unexpected": "field"}],
+            "unsupported field",
+        ),
+        (
+            [
+                {
+                    "iri": "https://example.test/analysis-packet#recipe",
+                    "query_text": "select 1",
+                },
+                {
+                    "query_recipe_iri": "https://example.test/analysis-packet#recipe",
+                    "query_text": "select 2",
+                },
+            ],
+            "duplicates",
+        ),
+    ],
+)
+def test_record_analysis_packet_preflights_query_recipe_validation(
+    tmp_path: Path,
+    query_recipes: list[dict[str, object]],
+    match: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match=match):
+        db.record_analysis_packet(
+            "https://example.test/analysis-packet#packet",
+            summary="Packet with invalid query recipes.",
+            evidence_sources=["scratch://packet.md"],
+            query_recipes=query_recipes,
         )
 
     assert _mutable_graph_counts(db) == before_counts

@@ -295,6 +295,16 @@ def test_profiling_doc_names_core_workflow_tools() -> None:
     assert "do_not_bulk_apply" in content
 
 
+def test_analysis_packet_doc_names_query_recipes() -> None:
+    doc = get_agent_doc("analysis_packets", max_chars=20_000)
+    content = str(doc["content"])
+
+    assert "record_analysis_packet" in content
+    assert "query_recipes" in content
+    assert "analysis_views" in content
+    assert "denominators" in content
+
+
 def test_systematisation_doc_names_core_workflow_tools() -> None:
     doc = get_agent_doc("systematisation", max_chars=20_000)
     content = str(doc["content"])

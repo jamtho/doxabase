@@ -44,7 +44,7 @@ rc:AnalysisDenominator a rdfs:Class ;
     rdfs:comment "Reviewed denominator or population semantics for an analysis view, including optional point-in-time row-count context." .
 
 rc:ExecutableQuerySnippet a rdfs:Class ;
-    rdfs:comment "Reviewed query text or pseudo-query text associated with an analysis view. It is a handoff recipe, not proof DoxaBase executed the query." .
+    rdfs:comment "Reviewed query text or pseudo-query text associated with an analysis view or analysis packet. It is a handoff recipe, not proof DoxaBase executed the query." .
 
 rc:DataFrame a rdfs:Class ;
     rdfs:subClassOf rc:Table ;
@@ -159,6 +159,11 @@ rc:hasQuerySnippet a rdf:Property ;
     rdfs:domain rc:AnalysisView ;
     rdfs:range rc:ExecutableQuerySnippet ;
     rdfs:comment "Links an analysis view to reviewed query text or a query recipe that can reconstruct or inspect it." .
+
+rc:hasQueryRecipe a rdf:Property ;
+    rdfs:domain rc:AnalysisPacket ;
+    rdfs:range rc:ExecutableQuerySnippet ;
+    rdfs:comment "Links an analysis packet to a reviewed reusable query or cookbook recipe that travels with the packet." .
 
 rc:forAnalysisView a rdf:Property ;
     rdfs:domain rc:ExecutableQuerySnippet ;

@@ -4526,9 +4526,27 @@ few useful gaps:
   dataset-owned templates, then partition templates, then storage-access-owned
   templates, so shared route catalogs do not displace table-local paths.
 
-  The main remaining candidate from this wave is a profile type-advisory batch
-  plan in `plan_profile_followthrough` that reduces large advisory queues
-  without collapsing distinct column judgements.
+- A follow-up profile advisory scout confirmed the remaining type-review
+  friction was large missing-map physical type queues after support-pattern
+  bindings had been resolved. `plan_profile_followthrough` now returns a
+  read-only `profile_type_assertion_batch_plan` that groups only call-ready
+  missing physical-type assertions and leaves conflicts, value-type assertions,
+  pending staged work, and unresolved bindings in skipped counts.
+- A later Enron handoff scout found several original code-owner feedback items
+  had become stale: graph/TriG/handoff exports already validate and block
+  invalid writes by default, `record_domain_network_profile` already preserves
+  aggregate sender/recipient-domain coverage without raw addresses, and
+  analysis views/profile-to-capsule manifests are now graph-native. The still
+  live gap was query-cookbook preservation: starter SQL for table registration,
+  joins, and setup steps did not always represent named denominators and was
+  awkward to model as `rc:AnalysisView`.
+- A copied Enron capsule trial recorded a packet-level query cookbook with two
+  `query_recipes`, including an attachment join by `parent_doc_id -> doc_id`.
+  The packet context slice included the recipe text and `validate_graph(all)`
+  conformed. `record_analysis_packet` now records packet-level
+  `rc:ExecutableQuerySnippet` recipes via `query_recipes`, linked by
+  `rc:hasQueryRecipe`, while keeping `analysis_views` for named populations and
+  denominators.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

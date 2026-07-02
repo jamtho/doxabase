@@ -1115,11 +1115,15 @@ manifest and does not read Parquet files or parse Markdown.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add
-follow-up tasks, and optionally create a packet-supported pattern. Use it for
-post-analysis bundles such as named subcorpora, lane definitions, aggregate
-JSON/PNG/Markdown artifact locators, caveats, and next tasks. It preflights the
-full structured packet on a scratch capsule before writing and does not read
-files, store raw artifact bytes, parse Markdown/JSON, or execute queries.
+packet-level query recipes, add follow-up tasks, and optionally create a
+packet-supported pattern. Use it for post-analysis bundles such as named
+subcorpora, lane definitions, reusable cookbook snippets, aggregate
+JSON/PNG/Markdown artifact locators, caveats, and next tasks. Use
+`analysis_views` for named populations and denominators; use `query_recipes`
+for setup SQL, joins, or other starter recipes that are not themselves logical
+views. It preflights the full structured packet on a scratch capsule before
+writing and does not read files, store raw artifact bytes, parse Markdown/JSON,
+or execute queries.
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,
 optional domain-pair/domain-frequency counts, shared evidence, and optional

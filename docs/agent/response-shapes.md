@@ -1648,6 +1648,8 @@ record.analysis_view_bundle
 record.analysis_view_iris
 record.artifact_records
 record.artifact_iris
+record.query_recipe_records
+record.query_recipe_iris
 record.followup_task_records
 record.followup_task_iris
 record.pattern
@@ -1657,12 +1659,15 @@ record.suggested_next_calls
 ```
 
 `analysis_view_bundle` has the `AnalysisViewBundleRecord` shape when the call
-created views, otherwise `None`. Each artifact record and follow-up task record
-has `iri`, `graph`, and `triples`. The helper writes the packet and artifact
-resources to `evidence`, links existing or newly created `rc:AnalysisView`
-resources, and optionally creates a packet-supported pattern. It is a no-I/O
-handoff helper for reviewed artifact locators and task metadata; it does not
-store artifact bytes, raw rows, or parsed Markdown/JSON content.
+created views, otherwise `None`. Each artifact, query recipe, and follow-up
+task record has `iri`, `graph`, and `triples`. The helper writes the packet,
+artifact, and packet-level query recipe resources to `evidence`, links existing
+or newly created `rc:AnalysisView` resources, and optionally creates a
+packet-supported pattern. Use query recipes for reusable cookbook snippets that
+should travel with the packet but should not be treated as analysis
+denominators. It is a no-I/O handoff helper for reviewed artifact locators,
+query recipes, and task metadata; it does not store artifact bytes, raw rows,
+or parsed Markdown/JSON content.
 
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 
