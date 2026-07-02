@@ -65157,6 +65157,12 @@ class DoxaBase:
                 "DoxaBase search index rebuild failed; graph data was preserved, "
                 "but lexical search may be stale or unavailable."
             )
+            if "readonly" in str(exc).lower() or "read-only" in str(exc).lower():
+                message += (
+                    " SQLite reported a read-only database; use "
+                    "DoxaBase.open_readonly(path) for non-mutating inspection of "
+                    "copied, mounted, or permission-restricted capsules."
+                )
             if raise_on_failure:
                 raise DoxaBaseError(message) from exc
             warnings.warn(message, RuntimeWarning, stacklevel=2)

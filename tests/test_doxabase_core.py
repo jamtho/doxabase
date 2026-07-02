@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import sqlite3
 import warnings
 from collections.abc import Callable
@@ -161,6 +162,25 @@ def test_open_readonly_inspects_existing_capsule_without_writes(
             )
 
     assert capsule.stat().st_mtime_ns == before_mtime
+
+
+def test_reopening_readonly_capsule_suggests_open_readonly(
+    tmp_path: Path,
+) -> None:
+    capsule = tmp_path / "capsule.sqlite"
+    db = DoxaBase.create(capsule)
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.close()
+
+    os.chmod(capsule, 0o444)
+    try:
+        with pytest.raises(DoxaBaseError, match="DoxaBase.open_readonly"):
+            DoxaBase(capsule)
+        with DoxaBase.open_readonly(capsule) as readonly:
+            assert readonly.describe_dataset(dataset).iri == dataset
+    finally:
+        os.chmod(capsule, 0o644)
 
 
 def test_stage_graph_revision_reports_stale_seed_patch_role_vocabulary(

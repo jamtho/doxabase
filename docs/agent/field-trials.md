@@ -4447,6 +4447,11 @@ few useful gaps:
   `import_handoff_bundle` now falls back to same-basename sibling artifacts when
   a recorded path is stale, so receivers do not need to hand-edit copied
   manifests before import.
+- The same copied-handoff verifier showed that source-capsule comparison scripts
+  should use `DoxaBase.open_readonly(path)` when the source capsule may be
+  mounted or permission-restricted. Normal `DoxaBase(path)` performs schema,
+  seed, and search-index maintenance, so read-only SQLite failures now point at
+  `open_readonly` instead of stopping at a generic search-index error.
 - A profile-to-capsule/Enron handoff check found `describe_query_context`
   correctly marked `rc:AnalysisView` resources as `logical_analysis_view`, but
   `project_brief` still routed those views through `query_context_review`.

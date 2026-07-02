@@ -257,8 +257,11 @@ observation = db.record_observation(
 validation = db.validate_graph(scope="all")
 ```
 
-Use `DoxaBase(path)` to reopen an existing capsule. `DoxaBase.create(...)`
-creates or replaces a capsule depending on `overwrite`.
+Use `DoxaBase(path)` to reopen an existing capsule when schema, seed, and
+search-index maintenance writes are acceptable. Use
+`DoxaBase.open_readonly(path)` for non-mutating inspection of copied, mounted,
+or permission-restricted capsules. `DoxaBase.create(...)` creates or replaces a
+capsule depending on `overwrite`.
 
 The capsule seeds immutable `base_ontology` and `base_shapes` graphs from
 `ontology/rc_core.ttl` and `ontology/rc_shapes.ttl`. Project imports can write
