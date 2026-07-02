@@ -7111,6 +7111,9 @@ would otherwise need to join `blocking_preflight_actions`,
 `requires_replan_after_completion=true`. Mechanical restage plans expose a
 safe dry-run step first, then a `run_reviewed_mechanical_restage` step with
 `can_run_now=false` until the dry-run classification has been reviewed.
+Ready mutation frontiers expose a non-mutating `review_frontier_target` step
+before the gated `mutate_one_frontier_target` step; do not run the mutate step
+until review has confirmed that target.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the

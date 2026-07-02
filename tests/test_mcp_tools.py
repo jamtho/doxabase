@@ -3450,6 +3450,23 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
             ),
         }
     ]
+    steps = result["recommended_unattended_steps"]
+    assert [step["step_kind"] for step in steps] == [
+        "review_frontier_target",
+        "mutate_one_frontier_target",
+    ]
+    assert steps[0]["action"] == review_action
+    assert steps[0]["can_run_now"] is True
+    assert steps[0]["mutates"] is False
+    assert steps[0]["requires_replan_after_completion"] is False
+    assert steps[0]["stop_reason"] == "review_frontier_target_before_mutation"
+    assert steps[0]["revision_iris"] == [staged["revision_iri"]]
+    assert steps[1]["action"] == lane["next_action"]
+    assert steps[1]["can_run_now"] is False
+    assert steps[1]["prerequisite"] == "after_reviewing_frontier_target"
+    assert steps[1]["mutates"] is True
+    assert steps[1]["requires_replan_after_completion"] is True
+    assert steps[1]["stop_reason"] == "apply_at_most_one_then_replan"
     assert result["bundle_summary"]["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }

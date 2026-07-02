@@ -46990,6 +46990,61 @@ class DoxaBase:
             default=None,
         )
 
+    def _staged_recovery_frontier_review_action(
+        self,
+        item: StagedRevisionMutationFrontierItem,
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> SuggestedNextAction | None:
+        review_tool_order = {
+            "describe_staged_revision": 0,
+            "describe_revision_lineage": 1,
+            "export_staged_revision": 2,
+            "export_staged_revisions": 3,
+            "describe_graph_revision": 4,
+            "describe_applied_revision_diff": 5,
+            "draft_staged_revision_rebase": 6,
+        }
+        target_iris = [
+            value
+            for value in [
+                item.target_iri,
+                *item.row_iris,
+                *item.source_revision_iris,
+            ]
+            if value is not None
+        ]
+        target_set = set(target_iris)
+        matching_actions = [
+            action
+            for action in suggested_next_actions
+            if action.tool_name in review_tool_order
+            and DoxaBase._staged_recovery_action_is_safe_review(action)
+            and DoxaBase._suggested_action_references_any_revision(
+                action,
+                target_set,
+            )
+        ]
+        if matching_actions:
+            return min(
+                matching_actions,
+                key=lambda action: review_tool_order[action.tool_name],
+            )
+        review_iri = next(iter(target_iris), None)
+        if review_iri is None:
+            return None
+        arguments = {"iri": review_iri, "include_current_apply_check": True}
+        return SuggestedNextAction(
+            action_label="Inspect mutation frontier target",
+            tool_name="describe_staged_revision",
+            mcp_tool_name="doxabase.describe_staged_revision",
+            arguments=arguments,
+            reason=(
+                "Inspect the staged revision before running its mutation "
+                "frontier action."
+            ),
+            call=self._suggested_call_string("describe_staged_revision", arguments),
+        )
+
     @staticmethod
     def _staged_recovery_repair_inspection_required(
         lanes: Iterable[StagedRevisionRecoveryLane],
@@ -47282,6 +47337,11 @@ class DoxaBase:
         for item in mutation_frontier_items:
             if item.item_kind != "revision_target":
                 continue
+            review_prerequisite = (
+                "after_mechanical_restage_replan_if_still_current"
+                if blocked_by_prior_restage
+                else None
+            )
             if item.requires_semantic_review_before_mutation:
                 review_action = (
                     self._staged_recovery_semantic_frontier_review_action(
@@ -47296,11 +47356,7 @@ class DoxaBase:
                         label="Review semantic-gated mutation target",
                         action=review_action,
                         can_run_now=not blocked_by_prior_restage,
-                        prerequisite=(
-                            "after_mechanical_restage_replan_if_still_current"
-                            if blocked_by_prior_restage
-                            else None
-                        ),
+                        prerequisite=review_prerequisite,
                         mutates=False,
                         requires_replan_after_completion=False,
                         stop_reason="semantic_review_required_before_mutation",
@@ -47318,16 +47374,44 @@ class DoxaBase:
                     )
                 )
                 continue
+            review_action = self._staged_recovery_frontier_review_action(
+                item,
+                suggested_next_actions,
+            )
+            if review_action is not None:
+                steps.append(
+                    self._staged_recovery_unattended_step(
+                        step_kind="review_frontier_target",
+                        label="Review mutation frontier target",
+                        action=review_action,
+                        can_run_now=not blocked_by_prior_restage,
+                        prerequisite=review_prerequisite,
+                        mutates=False,
+                        requires_replan_after_completion=False,
+                        stop_reason="review_frontier_target_before_mutation",
+                        revision_iris=list(item.row_iris),
+                        source_revision_iris=list(item.source_revision_iris),
+                        target_iris=[
+                            value
+                            for value in [item.target_iri]
+                            if value is not None
+                        ],
+                        note=(
+                            "Inspect this frontier target before running the "
+                            "post-review mutation step."
+                        ),
+                    )
+                )
             steps.append(
                 self._staged_recovery_unattended_step(
                     step_kind="mutate_one_frontier_target",
                     label="Mutate one reviewed frontier target",
                     action=item.action,
-                    can_run_now=not blocked_by_prior_restage,
+                    can_run_now=False,
                     prerequisite=(
                         "after_mechanical_restage_replan_if_still_current"
                         if blocked_by_prior_restage
-                        else None
+                        else "after_reviewing_frontier_target"
                     ),
                     mutates=item.action is not None,
                     requires_replan_after_completion=True,

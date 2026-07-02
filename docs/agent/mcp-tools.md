@@ -2473,11 +2473,14 @@ frontier item is still gated by `requires_semantic_review_before_mutation`,
 the post-review action and reason.
 For longer unattended loops, prefer `recommended_unattended_steps[]`. It orders
 blocking preflight, safe batch dry-run review, reviewed real restage,
-repair-helper staging, semantic-frontier review, and one-frontier mutation
-routes in the sequence the planner currently recommends. A step with
-`can_run_now=false` names its `prerequisite`; a step with
-`requires_replan_after_completion=true` is a stop point before the next
-mutation. This keeps scripts from reconstructing the route by hand from
+repair-helper staging, semantic-frontier review, ready-frontier review, and
+gated one-frontier mutation routes in the sequence the planner currently
+recommends. A ready `apply_after_review` frontier should expose
+`review_frontier_target` as the first runnable step; the following
+`mutate_one_frontier_target` step has `can_run_now=false` until review has
+confirmed that target. A step with `can_run_now=false` names its
+`prerequisite`; a step with `requires_replan_after_completion=true` is a stop
+point before the next mutation. This keeps scripts from reconstructing the route by hand from
 `would_restage_revision_iris`, `helper_mutation_frontier_actions`, and
 `mutation_frontier_items`.
 Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated

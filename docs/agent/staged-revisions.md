@@ -366,8 +366,11 @@ informational rows out of bulk apply/restage lanes.
 When available, drive that loop from `plan.recommended_unattended_steps[]`
 rather than reconstructing it manually. It includes the safe dry-run, the
 reviewed real restage step, helper repair staging, semantic review gates, and
-one-mutation/replan stop points with `can_run_now`, `prerequisite`, `mutates`,
-and `requires_replan_after_completion` fields.
+frontier review before one-mutation/replan stop points with `can_run_now`,
+`prerequisite`, `mutates`, and `requires_replan_after_completion` fields.
+For a ready `apply_after_review` frontier, the first runnable unattended step is
+`review_frontier_target`; the following `mutate_one_frontier_target` apply step
+is present but has `can_run_now=false` until that review has happened.
 When the recovery will span several calls or was started from an imported
 handoff, create a durable session with
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
@@ -387,7 +390,9 @@ Compact cookbook for a mixed stale queue:
 4. Read `plan.recommended_unattended_steps[]` for the planner's current
    executable route. Run only steps with `can_run_now=true`, honor
    `prerequisite` before any step that is false, and rerun the planner after
-   every completed step with `requires_replan_after_completion=true`.
+   every completed step with `requires_replan_after_completion=true`. A ready
+   apply frontier still exposes a runnable review step first; do not run the
+   gated mutate step until review confirms that target.
 5. Review `plan.lanes[]`. Treat `would_restage_revision_iris` as the only
    mechanical restage worklist; do not feed `repair_or_replace`,
    `skipped_not_restageable`, informational, or already-applied rows into a bulk

@@ -4805,6 +4805,12 @@ few useful gaps:
   That issue now carries a repair hint and lifted `suggested_repair_action_groups`
   choices to add a reviewed storage-owned `rc:pathTemplate` or mark the root as
   the exact object with `rc:locationKind "object"` after review.
+- A staged-revision recovery scout found ready-only `apply_after_review` queues
+  had a safe `describe_staged_revision` first action, but
+  `recommended_unattended_steps` could still mark the mutating apply step as
+  runnable. Ready mutation frontiers now expose `review_frontier_target` first
+  and keep `mutate_one_frontier_target` gated with `can_run_now=false` until
+  that review has happened.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
