@@ -27,6 +27,22 @@ class ParquetFileMetadata:
     compression_codec: str | None = None
 
 
+@dataclass(frozen=True)
+class ParquetManifestStorageRoute:
+    storage_protocol: str
+    access_mode: str
+    location_kind: str
+    storage_root: str
+    bucket_name: str | None = None
+    key_prefix: str | None = None
+    endpoint_profile: str | None = None
+    region: str | None = None
+    path_style_access: bool | None = None
+    credential_reference: str | None = None
+    route_roles: tuple[str, ...] = ()
+    records_local_footer_paths: bool = True
+
+
 ParquetMetadataReader = Callable[[Path], ParquetFileMetadata]
 
 
@@ -36,6 +52,17 @@ def build_parquet_profile_manifest(
     base_iri: str,
     observed_by: str | None = None,
     storage_root: str | Path | None = None,
+    local_footer_root: str | Path | None = None,
+    storage_protocol: str = "rc:LocalFilesystemStorage",
+    access_mode: str = "rc:ReadOnlyAccess",
+    location_kind: str | None = None,
+    bucket_name: str | None = None,
+    key_prefix: str | None = None,
+    endpoint_profile: str | None = None,
+    region: str | None = None,
+    path_style_access: bool | None = None,
+    credential_reference: str | None = None,
+    route_roles: Iterable[str] | str | None = None,
     include_review_caveat: bool = True,
     metadata_reader: ParquetMetadataReader | None = None,
 ) -> dict[str, Any]:
@@ -48,10 +75,29 @@ def build_parquet_profile_manifest(
         raise DoxaBaseError("base_iri must be a non-empty IRI base")
 
     absolute_paths = [path.resolve() for path in path_values]
-    root = (
-        Path(storage_root).expanduser().resolve()
-        if storage_root is not None
-        else _common_parent(absolute_paths)
+    route = _parquet_manifest_storage_route(
+        storage_protocol=storage_protocol,
+        access_mode=access_mode,
+        location_kind=location_kind,
+        storage_root=storage_root,
+        local_footer_root=local_footer_root,
+        absolute_paths=absolute_paths,
+        bucket_name=bucket_name,
+        key_prefix=key_prefix,
+        endpoint_profile=endpoint_profile,
+        region=region,
+        path_style_access=path_style_access,
+        credential_reference=credential_reference,
+        route_roles=route_roles,
+    )
+    footer_root = (
+        Path(local_footer_root).expanduser().resolve()
+        if local_footer_root is not None
+        else (
+            Path(storage_root).expanduser().resolve()
+            if storage_root is not None and route.records_local_footer_paths
+            else _common_parent(absolute_paths)
+        )
     )
     reader = metadata_reader or _read_pyarrow_parquet_metadata
     table_entries: list[dict[str, Any]] = []
@@ -62,40 +108,45 @@ def build_parquet_profile_manifest(
             _manifest_table_entry(
                 metadata,
                 base_iri=base_iri,
-                storage_root=root,
+                local_footer_root=footer_root,
                 observed_by=observed_by,
                 slug=_unique_slug(_slugify(path.stem), used_slugs),
+                records_local_footer_paths=route.records_local_footer_paths,
             )
         )
 
+    table_defaults = {
+        **_route_table_defaults(route),
+        "schema_stability": "rc:InferredSchema",
+        "layout_verification_status": "rc:CandidateLayout",
+        "layout_verification_note": (
+            "Generated from local Parquet footer metadata; review before "
+            "treating this as executable query-planning context."
+        ),
+        "storage_layout_verification_status": "rc:VerifiedByListingLayout",
+        "storage_layout_verification_note": (
+            "The scaffold generator resolved the local file path and read "
+            "Parquet metadata; review path portability before sharing."
+        )
+        if route.records_local_footer_paths
+        else (
+            "The scaffold generator read local Parquet footer copies while "
+            "recording the reviewed object-store route; review the bucket, "
+            "prefix, and runtime access marker before treating it as executable."
+        ),
+        "physical_layout_verification_status": "rc:CandidateLayout",
+        "physical_layout_verification_note": (
+            "Schema and row-count facts came from Parquet metadata; DoxaBase "
+            "did not scan raw rows or compute data-quality profiles."
+        ),
+        "sample_method": (
+            "Parquet footer/schema scaffold generated for review; DoxaBase "
+            "did no raw-row ingestion."
+        ),
+    }
     manifest: dict[str, Any] = {
         "format": PROFILE_TO_CAPSULE_MANIFEST_FORMAT,
-        "table_defaults": {
-            "storage_protocol": "rc:LocalFilesystemStorage",
-            "access_mode": "rc:ReadOnlyAccess",
-            "location_kind": "directory",
-            "storage_root": str(root),
-            "schema_stability": "rc:InferredSchema",
-            "layout_verification_status": "rc:CandidateLayout",
-            "layout_verification_note": (
-                "Generated from local Parquet footer metadata; review before "
-                "treating this as executable query-planning context."
-            ),
-            "storage_layout_verification_status": "rc:VerifiedByListingLayout",
-            "storage_layout_verification_note": (
-                "The scaffold generator resolved the local file path and read "
-                "Parquet metadata; review path portability before sharing."
-            ),
-            "physical_layout_verification_status": "rc:CandidateLayout",
-            "physical_layout_verification_note": (
-                "Schema and row-count facts came from Parquet metadata; DoxaBase "
-                "did not scan raw rows or compute data-quality profiles."
-            ),
-            "sample_method": (
-                "Parquet footer/schema scaffold generated for review; DoxaBase "
-                "did no raw-row ingestion."
-            ),
-        },
+        "table_defaults": table_defaults,
         "tables": table_entries,
     }
     if observed_by is not None:
@@ -127,6 +178,17 @@ def write_parquet_profile_manifest(
     base_iri: str,
     observed_by: str | None = None,
     storage_root: str | Path | None = None,
+    local_footer_root: str | Path | None = None,
+    storage_protocol: str = "rc:LocalFilesystemStorage",
+    access_mode: str = "rc:ReadOnlyAccess",
+    location_kind: str | None = None,
+    bucket_name: str | None = None,
+    key_prefix: str | None = None,
+    endpoint_profile: str | None = None,
+    region: str | None = None,
+    path_style_access: bool | None = None,
+    credential_reference: str | None = None,
+    route_roles: Iterable[str] | str | None = None,
     overwrite: bool = False,
     include_review_caveat: bool = True,
     metadata_reader: ParquetMetadataReader | None = None,
@@ -136,6 +198,17 @@ def write_parquet_profile_manifest(
         base_iri=base_iri,
         observed_by=observed_by,
         storage_root=storage_root,
+        local_footer_root=local_footer_root,
+        storage_protocol=storage_protocol,
+        access_mode=access_mode,
+        location_kind=location_kind,
+        bucket_name=bucket_name,
+        key_prefix=key_prefix,
+        endpoint_profile=endpoint_profile,
+        region=region,
+        path_style_access=path_style_access,
+        credential_reference=credential_reference,
+        route_roles=route_roles,
         include_review_caveat=include_review_caveat,
         metadata_reader=metadata_reader,
     )
@@ -158,13 +231,14 @@ def _manifest_table_entry(
     metadata: ParquetFileMetadata,
     *,
     base_iri: str,
-    storage_root: Path,
+    local_footer_root: Path,
     observed_by: str | None,
     slug: str,
+    records_local_footer_paths: bool,
 ) -> dict[str, Any]:
     label = _label_from_slug(slug)
     metadata_path = metadata.path.resolve()
-    relative_path = _relative_path(metadata_path, storage_root)
+    relative_path = _relative_path(metadata_path, local_footer_root)
     table_iri = _join_base_iri(base_iri, slug)
     columns = [
         _manifest_column_entry(column)
@@ -179,21 +253,29 @@ def _manifest_table_entry(
             f"Reviewable Parquet table scaffold generated from {relative_path}."
         ),
         "dataset_summary": (
-            f"{label} schema and row-count scaffold generated from local Parquet "
+            f"{label} schema and row-count scaffold generated from Parquet "
             "metadata for review."
         ),
-        "evidence_summary": (
-            "Parquet footer/schema metadata read from local file "
-            f"{metadata_path}; no raw rows were preserved in DoxaBase."
-        ),
-        "evidence_sources": [metadata_path.as_uri()],
         "path_templates": [relative_path],
         "sample_scope": (
-            f"Parquet metadata for local file {relative_path}; row count, when "
+            f"Parquet metadata for file {relative_path}; row count, when "
             "present, is the file metadata row count."
         ),
         "columns": columns,
     }
+    if records_local_footer_paths:
+        entry["evidence_summary"] = (
+            "Parquet footer/schema metadata read from local file "
+            f"{metadata_path}; no raw rows were preserved in DoxaBase."
+        )
+        entry["evidence_sources"] = [metadata_path.as_uri()]
+    else:
+        entry["evidence_summary"] = (
+            "Parquet footer/schema metadata read from a local copy for reviewed "
+            f"object-store path {relative_path}; no raw rows were preserved in "
+            "DoxaBase."
+        )
+        entry["evidence_sources"] = [f"local-footer-copy:{relative_path}"]
     if row_count is not None:
         entry["row_count"] = row_count
         entry["sample_size"] = row_count
@@ -253,6 +335,174 @@ def _read_pyarrow_parquet_metadata(path: Path) -> ParquetFileMetadata:
         columns=columns,
         compression_codec=compression_codec,
     )
+
+
+def _parquet_manifest_storage_route(
+    *,
+    storage_protocol: str,
+    access_mode: str,
+    location_kind: str | None,
+    storage_root: str | Path | None,
+    local_footer_root: str | Path | None,
+    absolute_paths: list[Path],
+    bucket_name: str | None,
+    key_prefix: str | None,
+    endpoint_profile: str | None,
+    region: str | None,
+    path_style_access: bool | None,
+    credential_reference: str | None,
+    route_roles: Iterable[str] | str | None,
+) -> ParquetManifestStorageRoute:
+    storage_protocol_value = _non_empty_string(
+        storage_protocol,
+        "storage_protocol",
+    )
+    access_mode_value = _non_empty_string(access_mode, "access_mode")
+    records_local_footer_paths = _is_local_storage_protocol(storage_protocol_value)
+    if records_local_footer_paths:
+        object_store_fields = {
+            "bucket_name": bucket_name,
+            "key_prefix": key_prefix,
+            "endpoint_profile": endpoint_profile,
+            "region": region,
+            "path_style_access": path_style_access,
+        }
+        supplied_object_store_fields = [
+            name for name, value in object_store_fields.items() if value is not None
+        ]
+        if supplied_object_store_fields:
+            raise DoxaBaseError(
+                "object-store route field(s) require a non-local "
+                "storage_protocol: "
+                + ", ".join(supplied_object_store_fields)
+            )
+        root = (
+            Path(storage_root).expanduser().resolve()
+            if storage_root is not None
+            else _common_parent(absolute_paths)
+        )
+        storage_root_value = str(root)
+        location_kind_value = location_kind or "directory"
+    else:
+        if storage_root is None:
+            storage_root_value = _default_remote_storage_root(
+                storage_protocol_value=storage_protocol_value,
+                bucket_name=bucket_name,
+                key_prefix=key_prefix,
+            )
+        else:
+            storage_root_value = _non_empty_string(str(storage_root), "storage_root")
+        location_kind_value = location_kind or (
+            "bucket" if bucket_name is not None else "prefix"
+        )
+
+    return ParquetManifestStorageRoute(
+        storage_protocol=storage_protocol_value,
+        access_mode=access_mode_value,
+        location_kind=_non_empty_string(location_kind_value, "location_kind"),
+        storage_root=storage_root_value,
+        bucket_name=_optional_non_empty_string(bucket_name, "bucket_name"),
+        key_prefix=_normalise_key_prefix(key_prefix),
+        endpoint_profile=_optional_non_empty_string(
+            endpoint_profile,
+            "endpoint_profile",
+        ),
+        region=_optional_non_empty_string(region, "region"),
+        path_style_access=path_style_access,
+        credential_reference=_optional_non_empty_string(
+            credential_reference,
+            "credential_reference",
+        ),
+        route_roles=tuple(_string_values(route_roles, "route_roles")),
+        records_local_footer_paths=records_local_footer_paths,
+    )
+
+
+def _route_table_defaults(route: ParquetManifestStorageRoute) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "storage_protocol": route.storage_protocol,
+        "access_mode": route.access_mode,
+        "location_kind": route.location_kind,
+        "storage_root": route.storage_root,
+    }
+    for field in (
+        "bucket_name",
+        "key_prefix",
+        "endpoint_profile",
+        "region",
+        "credential_reference",
+    ):
+        value = getattr(route, field)
+        if value is not None:
+            defaults[field] = value
+    if route.path_style_access is not None:
+        defaults["path_style_access"] = route.path_style_access
+    if route.route_roles:
+        defaults["route_roles"] = list(route.route_roles)
+    return defaults
+
+
+def _is_local_storage_protocol(value: str) -> bool:
+    return value in {
+        "rc:LocalFilesystemStorage",
+        "https://richcanopy.org/ns/rc#LocalFilesystemStorage",
+    }
+
+
+def _default_remote_storage_root(
+    *,
+    storage_protocol_value: str,
+    bucket_name: str | None,
+    key_prefix: str | None,
+) -> str:
+    if storage_protocol_value in {
+        "rc:S3CompatibleStorage",
+        "https://richcanopy.org/ns/rc#S3CompatibleStorage",
+    }:
+        bucket = _optional_non_empty_string(bucket_name, "bucket_name")
+        if bucket is None:
+            raise DoxaBaseError(
+                "bucket_name is required when storage_protocol is "
+                "rc:S3CompatibleStorage and storage_root is omitted"
+            )
+        prefix = _normalise_key_prefix(key_prefix)
+        return f"s3://{bucket}/{prefix}" if prefix else f"s3://{bucket}"
+    raise DoxaBaseError(
+        "storage_root is required when storage_protocol is not local "
+        "filesystem storage and no object-store default can be inferred"
+    )
+
+
+def _normalise_key_prefix(value: str | None) -> str | None:
+    prefix = _optional_non_empty_string(value, "key_prefix")
+    if prefix is None:
+        return None
+    stripped = prefix.strip("/")
+    return stripped or None
+
+
+def _non_empty_string(value: str, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise DoxaBaseError(f"{field} must be a non-empty string")
+    return value.strip()
+
+
+def _optional_non_empty_string(value: str | None, field: str) -> str | None:
+    if value is None:
+        return None
+    return _non_empty_string(value, field)
+
+
+def _string_values(value: Iterable[str] | str | None, field: str) -> list[str]:
+    if value is None:
+        return []
+    values = [value] if isinstance(value, str) else list(value)
+    result: list[str] = []
+    for index, item in enumerate(values, start=1):
+        if not isinstance(item, str) or not item.strip():
+            raise DoxaBaseError(f"{field}[{index}] must be a non-empty string")
+        result.append(item.strip())
+    return result
 
 
 def _compression_codec_from_metadata(metadata: Any) -> str | None:
@@ -375,7 +625,68 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--storage-root",
-        help="Reviewed storage root to record. Defaults to the common parent.",
+        help=(
+            "Reviewed storage root to record. Defaults to the common parent for "
+            "local storage or to s3://bucket[/prefix] for S3-compatible storage."
+        ),
+    )
+    parser.add_argument(
+        "--local-footer-root",
+        help=(
+            "Local root used only to make input Parquet footer paths relative. "
+            "Useful when recording an object-store route from local file copies."
+        ),
+    )
+    parser.add_argument(
+        "--storage-protocol",
+        default="rc:LocalFilesystemStorage",
+        help="Storage protocol IRI/CURIE to record.",
+    )
+    parser.add_argument(
+        "--access-mode",
+        default="rc:ReadOnlyAccess",
+        help="Storage access mode IRI/CURIE to record.",
+    )
+    parser.add_argument(
+        "--location-kind",
+        help=(
+            "Storage location kind to record. Defaults to directory for local "
+            "storage and bucket/prefix for object-store routes."
+        ),
+    )
+    parser.add_argument(
+        "--bucket-name",
+        help="Object-store bucket name to record.",
+    )
+    parser.add_argument(
+        "--key-prefix",
+        help="Object-store key prefix to record; table templates stay relative.",
+    )
+    parser.add_argument(
+        "--endpoint-profile",
+        help="Non-secret endpoint/runtime profile name to record.",
+    )
+    parser.add_argument(
+        "--region",
+        help="Object-store region to record.",
+    )
+    parser.add_argument(
+        "--path-style-access",
+        action="store_true",
+        help="Record path-style object-store access.",
+    )
+    parser.add_argument(
+        "--credential-reference",
+        help=(
+            "Non-secret credential marker such as profile:name, env:VAR, or "
+            "external:intentionally-unrecorded."
+        ),
+    )
+    parser.add_argument(
+        "--route-role",
+        dest="route_roles",
+        action="append",
+        help="Repeatable storage route role IRI/CURIE to record.",
     )
     parser.add_argument(
         "--observed-by",
@@ -404,6 +715,17 @@ def main(argv: list[str] | None = None) -> int:
             base_iri=args.base_iri,
             observed_by=args.observed_by,
             storage_root=args.storage_root,
+            local_footer_root=args.local_footer_root,
+            storage_protocol=args.storage_protocol,
+            access_mode=args.access_mode,
+            location_kind=args.location_kind,
+            bucket_name=args.bucket_name,
+            key_prefix=args.key_prefix,
+            endpoint_profile=args.endpoint_profile,
+            region=args.region,
+            path_style_access=True if args.path_style_access else None,
+            credential_reference=args.credential_reference,
+            route_roles=args.route_roles,
             overwrite=args.overwrite,
             include_review_caveat=not args.no_review_caveat,
         )

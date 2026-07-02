@@ -4817,6 +4817,12 @@ few useful gaps:
   manifest apply path accepted them. The `doxabase.reviewed_profile_facts.v1`
   merge route now carries reviewed table and column profile pattern fields
   through to `profile_to_capsule`, including stable column pattern IRIs.
+- An Enron ingestion scout found the no-row-I/O Parquet scaffold route still
+  assumed local filesystem storage even when agents were reading local footer
+  copies for a real S3/MinIO source. `python -m doxabase.parquet_manifest` and
+  `build_parquet_profile_manifest` now accept object-store route fields, keep
+  table templates relative to `key_prefix`, and avoid recording absolute local
+  footer-copy paths as evidence sources for those remote routes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

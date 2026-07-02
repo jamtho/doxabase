@@ -125,7 +125,9 @@ When the sidecar does not exist yet and the source files are local Parquet, use
 `python -m doxabase.parquet_manifest --base-iri ... --output profile-to-capsule.json ...`
 to generate a reviewable manifest scaffold from Parquet footer/schema metadata.
 It requires optional `pyarrow`, records conservative candidate layout statuses,
-and should be reviewed before applying with
+can record S3/MinIO route fields with `--storage-protocol` set to
+`rc:S3CompatibleStorage`, `--bucket-name`, `--key-prefix`, and
+`--credential-reference`, and should be reviewed before applying with
 `python -m doxabase.profile_to_capsule`.
 When reviewed external aggregate profile facts are available separately, use
 the merge adapter to compose the reviewed manifest:

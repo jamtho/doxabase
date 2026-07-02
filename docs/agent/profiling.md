@@ -53,6 +53,27 @@ python -m doxabase.parquet_manifest \
   data/orders.parquet data/tickets.parquet
 ```
 
+If the reviewed storage route is S3/MinIO but the footer reads happen from
+local copies, keep those concepts separate:
+
+```bash
+python -m doxabase.parquet_manifest \
+  --base-iri https://example.test/enron-emails# \
+  --output profile-to-capsule.json \
+  --local-footer-root /tmp/enron-parquet-copy \
+  --storage-protocol rc:S3CompatibleStorage \
+  --location-kind bucket \
+  --bucket-name enron-emails \
+  --key-prefix parquet \
+  --endpoint-profile minio-local \
+  --credential-reference external:intentionally-unrecorded \
+  /tmp/enron-parquet-copy/eml_messages.parquet
+```
+
+This records the object-store route in `table_defaults`, keeps table
+`path_templates` relative to the reviewed key prefix, and avoids recording
+absolute local footer-copy paths as evidence sources.
+
 This command requires `pyarrow` in the environment. It reads Parquet footer and
 schema metadata only, emits a reviewable
 `doxabase.profile_to_capsule_manifest.v1` JSON file, and adds a caveat reminding

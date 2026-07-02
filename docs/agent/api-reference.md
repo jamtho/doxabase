@@ -1141,6 +1141,14 @@ python -m doxabase.parquet_manifest \
 
 That scaffold command requires optional `pyarrow`, does not preserve raw rows,
 and records conservative candidate layout statuses plus a default review caveat.
+When the recorded source is S3/MinIO but metadata was read from local copies,
+add route options such as `--local-footer-root`, `--storage-protocol` set to
+`rc:S3CompatibleStorage`, `--location-kind bucket`, `--bucket-name`,
+`--key-prefix`, `--endpoint-profile`, `--path-style-access`, and a non-secret
+`--credential-reference`. The manifest records those object-store fields in
+`table_defaults`, keeps table path templates relative to the key prefix, and
+uses `local-footer-copy:<relative-path>` evidence sources instead of absolute
+local file URIs.
 Review the JSON before applying it with `profile_to_capsule`. The generated
 single-file path is kept on table `path_templates`, not duplicated onto
 `storage_path_templates`, so query context shows one dataset-sourced route

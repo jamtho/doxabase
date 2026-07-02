@@ -353,7 +353,9 @@ Useful first tool calls for an agent:
     ingestion manifest should record caveats, profiled tables, and analysis
     views together without reading files
 24. `python -m doxabase.parquet_manifest` when local Parquet footer/schema
-    metadata should become a reviewable profile-to-capsule manifest scaffold
+    metadata should become a reviewable profile-to-capsule manifest scaffold,
+    including S3/MinIO route options when local footer copies represent an
+    object-store source
 25. `python -m doxabase.profile_manifest_merge` when reviewed aggregate
     profile facts should be merged into that scaffold without raw-row I/O
 26. `doxabase.record_analysis_packet` when reviewed analysis-view links,
