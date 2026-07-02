@@ -9739,6 +9739,24 @@ class DoxaBase:
         changed_resources_omitted_count: int | None = None
         changed_resources: list[ChangedGraphResourceSummary] = []
         changed_resource_suggested_next_actions: list[SuggestedNextAction] = []
+        before_patch_terms: _StagedRevisionDriftTerms | None = None
+        before_source_revision_iri: str | None = None
+
+        if self._graph_revision_record_kind_for_iri(before_snapshot.revision_iri) == (
+            "staged_patch"
+        ):
+            try:
+                before_staged = self.describe_staged_revision(
+                    before_snapshot.revision_iri,
+                    graph=graph,
+                )
+            except DoxaBaseError:
+                before_staged = None
+            if before_staged is not None:
+                before_patch_terms = self._staged_revision_patch_terms_by_graph(
+                    before_staged
+                ).get(graph_role)
+                before_source_revision_iri = before_staged.iri
 
         if exact_available:
             added_rows = self._sort_graph_storage_rows(after_rows - before_rows)
@@ -9760,6 +9778,8 @@ class DoxaBase:
             ) = self._changed_graph_resource_summary(
                 triples_added=added_descriptions,
                 triples_removed=removed_descriptions,
+                patch_terms=before_patch_terms,
+                source_revision_iri=before_source_revision_iri,
             )
             if include_triples:
                 exact_included = True

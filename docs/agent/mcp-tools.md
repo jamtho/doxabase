@@ -445,6 +445,12 @@ version?" rather than merely inspect count/digest metadata. Pass
 triple counts and capped changed-resource summaries are reported when stored
 rows are available, and `include_triples=true` includes bounded changed-triple
 arrays.
+When the before comparison point is a staged patch and a changed resource
+overlaps the patch subject/object or revision anchor, changed-resource follow-up
+actions call `describe_resource_revision_lineage(resource_iri=...,
+revision_iri=before_revision_iri)`. Otherwise they fall back to
+`list_resource_revisions(resource_iri=..., include_patch_mentions=true,
+include_apply_checks=true)`.
 The response also carries compact before/after revision context and
 `related_revision_iris`, including alternative semantic-review gate fields when
 a staged comparison point competes with an already-applied alternative, plus

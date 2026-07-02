@@ -824,9 +824,13 @@ before/after revision context plus lineage/applied-diff follow-up actions; use
 those when a zero or small graph delta might hide staged/applied/restaged
 recovery state. When exact snapshot rows are available, it also returns capped
 changed-resource summaries and resource revision follow-up actions even when
-raw changed triples are omitted. Use those summaries first when deciding which
-resources need lineage review. `list_graph_versions` still does not provide
-checkout/replay.
+raw changed triples are omitted. If the before version is a staged patch and a
+changed resource overlaps its patch subject/object or revision anchor, the
+changed-resource action is a direct
+`describe_resource_revision_lineage(resource_iri=..., revision_iri=...)` call;
+otherwise use the generic `list_resource_revisions` action. Use those summaries
+first when deciding which resources need lineage review. `list_graph_versions`
+still does not provide checkout/replay.
 
 ## Limits
 

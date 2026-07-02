@@ -15136,12 +15136,34 @@ def test_describe_graph_version_diff_compares_versions_and_current(
         "https://example.test/project#Messages",
         "https://richcanopy.org/ns/rc#Dataset",
     ]
-    assert stored_diff.changed_resources[0].matched_by == ["changed_subject"]
-    assert stored_diff.changed_resources[1].matched_by == ["changed_object"]
+    assert stored_diff.changed_resources[0].matched_by == [
+        "patch_subject",
+        "changed_subject",
+    ]
+    assert stored_diff.changed_resources[1].matched_by == [
+        "patch_object",
+        "changed_object",
+    ]
     assert [
         action.tool_name
         for action in stored_diff.changed_resource_suggested_next_actions
-    ] == ["list_resource_revisions", "list_resource_revisions"]
+    ] == [
+        "describe_resource_revision_lineage",
+        "describe_resource_revision_lineage",
+    ]
+    assert [
+        action.arguments
+        for action in stored_diff.changed_resource_suggested_next_actions
+    ] == [
+        {
+            "resource_iri": "https://example.test/project#Messages",
+            "revision_iri": first_staged.revision_iri,
+        },
+        {
+            "resource_iri": "https://richcanopy.org/ns/rc#Dataset",
+            "revision_iri": first_staged.revision_iri,
+        },
+    ]
     assert [action.tool_name for action in stored_diff.suggested_next_actions] == [
         "describe_revision_graph_snapshot",
         "describe_revision_graph_snapshot",
@@ -15192,6 +15214,14 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert current_diff.changed_resources[0].matched_by == ["changed_subject"]
     assert current_diff.changed_resources[1].matched_by == ["changed_subject"]
     assert current_diff.changed_resources[2].matched_by == ["changed_object"]
+    assert [
+        action.tool_name
+        for action in current_diff.changed_resource_suggested_next_actions
+    ] == [
+        "list_resource_revisions",
+        "list_resource_revisions",
+        "list_resource_revisions",
+    ]
     assert {triple.subject for triple in current_diff.triples_added} <= {
         "https://example.test/project#Messages",
         "https://example.test/project#Orders",

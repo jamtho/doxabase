@@ -4838,6 +4838,13 @@ safe and useful to inspect. Snapshot-evidence
 import actions from the before/after snapshots are promoted into
 `diff.suggested_next_actions`, so RDF-only or snapshot-only handoff imports can
 self-route to `import_revision_snapshots` or `import_trig`.
+Changed-resource follow-up actions are direct resource-lineage calls when the
+before version is a staged patch and the resource overlaps that patch's
+subject/object or revision anchor:
+`describe_resource_revision_lineage(resource_iri=..., revision_iri=...)`.
+Other changed resources fall back to
+`list_resource_revisions(resource_iri=..., include_patch_mentions=True,
+include_apply_checks=True)`.
 The revision-context fields are compact lineage pointers for the comparison
 points. They include `record_kind`, `snapshot_semantics`, `application_status`,
 `staged_validation_status`, `is_current_staged_work`,
@@ -6121,6 +6128,10 @@ current.suggested_next_calls
 current.error
 ```
 
+The nested summary does not expose `first_safe_next_action`; use
+`current.suggested_next_actions[0]` for the first listed review/preflight route,
+or call `check_staged_revision_apply()` when the full direct apply-check shape
+with `first_safe_next_action` is needed.
 `current.snapshot_drifts` uses summary drift rows: counts, digests, relevance,
 and overlap arrays are present, but exact changed-triple arrays are omitted.
 `current.next_action` is the compact queue route for the live apply branch and

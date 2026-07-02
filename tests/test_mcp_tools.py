@@ -5238,6 +5238,19 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
     assert stored_diff["after_snapshot"]["revision_iri"] == (
         first_applied["applied_revision_iri"]
     )
+    assert [
+        action["tool_name"]
+        for action in stored_diff["changed_resource_suggested_next_actions"]
+    ] == [
+        "describe_resource_revision_lineage",
+        "describe_resource_revision_lineage",
+    ]
+    assert stored_diff["changed_resource_suggested_next_actions"][0][
+        "arguments"
+    ] == {
+        "resource_iri": "https://example.test/project#Messages",
+        "revision_iri": first_staged["revision_iri"],
+    }
 
     current_diff = describe_graph_version_diff_tool(
         db,

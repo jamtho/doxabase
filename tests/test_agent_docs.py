@@ -189,6 +189,9 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     assert "compare two stored snapshots" in str(
         graph_version_diff_mcp_doc["content"]
     )
+    assert "describe_resource_revision_lineage" in str(
+        graph_version_diff_mcp_doc["content"]
+    )
 
     profile_run_mcp_doc = get_agent_doc(
         "mcp_tools",
@@ -247,12 +250,15 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     staged_response_doc = get_agent_doc(
         "response_shapes",
         section="Staged Revisions",
-        max_chars=4_000,
+        max_chars=30_000,
     )
     assert staged_response_doc["selected_section"]["heading"] == (
         "Staged Revisions"
     )
     assert "systematisation_draft" in str(staged_response_doc["content"])
+    assert "describe_resource_revision_lineage" in str(
+        staged_response_doc["content"]
+    )
 
     query_context_doc = get_agent_doc(
         "response_shapes",
