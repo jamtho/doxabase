@@ -4671,6 +4671,15 @@ item.application_validation_skipped_reason
 item.application_blocking_reasons
 item.application_count_drifts
 item.application_snapshot_drifts
+item.profile_route_keys
+item.profile_route_groups
+item.profile_gate_label
+item.profile_generic_queue_caution
+item.profile_semantic_apply_role
+item.profile_apply_cardinality
+item.profile_safe_single_apply_candidate
+item.profile_bulk_apply_allowed
+item.profile_semantic_apply_gate_reason
 item.snapshot_evidence
 item.next_action
 item.suggested_next_actions
@@ -4699,9 +4708,14 @@ triples.
 row per routed item. It preserves the queued `row_iri`, adds
 `resolved_target_iri`, `resolved_target_record_kind`, and `row_is_target`, and
 carries row status, semantic-risk fields when available, and alternative-gate
-fields. When returned rows include unresolved alternatives, the queue items also
-carry `alternative_set_iris`, `alternative_set_source_iri`, and
-`alternative_set_role` for every member, including the source row.
+fields. When profile route metadata is stored on a staged row, queue items also
+carry `profile_route_keys`, `profile_gate_label`,
+`profile_generic_queue_caution`, `profile_semantic_apply_role`,
+`profile_apply_cardinality`, `profile_safe_single_apply_candidate`,
+`profile_bulk_apply_allowed`, and `profile_semantic_apply_gate_reason`.
+When returned rows include unresolved alternatives, the queue items also carry
+`alternative_set_iris`, `alternative_set_source_iri`, and `alternative_set_role`
+for every member, including the source row.
 `next_action_queue_item_counts` counts those items by queue.
 `semantic_review_required_queue_counts` counts queued rows whose alternative
 gate still requires semantic review; it does not count ordinary semantic-risk
@@ -7370,6 +7384,13 @@ item.shared_context_patch_count
 item.shared_context_graphs
 item.profile_route_keys
 item.profile_route_groups
+item.profile_gate_label
+item.profile_generic_queue_caution
+item.profile_semantic_apply_role
+item.profile_apply_cardinality
+item.profile_safe_single_apply_candidate
+item.profile_bulk_apply_allowed
+item.profile_semantic_apply_gate_reason
 item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
@@ -7381,10 +7402,12 @@ When stored profile route metadata is present, `item.profile_route_keys` and
 `item.profile_route_groups` mirror the generic staged Markdown `Profile Route
 Bridge`; use them to connect staged rows back to profile map-update, metric,
 type, query-context, or caveat review lanes without regenerating a full profile
-insight bundle. The Markdown bridge also renders stored
-`sampled_evidence_cautions`, so generic staged exports preserve sampled-profile
-scope warnings for Markdown-only reviewers, including query-context repairs
-staged from sampled profile drafts.
+insight bundle. Generic staged export rows and queue items also expose row-local
+`profile_gate_label` and `profile_generic_queue_caution`; use the full profile
+insight bundle for bundle-level safe-single or open-lane decisions. The Markdown
+bridge also renders stored `sampled_evidence_cautions`, so generic staged
+exports preserve sampled-profile scope warnings for Markdown-only reviewers,
+including query-context repairs staged from sampled profile drafts.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
 for the row's current status, such as validation repair or restage advice.

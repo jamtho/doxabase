@@ -4763,6 +4763,13 @@ few useful gaps:
   notes, and visualization reports stay sidecar evidence until translated into a
   reviewed `doxabase.analysis_packet_manifest.v1` and applied, so `project_brief`
   can surface `analysis_packet_review`, `analysis_views`, and query recipes.
+- Profile semantic-routing and receiver-handoff trials found no hidden-state
+  gap in the profile insight bundle: mechanical map updates, metric/value-type
+  vocabulary rows, and open semantic lanes remained distinguishable after
+  handoff. The main friction was generic staged queues showing semantic profile
+  rows as mechanically `apply_after_review`; generic revision rows and queue
+  items now repeat the row-local profile gate and caution so agents can see
+  `blocked_by_profile_gate` before following those queues.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

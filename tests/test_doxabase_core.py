@@ -36948,6 +36948,132 @@ def test_profile_insight_review_bundle_marks_plain_map_update_safe_single(
     assert "generic queues may be followed after profile review" in exported
 
 
+def test_generic_revision_list_surfaces_profile_gate_cautions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-generic-gate#Orders"
+    status_column = "https://example.test/profile-generic-gate#OrdersStatus"
+    value_type = "https://example.test/profile-generic-gate#CustomerStatusValue"
+    evidence = "https://example.test/profile-generic-gate#OrdersProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=8,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    profile_bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled with semantic type evidence.",
+        evidence_summary="Synthetic profile output for generic gate routing.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=10,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status carried a project value type.",
+                "physical_type": "rc:Varchar",
+                "value_type": value_type,
+            }
+        ],
+    )
+    profile = db.describe_profile_run(
+        dataset,
+        evidence,
+    ).mapped_column_profile_observations[0]
+    support = db.record_pattern(
+        summary="Customer status value needs vocabulary.",
+        pattern_text=(
+            "Customer status value names the reviewed customer lifecycle "
+            "domain before it becomes current map type context."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[value_type],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+        map_implications=[value_type],
+    )
+
+    staged_map = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0],
+    )
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    promotion_action = next(
+        action
+        for action in draft.type_advisories[0].suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    )
+    promoted = db.stage_pattern_promotion(**promotion_action.arguments)
+    promoted_iri = promoted.staged_revisions[0].revision_iri
+
+    listing = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    rows = {item.iri: item for item in listing.revisions}
+    map_row = rows[staged_map.staged_revision.revision_iri]
+    semantic_row = rows[promoted_iri]
+
+    assert map_row.profile_route_keys
+    assert map_row.profile_gate_label == "bulk_allowed_after_review"
+    assert map_row.profile_generic_queue_caution == (
+        "generic queues may be followed after profile review; "
+        "rerun after mutation"
+    )
+    assert map_row.profile_safe_single_apply_candidate is True
+    assert map_row.profile_bulk_apply_allowed is True
+    assert semantic_row.profile_route_keys
+    assert semantic_row.profile_semantic_apply_role == "profile_type_candidate"
+    assert semantic_row.profile_gate_label == "blocked_by_profile_gate"
+    assert semantic_row.profile_safe_single_apply_candidate is False
+    assert semantic_row.profile_bulk_apply_allowed is False
+    assert semantic_row.profile_generic_queue_caution == (
+        "do not follow generic apply_after_review until profile gate is resolved"
+    )
+    queue_by_row = {item.row_iri: item for item in listing.next_action_queue_items}
+    assert queue_by_row[promoted_iri].profile_gate_label == (
+        "blocked_by_profile_gate"
+    )
+    assert queue_by_row[promoted_iri].profile_generic_queue_caution == (
+        semantic_row.profile_generic_queue_caution
+    )
+
+    export_path = tmp_path / "generic-profile-gate-review.md"
+    export = db.export_staged_revisions(
+        [staged_map.staged_revision.revision_iri, promoted_iri],
+        export_path,
+    )
+    export_queue_by_row = {
+        item.row_iri: item for item in export.bundle_summary.next_action_queue_items
+    }
+    assert export_queue_by_row[promoted_iri].profile_gate_label == (
+        "blocked_by_profile_gate"
+    )
+    exported = export_path.read_text(encoding="utf-8")
+    assert "Generic queue caution" in exported
+    assert "do not follow generic apply_after_review until profile gate is resolved" in (
+        exported
+    )
+    assert support.pattern_iri in promotion_action.arguments["patterns"]
+    assert profile_bundle.handoff_entrypoints.profile_observation_iris
+
+
 def test_profile_insight_route_bridge_groups_repeated_lane_labels(
     tmp_path: Path,
 ) -> None:

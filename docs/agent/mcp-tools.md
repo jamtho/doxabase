@@ -408,7 +408,8 @@ handled by restage. Responses include page-scoped `next_action_queue_items`,
 `next_action_queue_item_counts`, and `semantic_review_required_queue_counts`.
 Queue items preserve the old row-IRI queue while adding
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
-fields, semantic-risk fields when populated, alternative-gate fields, and
+fields, semantic-risk fields when populated, profile-gate caution fields when
+stored profile route metadata is present, alternative-gate fields, and
 `alternative_set_iris` / `alternative_set_source_iri` / `alternative_set_role`
 when returned rows compete as alternatives. Non-current rows include
 `not_current_staged_work_reason`,
@@ -425,6 +426,12 @@ Status, stale-state, and current-work filters automatically compute apply
 checks. `staged_validation_status="failed"` filters stored staged-time
 validation, while `application_status="validation_failed"` filters the current
 live replay branch.
+For profile-linked staged rows, read `profile_gate_label`,
+`profile_generic_queue_caution`, `profile_semantic_apply_role`,
+`profile_apply_cardinality`, `profile_safe_single_apply_candidate`, and
+`profile_bulk_apply_allowed` before following a generic `apply_after_review`
+queue. A semantic profile row can be mechanically ready while still reporting
+`blocked_by_profile_gate`.
 `drift_detail="summary"` is the default and omits exact changed-triple
 arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or

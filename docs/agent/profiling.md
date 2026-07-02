@@ -426,6 +426,12 @@ accounting; they are not permission to bulk apply metric/type/query/fallback
 semantic choices. A bundle with semantic candidates should be treated as
 choose-one-and-recheck unless the apply gate explicitly says bulk apply is
 allowed.
+Generic `list_graph_revisions(include_apply_checks=True)` rows and
+`next_action_queue_items` now repeat the row-local profile gate when stored
+profile route metadata exists. Use `profile_generic_queue_caution` and
+`profile_gate_label` as the compact warning in staged queues; use the full
+profile insight bundle when you need bundle-level open-lane analysis,
+safe-single lists, or executor decisions across several candidates.
 Use `executor_decision_summary` as the compact unattended routing object: it
 names the decision, mutation policy, safe-single candidates, blocked candidates,
 open lanes, candidate rationales, and whether a rerun is required after

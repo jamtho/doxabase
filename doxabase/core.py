@@ -2553,6 +2553,15 @@ class GraphRevisionListItem:
     application_snapshot_drifts: list[StagedGraphSnapshotDrift]
     application_semantic_risk_level: str | None
     application_semantic_risk_reasons: list[str]
+    profile_route_keys: list[str]
+    profile_route_groups: list[dict[str, Any]]
+    profile_gate_label: str | None
+    profile_generic_queue_caution: str | None
+    profile_semantic_apply_role: str | None
+    profile_apply_cardinality: str | None
+    profile_safe_single_apply_candidate: bool | None
+    profile_bulk_apply_allowed: bool | None
+    profile_semantic_apply_gate_reason: str | None
     snapshot_evidence: RevisionSnapshotEvidenceStatus
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
@@ -4709,6 +4718,14 @@ class RevisionNextActionQueueItem:
     staged_validation_status: str | None
     semantic_risk_level: str | None
     semantic_risk_reasons: list[str]
+    profile_route_keys: list[str]
+    profile_gate_label: str | None
+    profile_generic_queue_caution: str | None
+    profile_semantic_apply_role: str | None
+    profile_apply_cardinality: str | None
+    profile_safe_single_apply_candidate: bool | None
+    profile_bulk_apply_allowed: bool | None
+    profile_semantic_apply_gate_reason: str | None
     alternative_gate_status: str | None
     alternative_semantic_review_required: bool
     requires_semantic_review_before_mutation: bool | None
@@ -9895,6 +9912,32 @@ class DoxaBase:
                 record_kind=item_record_kind,
                 staged_validation_status=item_staged_validation_status,
             )
+            profile_route_sources = self._stored_profile_insight_route_sources(
+                revision_iri
+            )
+            profile_route_groups = (
+                self._stored_profile_route_groups(
+                    profile_route_sources,
+                    direct_review_lane=(
+                        self._profile_insight_direct_review_lane_from_review_note(
+                            self._first_object(
+                                data_graphs,
+                                revision_iri,
+                                "rc:reviewNote",
+                            )
+                        )
+                    ),
+                )
+                if profile_route_sources
+                else []
+            )
+            profile_route_keys = self._profile_route_keys_from_sources(
+                profile_route_sources
+            )
+            profile_gate = self._profile_revision_gate_fields(
+                profile_route_groups,
+                application_status=application_status,
+            )
             alternative_gate = self._staged_revision_alternative_gate(
                 alternative_to,
                 revision_iri=revision_iri,
@@ -9966,6 +10009,27 @@ class DoxaBase:
                     application_semantic_risk_reasons=(
                         application_semantic_risk_reasons
                     ),
+                    profile_route_keys=profile_route_keys,
+                    profile_route_groups=profile_route_groups,
+                    profile_gate_label=profile_gate["profile_gate_label"],
+                    profile_generic_queue_caution=(
+                        profile_gate["profile_generic_queue_caution"]
+                    ),
+                    profile_semantic_apply_role=(
+                        profile_gate["profile_semantic_apply_role"]
+                    ),
+                    profile_apply_cardinality=(
+                        profile_gate["profile_apply_cardinality"]
+                    ),
+                    profile_safe_single_apply_candidate=(
+                        profile_gate["profile_safe_single_apply_candidate"]
+                    ),
+                    profile_bulk_apply_allowed=(
+                        profile_gate["profile_bulk_apply_allowed"]
+                    ),
+                    profile_semantic_apply_gate_reason=(
+                        profile_gate["profile_semantic_apply_gate_reason"]
+                    ),
                     snapshot_evidence=snapshot_evidence,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
@@ -9999,6 +10063,18 @@ class DoxaBase:
                 staged_validation_status=item.staged_validation_status,
                 semantic_risk_level=item.application_semantic_risk_level,
                 semantic_risk_reasons=item.application_semantic_risk_reasons,
+                profile_route_keys=item.profile_route_keys,
+                profile_gate_label=item.profile_gate_label,
+                profile_generic_queue_caution=item.profile_generic_queue_caution,
+                profile_semantic_apply_role=item.profile_semantic_apply_role,
+                profile_apply_cardinality=item.profile_apply_cardinality,
+                profile_safe_single_apply_candidate=(
+                    item.profile_safe_single_apply_candidate
+                ),
+                profile_bulk_apply_allowed=item.profile_bulk_apply_allowed,
+                profile_semantic_apply_gate_reason=(
+                    item.profile_semantic_apply_gate_reason
+                ),
                 alternative_gate=item.alternative_gate,
             )
             if queue_item is not None:
@@ -52017,6 +52093,14 @@ class DoxaBase:
         staged_validation_status: str | None = None,
         semantic_risk_level: str | None = None,
         semantic_risk_reasons: Iterable[str] = (),
+        profile_route_keys: Iterable[str] = (),
+        profile_gate_label: str | None = None,
+        profile_generic_queue_caution: str | None = None,
+        profile_semantic_apply_role: str | None = None,
+        profile_apply_cardinality: str | None = None,
+        profile_safe_single_apply_candidate: bool | None = None,
+        profile_bulk_apply_allowed: bool | None = None,
+        profile_semantic_apply_gate_reason: str | None = None,
         alternative_gate: StagedRevisionAlternativeGate | None = None,
     ) -> RevisionNextActionQueueItem | None:
         if next_action is None:
@@ -52050,6 +52134,14 @@ class DoxaBase:
             staged_validation_status=staged_validation_status,
             semantic_risk_level=semantic_risk_level,
             semantic_risk_reasons=list(semantic_risk_reasons),
+            profile_route_keys=list(profile_route_keys),
+            profile_gate_label=profile_gate_label,
+            profile_generic_queue_caution=profile_generic_queue_caution,
+            profile_semantic_apply_role=profile_semantic_apply_role,
+            profile_apply_cardinality=profile_apply_cardinality,
+            profile_safe_single_apply_candidate=profile_safe_single_apply_candidate,
+            profile_bulk_apply_allowed=profile_bulk_apply_allowed,
+            profile_semantic_apply_gate_reason=profile_semantic_apply_gate_reason,
             alternative_gate_status=(
                 alternative_gate.status if alternative_gate is not None else None
             ),
@@ -53393,7 +53485,15 @@ class DoxaBase:
     def _profile_insight_candidate_direct_review_lane(
         description: StagedGraphRevisionDescription,
     ) -> str | None:
-        review_note = description.review_note or ""
+        return DoxaBase._profile_insight_direct_review_lane_from_review_note(
+            description.review_note
+        )
+
+    @staticmethod
+    def _profile_insight_direct_review_lane_from_review_note(
+        review_note: str | None,
+    ) -> str | None:
+        review_note = review_note or ""
         if review_note.startswith("Generated by stage_profile_map_updates."):
             return "profile_map_updates"
         if PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER in review_note:
@@ -54467,12 +54567,66 @@ class DoxaBase:
         return "\n".join(lines)
 
     @staticmethod
+    def _profile_revision_gate_fields(
+        profile_route_groups: Iterable[MappingABC[str, Any]],
+        *,
+        application_status: str | None,
+    ) -> dict[str, Any]:
+        groups = [dict(group) for group in profile_route_groups]
+        if not groups:
+            return {
+                "profile_gate_label": None,
+                "profile_generic_queue_caution": None,
+                "profile_semantic_apply_role": None,
+                "profile_apply_cardinality": None,
+                "profile_safe_single_apply_candidate": None,
+                "profile_bulk_apply_allowed": None,
+                "profile_semantic_apply_gate_reason": None,
+            }
+        gate = DoxaBase._profile_insight_candidate_apply_gate(
+            groups,
+            application_status=application_status,
+        )
+        bulk_apply_allowed = bool(gate["bulk_apply_allowed"])
+        safe_single_apply_candidate = bool(gate["safe_single_apply_candidate"])
+        return {
+            "profile_gate_label": DoxaBase._profile_gate_label_from_flags(
+                bulk_apply_allowed=bulk_apply_allowed,
+                safe_single_apply_candidate=safe_single_apply_candidate,
+            ),
+            "profile_generic_queue_caution": (
+                DoxaBase._profile_generic_queue_caution_from_flags(
+                    bulk_apply_allowed=bulk_apply_allowed,
+                    safe_single_apply_candidate=safe_single_apply_candidate,
+                )
+            ),
+            "profile_semantic_apply_role": gate["semantic_apply_role"],
+            "profile_apply_cardinality": gate["apply_cardinality"],
+            "profile_safe_single_apply_candidate": safe_single_apply_candidate,
+            "profile_bulk_apply_allowed": bulk_apply_allowed,
+            "profile_semantic_apply_gate_reason": (
+                gate["semantic_apply_gate_reason"]
+            ),
+        }
+
+    @staticmethod
     def _profile_insight_candidate_profile_gate_label(
         candidate: ProfileInsightReviewCandidate,
     ) -> str:
-        if candidate.bulk_apply_allowed:
+        return DoxaBase._profile_gate_label_from_flags(
+            bulk_apply_allowed=candidate.bulk_apply_allowed,
+            safe_single_apply_candidate=candidate.safe_single_apply_candidate,
+        )
+
+    @staticmethod
+    def _profile_gate_label_from_flags(
+        *,
+        bulk_apply_allowed: bool,
+        safe_single_apply_candidate: bool,
+    ) -> str:
+        if bulk_apply_allowed:
             return "bulk_allowed_after_review"
-        if candidate.safe_single_apply_candidate:
+        if safe_single_apply_candidate:
             return "safe_single_after_review"
         return "blocked_by_profile_gate"
 
@@ -54480,12 +54634,23 @@ class DoxaBase:
     def _profile_insight_candidate_generic_queue_caution(
         candidate: ProfileInsightReviewCandidate,
     ) -> str:
-        if candidate.bulk_apply_allowed:
+        return DoxaBase._profile_generic_queue_caution_from_flags(
+            bulk_apply_allowed=candidate.bulk_apply_allowed,
+            safe_single_apply_candidate=candidate.safe_single_apply_candidate,
+        )
+
+    @staticmethod
+    def _profile_generic_queue_caution_from_flags(
+        *,
+        bulk_apply_allowed: bool,
+        safe_single_apply_candidate: bool,
+    ) -> str:
+        if bulk_apply_allowed:
             return (
                 "generic queues may be followed after profile review; "
                 "rerun after mutation"
             )
-        if candidate.safe_single_apply_candidate:
+        if safe_single_apply_candidate:
             return (
                 "apply at most this row after profile review; "
                 "rerun after mutation"
@@ -55272,6 +55437,10 @@ class DoxaBase:
         ]
         next_action_queue_items: list[RevisionNextActionQueueItem] = []
         for summary in summaries:
+            profile_gate = self._profile_revision_gate_fields(
+                summary.profile_route_groups,
+                application_status=summary.apply_status,
+            )
             queue_item = self._revision_next_action_queue_item(
                 row_iri=summary.revision_iri,
                 next_action=summary.next_action,
@@ -55285,6 +55454,26 @@ class DoxaBase:
                 ),
                 semantic_risk_level=summary.semantic_risk_level,
                 semantic_risk_reasons=summary.semantic_risk_reasons,
+                profile_route_keys=summary.profile_route_keys,
+                profile_gate_label=profile_gate["profile_gate_label"],
+                profile_generic_queue_caution=(
+                    profile_gate["profile_generic_queue_caution"]
+                ),
+                profile_semantic_apply_role=(
+                    profile_gate["profile_semantic_apply_role"]
+                ),
+                profile_apply_cardinality=(
+                    profile_gate["profile_apply_cardinality"]
+                ),
+                profile_safe_single_apply_candidate=(
+                    profile_gate["profile_safe_single_apply_candidate"]
+                ),
+                profile_bulk_apply_allowed=(
+                    profile_gate["profile_bulk_apply_allowed"]
+                ),
+                profile_semantic_apply_gate_reason=(
+                    profile_gate["profile_semantic_apply_gate_reason"]
+                ),
                 alternative_gate=summary.alternative_gate,
             )
             if queue_item is not None:
@@ -60844,13 +61033,18 @@ class DoxaBase:
         lines = [
             (
                 "| Row | Candidate | Revision | Profile route keys | "
-                "Review lanes | Semantic moves | Evidence cautions |"
+                "Review lanes | Semantic moves | Generic queue caution | "
+                "Evidence cautions |"
             ),
-            "|---:|---|---|---|---|---|---|",
+            "|---:|---|---|---|---|---|---|---|",
         ]
         for index, summary in enumerate(summaries, start=1):
             if not summary.profile_route_groups:
                 continue
+            profile_gate = self._profile_revision_gate_fields(
+                summary.profile_route_groups,
+                application_status=summary.apply_status,
+            )
             route_keys = ", ".join(
                 f"`{key}`" for key in summary.profile_route_keys
             )
@@ -60861,6 +61055,9 @@ class DoxaBase:
             )
             semantic_moves = self._staged_revisions_profile_route_move_cell(
                 summary.profile_route_groups
+            )
+            generic_queue_caution = (
+                profile_gate["profile_generic_queue_caution"] or "none"
             )
             evidence_cautions = (
                 self._staged_revisions_profile_route_caution_cell(
@@ -60881,6 +61078,7 @@ class DoxaBase:
                         self._markdown_table_cell(route_keys),
                         self._markdown_table_cell(review_lanes),
                         self._markdown_table_cell(semantic_moves),
+                        self._markdown_table_cell(generic_queue_caution),
                         self._markdown_table_cell(evidence_cautions),
                     ]
                 )

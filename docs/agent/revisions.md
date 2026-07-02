@@ -398,6 +398,13 @@ just are not current work. This filter also computes apply checks, so the queue
 includes live `application_status`, blocker, and suggested-action fields.
 When inspecting a mixed history list, use `not_current_staged_work_reason` to see
 why a false `is_current_staged_work` row was excluded from that queue.
+When staged rows carry stored profile route metadata, generic revision-list rows
+and `next_action_queue_items` also carry `profile_gate_label`,
+`profile_generic_queue_caution`, `profile_semantic_apply_role`,
+`profile_apply_cardinality`, `profile_safe_single_apply_candidate`, and
+`profile_bulk_apply_allowed`. Use those fields before following a generic
+`apply_after_review` queue; a row can be mechanically ready while still
+`blocked_by_profile_gate`.
 Graph-version rows and graph-version diff revision contexts project the same
 closure fields. Pass `include_apply_checks=True` to `list_graph_versions()` when
 the version list itself should carry live `application_status`,
