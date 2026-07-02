@@ -73862,6 +73862,13 @@ class DoxaBase:
             )
         expanded = self.expand_iri(text)
         if "://" not in expanded and not expanded.startswith("urn:") and ":" not in text:
+            if self._is_relationship_column_ref_name(name):
+                raise DoxaBaseError(
+                    f"{name} values must be recorded column IRIs or CURIEs, "
+                    f"not raw column names: {value!r}. Record the column first "
+                    "with record_map_column, then pass the column IRI in "
+                    "relationship column fields."
+                )
             if name == "compression_codec":
                 raise DoxaBaseError(
                     f"{name} values must be IRIs or CURIEs, not plain names: "
@@ -73875,6 +73882,23 @@ class DoxaBase:
                 "or a full project IRI."
             )
         return URIRef(expanded)
+
+    @staticmethod
+    def _is_relationship_column_ref_name(name: str) -> bool:
+        if name in {
+            "from_column",
+            "to_column",
+            "identifying_columns",
+            "source_columns",
+            "derived_columns",
+            "group_by_columns",
+        }:
+            return True
+        return re.fullmatch(
+            r"aggregated_columns\[\d+\]\."
+            r"(?:target_column|source_columns|within_group_ordering)",
+            name,
+        ) is not None
 
     def _write_export(
         self,

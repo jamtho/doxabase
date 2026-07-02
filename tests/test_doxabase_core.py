@@ -29885,6 +29885,33 @@ def test_record_map_relationship_rejects_unrecorded_column_iris(
     assert db.triple_count("map") == before_map_count
 
 
+def test_record_map_relationship_rejects_raw_column_names_with_specific_hint(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    messages = f"{base}messages"
+    body_top = f"{base}messages__body_top"
+
+    db.record_map_dataset(messages, label="Messages", is_table=True)
+    before_map_count = db.triple_count("map")
+
+    with pytest.raises(DoxaBaseError) as exc_info:
+        db.record_map_relationship(
+            f"{base}body_preview_derivation",
+            relationship_type="derivation",
+            source_columns=["body"],
+            derived_columns=[body_top],
+        )
+
+    message = str(exc_info.value)
+    assert "source_columns values must be recorded column IRIs or CURIEs" in message
+    assert "not raw column names: 'body'" in message
+    assert "record_map_column" in message
+    assert "rc:Moderate" not in message
+    assert db.triple_count("map") == before_map_count
+
+
 def test_record_map_relationship_rejects_columns_in_dataset_endpoints(
     tmp_path: Path,
 ) -> None:
