@@ -10140,7 +10140,20 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert s3_target["bucket_name"] is None
     assert s3_target["key_prefix"] is None
     assert s3_target["requires_endpoint_profile"] is True
-    assert s3_target["review_reasons"] == []
+    assert s3_target["review_required"] is False
+    assert s3_target["direct_review_required"] is False
+    assert [
+        reason["code"] for reason in s3_target["review_reasons"]
+    ] == ["s3_credential_reference_not_recorded"]
+    assert [
+        reason["code"] for reason in s3_target["direct_review_reasons"]
+    ] == ["s3_credential_reference_not_recorded"]
+    assert any(
+        issue["code"] == "s3_credential_reference_not_recorded"
+        and issue["severity"] == "info"
+        and issue["resource"]["iri"] == s3_storage["iri"]
+        for issue in s3_result["issues"]
+    )
     assert s3_result["query_target_decision"]["status"] == "ready"
     assert s3_result["query_target_decision"]["candidate_index"] == 0
     assert s3_result["query_target_decision"]["candidate_path"] == s3_root

@@ -4839,6 +4839,13 @@ few useful gaps:
   `completed_draft_count`, and top-level `profile_review_drafts` /
   `profile_completed_drafts` so agents can distinguish open work from useful
   completed handoff context without losing total draft counts.
+- An S3/MinIO credential-marker trial confirmed DoxaBase can model non-secret
+  object-store routes safely with
+  `credential_reference="external:intentionally-unrecorded"`, but a verified
+  route with endpoint/region context and no marker could look fully ready.
+  Query context now carries non-blocking
+  `s3_credential_reference_not_recorded` info so agents preserve the difference
+  between intentionally omitted secrets and an unstated runtime handle.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

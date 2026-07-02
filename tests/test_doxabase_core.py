@@ -22105,6 +22105,86 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     ]
 
 
+def test_describe_query_context_advises_s3_credential_marker_when_omitted(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="orders",
+        key_prefix="warehouse",
+        endpoint_profile="orders-prod",
+        region="us-test-1",
+        path_templates=["orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    advisory = next(
+        issue
+        for issue in context.issues
+        if issue.code == "s3_credential_reference_not_recorded"
+    )
+    assert advisory.severity == "info"
+    assert advisory.resource is not None
+    assert advisory.resource.iri == storage.iri
+    assert advisory.details is not None
+    assert advisory.details["recommended_omitted_marker"] == (
+        "external:intentionally-unrecorded"
+    )
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "s3://orders/warehouse/orders/*.parquet"
+    assert target.candidate_path_status == "ready"
+    assert target.review_required is False
+    assert target.direct_review_required is False
+    assert [
+        reason.code for reason in target.review_reasons
+    ] == ["s3_credential_reference_not_recorded"]
+    assert [
+        reason.code for reason in target.direct_review_reasons
+    ] == ["s3_credential_reference_not_recorded"]
+    assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.reason_codes == []
+
+    draft_action = next(
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "draft_query_plan"
+    )
+    assert draft_action.route_card["issue_codes"] == [
+        "s3_credential_reference_not_recorded"
+    ]
+    assert draft_action.route_card["direct_issue_codes"] == [
+        "s3_credential_reference_not_recorded"
+    ]
+
+    plan = db.draft_query_plan(dataset)
+    assert plan.review_gate.all_issue_codes == [
+        "s3_credential_reference_not_recorded"
+    ]
+    assert plan.review_gate.blocking_reason_codes == []
+    assert plan.review_gate.status == "ready"
+    assert plan.handoff_kind == "runtime_resolution_required"
+
+
 def test_query_target_decision_prefers_dataset_template_over_shared_storage_peer(
     tmp_path: Path,
 ) -> None:

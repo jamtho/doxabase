@@ -241,6 +241,12 @@ Start with `describe_query_context(dataset_iri)`:
    They also carry storage-access `route_roles`; use those reviewed route intent
    facts to distinguish production/current/canonical routes from sample, archive,
    or backfill routes before unattended execution.
+   For S3-compatible routes, an informational
+   `s3_credential_reference_not_recorded` issue means the route can still be
+   ready, but the graph has not said how credentials are intentionally handled.
+   Add `credential_reference="external:intentionally-unrecorded"` when secrets
+   are deliberately omitted, or a reviewed non-secret `profile:<name>` /
+   `env:<VAR_NAME>` runtime marker.
    For non-database storage with `location_kind="object"`, prefer the exact
    `storage_access_location` candidate; candidates that append dataset or
    partition templates to that object root are review-only with

@@ -30483,6 +30483,28 @@ class DoxaBase:
             for template in access.path_templates
         )
 
+    def _s3_credential_reference_not_recorded(
+        self,
+        access: StorageAccessDescription,
+    ) -> bool:
+        if not self._is_s3_storage(access.storage_protocol):
+            return False
+        if access.credential_reference:
+            return False
+        if self._s3_access_resolution_unrecorded(access):
+            return False
+        return bool(
+            access.endpoint_profile
+            or access.region
+            or access.bucket_name
+            or access.key_prefix
+            or self._is_s3_scheme(self._storage_root_scheme(access.storage_root))
+            or any(
+                self._is_s3_scheme(self._path_template_scheme(template))
+                for template in access.path_templates
+            )
+        )
+
     def _candidate_storage_location_mismatch_reasons(
         self,
         access: StorageAccessDescription,
@@ -30693,6 +30715,37 @@ class DoxaBase:
                     "warning",
                     "S3-compatible access records S3 location metadata but no endpoint profile, credential reference, or region.",
                     access_resource,
+                )
+            elif self._s3_credential_reference_not_recorded(access):
+                add_issue(
+                    "s3_credential_reference_not_recorded",
+                    "info",
+                    (
+                        "S3-compatible access has enough non-secret endpoint "
+                        "or location context for query planning, but no "
+                        "credential_reference marker is recorded. If credentials "
+                        "are intentionally omitted, record "
+                        "credential_reference='external:intentionally-unrecorded'; "
+                        "otherwise record a reviewed non-secret profile/env "
+                        "marker such as 'profile:<name>' or 'env:<VAR_NAME>'."
+                    ),
+                    access_resource,
+                    {
+                        "storage_access_iri": access.iri,
+                        "storage_protocol_iri": (
+                            access.storage_protocol.iri
+                            if access.storage_protocol is not None
+                            else None
+                        ),
+                        "endpoint_profile": access.endpoint_profile,
+                        "bucket_name": access.bucket_name,
+                        "key_prefix": access.key_prefix,
+                        "region": access.region,
+                        "credential_reference": access.credential_reference,
+                        "recommended_omitted_marker": (
+                            "external:intentionally-unrecorded"
+                        ),
+                    },
                 )
             location_mismatch_reasons = (
                 self._storage_protocol_location_mismatch_reasons(access)

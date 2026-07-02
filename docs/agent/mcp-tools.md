@@ -1106,6 +1106,12 @@ Candidate cards and route cards both include non-secret storage orientation such
 as `access_mode`, `region`, `endpoint_profile`, `credential_reference`,
 `path_style_access`, and `requires_endpoint_profile`, so scripts do not need a
 second `describe_dataset` call just to compare runtime route handles.
+For S3-compatible routes, `s3_credential_reference_not_recorded` is an
+informational issue, not an execution blocker: it means endpoint or location
+metadata is present but no non-secret credential marker was recorded. Use
+`external:intentionally-unrecorded` when credentials are deliberately omitted,
+or a reviewed `profile:<name>` / `env:<VAR_NAME>` marker when that is the
+intended runtime handle.
 Candidate cards also include `required_bindings`, `required_binding_details`,
 `binding_example`, and `binding_examples`, so candidate-only planners can see
 path-template runtime parameters before drafting.
