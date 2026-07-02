@@ -4646,6 +4646,9 @@ few useful gaps:
   existing `staged_frontier_review` queue but points it at
   `describe_staged_revision_recovery_session` when a persisted session overlaps
   current staged work.
+- The same Enron handoff scout found `draft_profile_map_updates(...,
+  evidence_iri=None)` raised a raw `AttributeError`; required IRI validation now
+  returns a clear `DoxaBaseError` for non-string missing identifiers.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

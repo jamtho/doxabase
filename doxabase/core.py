@@ -71803,6 +71803,8 @@ class DoxaBase:
         return len(data.encode("utf-8"))
 
     def _required_iri(self, name: str, value: str) -> str:
+        if not isinstance(value, str):
+            raise DoxaBaseError(f"{name} must be a non-empty IRI or CURIE string")
         cleaned = value.strip()
         if not cleaned:
             raise DoxaBaseError(f"{name} must not be empty")

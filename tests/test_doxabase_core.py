@@ -42565,6 +42565,29 @@ def test_describe_profile_run_rejects_invalid_limit(tmp_path: Path) -> None:
         )
 
 
+def test_draft_profile_map_updates_rejects_missing_identifiers(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="dataset_iri must be a non-empty IRI or CURIE string",
+    ):
+        db.draft_profile_map_updates(
+            None,  # type: ignore[arg-type]
+            "https://example.test/project#ProfileEvidence",
+        )
+    with pytest.raises(
+        DoxaBaseError,
+        match="evidence_iri must be a non-empty IRI or CURIE string",
+    ):
+        db.draft_profile_map_updates(
+            "https://example.test/project#Orders",
+            None,  # type: ignore[arg-type]
+        )
+
+
 def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     before_counts = _mutable_graph_counts(db)

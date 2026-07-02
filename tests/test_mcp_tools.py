@@ -11880,6 +11880,22 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == "describe_context_slice"
 
 
+def test_draft_profile_map_updates_tool_rejects_missing_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="evidence_iri must be a non-empty IRI or CURIE string",
+    ):
+        draft_profile_map_updates_tool(
+            db,
+            dataset_iri="https://example.test/project#Orders",
+            evidence_iri=None,  # type: ignore[arg-type]
+        )
+
+
 def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
     tmp_path: Path,
 ) -> None:
