@@ -5250,6 +5250,15 @@ class DoxaBase:
             "patterns": self._count_type("rc:Pattern"),
             "evidence": self._count_type("rc:Evidence"),
             "source_spans": self._count_type("rc:SourceSpan"),
+            "analysis_views": self._count_type("rc:AnalysisView"),
+            "analysis_packets": self._count_type("rc:AnalysisPacket"),
+            "analysis_artifacts": self._count_type("rc:AnalysisArtifact"),
+            "analysis_followup_tasks": self._count_type(
+                "rc:AnalysisFollowupTask"
+            ),
+            "executable_query_snippets": self._count_type(
+                "rc:ExecutableQuerySnippet"
+            ),
             "graph_revisions": self._count_type("rc:GraphRevision"),
             "graph_patches": self._count_type("rc:GraphPatch"),
             "graph_snapshots": self._count_type("rc:GraphSnapshot"),
@@ -5350,6 +5359,11 @@ class DoxaBase:
 
         recommended_tasks.extend(
             self._project_brief_staged_tasks(staged_review)
+        )
+        recommended_tasks.extend(
+            self._project_brief_analysis_packet_tasks(
+                overview.key_counts.get("analysis_packets", 0)
+            )
         )
         recommended_tasks.sort(key=lambda task: (task.priority, task.task_type))
         selected_tasks = self._project_brief_select_recommended_tasks(
@@ -7187,6 +7201,72 @@ class DoxaBase:
             ),
             call=self._suggested_call_string(
                 "describe_analysis_view",
+                arguments,
+            ),
+        )
+
+    def _project_brief_analysis_packet_tasks(
+        self,
+        analysis_packet_count: int,
+    ) -> list[ProjectBriefRecommendedTask]:
+        if analysis_packet_count <= 0:
+            return []
+        packets = self.list_entities(
+            type="rc:AnalysisPacket",
+            graph="evidence",
+            limit=analysis_packet_count,
+        ).entities
+        tasks: list[ProjectBriefRecommendedTask] = []
+        for packet in packets:
+            action = self._project_brief_describe_analysis_packet_action(
+                packet.iri
+            )
+            tasks.append(
+                ProjectBriefRecommendedTask(
+                    priority=70,
+                    task_type="analysis_packet_review",
+                    source="describe_context_slice",
+                    resource=ResourceSummary(
+                        iri=packet.iri,
+                        label=packet.label,
+                        description=self._first_object(
+                            ["evidence"],
+                            packet.iri,
+                            "rc:summary",
+                        ),
+                    ),
+                    reason=(
+                        "Evidence includes an analysis packet with linked "
+                        "logical views, cookbook recipes, artifact locators, or "
+                        "follow-up tasks; inspect the packet context before "
+                        "assuming analysis handoff work is exhausted."
+                    ),
+                    suggested_next_action=action,
+                    suggested_next_call=action.call,
+                )
+            )
+        return tasks
+
+    def _project_brief_describe_analysis_packet_action(
+        self,
+        packet_iri: str,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "seed_iris": [packet_iri],
+            "profile": "resource_brief",
+        }
+        return SuggestedNextAction(
+            action_label="Inspect analysis packet context",
+            tool_name="describe_context_slice",
+            mcp_tool_name="doxabase.describe_context_slice",
+            arguments=arguments,
+            reason=(
+                "Inspect the packet, linked analysis views, artifact locators, "
+                "query recipes, follow-up tasks, and supporting patterns as one "
+                "bounded handoff context."
+            ),
+            call=self._suggested_call_string(
+                "describe_context_slice",
                 arguments,
             ),
         )

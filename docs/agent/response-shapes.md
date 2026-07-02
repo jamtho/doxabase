@@ -368,6 +368,15 @@ bindings, and unselected ready/direct-clean candidate indexes from the matching
 `draft_query_plan` call. Read that summary before following the first draft
 action blindly, especially when database relation candidates include both archive
 and current tables.
+`graph_overview.key_counts` and `project_brief.key_counts` include explicit
+analysis handoff counts: `analysis_views`, `analysis_packets`,
+`analysis_artifacts`, `analysis_followup_tasks`, and
+`executable_query_snippets`. `queue_counts["analysis_packet_review"]` appears
+for `rc:AnalysisPacket` evidence resources and points to
+`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")` so
+cold-start agents can find packet-level query recipes, artifact locators, and
+follow-up tasks even when the linked logical views are already visible through
+`analysis_view_review`.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending

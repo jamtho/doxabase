@@ -242,6 +242,13 @@ review-gated `draft_query_plan` action for deeper inspection.
 Tasks labelled `analysis_view_review` point to `describe_analysis_view` for an
 `rc:AnalysisView` with `readiness="logical_analysis_view"`. These are logical
 population/query-recipe reviews, not physical query-repair work.
+Tasks labelled `analysis_packet_review` point to
+`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")` for
+an `rc:AnalysisPacket` in the evidence graph. Use this queue to recover
+packet-level query recipes, artifact locators, and follow-up tasks that are not
+visible from the logical-view review queue alone. `key_counts` also includes
+`analysis_views`, `analysis_packets`, `analysis_artifacts`,
+`analysis_followup_tasks`, and `executable_query_snippets`.
 Tasks labelled `query_plan_handoff` are low-priority ready-query lanes. They
 appear when `describe_query_context` reports `ready_for_query_planning` and point
 to the query context's `draft_query_plan` action when one is available, even when

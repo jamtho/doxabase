@@ -4743,9 +4743,10 @@ few useful gaps:
 - An analysis-view/query-cookbook trial found `record_analysis_packet` handles
   Enron-style logical populations and cookbook recipes well after reviewed
   Markdown is translated into structured specs. `project_brief` surfaces the
-  logical views but not the packet/cookbook itself as a review task; a useful
-  later fix would add analysis packet/query recipe key counts and a low-priority
-  `analysis_packet_review` task pointing to packet `resource_brief` context.
+  logical views, and now also reports analysis packet/query recipe key counts
+  plus a low-priority `analysis_packet_review` task pointing to packet
+  `resource_brief` context so cold-start agents can find cookbook recipes,
+  artifact locators, and follow-up tasks.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

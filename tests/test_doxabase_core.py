@@ -652,6 +652,76 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert rerun.first_unattended_action == rerun.frontier_first_action
 
 
+def test_project_brief_packet_review_participates_in_frontier_expansion(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/packet-frontier#"
+    view = f"{base}message_like_rows"
+    packet = f"{base}message_like_packet"
+
+    db.record_analysis_packet(
+        packet,
+        summary="Reviewed packet with a logical view and cookbook recipe.",
+        evidence_sources=["scratch://message-like-packet.md"],
+        analysis_views=[
+            {
+                "iri": view,
+                "label": "Message-like rows",
+                "denominator_description": "Rows that behave like messages.",
+                "query_snippets": [
+                    {
+                        "label": "View definition",
+                        "query_text": "select * from messages where is_message",
+                    }
+                ],
+            }
+        ],
+        query_recipes=[
+            {
+                "iri": f"{base}register_messages_recipe",
+                "label": "Register messages",
+                "query_text": "create view messages as select * from read_parquet(?)",
+            }
+        ],
+    )
+
+    tight = db.project_brief(limit=1, profile_candidate_limit=0)
+
+    assert tight.queue_counts["analysis_view_review"] == 1
+    assert tight.queue_counts["analysis_packet_review"] == 1
+    assert tight.returned_queue_counts == {"analysis_view_review": 1}
+    assert tight.omitted_queue_counts == {"analysis_packet_review": 1}
+    assert tight.full_frontier_expansion is not None
+    assert tight.full_frontier_expansion.suggested_next_action is not None
+    assert tight.full_frontier_expansion.suggested_next_action.arguments == {
+        "limit": 2,
+        "profile_candidate_limit": 0,
+    }
+    assert tight.frontier_first_source == "full_frontier_expansion"
+
+    expanded = db.project_brief(
+        **tight.full_frontier_expansion.suggested_next_action.arguments
+    )
+
+    assert expanded.omitted_queue_counts == {}
+    assert [
+        task.task_type for task in expanded.recommended_next_tasks
+    ] == [
+        "analysis_view_review",
+        "analysis_packet_review",
+    ]
+    packet_task = expanded.recommended_next_tasks[1]
+    assert packet_task.resource is not None
+    assert packet_task.resource.iri == packet
+    assert packet_task.suggested_next_action is not None
+    assert packet_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert packet_task.suggested_next_action.arguments == {
+        "seed_iris": [packet],
+        "profile": "resource_brief",
+    }
+
+
 def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
     tmp_path: Path,
 ) -> None:
@@ -28127,6 +28197,12 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
         "describe_context_slice",
         "describe_query_context",
     }
+    overview = db.graph_overview()
+    assert overview.key_counts["analysis_views"] == 2
+    assert overview.key_counts["analysis_packets"] == 1
+    assert overview.key_counts["analysis_artifacts"] == 2
+    assert overview.key_counts["analysis_followup_tasks"] == 1
+    assert overview.key_counts["executable_query_snippets"] == 3
 
     packet_resource = to_dict(db.describe_resource(packet, graph="evidence"))
     assert RC + "AnalysisPacket" in packet_resource["types"]
@@ -28150,6 +28226,22 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
         lane_view,
     }
     assert "read_parquet" in json.dumps(context)
+    brief = db.project_brief(limit=10)
+    assert brief.key_counts["analysis_packets"] == 1
+    assert brief.queue_counts["analysis_packet_review"] == 1
+    packet_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "analysis_packet_review"
+    )
+    assert packet_task.resource is not None
+    assert packet_task.resource.iri == packet
+    assert packet_task.suggested_next_action is not None
+    assert packet_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert packet_task.suggested_next_action.arguments == {
+        "seed_iris": [packet],
+        "profile": "resource_brief",
+    }
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
 
