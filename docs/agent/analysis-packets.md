@@ -60,7 +60,11 @@ Follow-up task specs accept:
 
 Use `analysis_views=[...]` for reviewed structured view specs. Use
 `analysis_view_iris=[...]` only for views already present in the capsule or
-created by the same packet call.
+created by the same packet call. Inside `analysis_views`, the `caveats` field
+uses the normal analysis-view helper contract: pass existing caveat IRIs or
+CURIEs, not inline prose. Put packet-level caveat text in the packet summary,
+view descriptions, follow-up tasks, or an optional packet-supported pattern
+unless the caveat has already been recorded as `rc:KnownCaveat`.
 
 ## Choosing The Helper
 

@@ -28054,9 +28054,9 @@ class DoxaBase:
     ) -> int:
         return {
             "storage_access_location": 0,
-            "storage_access": 1,
+            "dataset": 1,
             "partition_scheme": 2,
-            "dataset": 3,
+            "storage_access": 3,
         }.get(candidate.template_source, 4)
 
     def _query_target_decision_reason_codes(

@@ -159,8 +159,10 @@ Start with `describe_query_context(dataset_iri)`:
    Automatic selection
    prefers safer candidates first, then fewer required template bindings, then
    file/object scans before database relation handoffs when otherwise tied, then
-   route-specific storage-access sources before broader partition or dataset
-   templates within that same shape of handoff.
+   exact storage-access object locations, dataset-owned templates, partition
+   templates, and finally storage-access-owned templates within that same shape
+   of handoff. This keeps a table's own reviewed path from being displaced by a
+   peer path advertised on a shared storage access.
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_selector` when a different route is intended.

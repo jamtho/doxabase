@@ -4513,6 +4513,18 @@ few useful gaps:
   records an `rc:AnalysisPacket` evidence node, optional analysis-view bundle,
   locator-only `rc:AnalysisArtifact` resources, `rc:AnalysisFollowupTask`
   resources, and optional pattern support, all preflighted before live writes.
+- A scratch Western power lane packet trial on a copied Enron capsule confirmed
+  that `record_analysis_packet` can preserve the lane views, Markdown/JSON/PNG
+  artifact locators, follow-up tasks, and packet-supported pattern in one
+  validating handoff node. The main friction was that
+  `analysis_views[].caveats` expects existing caveat IRIs or CURIEs, not inline
+  prose; the packet docs now call that out explicitly.
+- A broader Enron query-planning scout found automatic `draft_query_plan`
+  ranking could select the first storage-access-owned path from a shared S3
+  access for every table, even when each table had its own reviewed dataset
+  path. Query-target precedence now keeps exact storage object roots first, then
+  dataset-owned templates, then partition templates, then storage-access-owned
+  templates, so shared route catalogs do not displace table-local paths.
 
   The main remaining candidate from this wave is a profile type-advisory batch
   plan in `plan_profile_followthrough` that reduces large advisory queues

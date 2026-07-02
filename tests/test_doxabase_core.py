@@ -21391,6 +21391,77 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     ]
 
 
+def test_query_target_decision_prefers_dataset_template_over_shared_storage_peer(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    storage = db.record_map_storage_access(
+        f"{base}shared_enron_storage",
+        label="Shared Enron object-store access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://enron-emails/",
+        location_kind="prefix",
+        bucket_name="enron-emails",
+        endpoint_profile="local-minio",
+        credential_reference="profile:enron-readonly",
+        path_templates=["eml_attachments.parquet", "eml_messages.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    messages = f"{base}eml_messages"
+    attachments = f"{base}eml_attachments"
+    db.record_map_dataset(
+        messages,
+        label="EML messages",
+        is_table=True,
+        path_templates=["eml_messages.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(
+        attachments,
+        label="EML attachments",
+        is_table=True,
+        path_templates=["eml_attachments.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+
+    messages_context = db.describe_query_context(messages)
+    messages_index = messages_context.query_target_decision.candidate_index
+    assert messages_index is not None
+    messages_candidate = messages_context.query_target_candidates[messages_index]
+    assert messages_candidate.template_source == "dataset"
+    assert messages_candidate.source_resource.iri == messages
+    assert messages_candidate.candidate_path == "s3://enron-emails/eml_messages.parquet"
+    assert messages_context.query_target_decision.status == "ready"
+    assert set(messages_context.unselected_ready_candidate_indexes) == {1, 2}
+
+    messages_plan = db.draft_query_plan(messages)
+    assert messages_plan.selected_candidate is not None
+    assert messages_plan.selected_candidate.template_source == "dataset"
+    assert messages_plan.scan.uri_template == "s3://enron-emails/eml_messages.parquet"
+
+    attachments_context = db.describe_query_context(attachments)
+    attachments_index = attachments_context.query_target_decision.candidate_index
+    assert attachments_index is not None
+    attachments_candidate = attachments_context.query_target_candidates[
+        attachments_index
+    ]
+    assert attachments_candidate.template_source == "dataset"
+    assert attachments_candidate.source_resource.iri == attachments
+    assert attachments_candidate.candidate_path == (
+        "s3://enron-emails/eml_attachments.parquet"
+    )
+
+
 def test_query_target_decision_prefers_ready_wildcard_without_bindings(
     tmp_path: Path,
 ) -> None:
