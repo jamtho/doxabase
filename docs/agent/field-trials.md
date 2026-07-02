@@ -4730,9 +4730,9 @@ few useful gaps:
   diagnostic slices.
 - A Parquet profile-to-capsule trial found current recording primitives,
   `profile_to_capsule`, and the maintained rich-profile manifest example work
-  once a reviewed manifest exists. The remaining cold-start gap is a small
-  reviewed-aggregate merge adapter from `scaffold.json` plus
-  `external-profile-facts.json` to a reviewed manifest; this should preserve
+  once a reviewed manifest exists. `python -m doxabase.profile_manifest_merge`
+  now fills the cold-start adapter gap from `scaffold.json` plus
+  `external-profile-facts.json` to a reviewed manifest, while preserving
   DoxaBase's no-row-I/O boundary rather than becoming a profiler.
 - A storage/relationship ergonomics trial found the old Enron friction has
   already been fixed in behavior: `location_kind="bucket"` normalizes to

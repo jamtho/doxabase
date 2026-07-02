@@ -62,6 +62,25 @@ single-file templates are dataset-owned `path_templates`; the scaffold does not
 also put the same value on storage access `storage_path_templates`, because that
 would create duplicate same-path query candidates.
 
+When a reviewed external profiler has produced aggregate facts for that
+scaffold, merge them without row I/O:
+
+```bash
+python -m doxabase.profile_manifest_merge \
+  --scaffold profile-to-capsule-scaffold.json \
+  --profile-facts external-profile-facts.json \
+  --output reviewed-profile-to-capsule.json
+```
+
+The sidecar format is `doxabase.reviewed_profile_facts.v1`. It names scaffold
+table IRIs exactly, requires table `sample_scope` and `sample_method`, accepts
+reviewed table counts/evidence metadata, and accepts per-column aggregate
+fields such as `null_count`, `distinct_count`, `value_frequencies`, and
+`profile_metrics`. The adapter rejects unknown tables, unknown columns,
+unsupported fields, and row-count mismatches. It adds a table caveat by default
+so later agents can see that aggregate facts came from an external reviewed
+sidecar. Apply the merged output with `profile_to_capsule`.
+
 For the common next step, run
 `python examples/rich-profile-manifest-smoke.py`. It uses the scaffold shape,
 merges reviewed external aggregate profile facts such as null counts, distinct

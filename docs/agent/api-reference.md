@@ -1142,6 +1142,23 @@ Review the JSON before applying it with `profile_to_capsule`. The generated
 single-file path is kept on table `path_templates`, not duplicated onto
 `storage_path_templates`, so query context shows one dataset-sourced route
 instead of two same-path candidates.
+If an external reviewed aggregate profile sidecar exists for the scaffold, run
+the merge adapter before applying it:
+
+```bash
+python -m doxabase.profile_manifest_merge \
+  --scaffold profile-to-capsule-scaffold.json \
+  --profile-facts external-profile-facts.json \
+  --output reviewed-profile-to-capsule.json
+```
+
+The sidecar declares
+`format="doxabase.reviewed_profile_facts.v1"`, names scaffold table IRIs
+exactly, and supplies table sample metadata plus optional row counts, evidence
+sources, and per-column aggregate facts. The adapter rejects unknown fields,
+unknown tables, unknown columns, and scaffold/profile row-count mismatches, and
+adds an external-profile caveat by default. It does not scan Parquet files or
+read raw rows.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add

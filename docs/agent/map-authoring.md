@@ -123,6 +123,19 @@ to generate a reviewable manifest scaffold from Parquet footer/schema metadata.
 It requires optional `pyarrow`, records conservative candidate layout statuses,
 and should be reviewed before applying with
 `python -m doxabase.profile_to_capsule`.
+When reviewed external aggregate profile facts are available separately, use
+the merge adapter to compose the reviewed manifest:
+
+```bash
+python -m doxabase.profile_manifest_merge \
+  --scaffold scaffold.json \
+  --profile-facts external-profile-facts.json \
+  --output reviewed-profile-to-capsule.json
+```
+
+This adapter accepts table/sample metadata and
+per-column aggregate facts only; it rejects unknown scaffold anchors and keeps
+the no-row-I/O boundary intact.
 
 ## When To Use Map Helpers
 
