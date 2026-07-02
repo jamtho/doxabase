@@ -33085,6 +33085,96 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     assert diff.digest_changed is True
 
 
+def test_handoff_import_gates_nested_plan_when_source_session_matches(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = source.stage_graph_revision(
+        summary="Add Orders dataset",
+        rationale="Stage a mechanically ready row for receiver handoff.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    source_plan = source.plan_staged_revision_recovery(
+        [staged.revision_iri],
+        current_staged_work_only=False,
+    )
+    assert source_plan.first_mutation_action is not None
+    assert source_plan.first_mutation_action.tool_name == "apply_staged_revision"
+
+    manifest_path = tmp_path / "ready-handoff-manifest.json"
+    trig_path = tmp_path / "ready-handoff.trig"
+    snapshot_path = tmp_path / "ready-revision-snapshots.json"
+    session = source.start_staged_revision_recovery_session(
+        [staged.revision_iri],
+        summary="Ready staged handoff recovery session",
+        handoff_manifest_path=str(manifest_path),
+        current_staged_work_only=False,
+    )
+    source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[staged.revision_iri],
+    )
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(manifest_path)
+
+    assert imported.matching_recovery_session_iris == [session.session_iri]
+    assert imported.recovery_summary.recommended_next_step == (
+        "continue_imported_recovery_session"
+    )
+    assert imported.recovery_summary.first_mutation_action is None
+    assert imported.recovery_summary.first_safe_review_or_mutation_action is not None
+    assert imported.recovery_summary.first_safe_review_or_mutation_action.tool_name == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert imported.recovery_plan is not None
+    assert imported.recovery_plan.mutation_frontier_iris == [staged.revision_iri]
+    assert imported.recovery_plan.first_mutation_action is None
+    assert imported.recovery_plan.first_mutation_call is None
+    assert imported.recovery_plan.first_safe_review_or_mutation_action is not None
+    assert imported.recovery_plan.first_safe_review_or_mutation_action.tool_name == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert imported.recovery_plan.first_safe_review_or_mutation_action.arguments == {
+        "session_iri": session.session_iri,
+        "drift_detail": "summary",
+    }
+    assert imported.recovery_plan.first_safe_review_or_mutation_source == (
+        "imported_recovery_session"
+    )
+    assert imported.recovery_plan.mutation_allowed_after == (
+        "imported_recovery_session_required_before_mutation"
+    )
+    assert [
+        action.tool_name for action in imported.recovery_plan.blocking_preflight_actions
+    ] == ["describe_staged_revision_recovery_session"]
+    assert imported.recovery_plan.recommended_unattended_steps
+    first_step = imported.recovery_plan.recommended_unattended_steps[0]
+    assert first_step.step_kind == "continue_imported_recovery_session"
+    assert first_step.mutates is False
+    assert first_step.requires_replan_after_completion is True
+    assert first_step.action is not None
+    assert first_step.action.tool_name == "describe_staged_revision_recovery_session"
+    assert "Continue the imported source recovery session" in (
+        imported.recovery_plan.warnings[0]
+    )
+    assert "Continue the imported source recovery session" in (
+        imported.recovery_plan.note
+    )
+
+
 def test_scratch_capsule_observation_write_recovers_search_index(
     tmp_path: Path,
 ) -> None:

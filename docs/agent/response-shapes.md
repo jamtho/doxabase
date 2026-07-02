@@ -6078,6 +6078,12 @@ history search. Continue the source session first, then rerun receiver-local
 recovery planning before applying any exposed frontier row. That continuation
 action is effect-annotated with `mutation_scope="none"` and all write flags
 false.
+The nested `recovery_plan` uses the same session gate:
+`first_mutation_action` is empty,
+`first_safe_review_or_mutation_source="imported_recovery_session"`,
+`mutation_allowed_after="imported_recovery_session_required_before_mutation"`,
+and its first unattended step describes the imported session before any
+receiver-local mutation.
 When no matching imported source session exists but the import prepends a
 `start_staged_revision_recovery_session` action,
 `recommended_next_step="start_receiver_local_recovery_session"`. The summary

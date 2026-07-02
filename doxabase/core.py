@@ -64729,21 +64729,35 @@ class DoxaBase:
                 snapshot_path=str(snapshot_path),
                 revision_snapshots=snapshot_import,
             )
+            recovery_session_actions = (
+                self._import_handoff_bundle_recovery_session_actions(
+                    matching_recovery_session_iris=matching_recovery_session_iris,
+                    recovery_plan=recovery_plan,
+                    manifest_path=(
+                        source_label if manifest_path is not None else None
+                    ),
+                    include_drafts=include_drafts,
+                    validation_scope=validation_scope,
+                    drift_detail=drift_detail,
+                )
+            )
             recovery_suggested_next_actions = self._dedupe_suggested_next_actions(
                 [
-                    *self._import_handoff_bundle_recovery_session_actions(
-                        matching_recovery_session_iris=matching_recovery_session_iris,
-                        recovery_plan=recovery_plan,
-                        manifest_path=(
-                            source_label if manifest_path is not None else None
-                        ),
-                        include_drafts=include_drafts,
-                        validation_scope=validation_scope,
-                        drift_detail=drift_detail,
-                    ),
+                    *recovery_session_actions,
                     *recovery_plan.suggested_next_actions,
                 ]
             )
+            if (
+                matching_recovery_session_iris
+                and recovery_plan.mutation_allowed_after
+                != "handoff_preflight_required_before_mutation"
+            ):
+                recovery_plan = (
+                    self._import_handoff_bundle_session_gated_recovery_plan(
+                        recovery_plan,
+                        recovery_session_actions,
+                    )
+                )
             if privacy_review_required_before_recovery:
                 privacy_review_action = (
                     self._import_handoff_bundle_privacy_review_action(
@@ -65396,6 +65410,76 @@ class DoxaBase:
                 *redacted_plan.warnings,
             ],
             note=gated_note(redacted_plan.note),
+        )
+
+    def _import_handoff_bundle_session_gated_recovery_plan(
+        self,
+        recovery_plan: StagedRevisionRecoveryPlan,
+        session_actions: list[SuggestedNextAction],
+    ) -> StagedRevisionRecoveryPlan:
+        session_actions = self._dedupe_suggested_next_actions(session_actions)
+        if not session_actions:
+            return recovery_plan
+        session_action = session_actions[0]
+        session_calls = [action.call for action in session_actions if action.call]
+        session_note = (
+            "Continue the imported source recovery session before following "
+            "nested recovery or mutation actions."
+        )
+        session_step_revision_iris = (
+            self._suggested_action_revision_iris(session_action)
+            or list(recovery_plan.processed_revision_iris)
+        )
+        session_steps = [
+            self._staged_recovery_unattended_step(
+                step_kind="continue_imported_recovery_session",
+                label="Continue imported recovery session",
+                action=session_action,
+                can_run_now=True,
+                prerequisite=None,
+                mutates=False,
+                requires_replan_after_completion=True,
+                stop_reason="rerun_plan_after_imported_recovery_session",
+                revision_iris=session_step_revision_iris,
+                source_revision_iris=list(recovery_plan.processed_revision_iris),
+                target_iris=[],
+                note=(
+                    "Describe the imported source recovery session first, then "
+                    "rerun receiver-local recovery planning before applying any "
+                    "mutation-frontier action."
+                ),
+            )
+        ]
+        suggested_next_actions = self._dedupe_suggested_next_actions(
+            [
+                *session_actions,
+                *recovery_plan.suggested_next_actions,
+            ]
+        )
+        return replace(
+            recovery_plan,
+            first_mutation_action=None,
+            first_mutation_call=None,
+            first_safe_review_or_mutation_action=session_action,
+            first_safe_review_or_mutation_call=session_action.call,
+            first_safe_review_or_mutation_source="imported_recovery_session",
+            helper_mutation_frontier_actions=[],
+            helper_mutation_frontier_calls=[],
+            mutation_allowed_after=(
+                "imported_recovery_session_required_before_mutation"
+            ),
+            blocking_preflight_actions=session_actions,
+            blocking_preflight_calls=session_calls,
+            recommended_unattended_steps=session_steps,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+            warnings=[
+                session_note,
+                *recovery_plan.warnings,
+            ],
+            note=f"{session_note} {recovery_plan.note}",
         )
 
     def _import_handoff_bundle_validation_gated_recovery_plan(

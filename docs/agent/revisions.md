@@ -204,6 +204,9 @@ On the receiving capsule:
    at the session continuation, exposes `resume_recovery_session_iri` /
    `resume_recovery_session_call`, and suppresses `first_mutation_action`;
    continue the imported session before applying receiver-local frontier rows.
+   The nested `recovery_plan` is also gated the same way, so do not treat a
+   visible mutation-frontier count as permission to apply before continuing the
+   imported source session.
    The manifest-scoped recovery plan can include applied events and historical
    snapshot rows that are useful context but noisy for choosing the next live
    mutation. After import, rerun `project_brief` or
