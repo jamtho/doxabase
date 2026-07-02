@@ -245,7 +245,8 @@ selected for route context and should not be assumed to be a recovery or
 shareable handoff bundle.
 Context-slice export records include preflight-style routing fields:
 `decision`, `scanner_clean`, `shareability_review_required`,
-`shareability_review_status`, `would_block_sensitive_export`, and
+`shareability_review_status`, `would_block_sensitive_export`,
+`would_block_invalid_export`, validation scope/conformance/result fields, and
 `handoff_fit`. They also include `shareability_hints`,
 `artifact_disposition`, and `git_safe`; use these fields for unattended routing
 instead of inferring shareability from `sensitive_literal_count` alone.
@@ -256,12 +257,18 @@ shareability review decides whether a receiver can interpret or reproduce the
 path.
 When `decision="block"`, the preflight does not suggest a direct
 `export_context_slice` write. Follow the read-only suggested actions first:
-inspect the selected slice locally with `describe_context_slice`, narrow to
-clean seeds when possible, or run the broader redacted
+run `validate_graph` when validation blocks, inspect the selected slice locally
+with `describe_context_slice` when privacy blocks, narrow to clean seeds when
+possible, or run the broader redacted
 `export_preflight(export_kind="handoff_bundle", graphs=["project"])` route
 before deciding whether to scrub, narrow, or defer sharing. History-bearing
 blocked slices route to `export_preflight(export_kind="handoff_bundle", ...)`
 before any recovery-complete artifact write.
+The validation check uses the live graph scope implied by selected graph roles,
+not only a temporary in-memory subset. That can block a narrow slice because a
+sibling resource in the same validation scope is invalid. Keep the default for
+unattended handoffs; use `fail_on_invalid=False` only for a deliberately
+reviewed invalid diagnostic slice.
 Scanner-clean context-slice exports only prove that the selected slice triples
 passed the scanner. History-bearing exports add the direct `rc:GraphPatch`,
 `rc:GraphSnapshot`, and validation-result triples needed for an imported review

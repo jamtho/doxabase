@@ -10760,6 +10760,11 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight["shareability_review_required"] is True
     assert preflight["shareability_review_status"] == "required_not_completed"
     assert preflight["would_block_sensitive_export"] is False
+    assert preflight["would_block_invalid_export"] is False
+    assert preflight["validation_scope"] == "map"
+    assert preflight["validation_conforms"] is True
+    assert preflight["validation_result_count"] == 0
+    assert preflight["validation_results"] == []
     assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert preflight["profile"] == "dataset_brief"
     assert preflight["seeds"][0]["iri"] == dataset
@@ -10782,6 +10787,8 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert action["mcp_tool_name"] == "doxabase.export_context_slice"
     assert action["arguments"]["seed_iris"] == [dataset]
     assert action["arguments"]["fail_on_sensitive"] is True
+    assert action["arguments"]["fail_on_invalid"] is True
+    assert action["arguments"]["validation_scope"] == "map"
     assert preflight["suggested_next_calls"] == [action["call"]]
 
     export_path = tmp_path / "orders-context-slice.trig"
@@ -10800,6 +10807,11 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["shareability_review_required"] is True
     assert export["shareability_review_status"] == "required_not_completed"
     assert export["would_block_sensitive_export"] is False
+    assert export["would_block_invalid_export"] is False
+    assert export["validation_scope"] == "map"
+    assert export["validation_conforms"] is True
+    assert export["validation_result_count"] == 0
+    assert export["validation_results"] == []
     assert export["handoff_fit"] == "resource_scoped_review_context"
     assert export["bytes_written"] > 0
     assert export["sensitive_literal_count"] == 0

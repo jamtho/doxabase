@@ -882,6 +882,11 @@ class ContextSliceExportRecord:
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    validation_scope: str | None = None
+    validation_conforms: bool | None = None
+    validation_result_count: int = 0
+    validation_results: list[ValidationDiagnostic] = field(default_factory=list)
+    would_block_invalid_export: bool = False
     artifact_kind: str = "context_slice_trig"
     importable: bool = True
     recommended_import_tool: str | None = "doxabase.import_trig"
@@ -61938,6 +61943,14 @@ class DoxaBase:
         ] = "dataset_brief",
         max_triples: int = 500,
         include_seed_graphs: bool = False,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
         limit: int = 20,
     ) -> ContextSliceExportRecord:
         return self._context_slice_export_record(
@@ -61950,6 +61963,8 @@ class DoxaBase:
             overwrite=False,
             graph_iri_prefix=RCG_PREFIX,
             fail_on_sensitive=False,
+            fail_on_invalid=False,
+            validation_scope=validation_scope,
             write=False,
         )
 
@@ -61969,6 +61984,15 @@ class DoxaBase:
         overwrite: bool = False,
         graph_iri_prefix: str = RCG_PREFIX,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
         limit: int = 20,
     ) -> ContextSliceExportRecord:
         return self._context_slice_export_record(
@@ -61981,6 +62005,8 @@ class DoxaBase:
             overwrite=overwrite,
             graph_iri_prefix=graph_iri_prefix,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,
             write=True,
         )
 
@@ -62001,6 +62027,8 @@ class DoxaBase:
         overwrite: bool,
         graph_iri_prefix: str,
         fail_on_sensitive: bool,
+        fail_on_invalid: bool,
+        validation_scope: str | None,
         write: bool,
     ) -> ContextSliceExportRecord:
         if limit < 1:
@@ -62087,10 +62115,22 @@ class DoxaBase:
                     "revision recovery."
                 ),
             )
+        validation = self._export_validation_result(
+            graph_names,
+            validation_scope=validation_scope,
+            default_scope=None,
+        )
+        validation_warnings = self._export_validation_warnings(validation)
+        validation_blocks_export = validation is not None and not validation.conforms
+        warnings.extend(validation_warnings)
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+        )
+        self._raise_if_invalid_export_blocked(
+            fail_on_invalid=fail_on_invalid,
+            validation=validation,
         )
         bytes_written = 0
         path_value = str(path) if path is not None else None
@@ -62114,6 +62154,8 @@ class DoxaBase:
             limit=limit,
             write=write,
             would_block_sensitive_export=sensitive_literal_count > 0,
+            would_block_invalid_export=validation_blocks_export,
+            validation_scope=validation.scope if validation is not None else None,
             includes_history="history" in graph_names,
             revision_iris=history_revision_iris,
         )
@@ -62122,7 +62164,7 @@ class DoxaBase:
             format="trig",
             decision=(
                 "block"
-                if sensitive_literal_count
+                if sensitive_literal_count or validation_blocks_export
                 else "clean_by_scanner_only"
             ),
             scanner_clean=sensitive_literal_count == 0,
@@ -62161,6 +62203,15 @@ class DoxaBase:
             scanner_note=scanner_note,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
+            validation_scope=validation.scope if validation is not None else None,
+            validation_conforms=(
+                validation.conforms if validation is not None else None
+            ),
+            validation_result_count=(
+                validation.result_count if validation is not None else 0
+            ),
+            validation_results=validation.results if validation is not None else [],
+            would_block_invalid_export=validation_blocks_export,
             shareability_hints=shareability_hints,
             shareability_hint_count=shareability_hint_count,
             returned_shareability_hint_count=len(shareability_hint_matches),
@@ -62302,6 +62353,8 @@ class DoxaBase:
         limit: int,
         write: bool,
         would_block_sensitive_export: bool,
+        would_block_invalid_export: bool,
+        validation_scope: str | None,
         includes_history: bool,
         revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
@@ -62380,6 +62433,29 @@ class DoxaBase:
                     ),
                 )
             )
+        if would_block_invalid_export and validation_scope is not None:
+            arguments = {
+                "scope": validation_scope,
+                "limit_results": max(limit, 20),
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect context-slice validation failures",
+                    tool_name="validate_graph",
+                    mcp_tool_name="doxabase.validate_graph",
+                    arguments=arguments,
+                    reason=(
+                        "The live graph validation gate failed for the graph "
+                        "roles selected by this context slice. Inspect SHACL "
+                        "diagnostics and repair the graph before writing an "
+                        "importable slice."
+                    ),
+                    call=self._suggested_call_string(
+                        "validate_graph",
+                        arguments,
+                    ),
+                )
+            )
         if would_block_sensitive_export:
             inspect_arguments = {
                 "seed_iris": seed_values,
@@ -62429,7 +62505,11 @@ class DoxaBase:
                         ),
                     )
                 )
-        if not write and not would_block_sensitive_export:
+        if (
+            not write
+            and not would_block_sensitive_export
+            and not would_block_invalid_export
+        ):
             digest_source = "\n".join(seed_values)
             digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
             label_source = self._local_name(seed_values[0]) if seed_values else None
@@ -62442,9 +62522,12 @@ class DoxaBase:
                 "max_triples": max_triples,
                 "include_seed_graphs": include_seed_graphs,
                 "fail_on_sensitive": True,
+                "fail_on_invalid": True,
             }
             if fail_on_sensitive:
                 arguments["fail_on_sensitive"] = fail_on_sensitive
+            if validation_scope is not None:
+                arguments["validation_scope"] = validation_scope
             actions.append(
                 SuggestedNextAction(
                     action_label="Export context slice",
@@ -62463,12 +62546,14 @@ class DoxaBase:
             )
         if includes_history:
             handoff_arguments: dict[str, Any]
-            if would_block_sensitive_export:
+            if would_block_sensitive_export or would_block_invalid_export:
                 handoff_arguments = {
                     "export_kind": "handoff_bundle",
                     "graphs": ["project"],
                     "limit": limit,
                 }
+                if validation_scope is not None:
+                    handoff_arguments["validation_scope"] = validation_scope
             else:
                 handoff_arguments = {
                     "trig_path": "<project-handoff.trig>",
@@ -62476,15 +62561,18 @@ class DoxaBase:
                     "manifest_path": "<handoff-manifest.json>",
                     "graphs": ["project"],
                     "fail_on_sensitive": True,
+                    "fail_on_invalid": True,
                 }
+                if validation_scope is not None:
+                    handoff_arguments["validation_scope"] = validation_scope
             if revision_iris:
                 handoff_arguments["revision_iris"] = revision_iris
-            if would_block_sensitive_export:
+            if would_block_sensitive_export or would_block_invalid_export:
                 tool_name = "export_preflight"
                 action_label = "Preflight recovery handoff bundle"
                 reason = (
-                    "The selected history-bearing context slice contains "
-                    "sensitive-looking terms, so resolve export privacy review "
+                    "The selected history-bearing context slice is blocked by "
+                    "privacy or validation review, so resolve the preflight "
                     "before writing recovery-complete handoff artifacts."
                 )
             else:
@@ -62507,11 +62595,11 @@ class DoxaBase:
             ]
             action_class = (
                 SuggestedNextAction
-                if would_block_sensitive_export
+                if would_block_sensitive_export or would_block_invalid_export
                 else TemplatedSuggestedNextAction
             )
             action_kwargs: dict[str, Any] = {}
-            if not would_block_sensitive_export:
+            if not would_block_sensitive_export and not would_block_invalid_export:
                 action_kwargs = {
                     "required_extra_arguments": placeholder_fields,
                     "placeholder_fields": placeholder_fields,

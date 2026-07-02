@@ -537,9 +537,10 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         profile: str = "dataset_brief",
         max_triples: int = 500,
         include_seed_graphs: bool = False,
+        validation_scope: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """Dry-run an importable context-slice TriG export and scan selected triples."""
+        """Dry-run an importable context-slice TriG export with privacy and validation gates."""
 
         return preflight_context_slice_export_tool(
             db,
@@ -547,6 +548,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             profile=profile,
             max_triples=max_triples,
             include_seed_graphs=include_seed_graphs,
+            validation_scope=validation_scope,
             limit=limit,
         )
 
@@ -559,9 +561,17 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         include_seed_graphs: bool = False,
         overwrite: bool = False,
         fail_on_sensitive: bool = False,
+        fail_on_invalid: bool = True,
+        validation_scope: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """Write an importable TriG bundle for selected context-slice triples."""
+        """Write an importable TriG bundle for selected context-slice triples.
+
+        By default, fail_on_invalid=True blocks writes when the live graph
+        validation scope implied by the selected graph roles fails. Pass
+        fail_on_invalid=False only for a deliberately reviewed diagnostic
+        artifact.
+        """
 
         return export_context_slice_tool(
             db,
@@ -572,6 +582,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             include_seed_graphs=include_seed_graphs,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,
             limit=limit,
         )
 

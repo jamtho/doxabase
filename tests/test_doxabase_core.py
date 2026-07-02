@@ -32564,6 +32564,81 @@ def test_export_preflight_and_writes_gate_invalid_graphs(tmp_path: Path) -> None
     assert manifest["artifacts"]["trig"]["validation_conforms"] is False
 
 
+def test_context_slice_export_gates_invalid_graphs(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    observation_iri = "https://example.test/project#obs_without_evidence"
+    db.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation should block context-slice export." .
+        }
+        """
+    )
+
+    preflight = db.preflight_context_slice_export(
+        [observation_iri],
+        profile="resource_brief",
+        max_triples=50,
+        limit=5,
+    )
+
+    assert preflight.decision == "block"
+    assert preflight.scanner_clean is True
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.would_block_invalid_export is True
+    assert preflight.validation_scope == "patterns"
+    assert preflight.validation_conforms is False
+    assert preflight.validation_result_count > 0
+    assert preflight.validation_results
+    assert preflight.suggested_next_actions[0].tool_name == "validate_graph"
+    assert preflight.suggested_next_actions[0].arguments == {
+        "scope": "patterns",
+        "limit_results": 20,
+    }
+    assert not any(
+        action.tool_name == "export_context_slice"
+        for action in preflight.suggested_next_actions
+    )
+
+    blocked_path = tmp_path / "blocked-invalid-context-slice.trig"
+    with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
+        db.export_context_slice(
+            blocked_path,
+            [observation_iri],
+            profile="resource_brief",
+            max_triples=50,
+        )
+    assert not blocked_path.exists()
+
+    reviewed_path = tmp_path / "reviewed-invalid-context-slice.trig"
+    reviewed = db.export_context_slice(
+        reviewed_path,
+        [observation_iri],
+        profile="resource_brief",
+        max_triples=50,
+        fail_on_invalid=False,
+    )
+
+    assert reviewed_path.exists()
+    assert reviewed.decision == "block"
+    assert reviewed.scanner_clean is True
+    assert reviewed.validation_scope == "patterns"
+    assert reviewed.validation_conforms is False
+    assert reviewed.validation_result_count > 0
+    assert reviewed.would_block_invalid_export is True
+    assert any("Export validation failed" in warning for warning in reviewed.warnings)
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    receiver.import_trig(reviewed_path)
+    receiver_validation = receiver.validate_graph(scope="patterns")
+    assert receiver_validation.conforms is False
+
+
 def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     result = db.record_claim_observation(

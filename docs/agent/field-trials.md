@@ -4720,6 +4720,32 @@ few useful gaps:
   rows to `repair_or_replace` with `Draft patch repair plan`, and make direct
   and batch restage skip these mixed rows with
   `not_restageable_reason="patch_repair_plan"`.
+- A post-Enron export safety trial found broad `export_graph`, `export_trig`,
+  and `export_handoff_bundle` already gate invalid live graphs by default, but
+  `export_context_slice` could still write an importable invalid TriG slice
+  after a scanner-clean preflight. Context-slice preflight/export now report
+  validation scope/conformance/result fields, suppress direct write suggestions
+  when validation blocks, and keep default writes guarded with
+  `fail_on_invalid=True`; use `fail_on_invalid=False` only for reviewed invalid
+  diagnostic slices.
+- A Parquet profile-to-capsule trial found current recording primitives,
+  `profile_to_capsule`, and the maintained rich-profile manifest example work
+  once a reviewed manifest exists. The remaining cold-start gap is a small
+  reviewed-aggregate merge adapter from `scaffold.json` plus
+  `external-profile-facts.json` to a reviewed manifest; this should preserve
+  DoxaBase's no-row-I/O boundary rather than becoming a profiler.
+- A storage/relationship ergonomics trial found the old Enron friction has
+  already been fixed in behavior: `location_kind="bucket"` normalizes to
+  `prefix`, and relationship types accept compact tokens, `rc:` class aliases,
+  and full IRIs. The remaining improvement is MCP-tool discoverability,
+  especially expanding `record_map_relationship`'s live docstring with accepted
+  values and the already-recorded-column requirement.
+- An analysis-view/query-cookbook trial found `record_analysis_packet` handles
+  Enron-style logical populations and cookbook recipes well after reviewed
+  Markdown is translated into structured specs. `project_brief` surfaces the
+  logical views but not the packet/cookbook itself as a review task; a useful
+  later fix would add analysis packet/query recipe key counts and a low-priority
+  `analysis_packet_review` task pointing to packet `resource_brief` context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

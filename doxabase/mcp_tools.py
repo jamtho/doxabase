@@ -868,6 +868,7 @@ def preflight_context_slice_export_tool(
     profile: str = "dataset_brief",
     max_triples: int = 500,
     include_seed_graphs: bool = False,
+    validation_scope: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     return to_dict(
@@ -876,6 +877,7 @@ def preflight_context_slice_export_tool(
             profile=profile,  # type: ignore[arg-type]
             max_triples=max_triples,
             include_seed_graphs=include_seed_graphs,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
             limit=limit,
         )
     )
@@ -890,6 +892,8 @@ def export_context_slice_tool(
     include_seed_graphs: bool = False,
     overwrite: bool = False,
     fail_on_sensitive: bool = False,
+    fail_on_invalid: bool = True,
+    validation_scope: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     return to_dict(
@@ -901,6 +905,8 @@ def export_context_slice_tool(
             include_seed_graphs=include_seed_graphs,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
+            fail_on_invalid=fail_on_invalid,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
             limit=limit,
         )
     )

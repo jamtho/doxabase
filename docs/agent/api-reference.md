@@ -89,6 +89,7 @@ db.export_context_slice(
     ["https://example.test/project#child_table"],
     profile="dataset_brief",
     fail_on_sensitive=True,
+    fail_on_invalid=True,
 )
 db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=True)
@@ -123,8 +124,11 @@ they are review context only and omit history plus revision snapshot rows. Use
 `export_context_slice()` when a handoff should include only the selected
 resource neighborhood instead of every resource in a graph role. It omits
 immutable seed graphs by default so fresh capsules can import the artifact, and
-its preflight scans only selected context-slice triples; scanner-clean still
-requires separate shareability review. Use
+its preflight scans only selected context-slice triples. Context-slice exports
+also validate the live graph scope implied by the selected graph roles; the
+default write blocks when that scope fails SHACL. Pass
+`fail_on_invalid=False` only for a deliberately reviewed invalid diagnostic
+slice. Scanner-clean still requires separate shareability review. Use
 `export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
 recovery handoffs.
 Read-only orientation payloads that sit near privacy workflows, including
@@ -157,9 +161,11 @@ false.
 When a broad graph/TriG/handoff preflight blocks and the task has a known target
 resource, follow the suggested
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])` route to
-test a narrower review-context bundle. Context-slice exports can be imported
-with `import_trig`, but they are not recovery-complete because they omit
-SQLite-side revision snapshot rows.
+test a narrower review-context bundle. Context-slice preflights also report
+`would_block_invalid_export`, validation scope, conformance, result count, and
+diagnostics; if they block, run the suggested `validate_graph` before writing.
+Context-slice exports can be imported with `import_trig`, but they are not
+recovery-complete because they omit SQLite-side revision snapshot rows.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
 faithful RDF exports and do not by themselves trigger `privacy_warnings`.

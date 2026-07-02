@@ -121,7 +121,7 @@ Privacy/export route matrix:
 | Named-graph TriG | `export_preflight(export_kind="trig", graphs=...)` | `export_trig(..., fail_on_sensitive=true, fail_on_invalid=true)` |
 | Revision snapshot JSON | `export_preflight(export_kind="revision_snapshots", ...)` | `export_revision_snapshots(..., fail_on_sensitive=true)` |
 | Recovery-complete project handoff | `export_preflight(export_kind="handoff_bundle", graphs=["project"])` | `export_handoff_bundle(..., fail_on_sensitive=true, fail_on_invalid=true)` |
-| Context slice TriG | `preflight_context_slice_export(...)` | `export_context_slice(..., fail_on_sensitive=true)` |
+| Context slice TriG | `preflight_context_slice_export(...)` | `export_context_slice(..., fail_on_sensitive=true, fail_on_invalid=true)` |
 | Staged/profile Markdown review | Attempt the relevant export with `fail_on_sensitive=true` | `export_staged_revision`, `export_staged_revisions`, or `export_profile_insight_review_bundle` |
 
 Graph/TriG/handoff preflights also run live SHACL validation for the selected
@@ -1526,10 +1526,14 @@ export triples for credential-like graph terms, and returns the same
 `decision`, `scanner_clean`, `shareability_review_required`,
 `shareability_review_status`, `would_block_sensitive_export`,
 `sensitive_literal_count`, `privacy_warnings`, `shareability_hints`,
-`shareability_hint_matches`, `artifact_disposition`, `git_safe`, `warnings`, and
-suggested-action style used by broader export preflights. `scanner_clean=true`
-is still not a shareability proof; local paths, endpoints, and confidential
-project facts need human review.
+`shareability_hint_matches`, validation fields, `artifact_disposition`,
+`git_safe`, `warnings`, and suggested-action style used by broader export
+preflights. The validation gate checks the live graph scope implied by the
+selected graph roles, so an invalid observations/patterns/evidence slice usually
+routes to `validate_graph(scope="patterns")`, while mixed or history-bearing
+slices usually route to `scope="all"`. `scanner_clean=true` is still not a
+shareability proof; local paths, endpoints, and confidential project facts need
+human review.
 `handoff_fit` is `resource_scoped_review_context` for ordinary slice exports and
 `resource_scoped_review_context_not_recovery_complete` when
 history graph triples are included. If the selected slice includes `history`, the
@@ -1557,7 +1561,9 @@ credential-like terms.
 `doxabase.export_context_slice`
 
 Writes the selected context-slice triples as TriG. Pass
-`fail_on_sensitive=true` for unattended/shareable exports. Keep
+`fail_on_sensitive=true` and keep the default `fail_on_invalid=true` for
+unattended/shareable exports. Pass `fail_on_invalid=false` only for a
+deliberately reviewed invalid diagnostic slice. Keep
 `include_seed_graphs=false` unless you deliberately want a bundle that may
 require `import_trig(..., allow_immutable=True)`: fresh DoxaBase capsules
 already contain the standard base ontology and shape seed graphs. Prefer this

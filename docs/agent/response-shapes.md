@@ -1183,6 +1183,11 @@ export.warnings
 export.scanner_note
 export.suggested_next_actions
 export.suggested_next_calls
+export.validation_scope
+export.validation_conforms
+export.validation_result_count
+export.validation_results
+export.would_block_invalid_export
 export.artifact_kind
 export.importable
 export.recommended_import_tool
@@ -1191,20 +1196,26 @@ export.recovery_complete
 
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
 and `bytes_written` is `0`. It includes a suggested `export_context_slice`
-action only when the selected triples are scanner-clean; if `decision="block"`,
-the suggested actions stay read-only, for example inspecting the selected slice
-with `describe_context_slice` or running project-level `export_preflight`;
-resolve privacy review before writing rather than blindly following a doomed
-export. `decision` is `block` when selected export triples have sensitive-looking
-terms and `clean_by_scanner_only` otherwise; `scanner_clean` is the matching
-boolean, while `shareability_review_required` remains true because scanner-clean
-is not proof that a resource-scoped bundle is appropriate to share.
+action only when the selected triples are scanner-clean and validation-conformant;
+if `decision="block"`, the suggested actions stay read-only, for example
+running `validate_graph`, inspecting the selected slice with
+`describe_context_slice`, or running project-level `export_preflight`; resolve
+validation/privacy review before writing rather than blindly following a doomed
+export. `decision` is `block` when selected export triples have
+sensitive-looking terms or the live graph validation scope implied by the
+selected graph roles fails. `scanner_clean` only describes sensitive-term scan
+status, while `would_block_invalid_export` describes validation blocking and
+`shareability_review_required` remains true because scanner-clean is not proof
+that a resource-scoped bundle is appropriate to share.
 `handoff_fit` is `resource_scoped_review_context` for ordinary context-slice
 exports and `resource_scoped_review_context_not_recovery_complete` when the
 selected triples include `history`.
 `export_context_slice()` writes TriG and usually returns no further export
-action. If the selected triples include `history`, both helpers warn that the
-slice is not a recovery-complete revision handoff. Scanner-clean responses
+action. It defaults to `fail_on_invalid=True`, matching graph/TriG/handoff
+exports; pass `fail_on_invalid=False` only for a deliberately reviewed invalid
+diagnostic slice. If the selected triples include `history`, both helpers warn
+that the slice is not a recovery-complete revision handoff. Scanner-clean and
+validation-conformant responses
 include an `export_handoff_bundle` action, optionally narrowed to the revision
 IRIs visible in the slice. That action's path arguments are placeholders and
 carry `required_extra_arguments`, `placeholder_fields`, and
