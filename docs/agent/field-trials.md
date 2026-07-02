@@ -4793,6 +4793,12 @@ few useful gaps:
   validation and puts a receiver-side `validate_graph` action before recovery
   or mutation actions. The same wave identified source-view caveat rollup in
   `describe_analysis_view` as a later useful analysis-packet refinement.
+- An analysis-view caveat-rollup trial confirmed the Enron-style packet route
+  can model parent/child logical populations, but child views did not expose
+  caveats attached to parent/source views. `describe_analysis_view` now keeps
+  direct caveats in `caveats` and immediate source-dataset or parent-view
+  caveats in `source_caveats`, so agents can inspect inherited population
+  warnings without duplicating every caveat onto every child logical view.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

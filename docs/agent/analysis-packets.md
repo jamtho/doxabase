@@ -152,6 +152,9 @@ query recipes, pattern, and other bounded handoff context. The packet slice
 also suggests `describe_analysis_view` for linked logical views so agents can
 inspect denominators, source datasets, caveats, and query snippets from the
 slice without hunting through generic outgoing references.
+When one logical view sources another, `describe_analysis_view` reports caveats
+attached to the parent/source view as `source_caveats`; do not duplicate every
+parent caveat on child views unless the child population itself owns the caveat.
 Cold-start agents can also find packets from `project_brief`: key counts include
 `analysis_packets`, `analysis_artifacts`, `analysis_followup_tasks`, and
 `executable_query_snippets`, and `queue_counts["analysis_packet_review"]` points

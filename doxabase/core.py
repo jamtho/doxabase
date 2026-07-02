@@ -3556,6 +3556,7 @@ class AnalysisViewDescription:
     denominator: AnalysisDenominatorDescription | None
     query_snippets: list[QuerySnippetDescription]
     caveats: list[CaveatDescription]
+    source_caveats: list[CaveatDescription]
     row_count_snapshot: int | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -17765,6 +17766,8 @@ class DoxaBase:
         if self.expand_iri("rc:AnalysisView") not in types:
             raise DoxaBaseError(f"Resource '{iri}' is not typed as rc:AnalysisView")
 
+        source_iris = self._objects(data_graphs, view_iri, "rc:sourceDataset")
+        caveat_iris = self._objects(data_graphs, view_iri, "rc:hasKnownCaveat")
         denominator_iri = self._first_object(
             data_graphs,
             view_iri,
@@ -17795,7 +17798,7 @@ class DoxaBase:
             types=types,
             source_datasets=[
                 self._resource_summary(lookup_graphs, source_iri)
-                for source_iri in self._objects(data_graphs, view_iri, "rc:sourceDataset")
+                for source_iri in source_iris
             ],
             denominator=(
                 self._describe_analysis_denominator(
@@ -17816,7 +17819,15 @@ class DoxaBase:
             ],
             caveats=[
                 self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
-                for caveat_iri in self._objects(data_graphs, view_iri, "rc:hasKnownCaveat")
+                for caveat_iri in caveat_iris
+            ],
+            source_caveats=[
+                self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
+                for caveat_iri in self._analysis_view_source_caveat_iris(
+                    source_iris,
+                    direct_caveat_iris=caveat_iris,
+                    data_graphs=data_graphs,
+                )
             ],
             row_count_snapshot=self._int_object(
                 data_graphs,
@@ -17826,6 +17837,25 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
+
+    def _analysis_view_source_caveat_iris(
+        self,
+        source_iris: Iterable[str],
+        *,
+        direct_caveat_iris: Iterable[str],
+        data_graphs: list[str],
+    ) -> list[str]:
+        direct_caveat_set = set(direct_caveat_iris)
+        source_caveat_iris: dict[str, None] = {}
+        for source_iri in source_iris:
+            for caveat_iri in self._objects(
+                data_graphs,
+                source_iri,
+                "rc:hasKnownCaveat",
+            ):
+                if caveat_iri not in direct_caveat_set:
+                    source_caveat_iris.setdefault(caveat_iri, None)
+        return sorted(source_caveat_iris)
 
     def describe_profile_run(
         self,

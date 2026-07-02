@@ -27984,6 +27984,7 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert snippet.query_text is not None
     assert "recipient_domain" in snippet.query_text
     assert [item.iri for item in described.caveats] == [caveat]
+    assert described.source_caveats == []
     assert described.row_count_snapshot == 42
 
     dataset_description = db.describe_dataset(view)
@@ -28178,12 +28179,19 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     packet = f"{base}western_power_packet"
     parent_view = f"{base}western_power_policy"
     lane_view = f"{base}western_power_policy_operational_lane"
+    parent_caveat = f"{base}western_power_policy_population_caveat"
     aggregate_json = f"{base}western_power_lanes_json"
     register_tables_recipe = f"{base}register_tables_recipe"
     attachment_join_recipe = f"{base}attachment_join_recipe"
     lane_chart = f"{base}operational_lane_chart"
 
     db.record_map_dataset(source, label="Messages", is_table=True)
+    db.record_map_caveat(
+        parent_caveat,
+        label="Western policy population caveat",
+        description="The Western policy subcorpus depends on reviewed search terms.",
+        severity="rc:Moderate",
+    )
     result = db.record_analysis_packet(
         packet,
         label="Western power policy packet",
@@ -28200,6 +28208,7 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
                 "denominator_description": (
                     "Message-like rows matching reviewed Western power terms."
                 ),
+                "caveats": [parent_caveat],
                 "query_snippets": [
                     {
                         "label": "Subcorpus definition",
@@ -28314,6 +28323,16 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
         db.describe_resource(register_tables_recipe, graph="evidence")
     )
     assert RC + "ExecutableQuerySnippet" in recipe_resource["types"]
+    parent_description = db.describe_analysis_view(parent_view)
+    lane_description = db.describe_analysis_view(lane_view)
+    assert [caveat.iri for caveat in parent_description.caveats] == [
+        parent_caveat
+    ]
+    assert parent_description.source_caveats == []
+    assert lane_description.caveats == []
+    assert [caveat.iri for caveat in lane_description.source_caveats] == [
+        parent_caveat
+    ]
     assert db.describe_query_context(parent_view).readiness == "logical_analysis_view"
     context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
     assert packet in {resource["iri"] for resource in context["resources"]}

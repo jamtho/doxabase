@@ -94,6 +94,9 @@ check. `describe_query_context` returns
 `readiness="logical_analysis_view"` for these resources and deliberately does
 not produce missing-storage repair actions unless you separately model a
 materialized physical route.
+`describe_analysis_view` keeps directly attached caveats in `caveats` and
+immediate source-dataset or parent-view caveats in `source_caveats`; repeat a
+caveat on the child view only when the child itself changes or owns that caveat.
 Use `record_map_analysis_view_bundle(views=[...])` when a reviewed sidecar or
 manifest defines several logical populations at once. It is a structured
 orchestrator over the same single-view helper; supply one object per reviewed

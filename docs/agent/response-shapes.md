@@ -3227,6 +3227,7 @@ view.source_datasets
 view.denominator
 view.query_snippets
 view.caveats
+view.source_caveats
 view.row_count_snapshot
 view.suggested_next_actions
 view.suggested_next_calls
@@ -3237,6 +3238,10 @@ view.suggested_next_calls
 `view.query_snippets[]` carries `iri`, `label`, `description`, `query_text`,
 `query_language`, and `query_engine`; the RDF predicate for that last field is
 `rc:queryRuntime`, not evidence `rc:queryEngine`.
+`view.caveats` are caveats directly attached to this logical view.
+`view.source_caveats` are caveats attached to the view's immediate
+`source_datasets`, including parent analysis views, and are excluded from
+`view.caveats` unless the same caveat is directly repeated on the child view.
 `record_map_analysis_view(query_snippets=[...])` can write several snippets for
 one logical view. Omitted snippet IRIs default to
 `{view_iri}/query-snippet/{index}`. Do not combine `query_snippets` with the

@@ -18,9 +18,9 @@ For `rc:AnalysisView` resources recorded with `record_map_analysis_view`,
 `describe_query_context` returns `readiness="logical_analysis_view"` with no
 query target candidates and no storage-repair groups. Treat the view as reviewed
 logical analysis context: inspect `describe_analysis_view` for source datasets,
-denominator, caveats, and query snippets. Query or repair the source datasets
-when needed; only add physical storage/layout metadata to a separate
-materialized table route when that route actually exists.
+denominator, direct caveats, `source_caveats`, and query snippets. Query or
+repair the source datasets when needed; only add physical storage/layout
+metadata to a separate materialized table route when that route actually exists.
 `project_brief` surfaces these resources as `analysis_view_review`, not
 `query_context_review`, so unattended agents can inspect the logical definition
 without entering a physical-route repair loop.
