@@ -6746,6 +6746,7 @@ plan.first_safe_review_or_mutation_call
 plan.first_safe_review_or_mutation_source
 plan.blocking_preflight_actions
 plan.blocking_preflight_calls
+plan.recommended_unattended_steps
 plan.requires_recheck_after_each_apply
 plan.semantic_review_required_queue_counts
 plan.would_restage_revision_iris
@@ -7094,6 +7095,17 @@ their display calls. If that list is empty, drive the repair from
 When helper mutation actions are present, `plan.warnings` explicitly says they
 are required and are not represented by `mutation_frontier_iris`; do not treat
 the IRI list as a complete mutation queue.
+`recommended_unattended_steps[]` is the compact ordered route for scripts that
+would otherwise need to join `blocking_preflight_actions`,
+`would_restage_revision_iris`, `helper_mutation_frontier_actions`,
+`mutation_frontier_items`, and first-safe fields. Each step includes
+`step_kind`, `label`, `action`, `call`, `can_run_now`, `prerequisite`,
+`mutates`, `requires_replan_after_completion`, `stop_reason`, `revision_iris`,
+`source_revision_iris`, `target_iris`, and `note`. Run only steps whose
+`can_run_now` is true, and stop/replan whenever the completed step says
+`requires_replan_after_completion=true`. Mechanical restage plans expose a
+safe dry-run step first, then a `run_reviewed_mechanical_restage` step with
+`can_run_now=false` until the dry-run classification has been reviewed.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the

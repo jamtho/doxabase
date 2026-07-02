@@ -3315,6 +3315,16 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     )
     assert imported.recovery_plan.suggested_next_actions == [privacy_action]
     assert imported.recovery_plan.blocking_preflight_actions == [privacy_action]
+    assert [
+        step.step_kind
+        for step in imported.recovery_plan.recommended_unattended_steps
+    ] == ["review_handoff_privacy"]
+    privacy_step = imported.recovery_plan.recommended_unattended_steps[0]
+    assert privacy_step.action == privacy_action
+    assert privacy_step.can_run_now is True
+    assert privacy_step.mutates is False
+    assert privacy_step.requires_replan_after_completion is True
+    assert privacy_step.stop_reason == "rerun_plan_after_handoff_privacy_review"
     assert imported.recovery_plan.first_mutation_action is None
     assert imported.recovery_plan.first_mutation_call is None
     assert (
@@ -10459,6 +10469,40 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert batch_dry_run_action.mutates_project_graph is False
     assert batch_dry_run_action.writes_history is False
     assert batch_dry_run_action.writes_files is False
+    assert [
+        step.step_kind for step in plan.recommended_unattended_steps[:3]
+    ] == [
+        "dry_run_mechanical_restage",
+        "run_reviewed_mechanical_restage",
+        "stage_repair_successor",
+    ]
+    dry_step = plan.recommended_unattended_steps[0]
+    assert dry_step.action == batch_dry_run_action
+    assert dry_step.can_run_now is True
+    assert dry_step.mutates is False
+    assert dry_step.requires_replan_after_completion is False
+    assert dry_step.revision_iris == [stale.revision_iri]
+    real_step = plan.recommended_unattended_steps[1]
+    assert real_step.action is not None
+    assert real_step.action.tool_name == "restage_staged_revisions"
+    assert real_step.action.arguments == {
+        "revision_iris": [stale.revision_iri],
+        "dry_run": False,
+    }
+    assert real_step.can_run_now is False
+    assert real_step.prerequisite == "after_reviewing_matching_dry_run"
+    assert real_step.mutates is True
+    assert real_step.requires_replan_after_completion is True
+    assert real_step.stop_reason == "rerun_plan_after_restage"
+    helper_step = plan.recommended_unattended_steps[2]
+    assert helper_step.action == plan.helper_mutation_frontier_actions[0]
+    assert helper_step.source_revision_iris == [repair_source.revision_iri]
+    assert helper_step.can_run_now is False
+    assert (
+        helper_step.prerequisite
+        == "after_mechanical_restage_replan_if_still_current"
+    )
+    assert helper_step.stop_reason == "mechanical_restage_first"
     assert any(
         action.tool_name == "restage_staged_revision"
         and action.arguments == {"iri": stale.revision_iri}

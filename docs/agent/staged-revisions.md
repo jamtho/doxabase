@@ -363,6 +363,11 @@ recovery, dry-run batch restage when the plan points at stale mechanical rows,
 restage only `would_restage_revision_iris`, apply at most one ready row, then
 rerun the planner before the next mutation. Keep `repair_or_replace` and
 informational rows out of bulk apply/restage lanes.
+When available, drive that loop from `plan.recommended_unattended_steps[]`
+rather than reconstructing it manually. It includes the safe dry-run, the
+reviewed real restage step, helper repair staging, semantic review gates, and
+one-mutation/replan stop points with `can_run_now`, `prerequisite`, `mutates`,
+and `requires_replan_after_completion` fields.
 When the recovery will span several calls or was started from an imported
 handoff, create a durable session with
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
@@ -379,7 +384,11 @@ Compact cookbook for a mixed stale queue:
 3. For multi-step work, start a session from `plan.processed_revision_iris`.
    Session creation records source revisions and planning parameters only; it
    does not mutate project graphs.
-4. Review `plan.lanes[]`. Treat `would_restage_revision_iris` as the only
+4. Read `plan.recommended_unattended_steps[]` for the planner's current
+   executable route. Run only steps with `can_run_now=true`, honor
+   `prerequisite` before any step that is false, and rerun the planner after
+   every completed step with `requires_replan_after_completion=true`.
+5. Review `plan.lanes[]`. Treat `would_restage_revision_iris` as the only
    mechanical restage worklist; do not feed `repair_or_replace`,
    `skipped_not_restageable`, informational, or already-applied rows into a bulk
    restage. In mixed plans, `first_mutation_action` stays empty when any
@@ -405,20 +414,20 @@ Compact cookbook for a mixed stale queue:
    and/or snapshot digest drift, count deltas, patch-triple status counts, exact
    drift availability, added/removed-since-snapshot counts, and relevance
    without embedding raw triples.
-5. Run `restage_staged_revisions(revision_iris=plan.would_restage_revision_iris,
+6. Run `restage_staged_revisions(revision_iris=plan.would_restage_revision_iris,
    dry_run=True)` and compare its classifications with the plan.
-6. If the dry run still matches your review, run the real batch over the same
+7. If the dry run still matches your review, run the real batch over the same
    worklist. Treat `restaged_revision_iris` as created successors, not as an
    apply queue.
-7. For each candidate successor, call `check_staged_revision_apply()` and apply
+8. For each candidate successor, call `check_staged_revision_apply()` and apply
    at most one `ready` row after review.
-8. After any apply, rerun
+9. After any apply, rerun
    `describe_staged_revision_recovery_session(session_iri)` when a session
    exists, otherwise rerun
    `plan_staged_revision_recovery(current_staged_work_only=True)` before the
    next mutation. `post_apply_recheck_revision_iris` is only an affected-sibling
    subset, not the whole remaining frontier.
-9. For `repair_or_replace` / same-slot lanes, follow
+10. For `repair_or_replace` / same-slot lanes, follow
    `helper_mutation_frontier_actions` or the lane repair draft, usually a
    reviewed `stage_map_assertion_change(..., restages_revision=...)`, then
    check the new successor before applying.

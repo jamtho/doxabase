@@ -3947,6 +3947,26 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     assert batch_action["writes_history"] is False
     assert batch_action["writes_files"] is False
     assert batch_action["writes_storage"] is False
+    steps = result["recommended_unattended_steps"]
+    assert [step["step_kind"] for step in steps[:2]] == [
+        "dry_run_mechanical_restage",
+        "run_reviewed_mechanical_restage",
+    ]
+    assert steps[0]["action"] == batch_action
+    assert steps[0]["can_run_now"] is True
+    assert steps[0]["mutates"] is False
+    assert steps[0]["requires_replan_after_completion"] is False
+    assert steps[0]["revision_iris"] == [staged["revision_iri"]]
+    assert steps[1]["action"]["tool_name"] == "restage_staged_revisions"
+    assert steps[1]["action"]["arguments"] == {
+        "revision_iris": [staged["revision_iri"]],
+        "dry_run": False,
+    }
+    assert steps[1]["can_run_now"] is False
+    assert steps[1]["prerequisite"] == "after_reviewing_matching_dry_run"
+    assert steps[1]["mutates"] is True
+    assert steps[1]["requires_replan_after_completion"] is True
+    assert steps[1]["stop_reason"] == "rerun_plan_after_restage"
     assert result["first_mutation_action"] == result["mutation_frontier_items"][0][
         "action"
     ]

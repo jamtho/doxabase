@@ -2173,6 +2173,23 @@ class StagedRevisionMutationFrontierItem:
 
 
 @dataclass(frozen=True)
+class StagedRevisionRecoveryUnattendedStep:
+    step_kind: str
+    label: str
+    action: SuggestedNextAction | RevisionNextAction | None
+    call: str | None
+    can_run_now: bool
+    prerequisite: str | None
+    mutates: bool
+    requires_replan_after_completion: bool
+    stop_reason: str | None
+    revision_iris: list[str]
+    source_revision_iris: list[str]
+    target_iris: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionRecoveryPlan:
     result_kind: str
     helper: str
@@ -2214,6 +2231,7 @@ class StagedRevisionRecoveryPlan:
     first_safe_review_or_mutation_source: str | None
     blocking_preflight_actions: list[SuggestedNextAction]
     blocking_preflight_calls: list[str]
+    recommended_unattended_steps: list[StagedRevisionRecoveryUnattendedStep]
     requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
     would_restage_revision_iris: list[str]
@@ -44567,6 +44585,20 @@ class DoxaBase:
             mutation_frontier_items=mutation_frontier_items,
             suggested_next_actions=suggested_next_actions,
         )
+        recommended_unattended_steps = (
+            self._staged_recovery_recommended_unattended_steps(
+                blocking_preflight_actions=blocking_preflight_actions,
+                would_restage_revision_iris=batch.would_restage_revision_iris,
+                helper_mutation_frontier_actions=(
+                    helper_mutation_frontier_actions
+                ),
+                mutation_frontier_items=mutation_frontier_items,
+                suggested_next_actions=suggested_next_actions,
+                requires_recheck_after_each_apply=(
+                    requires_recheck_after_each_apply
+                ),
+            )
+        )
         processed_revision_iris = list(dict.fromkeys(selected_revision_iris))
         current_revision_by_source = {
             **batch.current_revision_by_source,
@@ -44680,6 +44712,7 @@ class DoxaBase:
             blocking_preflight_calls=[
                 action.call for action in blocking_preflight_actions if action.call
             ],
+            recommended_unattended_steps=recommended_unattended_steps,
             requires_recheck_after_each_apply=requires_recheck_after_each_apply,
             semantic_review_required_queue_counts=(
                 self._semantic_review_required_queue_counts(queue_items)
@@ -45856,6 +45889,7 @@ class DoxaBase:
             first_safe_review_or_mutation_source=None,
             blocking_preflight_actions=[],
             blocking_preflight_calls=[],
+            recommended_unattended_steps=[],
             requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
             would_restage_revision_iris=[],
@@ -46986,6 +47020,304 @@ class DoxaBase:
                 first_safe_source = "suggested_next_action"
         return first_mutation_action, first_safe_action, first_safe_source
 
+    def _staged_recovery_recommended_unattended_steps(
+        self,
+        *,
+        blocking_preflight_actions: list[SuggestedNextAction],
+        would_restage_revision_iris: list[str],
+        helper_mutation_frontier_actions: list[SuggestedNextAction],
+        mutation_frontier_items: list[StagedRevisionMutationFrontierItem],
+        suggested_next_actions: list[SuggestedNextAction],
+        requires_recheck_after_each_apply: bool,
+    ) -> list[StagedRevisionRecoveryUnattendedStep]:
+        steps: list[StagedRevisionRecoveryUnattendedStep] = []
+        for action in blocking_preflight_actions:
+            steps.append(
+                self._staged_recovery_unattended_step(
+                    step_kind="complete_handoff_preflight",
+                    label="Complete handoff preflight",
+                    action=action,
+                    can_run_now=True,
+                    prerequisite=None,
+                    mutates=False,
+                    requires_replan_after_completion=True,
+                    stop_reason="rerun_plan_after_handoff_preflight",
+                    revision_iris=self._suggested_action_revision_iris(action),
+                    source_revision_iris=[],
+                    target_iris=[],
+                    note=(
+                        "Run this blocking import/preflight action before any "
+                        "staged recovery mutation, then rerun the planner."
+                    ),
+                )
+            )
+        if blocking_preflight_actions:
+            return steps
+
+        if would_restage_revision_iris:
+            dry_run_action = self._staged_recovery_batch_restage_dry_run_action(
+                would_restage_revision_iris
+            )
+            steps.append(
+                self._staged_recovery_unattended_step(
+                    step_kind="dry_run_mechanical_restage",
+                    label="Dry-run mechanical restage worklist",
+                    action=dry_run_action,
+                    can_run_now=True,
+                    prerequisite=None,
+                    mutates=False,
+                    requires_replan_after_completion=False,
+                    stop_reason=None,
+                    revision_iris=list(would_restage_revision_iris),
+                    source_revision_iris=list(would_restage_revision_iris),
+                    target_iris=[],
+                    note=(
+                        "Classify exactly would_restage_revision_iris before "
+                        "creating restaged successors."
+                    ),
+                )
+            )
+            real_action = self._staged_recovery_batch_restage_real_action(
+                would_restage_revision_iris
+            )
+            steps.append(
+                self._staged_recovery_unattended_step(
+                    step_kind="run_reviewed_mechanical_restage",
+                    label="Run reviewed mechanical restage worklist",
+                    action=real_action,
+                    can_run_now=False,
+                    prerequisite="after_reviewing_matching_dry_run",
+                    mutates=True,
+                    requires_replan_after_completion=True,
+                    stop_reason="rerun_plan_after_restage",
+                    revision_iris=list(would_restage_revision_iris),
+                    source_revision_iris=list(would_restage_revision_iris),
+                    target_iris=[],
+                    note=(
+                        "After the dry-run classifications still match review, "
+                        "restage only this mechanical worklist, then rerun "
+                        "recovery planning before applying successors."
+                    ),
+                )
+            )
+
+        helper_items_by_call = {
+            item.call: item
+            for item in mutation_frontier_items
+            if item.item_kind == "helper_action" and item.call
+        }
+        for action in helper_mutation_frontier_actions:
+            item = helper_items_by_call.get(action.call)
+            requires_semantic_review = (
+                bool(item.requires_semantic_review_before_mutation)
+                if item is not None
+                else False
+            )
+            blocked_by_mechanical_restage = bool(would_restage_revision_iris)
+            prerequisite = None
+            stop_reason = "rerun_plan_after_repair_staging"
+            if blocked_by_mechanical_restage:
+                prerequisite = "after_mechanical_restage_replan_if_still_current"
+                stop_reason = "mechanical_restage_first"
+            elif requires_semantic_review:
+                prerequisite = "after_semantic_review"
+                stop_reason = "semantic_review_required_before_repair"
+            source_revision_iris = (
+                list(item.source_revision_iris)
+                if item is not None
+                else self._suggested_action_revision_iris(action)
+            )
+            steps.append(
+                self._staged_recovery_unattended_step(
+                    step_kind="stage_repair_successor",
+                    label="Stage repair successor",
+                    action=action,
+                    can_run_now=(
+                        not blocked_by_mechanical_restage
+                        and not requires_semantic_review
+                    ),
+                    prerequisite=prerequisite,
+                    mutates=True,
+                    requires_replan_after_completion=True,
+                    stop_reason=stop_reason,
+                    revision_iris=self._suggested_action_revision_iris(action),
+                    source_revision_iris=source_revision_iris,
+                    target_iris=[],
+                    note=(
+                        "Run the repair helper to create a concrete successor, "
+                        "then check the successor and rerun recovery planning "
+                        "before applying it."
+                    ),
+                )
+            )
+
+        blocked_by_prior_restage = bool(would_restage_revision_iris)
+        for item in mutation_frontier_items:
+            if item.item_kind != "revision_target":
+                continue
+            if item.requires_semantic_review_before_mutation:
+                review_action = (
+                    self._staged_recovery_semantic_frontier_review_action(
+                        [item],
+                        suggested_next_actions,
+                    )
+                    or item.action
+                )
+                steps.append(
+                    self._staged_recovery_unattended_step(
+                        step_kind="review_semantic_frontier",
+                        label="Review semantic-gated mutation target",
+                        action=review_action,
+                        can_run_now=not blocked_by_prior_restage,
+                        prerequisite=(
+                            "after_mechanical_restage_replan_if_still_current"
+                            if blocked_by_prior_restage
+                            else None
+                        ),
+                        mutates=False,
+                        requires_replan_after_completion=False,
+                        stop_reason="semantic_review_required_before_mutation",
+                        revision_iris=list(item.row_iris),
+                        source_revision_iris=list(item.source_revision_iris),
+                        target_iris=[
+                            value
+                            for value in [item.target_iri]
+                            if value is not None
+                        ],
+                        note=(
+                            "Do not run the post-review mutation unattended "
+                            "until this semantic gate is resolved."
+                        ),
+                    )
+                )
+                continue
+            steps.append(
+                self._staged_recovery_unattended_step(
+                    step_kind="mutate_one_frontier_target",
+                    label="Mutate one reviewed frontier target",
+                    action=item.action,
+                    can_run_now=not blocked_by_prior_restage,
+                    prerequisite=(
+                        "after_mechanical_restage_replan_if_still_current"
+                        if blocked_by_prior_restage
+                        else None
+                    ),
+                    mutates=item.action is not None,
+                    requires_replan_after_completion=True,
+                    stop_reason=(
+                        "apply_at_most_one_then_replan"
+                        if (
+                            requires_recheck_after_each_apply
+                            or item.queue == "apply_after_review"
+                        )
+                        else "rerun_plan_after_mutation"
+                    ),
+                    revision_iris=list(item.row_iris),
+                    source_revision_iris=list(item.source_revision_iris),
+                    target_iris=[
+                        value for value in [item.target_iri] if value is not None
+                    ],
+                    note=(
+                        "Run at most one reviewed mutation target from this "
+                        "plan, then rerun recovery planning before the next "
+                        "mutation."
+                    ),
+                )
+            )
+
+        if not steps:
+            review_action = next(
+                (
+                    action
+                    for action in suggested_next_actions
+                    if self._staged_recovery_action_is_safe_review(action)
+                ),
+                None,
+            )
+            if review_action is not None:
+                steps.append(
+                    self._staged_recovery_unattended_step(
+                        step_kind="inspect_frontier",
+                        label="Inspect recovery frontier",
+                        action=review_action,
+                        can_run_now=True,
+                        prerequisite=None,
+                        mutates=False,
+                        requires_replan_after_completion=False,
+                        stop_reason="no_unattended_mutation_frontier",
+                        revision_iris=self._suggested_action_revision_iris(
+                            review_action
+                        ),
+                        source_revision_iris=[],
+                        target_iris=[],
+                        note=(
+                            "No unattended mutation frontier is currently "
+                            "available; follow the inspection route."
+                        ),
+                    )
+                )
+        return steps
+
+    @staticmethod
+    def _staged_recovery_unattended_step(
+        *,
+        step_kind: str,
+        label: str,
+        action: SuggestedNextAction | RevisionNextAction | None,
+        can_run_now: bool,
+        prerequisite: str | None,
+        mutates: bool,
+        requires_replan_after_completion: bool,
+        stop_reason: str | None,
+        revision_iris: Iterable[str],
+        source_revision_iris: Iterable[str],
+        target_iris: Iterable[str],
+        note: str,
+    ) -> StagedRevisionRecoveryUnattendedStep:
+        return StagedRevisionRecoveryUnattendedStep(
+            step_kind=step_kind,
+            label=label,
+            action=action,
+            call=action.call if action is not None else None,
+            can_run_now=can_run_now,
+            prerequisite=prerequisite,
+            mutates=mutates,
+            requires_replan_after_completion=requires_replan_after_completion,
+            stop_reason=stop_reason,
+            revision_iris=list(dict.fromkeys(revision_iris)),
+            source_revision_iris=list(dict.fromkeys(source_revision_iris)),
+            target_iris=list(dict.fromkeys(target_iris)),
+            note=note,
+        )
+
+    @staticmethod
+    def _suggested_action_revision_iris(
+        action: SuggestedNextAction | RevisionNextAction | None,
+    ) -> list[str]:
+        if action is None:
+            return []
+        values: list[str] = []
+        for key in (
+            "iri",
+            "revision_iri",
+            "restages_revision",
+            "source_revision_iri",
+        ):
+            value = action.arguments.get(key)
+            if isinstance(value, str):
+                values.append(value)
+        for key in (
+            "revision_iris",
+            "source_revision_iris",
+            "missing_revision_iris",
+        ):
+            list_value = action.arguments.get(key)
+            if isinstance(list_value, list):
+                values.extend(
+                    value for value in list_value if isinstance(value, str)
+                )
+        return list(dict.fromkeys(values))
+
     @staticmethod
     def _staged_recovery_order_lanes(
         lanes: list[StagedRevisionRecoveryLane],
@@ -47029,6 +47361,34 @@ class DoxaBase:
             mutation_scope="none",
             mutates_project_graph=False,
             writes_history=False,
+            writes_files=False,
+        )
+
+    def _staged_recovery_batch_restage_real_action(
+        self,
+        revision_iris: list[str],
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "revision_iris": list(revision_iris),
+            "dry_run": False,
+        }
+        return EffectAnnotatedSuggestedNextAction(
+            action_label="Run reviewed batch restage",
+            tool_name="restage_staged_revisions",
+            mcp_tool_name="doxabase.restage_staged_revisions",
+            arguments=arguments,
+            reason=(
+                "Run the real batch restage only after the dry-run "
+                "classification has been reviewed and still matches the "
+                "mechanical worklist."
+            ),
+            call=self._suggested_call_string(
+                "restage_staged_revisions",
+                arguments,
+            ),
+            mutation_scope="history",
+            mutates_project_graph=False,
+            writes_history=True,
             writes_files=False,
         )
 
@@ -64495,10 +64855,42 @@ class DoxaBase:
                 values.append(action)
             return self._dedupe_suggested_next_actions(values)
 
+        def replace_unattended_steps(
+            steps: list[StagedRevisionRecoveryUnattendedStep],
+        ) -> list[StagedRevisionRecoveryUnattendedStep]:
+            replaced = False
+            values: list[StagedRevisionRecoveryUnattendedStep] = []
+            for step in steps:
+                action = step.action
+                if (
+                    isinstance(action, SuggestedNextAction)
+                    and self._is_placeholder_snapshot_import_action(action)
+                ):
+                    if not replaced:
+                        values.append(
+                            replace(
+                                step,
+                                action=replacement,
+                                call=replacement.call,
+                                revision_iris=(
+                                    self._suggested_action_revision_iris(
+                                        replacement
+                                    )
+                                ),
+                            )
+                        )
+                        replaced = True
+                    continue
+                values.append(step)
+            return values
+
         blocking_preflight_actions = replace_actions(
             recovery_plan.blocking_preflight_actions
         )
         suggested_next_actions = replace_actions(recovery_plan.suggested_next_actions)
+        recommended_unattended_steps = replace_unattended_steps(
+            recovery_plan.recommended_unattended_steps
+        )
         (
             first_mutation_action,
             first_safe_review_or_mutation_action,
@@ -64515,6 +64907,7 @@ class DoxaBase:
             blocking_preflight_calls=[
                 action.call for action in blocking_preflight_actions if action.call
             ],
+            recommended_unattended_steps=recommended_unattended_steps,
             first_mutation_action=first_mutation_action,
             first_mutation_call=(
                 first_mutation_action.call
@@ -64604,6 +64997,31 @@ class DoxaBase:
                 ],
             )
 
+        privacy_step_revision_iris = (
+            self._suggested_action_revision_iris(privacy_action)
+            or list(redacted_plan.processed_revision_iris)
+        )
+        privacy_steps = [
+            self._staged_recovery_unattended_step(
+                step_kind="review_handoff_privacy",
+                label="Review handoff privacy preflight",
+                action=privacy_action,
+                can_run_now=True,
+                prerequisite=None,
+                mutates=False,
+                requires_replan_after_completion=True,
+                stop_reason="rerun_plan_after_handoff_privacy_review",
+                revision_iris=privacy_step_revision_iris,
+                source_revision_iris=list(redacted_plan.processed_revision_iris),
+                target_iris=[],
+                note=(
+                    "Run this privacy preflight review before following "
+                    "imported recovery or mutation actions, then rerun the "
+                    "recovery plan."
+                ),
+            )
+        ]
+
         return replace(
             redacted_plan,
             lanes=[gated_lane(lane) for lane in redacted_plan.lanes],
@@ -64624,6 +65042,7 @@ class DoxaBase:
             ),
             blocking_preflight_actions=[privacy_action],
             blocking_preflight_calls=privacy_calls,
+            recommended_unattended_steps=privacy_steps,
             revision_summaries=[
                 gated_summary(summary)
                 for summary in redacted_plan.revision_summaries
