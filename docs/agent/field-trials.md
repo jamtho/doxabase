@@ -4497,6 +4497,12 @@ few useful gaps:
   now expose `target_detail`, and `Open Profile Review Lanes` renders a
   `Target / detail` column with the column, metric, observed type/value,
   scalar conflict value, or assertion target.
+- A staged-revision drift/handoff trial confirmed complete handoff imports can
+  recover stale, no-op, validation-failed, restaged, and semantic-alternative
+  rows without hidden state, but resuming was awkward if the import response was
+  lost. Handoff manifests now list overlapping `recovery_session_iris` and
+  compact `recovery_sessions[]` entries with resume calls, and import recovery
+  summaries expose `resume_recovery_session_iri` / `resume_recovery_session_call`.
 - A deeper Enron handoff review showed that reviewed Parquet schema/profile
   manifests still required agents to manually compose `record_map_table_bundle`
   and `record_profile_bundle` for every table. `record_profiled_parquet_table`

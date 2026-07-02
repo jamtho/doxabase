@@ -31856,11 +31856,27 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
         current_staged_work_only=False,
         drift_detail="exact",
     )
-    source.export_handoff_bundle(
+    exported = source.export_handoff_bundle(
         trig_path,
         snapshot_path,
         manifest_path=manifest_path,
         revision_iris=revision_iris,
+    )
+    assert exported.manifest["recovery_session_iris"] == [session.session_iri]
+    assert exported.manifest["recovery_session_count"] == 1
+    manifest_session = exported.manifest["recovery_sessions"][0]
+    assert manifest_session["session_iri"] == session.session_iri
+    assert manifest_session["summary"] == "Mixed staged handoff recovery session"
+    assert manifest_session["source_revision_iris"] == revision_iris
+    assert manifest_session["drift_detail"] == "exact"
+    assert manifest_session["resume_action"]["tool_name"] == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert manifest_session["resume_action"]["arguments"]["session_iri"] == (
+        session.session_iri
+    )
+    assert manifest_session["resume_call"].startswith(
+        "describe_staged_revision_recovery_session("
     )
 
     trig_only_receiver = DoxaBase.create(tmp_path / "trig-only.sqlite")
@@ -31884,15 +31900,29 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
         manifest_path,
         drift_detail="exact",
     )
+    assert imported.manifest["recovery_session_iris"] == [session.session_iri]
     assert imported.matching_recovery_session_iris == [session.session_iri]
+    assert imported.recovery_summary.imported_recovery_session_iris == [
+        session.session_iri
+    ]
+    assert imported.recovery_summary.matching_recovery_session_iris == [
+        session.session_iri
+    ]
+    assert imported.recovery_summary.resume_recovery_session_iri == (
+        session.session_iri
+    )
     assert imported.recovery_summary.recommended_next_step == (
         "continue_imported_recovery_session"
     )
     assert imported.suggested_next_actions[0].tool_name == (
         "describe_staged_revision_recovery_session"
     )
+    assert imported.recovery_summary.resume_recovery_session_call == (
+        imported.suggested_next_actions[0].call
+    )
+    manifest_resume_iri = imported.manifest["recovery_sessions"][0]["session_iri"]
     described_session = receiver.describe_staged_revision_recovery_session(
-        session.session_iri,
+        manifest_resume_iri,
         drift_detail="exact",
     )
     receiver_plan = described_session.current_plan

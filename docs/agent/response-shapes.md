@@ -5849,7 +5849,12 @@ the receiver route. It also preserves preflight-style export metadata:
 `shareability_review_status`, `would_block_sensitive_export`, graph/snapshot
 sensitive counts, warnings, and `scanner_note`. Treat
 `scanner_clean=true` as scanner-clean only; it is not shareability approval while
-`shareability_review_status="required_not_completed"`.
+`shareability_review_status="required_not_completed"`. When the exported
+history graph contains `rc:StagedRevisionRecoverySession` resources whose source
+revisions overlap the manifest revisions, the manifest includes
+`recovery_session_count`, `recovery_session_iris`, and `recovery_sessions[]`
+with compact source-session metadata plus a `resume_action` /
+`resume_call` for `describe_staged_revision_recovery_session`.
 When `manifest_path` is supplied,
 `recommended_import_tool` is `doxabase.import_handoff_bundle`; the manifest also
 keeps the lower-level `recommended_import_sequence`, where `import_trig` should
@@ -5916,8 +5921,11 @@ summary.trig_total_imported
 summary.imported_snapshot_count
 summary.skipped_snapshot_count
 summary.imported_recovery_session_count
+summary.imported_recovery_session_iris
 summary.matching_recovery_session_count
 summary.matching_recovery_session_iris
+summary.resume_recovery_session_iri
+summary.resume_recovery_session_call
 summary.recovery_plan_available
 summary.recovery_lane_counts
 summary.recovery_next_action_queue_item_counts
@@ -5972,10 +5980,13 @@ When `matching_recovery_session_count` is nonzero, `recommended_next_step` is
 `continue_imported_recovery_session`; in that case the summary keeps mutation
 frontier counts visible but suppresses `first_mutation_action` and points
 `first_safe_review_or_mutation_action` at
-`describe_staged_revision_recovery_session`. Continue the source session first,
-then rerun receiver-local recovery planning before applying any exposed
-frontier row. That continuation action is effect-annotated with
-`mutation_scope="none"` and all write flags false.
+`describe_staged_revision_recovery_session`. It also exposes
+`resume_recovery_session_iri` and `resume_recovery_session_call` so a cold
+receiver can resume the imported source session without rediscovering it through
+history search. Continue the source session first, then rerun receiver-local
+recovery planning before applying any exposed frontier row. That continuation
+action is effect-annotated with `mutation_scope="none"` and all write flags
+false.
 When no matching imported source session exists but the import prepends a
 `start_staged_revision_recovery_session` action,
 `recommended_next_step="start_receiver_local_recovery_session"`. The summary

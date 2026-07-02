@@ -186,14 +186,19 @@ On the receiving capsule:
    result for the manifest revisions. If `matching_recovery_session_iris` is
    non-empty, follow the first
    `describe_staged_revision_recovery_session(session_iri=...)` suggested action
-   before starting any receiver-local session.
+   before starting any receiver-local session. Exported manifests also carry
+   `recovery_session_iris` / `recovery_sessions[]` when source-side sessions
+   overlap the manifest revisions; if the import response is lost, use the
+   manifest session IRI or `resume_call` to continue the imported source
+   recovery session directly.
    Read `recovery_summary` first for a compact import smoke check over snapshot
    completeness, matching sessions, lane/queue counts, mutation frontier, and
    preserved profile route groups.
    When a matching source session exists, the summary keeps mutation-frontier
    counts visible for orientation but points `first_safe_review_or_mutation_action`
-   at the session continuation and suppresses `first_mutation_action`; continue
-   the imported session before applying receiver-local frontier rows.
+   at the session continuation, exposes `resume_recovery_session_iri` /
+   `resume_recovery_session_call`, and suppresses `first_mutation_action`;
+   continue the imported session before applying receiver-local frontier rows.
    The manifest-scoped recovery plan can include applied events and historical
    snapshot rows that are useful context but noisy for choosing the next live
    mutation. After import, rerun

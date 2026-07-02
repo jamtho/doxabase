@@ -1051,8 +1051,11 @@ class HandoffBundleRecoverySummary:
     imported_snapshot_count: int
     skipped_snapshot_count: int
     imported_recovery_session_count: int
+    imported_recovery_session_iris: list[str]
     matching_recovery_session_count: int
     matching_recovery_session_iris: list[str]
+    resume_recovery_session_iri: str | None
+    resume_recovery_session_call: str | None
     recovery_plan_available: bool
     recovery_lane_counts: dict[str, int]
     recovery_next_action_queue_item_counts: dict[str, int]
@@ -62086,6 +62089,9 @@ class DoxaBase:
             dict.fromkeys(entry["graph_role"] for entry in snapshot_entries)
         )
         snapshot_quad_count = sum(len(entry["quads"]) for entry in snapshot_entries)
+        recovery_sessions = self._handoff_bundle_recovery_session_manifest_entries(
+            snapshot_revision_iris
+        )
         trig_sensitive_count, trig_privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
@@ -62273,6 +62279,7 @@ class DoxaBase:
             ),
             validation_results=validation.results if validation is not None else [],
             would_block_invalid_export=validation_blocks_export,
+            recovery_sessions=recovery_sessions,
         )
         manifest_bytes_written = None
         if manifest_path is not None:
@@ -62358,7 +62365,13 @@ class DoxaBase:
         validation_result_count: int,
         validation_results: list[ValidationDiagnostic],
         would_block_invalid_export: bool,
+        recovery_sessions: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        recovery_session_iris = [
+            str(session["session_iri"])
+            for session in recovery_sessions
+            if isinstance(session.get("session_iri"), str)
+        ]
         return {
             "format": "doxabase.handoff_bundle.v1",
             "created_at": _now(),
@@ -62460,6 +62473,9 @@ class DoxaBase:
             "final_snapshot_evidence_status": "history_plus_snapshot_rows",
             "revision_iris": revision_snapshots.revision_iris,
             "snapshot_graph_roles": revision_snapshots.graph_roles,
+            "recovery_session_count": len(recovery_sessions),
+            "recovery_session_iris": recovery_session_iris,
+            "recovery_sessions": recovery_sessions,
             "decision": decision,
             "scanner_clean": scanner_clean,
             "shareability_review_required": shareability_review_required,
@@ -62483,6 +62499,113 @@ class DoxaBase:
             "shareability_hint_matches": to_jsonable(shareability_hint_matches),
             "artifact_disposition": DEFAULT_ARTIFACT_DISPOSITION,
             "git_safe": False,
+        }
+
+    def _handoff_bundle_recovery_session_manifest_entries(
+        self,
+        revision_iris: list[str],
+    ) -> list[dict[str, Any]]:
+        history_graphs = self._expand_graphs(["history"])
+        session_iris = self._matching_recovery_session_iris(
+            self._recovery_session_iris(history_graphs),
+            revision_iris=revision_iris,
+            history_graphs=history_graphs,
+        )
+        return [
+            self._handoff_bundle_recovery_session_manifest_entry(
+                session_iri,
+                history_graphs=history_graphs,
+            )
+            for session_iri in session_iris
+        ]
+
+    def _handoff_bundle_recovery_session_manifest_entry(
+        self,
+        session_iri: str,
+        *,
+        history_graphs: list[str],
+    ) -> dict[str, Any]:
+        source_revision_iris = self._staged_recovery_session_source_revision_iris(
+            session_iri,
+            history_graphs=history_graphs,
+        )
+        include_drafts = self._optional_bool_object(
+            self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionIncludeDrafts",
+            ),
+            default=True,
+        )
+        validation_scope = self._first_object(
+            history_graphs,
+            session_iri,
+            "rc:recoverySessionValidationScope",
+        )
+        drift_detail = (
+            self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionDriftDetail",
+            )
+            or "summary"
+        )
+        resume_action = self._describe_imported_recovery_session_action(
+            session_iri,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+        )
+        return {
+            "session_iri": session_iri,
+            "summary": self._first_object(history_graphs, session_iri, "rc:summary"),
+            "created_at": self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:sessionCreatedAt",
+            ),
+            "created_by": self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:sessionCreatedBy",
+            ),
+            "handoff_manifest_path": self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionHandoffManifestPath",
+            ),
+            "source_revision_iris": source_revision_iris,
+            "source_count": len(source_revision_iris),
+            "current_staged_work_only": self._optional_bool_object(
+                self._first_object(
+                    history_graphs,
+                    session_iri,
+                    "rc:recoverySessionCurrentStagedWorkOnly",
+                ),
+                default=False,
+            ),
+            "include_drafts": include_drafts,
+            "repair_draft_limit": self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionRepairDraftLimit",
+            ),
+            "validation_scope": validation_scope,
+            "drift_detail": drift_detail,
+            "initial_selection_mode": self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionInitialSelectionMode",
+            ),
+            "initial_lane_counts": self._json_object_literal(
+                self._first_object(
+                    history_graphs,
+                    session_iri,
+                    "rc:recoverySessionInitialLaneCounts",
+                ),
+            ),
+            "resume_action": to_jsonable(resume_action),
+            "resume_call": resume_action.call,
         }
 
     def import_handoff_bundle(
@@ -62802,6 +62925,34 @@ class DoxaBase:
         imported_session_continuation_required = (
             recommended_next_step == "continue_imported_recovery_session"
         )
+        resume_recovery_session_action = None
+        if imported_session_continuation_required:
+            for action in suggested_next_actions:
+                if (
+                    action.tool_name
+                    == "describe_staged_revision_recovery_session"
+                ):
+                    resume_recovery_session_action = action
+                    break
+        resume_recovery_session_iri = (
+            resume_recovery_session_action.arguments.get("session_iri")
+            if resume_recovery_session_action is not None
+            and isinstance(
+                resume_recovery_session_action.arguments.get("session_iri"),
+                str,
+            )
+            else (
+                matching_recovery_session_iris[0]
+                if imported_session_continuation_required
+                and matching_recovery_session_iris
+                else None
+            )
+        )
+        resume_recovery_session_call = (
+            resume_recovery_session_action.call
+            if resume_recovery_session_action is not None
+            else None
+        )
 
         profile_route_keys: list[str] = []
         profile_route_revision_count = 0
@@ -62944,8 +63095,11 @@ class DoxaBase:
                 else 0
             ),
             imported_recovery_session_count=len(imported_recovery_session_iris),
+            imported_recovery_session_iris=list(imported_recovery_session_iris),
             matching_recovery_session_count=len(matching_recovery_session_iris),
             matching_recovery_session_iris=list(matching_recovery_session_iris),
+            resume_recovery_session_iri=resume_recovery_session_iri,
+            resume_recovery_session_call=resume_recovery_session_call,
             recovery_plan_available=recovery_plan is not None,
             recovery_lane_counts=(
                 dict(recovery_plan.lane_counts)
