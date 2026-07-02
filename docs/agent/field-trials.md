@@ -4656,6 +4656,33 @@ few useful gaps:
 - The same Enron handoff scout found `draft_profile_map_updates(...,
   evidence_iri=None)` raised a raw `AttributeError`; required IRI validation now
   returns a clear `DoxaBaseError` for non-string missing identifiers.
+- A refreshed Enron gap audit found the original code-owner feedback mostly
+  stale after recent work: Parquet/profile manifests and CLIs, S3 bucket/prefix
+  metadata, non-secret credential references, relationship aliases, transform
+  docs, export gates, profile-review status, analysis packets, query recipes,
+  and domain-network profiles all now have a current route. The remaining broad
+  gap is adoption: rich handoff sidecars still need to be turned into
+  graph-native packets/views/recipes before future agents can start from the
+  capsule instead of manually reading a folder.
+- A current-checkout Enron handoff verification trial imported the refreshed
+  bundle cleanly: mutable project graph counts matched exactly, all four
+  revisions had `history_plus_snapshot_rows`, validation conformed, and all
+  four datasets stayed `ready_for_query_planning`. A `project_brief` shape-count
+  delta came from expected immutable seed drift in the fresh receiver. The
+  packaged external verifier should open copied source capsules with
+  `DoxaBase.open_readonly(...)`; the DoxaBase import path itself did not need a
+  code fix.
+- A Western power policy packet trial applied a reviewed
+  `doxabase.analysis_packet_manifest.v1` to a copied Enron capsule with
+  `python -m doxabase.analysis_packet`, recording five logical analysis views,
+  six artifact locators, two query recipes, four follow-up tasks, and one
+  packet-supported pattern. Validation conformed, packet context slices reached
+  the packet/view/artifact/recipe/task resources, `describe_analysis_view`
+  worked for every view, and `describe_query_context` correctly routed those
+  views as `logical_analysis_view`. The manifest contract was sufficient; the
+  expected limits are that caveats need existing caveat IRIs or narrative
+  fields, SQL is not executed or schema-checked, and locator-only artifacts are
+  not file/hash verified by the CLI.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
