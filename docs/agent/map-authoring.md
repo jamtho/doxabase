@@ -138,8 +138,9 @@ python -m doxabase.profile_manifest_merge \
 ```
 
 This adapter accepts table/sample metadata and
-per-column aggregate facts only; it rejects unknown scaffold anchors and keeps
-the no-row-I/O boundary intact.
+per-column aggregate facts, reviewed layout status fields, and reviewed profile
+pattern fields; it rejects unknown scaffold anchors and keeps the no-row-I/O
+boundary intact.
 
 ## When To Use Map Helpers
 

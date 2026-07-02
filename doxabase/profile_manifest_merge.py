@@ -30,6 +30,14 @@ _TABLE_FIELDS = {
     "storage_layout_verification_note",
     "physical_layout_verification_status",
     "physical_layout_verification_note",
+    "pattern_summary",
+    "pattern_text",
+    "pattern_rationale",
+    "pattern_confidence",
+    "pattern_status",
+    "pattern_stability",
+    "pattern_map_implications",
+    "pattern_support_scope",
     "columns",
 }
 _COLUMN_FIELDS = {
@@ -44,6 +52,15 @@ _COLUMN_FIELDS = {
     "distinct_count",
     "value_frequencies",
     "profile_metrics",
+    "pattern_summary",
+    "pattern_text",
+    "pattern_rationale",
+    "pattern_confidence",
+    "pattern_status",
+    "pattern_stability",
+    "pattern_map_implications",
+    "observation_iri",
+    "pattern_iri",
 }
 
 
@@ -228,6 +245,26 @@ def _merge_table_facts(
                 field,
                 table_context,
             )
+    for field in (
+        "pattern_summary",
+        "pattern_text",
+        "pattern_rationale",
+        "pattern_confidence",
+        "pattern_status",
+        "pattern_stability",
+        "pattern_support_scope",
+    ):
+        if field in table_facts:
+            scaffold_table[field] = _optional_non_empty_string(
+                table_facts,
+                field,
+                table_context,
+            )
+    if "pattern_map_implications" in table_facts:
+        scaffold_table["pattern_map_implications"] = _string_or_string_list(
+            table_facts["pattern_map_implications"],
+            f"{table_context}.pattern_map_implications",
+        )
     if "shared_evidence_iri" in table_facts:
         scaffold_table["shared_evidence_iri"] = _optional_non_empty_string(
             table_facts,
@@ -332,6 +369,14 @@ def _merge_one_column(
         "sample_method",
         "observed_at",
         "observed_by",
+        "pattern_summary",
+        "pattern_text",
+        "pattern_rationale",
+        "pattern_confidence",
+        "pattern_status",
+        "pattern_stability",
+        "observation_iri",
+        "pattern_iri",
     ):
         if field in column_facts:
             scaffold_column[field] = _optional_non_empty_string(
@@ -339,6 +384,11 @@ def _merge_one_column(
                 field,
                 column_context,
             )
+    if "pattern_map_implications" in column_facts:
+        scaffold_column["pattern_map_implications"] = _string_or_string_list(
+            column_facts["pattern_map_implications"],
+            f"{column_context}.pattern_map_implications",
+        )
     for field in ("row_count", "sample_size", "null_count", "distinct_count"):
         if field in column_facts:
             scaffold_column[field] = _non_negative_int(
@@ -547,6 +597,14 @@ def _string_list(value: Any, context: str) -> list[str]:
             raise DoxaBaseError(f"{context}[{index}] must be a non-empty string")
         result.append(item)
     return result
+
+
+def _string_or_string_list(value: Any, context: str) -> str | list[str]:
+    if isinstance(value, str):
+        if not value.strip():
+            raise DoxaBaseError(f"{context} must be a non-empty string")
+        return value
+    return _string_list(value, context)
 
 
 def _append_unique_strings(

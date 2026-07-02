@@ -103,6 +103,86 @@ def test_merge_reviewed_profile_facts_builds_applyable_manifest(
     }
 
 
+def test_merge_reviewed_profile_facts_preserves_profile_patterns(
+    tmp_path: Path,
+) -> None:
+    facts = _profile_facts(
+        columns={
+            "message_id": {
+                "null_count": 0,
+                "distinct_count": 12,
+                "pattern_summary": "message_id behaves like an identifier.",
+                "pattern_text": (
+                    "The reviewed profile sidecar reported no nulls and full "
+                    "distinctness for message_id."
+                ),
+                "pattern_rationale": (
+                    "Identifier-like columns should stay connected to their "
+                    "supporting aggregate profile facts."
+                ),
+                "pattern_map_implications": [f"{BASE}messages__message_id"],
+                "pattern_iri": f"{BASE}pattern_message_id_identifier",
+            }
+        }
+    )
+    facts["tables"][0].update(
+        {
+            "pattern_summary": "Messages profile is reviewed aggregate evidence.",
+            "pattern_text": (
+                "The reviewed sidecar links table and column profile facts "
+                "into one documented profiler run."
+            ),
+            "pattern_rationale": (
+                "Later agents need the profiler synthesis as graph-native lore, "
+                "not only as external Markdown."
+            ),
+            "pattern_support_scope": "dataset_profile",
+        }
+    )
+
+    merged = merge_reviewed_profile_facts(_scaffold(tmp_path), facts)
+    table = merged["tables"][0]
+
+    assert table["pattern_summary"] == (
+        "Messages profile is reviewed aggregate evidence."
+    )
+    message_id_column = _column(table, "message_id")
+    assert message_id_column["pattern_iri"] == (
+        f"{BASE}pattern_message_id_identifier"
+    )
+    assert message_id_column["pattern_map_implications"] == [
+        f"{BASE}messages__message_id"
+    ]
+
+    with DoxaBase.create(tmp_path / "capsule.sqlite") as db:
+        record = db.record_profile_to_capsule_manifest(merged)
+        validation = db.validate_graph(scope="all")
+        table_record = record.table_records[0]
+        dataset_pattern_record = (
+            table_record.profile_bundle.dataset_profile.pattern
+        )
+        assert dataset_pattern_record is not None
+        dataset_pattern = db.describe_pattern(dataset_pattern_record.pattern_iri)
+        column_pattern = db.describe_pattern(
+            f"{BASE}pattern_message_id_identifier"
+        )
+
+    assert validation.conforms, validation.report_text
+    assert dataset_pattern.summary == (
+        "Messages profile is reviewed aggregate evidence."
+    )
+    assert [target.iri for target in dataset_pattern.pattern_targets] == [
+        f"{BASE}messages"
+    ]
+    assert column_pattern.summary == "message_id behaves like an identifier."
+    assert [target.iri for target in column_pattern.pattern_targets] == [
+        f"{BASE}messages__message_id"
+    ]
+    assert [target.iri for target in column_pattern.map_implications] == [
+        f"{BASE}messages__message_id"
+    ]
+
+
 def test_merge_rejects_unknown_table_iri(tmp_path: Path) -> None:
     facts = _profile_facts(table_iri=f"{BASE}missing")
 

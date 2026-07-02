@@ -4811,6 +4811,12 @@ few useful gaps:
   runnable. Ready mutation frontiers now expose `review_frontier_target` first
   and keep `mutate_one_frontier_target` gated with `can_run_now=false` until
   that review has happened.
+- A profile-manifest sidecar scout found the reviewed profile-facts adapter
+  preserved counts, frequencies, metrics, and reviewed layout status, but still
+  rejected graph-worthy profile synthesis fields even though the downstream
+  manifest apply path accepted them. The `doxabase.reviewed_profile_facts.v1`
+  merge route now carries reviewed table and column profile pattern fields
+  through to `profile_to_capsule`, including stable column pattern IRIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

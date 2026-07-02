@@ -83,7 +83,10 @@ physical layout are usable, the sidecar may include
 `physical_layout_verification_status`, and
 `physical_layout_verification_note`; use `rc:VerifiedByListingLayout` for
 listing/footer/schema review and `rc:VerifiedByQueryLayout` only when an actual
-query has verified the layout. Without those reviewed status fields the
+query has verified the layout. The sidecar may also carry reviewed profile
+synthesis fields such as table or column `pattern_summary`, `pattern_text`, and
+`pattern_rationale` when the profiler review produced graph-worthy lore that
+should survive handoff. Without those reviewed status fields the
 scaffold remains `rc:CandidateLayout`, so `profile_to_capsule` validates but
 `describe_query_context` stays in `needs_review`. The adapter rejects unknown
 tables, unknown columns, unsupported fields, and row-count mismatches. It adds a
@@ -93,8 +96,9 @@ an external reviewed sidecar. Apply the merged output with `profile_to_capsule`.
 For the common next step, run
 `python examples/rich-profile-manifest-smoke.py`. It uses the scaffold shape,
 merges reviewed external aggregate profile facts such as null counts, distinct
-counts, value frequencies, scalar metrics, and reviewed layout status into the
-manifest, applies it with `profile_to_capsule`, and inspects
+counts, value frequencies, scalar metrics, reviewed profile patterns, and
+reviewed layout status into the manifest, applies it with `profile_to_capsule`,
+and inspects
 `describe_profile_run`, `draft_profile_map_updates`, `describe_query_context`,
 and a logical analysis view. The example deliberately keeps profiling outside
 DoxaBase; DoxaBase records the reviewed aggregates.

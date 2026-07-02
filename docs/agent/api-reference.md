@@ -1158,13 +1158,16 @@ exactly, and supplies table sample metadata plus optional row counts, evidence
 sources, per-column aggregate facts, and reviewed table-level layout status
 fields such as `layout_verification_status` and
 `physical_layout_verification_status`, plus the corresponding
-`storage_layout_*` fields when storage-access status should be updated. Use
-those status fields only when the external review has actually confirmed the
-path/layout; otherwise the scaffold stays conservatively `rc:CandidateLayout`
-and query planning remains review-gated. The adapter rejects unknown fields,
-unknown tables, unknown columns, and scaffold/profile row-count mismatches, and
-adds an external-profile caveat by default. It does not scan Parquet files or
-read raw rows.
+`storage_layout_*` fields when storage-access status should be updated. It can
+also preserve reviewed table and column `pattern_summary` / `pattern_text` /
+`pattern_rationale` fields, plus the usual profile pattern status, stability,
+confidence, implication, and column pattern IRI fields accepted by the manifest
+apply path. Use those status fields only when the external review has actually
+confirmed the path/layout; otherwise the scaffold stays conservatively
+`rc:CandidateLayout` and query planning remains review-gated. The adapter
+rejects unknown fields, unknown tables, unknown columns, and scaffold/profile
+row-count mismatches, and adds an external-profile caveat by default. It does
+not scan Parquet files or read raw rows.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add
