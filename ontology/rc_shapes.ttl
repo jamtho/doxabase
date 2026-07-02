@@ -1243,6 +1243,89 @@ rc:EvidenceShape a sh:NodeShape ;
     ] ;
     sh:message "Evidence must identify a source using dcterms:source, rc:sourceSpan, or rc:scannedSourceHandle." .
 
+rc:AnalysisPacketShape a sh:NodeShape ;
+    sh:targetClass rc:AnalysisPacket ;
+    sh:property [
+        sh:path rc:packetAnalysisView ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:AnalysisView ;
+        sh:message "packetAnalysisView values should be named AnalysisView resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasAnalysisArtifact ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:AnalysisArtifact ;
+        sh:message "hasAnalysisArtifact values should be named AnalysisArtifact resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasFollowupTask ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:AnalysisFollowupTask ;
+        sh:message "hasFollowupTask values should be named AnalysisFollowupTask resources." ;
+    ] .
+
+rc:AnalysisArtifactShape a sh:NodeShape ;
+    sh:targetClass rc:AnalysisArtifact ;
+    sh:property [
+        sh:path rc:artifactRole ;
+        sh:datatype xsd:string ;
+        sh:message "artifactRole values must be strings." ;
+    ] ;
+    sh:property [
+        sh:path rc:mediaType ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "mediaType must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:contentHash ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "contentHash must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:byteSize ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "byteSize must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:imageWidth ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "imageWidth must be a positive integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:imageHeight ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "imageHeight must be a positive integer." ;
+    ] .
+
+rc:AnalysisFollowupTaskShape a sh:NodeShape ;
+    sh:targetClass rc:AnalysisFollowupTask ;
+    sh:property [
+        sh:path rc:taskText ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "AnalysisFollowupTask must have one taskText string." ;
+    ] ;
+    sh:property [
+        sh:path rc:taskPriority ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "taskPriority must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:taskTarget ;
+        sh:nodeKind sh:IRI ;
+        sh:message "taskTarget values should be named resources." ;
+    ] .
+
 rc:SourceSpanShape a sh:NodeShape ;
     sh:targetClass rc:SourceSpan ;
     sh:property [

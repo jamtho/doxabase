@@ -58,6 +58,7 @@ from doxabase.mcp_tools import (
     plan_staged_revision_recovery_tool,
     preflight_context_slice_export_tool,
     project_brief_tool,
+    record_analysis_packet_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
     record_column_profile_tool,
@@ -206,6 +207,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_analysis_view" in tool_names
     assert "doxabase.record_map_analysis_view_bundle" in tool_names
+    assert "doxabase.record_analysis_packet" in tool_names
     assert "doxabase.record_map_table_bundle" in tool_names
     assert "doxabase.record_profiled_parquet_table" in tool_names
     assert "doxabase.record_profile_to_capsule_manifest" in tool_names
@@ -7134,6 +7136,65 @@ def test_analysis_view_bundle_tool_returns_json_like_payload(tmp_path: Path) -> 
         describe_query_context_tool(db, iri=message_like_view)["readiness"]
         == "logical_analysis_view"
     )
+
+
+def test_record_analysis_packet_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-analysis-packet#"
+    source = f"{base}messages"
+    packet = f"{base}packet"
+    view = f"{base}message_like_rows"
+    artifact = f"{base}lane_chart"
+
+    record_map_dataset_tool(db, iri=source, label="Messages", is_table=True)
+    result = record_analysis_packet_tool(
+        db,
+        iri=packet,
+        label="Message-like analysis packet",
+        summary="Reviewed packet with logical view and chart locator.",
+        analysis_views=[
+            {
+                "iri": view,
+                "label": "Message-like rows",
+                "source_datasets": [source],
+                "row_count_snapshot": 98,
+            }
+        ],
+        artifacts=[
+            {
+                "iri": artifact,
+                "source_path": "scratch://visuals/message_like_rows.png",
+                "artifact_role": "visualization",
+                "media_type": "image/png",
+                "image_width": 900,
+                "image_height": 600,
+                "supports": [view],
+            }
+        ],
+        followup_tasks=[
+            {
+                "task_text": "Inspect the top week in the message-like lane.",
+                "targets": [view],
+            }
+        ],
+    )
+
+    assert result["packet_iri"] == packet
+    assert result["evidence_iri"] == packet
+    assert result["analysis_view_iris"] == [view]
+    assert result["artifact_iris"] == [artifact]
+    assert len(result["followup_task_iris"]) == 1
+    assert result["analysis_view_bundle"]["view_count"] == 1
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "describe_context_slice"
+    )
+    assert (
+        describe_query_context_tool(db, iri=view)["readiness"]
+        == "logical_analysis_view"
+    )
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_record_map_table_bundle_tool_returns_json_like_records(

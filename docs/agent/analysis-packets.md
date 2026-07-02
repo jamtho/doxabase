@@ -1,0 +1,79 @@
+# Analysis Packets
+
+Use `record_analysis_packet` when an external analysis pass has already
+produced reviewed logical populations, aggregate artifact locators, visual
+outputs, caveats, or follow-up tasks, and the next agent needs one graph-native
+handoff node to inspect.
+
+This helper is intentionally no-I/O and locator-only. It records paths,
+artifact metadata, analysis-view links, and task text, but it does not read
+files, parse JSON or Markdown, store image bytes, preserve raw rows, or decide
+whether an analysis is valid.
+
+## What It Records
+
+`record_analysis_packet` writes the packet itself as both `rc:Evidence` and
+`rc:AnalysisPacket` in the `evidence` graph. The packet gets a required
+`rc:summary`, optional label, `dcterms:source` literals from
+`evidence_sources`, and links to any analysis views, artifacts, and follow-up
+tasks.
+
+The helper can also:
+
+- create logical analysis views from `analysis_views`, using the same
+  structured fields as `record_map_analysis_view_bundle`;
+- link existing logical views from `analysis_view_iris`, which must already be
+  recorded `rc:AnalysisView` resources unless the same call creates them;
+- record `rc:AnalysisArtifact` evidence resources with source locators,
+  roles, media types, hashes, byte sizes, image dimensions, and support links;
+- record `rc:AnalysisFollowupTask` resources with task text, priority, and
+  target links;
+- optionally create a `record_pattern` synthesis supported by the packet and
+  targeted at the packet plus linked analysis views.
+
+The call preflights the full structured packet on a scratch capsule before
+writing to the live capsule, so a later invalid view, artifact, or task does
+not leave earlier packet resources behind.
+
+## Inputs
+
+Required fields:
+
+- `iri`: the packet IRI;
+- `summary`: the packet summary;
+- at least one `evidence_sources` value or one artifact `source_path`.
+
+Artifact specs accept:
+
+- `iri` or `artifact_iri`, otherwise DoxaBase uses
+  `{packet_iri}/artifact/{index}`;
+- `source_path` or `path`;
+- optional `label`, `summary`, `artifact_role` or `role`, `media_type`,
+  `content_hash`, `byte_size`, `image_width`, `image_height`, and `supports`.
+
+Follow-up task specs accept:
+
+- `iri` or `task_iri`, otherwise DoxaBase uses
+  `{packet_iri}/followup-task/{index}`;
+- `task_text` or `text`;
+- optional `label`, `priority`, and `targets`.
+
+Use `analysis_views=[...]` for reviewed structured view specs. Use
+`analysis_view_iris=[...]` only for views already present in the capsule or
+created by the same packet call.
+
+## Choosing The Helper
+
+Use `record_analysis_packet` for analysis handoffs that need one durable
+inspection seed across named subcorpora, reviewed view definitions, aggregate
+artifacts, visual outputs, and next tasks.
+
+Use `record_profile_to_capsule_manifest` instead when the input is a reviewed
+table/profile ingestion sidecar. Use `record_map_analysis_view_bundle` when the
+only durable output is a set of logical views. Use `record_query_result` for a
+single executed query attempt or failure.
+
+After recording a packet, follow the returned
+`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
+action to review the packet, linked views, artifacts, tasks, and optional
+pattern as bounded handoff context.

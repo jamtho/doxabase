@@ -1868,6 +1868,20 @@ queries; it records reviewed specs and returns `analysis_views`,
 `query_snippet_count`, and `describe_query_context` follow-up actions for each
 view.
 
+`doxabase.record_analysis_packet`
+
+Records one graph-native analysis handoff packet. Use it after an external
+analysis pass has already produced reviewed logical populations, aggregate
+artifact locators, visual outputs, and follow-up tasks that should travel
+together. The packet is an `rc:Evidence` / `rc:AnalysisPacket` resource in the
+`evidence` graph. It can create logical analysis views from `analysis_views`,
+link existing `analysis_view_iris`, record locator-only `rc:AnalysisArtifact`
+resources, record `rc:AnalysisFollowupTask` resources, and optionally create a
+supporting pattern. The helper does not read files, parse Markdown or JSON,
+store raw artifact content, or execute queries. Follow the returned
+`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
+action to inspect the bounded handoff.
+
 `doxabase.describe_analysis_view`
 
 Returns bounded logical-view context: label, description, RDF types, source

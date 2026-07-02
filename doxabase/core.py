@@ -3489,6 +3489,38 @@ class AnalysisViewBundleRecord:
 
 
 @dataclass(frozen=True)
+class AnalysisArtifactRecord:
+    iri: str
+    graph: str
+    triples: int
+
+
+@dataclass(frozen=True)
+class AnalysisFollowupTaskRecord:
+    iri: str
+    graph: str
+    triples: int
+
+
+@dataclass(frozen=True)
+class AnalysisPacketRecord:
+    packet_iri: str
+    evidence_iri: str
+    graph: str
+    packet_triples: int
+    analysis_view_bundle: AnalysisViewBundleRecord | None
+    analysis_view_iris: list[str]
+    artifact_records: list[AnalysisArtifactRecord]
+    artifact_iris: list[str]
+    followup_task_records: list[AnalysisFollowupTaskRecord]
+    followup_task_iris: list[str]
+    pattern: PatternRecord | None
+    pattern_iri: str | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class AggregatedColumnDescription:
     iri: str
     target_column: ResourceSummary | None
@@ -38876,6 +38908,137 @@ class DoxaBase:
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
 
+    def record_analysis_packet(
+        self,
+        iri: str,
+        *,
+        summary: str,
+        label: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        analysis_views: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        analysis_view_iris: Iterable[str] | str | None = None,
+        artifacts: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        followup_tasks: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_iri: str | None = None,
+    ) -> AnalysisPacketRecord:
+        if self.read_only:
+            raise DoxaBaseError(
+                "record_analysis_packet requires a writable capsule; "
+                "open read-only capsules with DoxaBase.open_readonly(path) for "
+                "inspection only"
+            )
+        spec = self._normalise_analysis_packet(
+            iri=iri,
+            summary=summary,
+            label=label,
+            evidence_sources=evidence_sources,
+            analysis_views=analysis_views,
+            analysis_view_iris=analysis_view_iris,
+            artifacts=artifacts,
+            followup_tasks=followup_tasks,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_iri=pattern_iri,
+        )
+        with self._preflight_clone() as clone:
+            clone._apply_analysis_packet(spec)
+        return self._apply_analysis_packet(spec)
+
+    def _apply_analysis_packet(
+        self,
+        spec: Mapping[str, Any],
+    ) -> AnalysisPacketRecord:
+        analysis_view_bundle = (
+            self.record_map_analysis_view_bundle(spec["analysis_views"])
+            if spec["analysis_views"]
+            else None
+        )
+        analysis_view_iris = list(spec["analysis_view_iris"])
+        if analysis_view_bundle is not None:
+            analysis_view_iris = list(
+                dict.fromkeys([*analysis_view_iris, *analysis_view_bundle.view_iris])
+            )
+
+        artifact_records = self._record_analysis_packet_artifacts(
+            packet_iri=spec["iri"],
+            artifacts=spec["artifacts"],
+        )
+        followup_task_records = self._record_analysis_packet_followup_tasks(
+            packet_iri=spec["iri"],
+            followup_tasks=spec["followup_tasks"],
+        )
+        packet_triples = self._record_analysis_packet_resource(
+            packet_iri=spec["iri"],
+            label=spec["label"],
+            summary=spec["summary"],
+            evidence_sources=spec["evidence_sources"],
+            analysis_view_iris=analysis_view_iris,
+            artifact_iris=[record.iri for record in artifact_records],
+            followup_task_iris=[record.iri for record in followup_task_records],
+        )
+        pattern = None
+        if spec["pattern"] is not None:
+            pattern_spec = spec["pattern"]
+            pattern = self.record_pattern(
+                pattern_spec["summary"],
+                pattern_text=pattern_spec["pattern_text"],
+                rationale=pattern_spec["rationale"],
+                pattern_targets=list(dict.fromkeys([spec["iri"], *analysis_view_iris])),
+                evidence_iri=spec["iri"],
+                map_implications=analysis_view_iris,
+                pattern_iri=pattern_spec["iri"],
+            )
+        suggested_next_actions = self._dedupe_suggested_next_actions(
+            [
+                SuggestedNextAction(
+                    action_label="Inspect analysis packet context",
+                    tool_name="describe_context_slice",
+                    mcp_tool_name="doxabase.describe_context_slice",
+                    arguments={
+                        "seed_iris": [spec["iri"]],
+                        "profile": "resource_brief",
+                    },
+                    reason=(
+                        "Inspect the packet, linked analysis views, artifacts, "
+                        "follow-up tasks, and supporting evidence as a bounded "
+                        "resource handoff."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_context_slice",
+                        {
+                            "seed_iris": [spec["iri"]],
+                            "profile": "resource_brief",
+                        },
+                    ),
+                ),
+                *(
+                    analysis_view_bundle.suggested_next_actions
+                    if analysis_view_bundle is not None
+                    else []
+                ),
+            ]
+        )
+        return AnalysisPacketRecord(
+            packet_iri=spec["iri"],
+            evidence_iri=spec["iri"],
+            graph="evidence",
+            packet_triples=packet_triples,
+            analysis_view_bundle=analysis_view_bundle,
+            analysis_view_iris=analysis_view_iris,
+            artifact_records=artifact_records,
+            artifact_iris=[record.iri for record in artifact_records],
+            followup_task_records=followup_task_records,
+            followup_task_iris=[record.iri for record in followup_task_records],
+            pattern=pattern,
+            pattern_iri=pattern.pattern_iri if pattern is not None else None,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def record_map_column(
         self,
         iri: str,
@@ -68824,6 +68987,533 @@ class DoxaBase:
             spec["iri"] = view_iri
             specs.append(spec)
         return specs
+
+    def _normalise_analysis_packet(
+        self,
+        *,
+        iri: str,
+        summary: str,
+        label: str | None,
+        evidence_sources: Iterable[str] | str | None,
+        analysis_views: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        analysis_view_iris: Iterable[str] | str | None,
+        artifacts: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        followup_tasks: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        pattern_summary: str | None,
+        pattern_text: str | None,
+        pattern_rationale: str | None,
+        pattern_iri: str | None,
+    ) -> dict[str, Any]:
+        packet_iri = self._required_iri("iri", iri)
+        if not isinstance(summary, str) or not summary.strip():
+            raise DoxaBaseError("summary must be a non-empty string")
+        self._preflight_optional_string("label", label)
+        source_values = self._string_values("evidence_sources", evidence_sources)
+        view_specs = (
+            self._normalise_analysis_view_bundle_specs(analysis_views)
+            if analysis_views is not None
+            else []
+        )
+        existing_view_iris = [
+            str(self._resource_ref("analysis_view_iris", view_iri))
+            for view_iri in self._string_values("analysis_view_iris", analysis_view_iris)
+        ]
+        created_view_iris = {view_spec["iri"] for view_spec in view_specs}
+        for view_iri in existing_view_iris:
+            if view_iri in created_view_iris:
+                continue
+            if (
+                not self._subject_exists(view_iri, ["map"])
+                or self.expand_iri("rc:AnalysisView")
+                not in self._types_from_graphs(["map"], view_iri)
+            ):
+                raise DoxaBaseError(
+                    "analysis_view_iris must name existing rc:AnalysisView "
+                    f"resources unless they are also supplied in analysis_views: {view_iri}"
+                )
+        artifacts_specs = self._normalise_analysis_packet_artifacts(
+            packet_iri,
+            artifacts,
+        )
+        task_specs = self._normalise_analysis_packet_followup_tasks(
+            packet_iri,
+            followup_tasks,
+        )
+        artifact_sources = [artifact["source_path"] for artifact in artifacts_specs]
+        source_values = list(dict.fromkeys([*source_values, *artifact_sources]))
+        if not source_values:
+            raise DoxaBaseError(
+                "record_analysis_packet requires evidence_sources or at least "
+                "one artifact source_path"
+            )
+        pattern_spec = None
+        if self._profile_pattern_requested(
+            pattern_summary,
+            pattern_text,
+            pattern_rationale,
+        ):
+            pattern_iri_value = (
+                str(self._resource_ref("pattern_iri", pattern_iri))
+                if pattern_iri is not None
+                else None
+            )
+            pattern_spec = {
+                "iri": pattern_iri_value,
+                "summary": pattern_summary,
+                "pattern_text": pattern_text,
+                "rationale": pattern_rationale,
+            }
+        used_iris = {packet_iri}
+        for collection_name, specs in (
+            ("analysis_views", view_specs),
+            ("artifacts", artifacts_specs),
+            ("followup_tasks", task_specs),
+        ):
+            for item in specs:
+                item_iri = item["iri"]
+                if item_iri in used_iris:
+                    raise DoxaBaseError(
+                        f"{collection_name} contains duplicate packet resource IRI: "
+                        f"{item_iri}"
+                    )
+                used_iris.add(item_iri)
+        return {
+            "iri": packet_iri,
+            "summary": summary.strip(),
+            "label": label,
+            "evidence_sources": source_values,
+            "analysis_views": view_specs,
+            "analysis_view_iris": existing_view_iris,
+            "artifacts": artifacts_specs,
+            "followup_tasks": task_specs,
+            "pattern": pattern_spec,
+        }
+
+    def _normalise_analysis_packet_artifacts(
+        self,
+        packet_iri: str,
+        artifacts: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        artifact_values = self._normalise_manifest_object_list(
+            "artifacts",
+            artifacts,
+        )
+        allowed_fields = {
+            "iri",
+            "artifact_iri",
+            "label",
+            "summary",
+            "source_path",
+            "path",
+            "artifact_role",
+            "role",
+            "media_type",
+            "content_hash",
+            "byte_size",
+            "image_width",
+            "image_height",
+            "supports",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(artifact_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"artifacts[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            source_path = self._analysis_packet_required_string(
+                item,
+                index=index,
+                item_name="artifacts",
+                fields=("source_path", "path"),
+            )
+            iri_value = item.get("iri", item.get("artifact_iri"))
+            artifact_iri = (
+                str(self._resource_ref(f"artifacts[{index}].iri", iri_value))
+                if isinstance(iri_value, str) and iri_value.strip()
+                else f"{packet_iri}/artifact/{index}"
+            )
+            if artifact_iri in seen_iris:
+                raise DoxaBaseError(
+                    f"artifacts[{index}].iri duplicates {artifact_iri}"
+                )
+            seen_iris.add(artifact_iri)
+            for field in ("byte_size", "image_width", "image_height"):
+                value = item.get(field)
+                if value is not None:
+                    minimum = 1 if field in {"image_width", "image_height"} else 0
+                    if not isinstance(value, int) or value < minimum:
+                        raise DoxaBaseError(
+                            f"artifacts[{index}].{field} must be "
+                            f"{'positive' if minimum == 1 else 'non-negative'} "
+                            "integer"
+                        )
+            supports = [
+                str(self._resource_ref(f"artifacts[{index}].supports", value))
+                for value in self._string_values("supports", item.get("supports"))
+            ]
+            specs.append(
+                {
+                    "iri": artifact_iri,
+                    "label": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="artifacts",
+                        field="label",
+                    ),
+                    "summary": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="artifacts",
+                        field="summary",
+                    ),
+                    "source_path": source_path,
+                    "artifact_role": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="artifacts",
+                        field="artifact_role",
+                        aliases=("role",),
+                    ),
+                    "media_type": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="artifacts",
+                        field="media_type",
+                    ),
+                    "content_hash": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="artifacts",
+                        field="content_hash",
+                    ),
+                    "byte_size": item.get("byte_size"),
+                    "image_width": item.get("image_width"),
+                    "image_height": item.get("image_height"),
+                    "supports": supports,
+                }
+            )
+        return specs
+
+    def _normalise_analysis_packet_followup_tasks(
+        self,
+        packet_iri: str,
+        followup_tasks: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        task_values = self._normalise_manifest_object_list(
+            "followup_tasks",
+            followup_tasks,
+        )
+        allowed_fields = {
+            "iri",
+            "task_iri",
+            "label",
+            "task_text",
+            "text",
+            "priority",
+            "targets",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(task_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"followup_tasks[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            task_text = self._analysis_packet_required_string(
+                item,
+                index=index,
+                item_name="followup_tasks",
+                fields=("task_text", "text"),
+            )
+            iri_value = item.get("iri", item.get("task_iri"))
+            task_iri = (
+                str(self._resource_ref(f"followup_tasks[{index}].iri", iri_value))
+                if isinstance(iri_value, str) and iri_value.strip()
+                else f"{packet_iri}/followup-task/{index}"
+            )
+            if task_iri in seen_iris:
+                raise DoxaBaseError(
+                    f"followup_tasks[{index}].iri duplicates {task_iri}"
+                )
+            seen_iris.add(task_iri)
+            targets = [
+                str(self._resource_ref(f"followup_tasks[{index}].targets", value))
+                for value in self._string_values("targets", item.get("targets"))
+            ]
+            specs.append(
+                {
+                    "iri": task_iri,
+                    "label": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="followup_tasks",
+                        field="label",
+                    ),
+                    "task_text": task_text,
+                    "priority": self._analysis_packet_optional_string(
+                        item,
+                        index=index,
+                        item_name="followup_tasks",
+                        field="priority",
+                    ),
+                    "targets": targets,
+                }
+            )
+        return specs
+
+    @staticmethod
+    def _analysis_packet_required_string(
+        item: Mapping[str, Any],
+        *,
+        index: int,
+        item_name: str,
+        fields: tuple[str, ...],
+    ) -> str:
+        for field in fields:
+            value = item.get(field)
+            if value is None:
+                continue
+            if not isinstance(value, str) or not value.strip():
+                raise DoxaBaseError(
+                    f"{item_name}[{index}].{field} must be a non-empty string"
+                )
+            return value.strip()
+        raise DoxaBaseError(
+            f"{item_name}[{index}].{fields[0]} must be a non-empty string"
+        )
+
+    @staticmethod
+    def _analysis_packet_optional_string(
+        item: Mapping[str, Any],
+        *,
+        index: int,
+        item_name: str,
+        field: str,
+        aliases: tuple[str, ...] = (),
+    ) -> str | None:
+        for name in (field, *aliases):
+            value = item.get(name)
+            if value is None:
+                continue
+            if not isinstance(value, str):
+                raise DoxaBaseError(f"{item_name}[{index}].{name} must be a string")
+            return value.strip() or None
+        return None
+
+    def _record_analysis_packet_resource(
+        self,
+        *,
+        packet_iri: str,
+        label: str | None,
+        summary: str,
+        evidence_sources: Iterable[str],
+        analysis_view_iris: Iterable[str],
+        artifact_iris: Iterable[str],
+        followup_task_iris: Iterable[str],
+    ) -> int:
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(packet_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:Evidence"))))
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:AnalysisPacket"))))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        graph.add((subject, URIRef(self.expand_iri("rc:summary")), Literal(summary)))
+        for source in evidence_sources:
+            graph.add((subject, DCTERMS.source, Literal(source)))
+        for view_iri in analysis_view_iris:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:packetAnalysisView")),
+                    URIRef(view_iri),
+                )
+            )
+        for artifact_iri in artifact_iris:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasAnalysisArtifact")),
+                    URIRef(artifact_iri),
+                )
+            )
+        for task_iri in followup_task_iris:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasFollowupTask")),
+                    URIRef(task_iri),
+                )
+            )
+        return self._replace_subject_triples(
+            "evidence",
+            packet_iri,
+            [
+                str(RDF.type),
+                str(RDFS.label),
+                self.expand_iri("rc:summary"),
+                str(DCTERMS.source),
+                self.expand_iri("rc:packetAnalysisView"),
+                self.expand_iri("rc:hasAnalysisArtifact"),
+                self.expand_iri("rc:hasFollowupTask"),
+            ],
+            graph,
+        )
+
+    def _record_analysis_packet_artifacts(
+        self,
+        *,
+        packet_iri: str,
+        artifacts: Iterable[Mapping[str, Any]],
+    ) -> list[AnalysisArtifactRecord]:
+        records: list[AnalysisArtifactRecord] = []
+        for artifact in artifacts:
+            graph = Graph()
+            self._bind_prefixes(graph)
+            subject = URIRef(artifact["iri"])
+            graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:Evidence"))))
+            graph.add(
+                (subject, RDF.type, URIRef(self.expand_iri("rc:AnalysisArtifact")))
+            )
+            graph.add((subject, DCTERMS.source, Literal(artifact["source_path"])))
+            self._add_optional_literal(graph, subject, str(RDFS.label), artifact["label"])
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:summary",
+                artifact["summary"],
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:artifactRole",
+                artifact["artifact_role"],
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:mediaType",
+                artifact["media_type"],
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:contentHash",
+                artifact["content_hash"],
+            )
+            for predicate, value in (
+                ("rc:byteSize", artifact["byte_size"]),
+                ("rc:imageWidth", artifact["image_width"]),
+                ("rc:imageHeight", artifact["image_height"]),
+            ):
+                if value is not None:
+                    graph.add(
+                        (
+                            subject,
+                            URIRef(self.expand_iri(predicate)),
+                            Literal(value, datatype=XSD.integer),
+                        )
+                    )
+            graph.add((subject, URIRef(self.expand_iri("rc:supports")), URIRef(packet_iri)))
+            for target in artifact["supports"]:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:supports")),
+                        URIRef(target),
+                    )
+                )
+            triples = self._replace_subject_triples(
+                "evidence",
+                artifact["iri"],
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    str(DCTERMS.source),
+                    self.expand_iri("rc:summary"),
+                    self.expand_iri("rc:artifactRole"),
+                    self.expand_iri("rc:mediaType"),
+                    self.expand_iri("rc:contentHash"),
+                    self.expand_iri("rc:byteSize"),
+                    self.expand_iri("rc:imageWidth"),
+                    self.expand_iri("rc:imageHeight"),
+                    self.expand_iri("rc:supports"),
+                ],
+                graph,
+            )
+            records.append(
+                AnalysisArtifactRecord(
+                    iri=artifact["iri"],
+                    graph="evidence",
+                    triples=triples,
+                )
+            )
+        return records
+
+    def _record_analysis_packet_followup_tasks(
+        self,
+        *,
+        packet_iri: str,
+        followup_tasks: Iterable[Mapping[str, Any]],
+    ) -> list[AnalysisFollowupTaskRecord]:
+        records: list[AnalysisFollowupTaskRecord] = []
+        for task in followup_tasks:
+            graph = Graph()
+            self._bind_prefixes(graph)
+            subject = URIRef(task["iri"])
+            graph.add(
+                (
+                    subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:AnalysisFollowupTask")),
+                )
+            )
+            self._add_optional_literal(graph, subject, str(RDFS.label), task["label"])
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:taskText")),
+                    Literal(task["task_text"]),
+                )
+            )
+            self._add_optional_literal(
+                graph,
+                subject,
+                "rc:taskPriority",
+                task["priority"],
+            )
+            for target in task["targets"]:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:taskTarget")),
+                        URIRef(target),
+                    )
+                )
+            triples = self._replace_subject_triples(
+                "evidence",
+                task["iri"],
+                [
+                    str(RDF.type),
+                    str(RDFS.label),
+                    self.expand_iri("rc:taskText"),
+                    self.expand_iri("rc:taskPriority"),
+                    self.expand_iri("rc:taskTarget"),
+                ],
+                graph,
+            )
+            records.append(
+                AnalysisFollowupTaskRecord(
+                    iri=task["iri"],
+                    graph="evidence",
+                    triples=triples,
+                )
+            )
+        return records
 
     def _normalise_profile_to_capsule_manifest(
         self,

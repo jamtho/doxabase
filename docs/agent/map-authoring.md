@@ -97,6 +97,9 @@ Use `record_map_analysis_view_bundle(views=[...])` when a reviewed sidecar or
 manifest defines several logical populations at once. It is a structured
 orchestrator over the same single-view helper; supply one object per reviewed
 view rather than asking DoxaBase to parse arbitrary Markdown.
+When those logical populations belong to a wider analysis result with artifact
+locators, visual metadata, or follow-up tasks, use `record_analysis_packet` so
+the view links and evidence-side handoff material share one packet seed.
 
 For reviewed table schemas from Parquet, CSV, database catalogs, or profiler
 output, use `record_map_table_bundle` when you want one no-I/O map mutation for

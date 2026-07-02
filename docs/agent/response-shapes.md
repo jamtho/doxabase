@@ -1637,6 +1637,33 @@ manifest on a scratch capsule before writing, so a later invalid table or view
 does not leave earlier manifest rows in the live capsule. It is not a handoff
 export manifest and does not read files or parse Markdown.
 
+`db.record_analysis_packet(...)` returns an `AnalysisPacketRecord`:
+
+```python
+record.packet_iri
+record.evidence_iri
+record.graph
+record.packet_triples
+record.analysis_view_bundle
+record.analysis_view_iris
+record.artifact_records
+record.artifact_iris
+record.followup_task_records
+record.followup_task_iris
+record.pattern
+record.pattern_iri
+record.suggested_next_actions
+record.suggested_next_calls
+```
+
+`analysis_view_bundle` has the `AnalysisViewBundleRecord` shape when the call
+created views, otherwise `None`. Each artifact record and follow-up task record
+has `iri`, `graph`, and `triples`. The helper writes the packet and artifact
+resources to `evidence`, links existing or newly created `rc:AnalysisView`
+resources, and optionally creates a packet-supported pattern. It is a no-I/O
+handoff helper for reviewed artifact locators and task metadata; it does not
+store artifact bytes, raw rows, or parsed Markdown/JSON content.
+
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 
 ```python

@@ -1714,6 +1714,38 @@ def record_map_analysis_view_bundle_tool(
     return to_dict(result)
 
 
+def record_analysis_packet_tool(
+    db: DoxaBase,
+    iri: str,
+    summary: str,
+    label: str | None = None,
+    evidence_sources: list[str] | None = None,
+    analysis_views: list[dict[str, Any]] | None = None,
+    analysis_view_iris: list[str] | None = None,
+    artifacts: list[dict[str, Any]] | None = None,
+    followup_tasks: list[dict[str, Any]] | None = None,
+    pattern_summary: str | None = None,
+    pattern_text: str | None = None,
+    pattern_rationale: str | None = None,
+    pattern_iri: str | None = None,
+) -> dict[str, Any]:
+    result = db.record_analysis_packet(
+        iri=iri,
+        summary=summary,
+        label=label,
+        evidence_sources=evidence_sources,
+        analysis_views=analysis_views,
+        analysis_view_iris=analysis_view_iris,
+        artifacts=artifacts,
+        followup_tasks=followup_tasks,
+        pattern_summary=pattern_summary,
+        pattern_text=pattern_text,
+        pattern_rationale=pattern_rationale,
+        pattern_iri=pattern_iri,
+    )
+    return to_dict(result)
+
+
 def record_profile_to_capsule_manifest_tool(
     db: DoxaBase,
     manifest: dict[str, Any],

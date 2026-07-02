@@ -129,9 +129,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1467
+    assert graphs["base_ontology"].triple_count == 1523
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1462
+    assert graphs["base_shapes"].triple_count == 1530
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -27538,6 +27538,138 @@ def test_record_map_analysis_view_bundle_rejects_duplicate_views_before_mutation
                 {"iri": view, "label": "Message-like rows"},
                 {"view_iri": view, "label": "Duplicate message-like rows"},
             ]
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
+def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-packet#"
+    source = f"{base}messages"
+    packet = f"{base}western_power_packet"
+    parent_view = f"{base}western_power_policy"
+    lane_view = f"{base}western_power_policy_operational_lane"
+    aggregate_json = f"{base}western_power_lanes_json"
+    lane_chart = f"{base}operational_lane_chart"
+
+    db.record_map_dataset(source, label="Messages", is_table=True)
+    result = db.record_analysis_packet(
+        packet,
+        label="Western power policy packet",
+        summary=(
+            "Reviewed aggregate packet for Western power policy lanes and "
+            "visual artifacts."
+        ),
+        analysis_views=[
+            {
+                "iri": parent_view,
+                "label": "Western power policy subcorpus",
+                "source_datasets": [source],
+                "row_count_snapshot": 107510,
+                "denominator_description": (
+                    "Message-like rows matching reviewed Western power terms."
+                ),
+                "query_snippets": [
+                    {
+                        "label": "Subcorpus definition",
+                        "query_text": (
+                            "select * from messages where western_policy_match"
+                        ),
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    }
+                ],
+            },
+            {
+                "iri": lane_view,
+                "label": "Operational ISO lane",
+                "source_datasets": [parent_view],
+                "row_count_snapshot": 37017,
+                "denominator_description": (
+                    "Western policy rows matching operational ISO terms."
+                ),
+            },
+        ],
+        artifacts=[
+            {
+                "iri": aggregate_json,
+                "label": "Western lane aggregate JSON",
+                "summary": "Aggregate lane counts and overlaps.",
+                "source_path": "scratch://western_power_policy_lanes.json",
+                "artifact_role": "lane aggregate",
+                "media_type": "application/json",
+                "supports": [parent_view, lane_view],
+            },
+            {
+                "iri": lane_chart,
+                "label": "Operational lane chart",
+                "source_path": "scratch://visuals/operational_lane.png",
+                "artifact_role": "visualization",
+                "media_type": "image/png",
+                "image_width": 1200,
+                "image_height": 800,
+                "supports": [lane_view],
+            },
+        ],
+        followup_tasks=[
+            {
+                "label": "Inspect April 2001 operational spike",
+                "task_text": (
+                    "Trace week-level operational ISO subjects across the "
+                    "reviewed custodians."
+                ),
+                "priority": "high",
+                "targets": [lane_view],
+            }
+        ],
+        pattern_summary="Western power lanes need packet-level handoff.",
+        pattern_text=(
+            "The Western power analysis combines logical populations, aggregate "
+            "JSON, and visualization artifacts that should be carried together."
+        ),
+        pattern_rationale=(
+            "Future agents need one graph-native entry point for the lane "
+            "definitions and external artifact locators."
+        ),
+    )
+
+    assert result.packet_iri == packet
+    assert result.evidence_iri == packet
+    assert result.analysis_view_iris == [parent_view, lane_view]
+    assert result.artifact_iris == [aggregate_json, lane_chart]
+    assert len(result.followup_task_iris) == 1
+    assert result.pattern_iri is not None
+    assert {action.tool_name for action in result.suggested_next_actions} >= {
+        "describe_context_slice",
+        "describe_query_context",
+    }
+
+    packet_resource = to_dict(db.describe_resource(packet, graph="evidence"))
+    assert RC + "AnalysisPacket" in packet_resource["types"]
+    assert db.describe_query_context(parent_view).readiness == "logical_analysis_view"
+    context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
+    assert packet in {resource["iri"] for resource in context["resources"]}
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_analysis_packet_requires_existing_linked_analysis_views(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="existing rc:AnalysisView"):
+        db.record_analysis_packet(
+            "https://example.test/analysis-packet#packet",
+            summary="Packet with a missing linked view.",
+            evidence_sources=["scratch://packet.md"],
+            analysis_view_iris=[
+                "https://example.test/analysis-packet#missing_view",
+            ],
         )
 
     assert _mutable_graph_counts(db) == before_counts

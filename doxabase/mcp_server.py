@@ -57,6 +57,7 @@ from doxabase.mcp_tools import (
     plan_staged_revision_recovery_tool,
     preflight_context_slice_export_tool,
     project_brief_tool,
+    record_analysis_packet_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
     record_column_profile_tool,
@@ -1607,6 +1608,39 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Record or update several logical analysis views from reviewed specs."""
 
         return record_map_analysis_view_bundle_tool(db, views=views)
+
+    @server.tool(name="doxabase.record_analysis_packet")
+    def record_analysis_packet(
+        iri: str,
+        summary: str,
+        label: str | None = None,
+        evidence_sources: list[str] | None = None,
+        analysis_views: list[dict[str, Any]] | None = None,
+        analysis_view_iris: list[str] | None = None,
+        artifacts: list[dict[str, Any]] | None = None,
+        followup_tasks: list[dict[str, Any]] | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_iri: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a reviewed analysis packet with views, artifacts, and tasks."""
+
+        return record_analysis_packet_tool(
+            db,
+            iri=iri,
+            summary=summary,
+            label=label,
+            evidence_sources=evidence_sources,
+            analysis_views=analysis_views,
+            analysis_view_iris=analysis_view_iris,
+            artifacts=artifacts,
+            followup_tasks=followup_tasks,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_iri=pattern_iri,
+        )
 
     @server.tool(name="doxabase.record_map_table_bundle")
     def record_map_table_bundle(

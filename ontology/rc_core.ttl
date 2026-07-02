@@ -995,6 +995,17 @@ rc:ProfileMetricKind a rdfs:Class ;
 rc:Evidence a rdfs:Class ;
     rdfs:comment "A record that supports an observation or map assertion." .
 
+rc:AnalysisPacket a rdfs:Class ;
+    rdfs:subClassOf rc:Evidence ;
+    rdfs:comment "A graph-native packet tying reviewed analysis views, aggregate artifacts, visuals, caveats, and follow-up tasks into one handoff node." .
+
+rc:AnalysisArtifact a rdfs:Class ;
+    rdfs:subClassOf rc:Evidence ;
+    rdfs:comment "A reviewed external analysis artifact such as a Markdown readout, aggregate JSON file, chart image, or generated sidecar. The graph stores locators and metadata, not artifact bytes or raw rows." .
+
+rc:AnalysisFollowupTask a rdfs:Class ;
+    rdfs:comment "A lightweight next analysis task linked from an analysis packet." .
+
 rc:Claim a rdfs:Class ;
     rdfs:comment "A structured claim made by an observation. Claims let agents express nuanced dataset lore as RDF rather than only prose." .
 
@@ -1315,6 +1326,66 @@ rc:scannedSourceHandle a rdf:Property ;
     rdfs:domain rc:Evidence ;
     rdfs:range xsd:string ;
     rdfs:comment "Non-secret file, object, relation, or runtime handle scanned by an external query attempt." .
+
+rc:packetAnalysisView a rdf:Property ;
+    rdfs:domain rc:AnalysisPacket ;
+    rdfs:range rc:AnalysisView ;
+    rdfs:comment "A named logical analysis view, subcorpus, lane, or denominator included in an analysis packet." .
+
+rc:hasAnalysisArtifact a rdf:Property ;
+    rdfs:domain rc:AnalysisPacket ;
+    rdfs:range rc:AnalysisArtifact ;
+    rdfs:comment "Links an analysis packet to an external aggregate, report, visualization, or sidecar artifact." .
+
+rc:hasFollowupTask a rdf:Property ;
+    rdfs:domain rc:AnalysisPacket ;
+    rdfs:range rc:AnalysisFollowupTask ;
+    rdfs:comment "Links an analysis packet to a lightweight recommended next analysis task." .
+
+rc:artifactRole a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reviewed role of an analysis artifact within a packet, such as lane aggregate JSON, visualization, query cookbook, or narrative readout." .
+
+rc:mediaType a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Media type or format hint for an external analysis artifact." .
+
+rc:contentHash a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Optional non-secret hash or digest for an external artifact." .
+
+rc:byteSize a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Optional artifact byte size." .
+
+rc:imageWidth a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Optional image width in pixels for visual analysis artifacts." .
+
+rc:imageHeight a rdf:Property ;
+    rdfs:domain rc:AnalysisArtifact ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Optional image height in pixels for visual analysis artifacts." .
+
+rc:taskText a rdf:Property ;
+    rdfs:domain rc:AnalysisFollowupTask ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Human-readable follow-up task text." .
+
+rc:taskPriority a rdf:Property ;
+    rdfs:domain rc:AnalysisFollowupTask ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Optional lightweight priority label for an analysis follow-up task." .
+
+rc:taskTarget a rdf:Property ;
+    rdfs:domain rc:AnalysisFollowupTask ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A resource the follow-up task is about." .
 
 rc:summary a rdf:Property ;
     rdfs:range xsd:string ;

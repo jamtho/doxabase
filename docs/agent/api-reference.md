@@ -1107,6 +1107,14 @@ It composes `record_profiled_parquet_table()` and
 capsule before writing, and returns aggregate table, evidence, view, readiness,
 and suggested-action handles. It is not the same as an `export_handoff_bundle`
 manifest and does not read Parquet files or parse Markdown.
+`record_analysis_packet()` records one reviewed analysis handoff as an
+`rc:AnalysisPacket` evidence resource. It can create logical analysis views,
+link existing analysis views, preserve locator-only artifact metadata, add
+follow-up tasks, and optionally create a packet-supported pattern. Use it for
+post-analysis bundles such as named subcorpora, lane definitions, aggregate
+JSON/PNG/Markdown artifact locators, caveats, and next tasks. It preflights the
+full structured packet on a scratch capsule before writing and does not read
+files, store raw artifact bytes, parse Markdown/JSON, or execute queries.
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,
 optional domain-pair/domain-frequency counts, shared evidence, and optional
@@ -1232,6 +1240,9 @@ sidecar defines several logical views; each item accepts the same fields as the
 single-view helper, with `view_iri` as an `iri` alias. The bundle helper records
 those reviewed specs and returns described views plus query-context follow-up
 actions. It does not parse Markdown or execute SQL.
+If those views are part of a broader analysis handoff with artifact locators,
+visual metadata, or follow-up tasks, use `record_analysis_packet()` so future
+agents have one bounded `describe_context_slice` seed for the whole packet.
 `describe_analysis_view()` reads that logical definition, while
 `describe_query_context()` reports `readiness="logical_analysis_view"` and does
 not offer missing-storage repair groups for the view itself.

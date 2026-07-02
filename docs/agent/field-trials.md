@@ -4506,12 +4506,17 @@ few useful gaps:
   optional analysis-view bundle specs. It preflights the full structured
   manifest on a scratch capsule before writing and still does no file I/O or
   Markdown parsing.
+- An analysis-packet scout found that later agents needed one durable handoff
+  seed for named subcorpora, lane definitions, aggregate JSON/PNG/Markdown
+  artifact locators, caveats, visual metadata, and follow-up tasks, without
+  turning those artifacts into raw stored content. `record_analysis_packet` now
+  records an `rc:AnalysisPacket` evidence node, optional analysis-view bundle,
+  locator-only `rc:AnalysisArtifact` resources, `rc:AnalysisFollowupTask`
+  resources, and optional pattern support, all preflighted before live writes.
 
-  Two larger gaps remain useful candidates for later loops: an analysis-packet
-  helper for tying named subcorpora, lane definitions, aggregate artifacts,
-  visuals, caveats, and follow-up tasks into one graph-native handoff node; and
-  a profile type-advisory batch plan in `plan_profile_followthrough` that
-  reduces large advisory queues without collapsing distinct column judgements.
+  The main remaining candidate from this wave is a profile type-advisory batch
+  plan in `plan_profile_followthrough` that reduces large advisory queues
+  without collapsing distinct column judgements.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

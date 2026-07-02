@@ -97,6 +97,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "profiling.md",
     ),
     AgentDoc(
+        id="analysis_packets",
+        title="Analysis Packets",
+        description="How to preserve reviewed analysis artifacts, logical views, and follow-up tasks as one handoff node.",
+        path=DOCS_DIR / "analysis-packets.md",
+    ),
+    AgentDoc(
         id="revisions",
         title="Revision History",
         description="How to record graph revision metadata and review-bundle rationale.",
