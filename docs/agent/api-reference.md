@@ -1205,7 +1205,11 @@ placeholder names such as `date` or `event_date` in `path_template`.
 Use `record_map_analysis_view()` for current-best named logical analysis
 populations, denominator definitions, and reviewed query recipes that are not
 physical routes. It writes an `rc:AnalysisView`, optional
-`rc:AnalysisDenominator`, and optional `rc:ExecutableQuerySnippet` in `map`.
+`rc:AnalysisDenominator`, and one or more optional
+`rc:ExecutableQuerySnippet` resources in `map`. Use `query_snippets=[...]` for
+multiple reviewed recipes, and do not combine that list with legacy
+single-snippet fields such as `query_text`; `query_snippets=[]` clears snippet
+links.
 `describe_analysis_view()` reads that logical definition, while
 `describe_query_context()` reports `readiness="logical_analysis_view"` and does
 not offer missing-storage repair groups for the view itself.

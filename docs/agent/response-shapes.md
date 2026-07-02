@@ -3102,6 +3102,10 @@ view.suggested_next_calls
 `view.query_snippets[]` carries `iri`, `label`, `description`, `query_text`,
 `query_language`, and `query_engine`; the RDF predicate for that last field is
 `rc:queryRuntime`, not evidence `rc:queryEngine`.
+`record_map_analysis_view(query_snippets=[...])` can write several snippets for
+one logical view. Omitted snippet IRIs default to
+`{view_iri}/query-snippet/{index}`. Do not combine `query_snippets` with the
+legacy single-snippet fields; pass `query_snippets=[]` to clear snippet links.
 
 When the same resource is passed to `describe_query_context`, the planning
 context has `readiness="logical_analysis_view"`,

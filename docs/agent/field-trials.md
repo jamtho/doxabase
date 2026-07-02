@@ -4463,6 +4463,12 @@ few useful gaps:
   bundle, and profile/query follow-up handles together; use it when the
   profile facts are already reviewed aggregate metadata, not when DoxaBase
   should read Parquet files or preserve raw row samples.
+- The same review showed analysis-view handoffs often need more than one
+  reviewed recipe, for example a logical view definition plus a count-check
+  query. `record_map_analysis_view` now accepts `query_snippets=[...]` while
+  keeping the legacy single-snippet fields for compatibility; logical views
+  still route through `describe_analysis_view` and never become physical storage
+  routes by having executable-looking SQL attached.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

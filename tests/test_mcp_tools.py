@@ -7025,6 +7025,50 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert context["suggested_next_actions"][0]["tool_name"] == "describe_analysis_view"
 
 
+def test_analysis_view_tool_accepts_multiple_query_snippets(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-analysis-view#"
+    source = f"{base}messages"
+    view = f"{base}message_like_rows"
+
+    record_map_dataset_tool(db, iri=source, label="Messages", is_table=True)
+    result = record_map_analysis_view_tool(
+        db,
+        iri=view,
+        label="Message-like rows",
+        source_datasets=[source],
+        query_snippets=[
+            {
+                "label": "DuckDB view definition",
+                "query_text": "select * from messages where folder <> 'calendar'",
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+            },
+            {
+                "iri": f"{view}/query-snippet/count-check",
+                "label": "Count check",
+                "query_text": "select count(*) from message_like_rows",
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+            },
+        ],
+    )
+
+    assert result["resource_type"] == RC + "AnalysisView"
+    description = describe_analysis_view_tool(db, iri=view)
+    assert [snippet["label"] for snippet in description["query_snippets"]] == [
+        "DuckDB view definition",
+        "Count check",
+    ]
+    assert description["query_snippets"][1]["iri"] == (
+        f"{view}/query-snippet/count-check"
+    )
+    assert (
+        describe_query_context_tool(db, iri=view)["readiness"]
+        == "logical_analysis_view"
+    )
+
+
 def test_record_map_table_bundle_tool_returns_json_like_records(
     tmp_path: Path,
 ) -> None:

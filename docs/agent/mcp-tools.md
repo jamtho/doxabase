@@ -1833,11 +1833,15 @@ Records or updates a logical analysis view in the `map` graph. Use it for
 named populations, denominators, reusable analysis slices, and reviewed query
 recipes that should not be treated as direct physical storage. Resource-valued
 fields such as `source_datasets`, `caveats`, `denominator_iri`, and
-`query_snippet_iri` expect IRIs or CURIEs, not prose. Put denominator prose in
-`denominator_description` / `denominator_basis`, and reviewed SQL or
-pseudo-query text in `query_text`. The MCP/Python argument `query_engine`
-records snippet runtime context with `rc:queryRuntime`; it is separate from
-evidence `rc:queryEngine`, which describes an executed or attempted query.
+`query_snippet_iri` or `query_snippets[].iri` expect IRIs or CURIEs, not prose.
+Put denominator prose in `denominator_description` / `denominator_basis`, and
+reviewed SQL or pseudo-query text in `query_text` or
+`query_snippets[].query_text`. Use `query_snippets=[...]` when a view needs
+several recipes such as a view definition and a count check; do not combine that
+list with the legacy single-snippet fields. Passing `query_snippets=[]` clears
+the view's snippet links. The MCP/Python argument `query_engine` records
+snippet runtime context with `rc:queryRuntime`; it is separate from evidence
+`rc:queryEngine`, which describes an executed or attempted query.
 
 `doxabase.describe_analysis_view`
 

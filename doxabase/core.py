@@ -38446,6 +38446,7 @@ class DoxaBase:
         query_text: str | None = None,
         query_language: str | None = None,
         query_engine: str | None = None,
+        query_snippets: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None = None,
     ) -> MapResourceRecord:
         view_iri = self._required_iri("iri", iri)
         self._ensure_non_negative("row_count_snapshot", row_count_snapshot)
@@ -38453,8 +38454,42 @@ class DoxaBase:
             "denominator_row_count_snapshot",
             denominator_row_count_snapshot,
         )
-        if query_text is not None and not query_text.strip():
-            raise DoxaBaseError("query_text must not be empty when provided")
+        legacy_query_fields_supplied = any(
+            value is not None
+            for value in (
+                query_snippet_iri,
+                query_snippet_label,
+                query_snippet_description,
+                query_text,
+                query_language,
+                query_engine,
+            )
+        )
+        if query_snippets is not None and legacy_query_fields_supplied:
+            raise DoxaBaseError(
+                "query_snippets cannot be combined with legacy single-snippet "
+                "query_snippet_* or query_text/query_language/query_engine fields"
+            )
+        if query_snippets is not None:
+            query_snippet_specs = self._normalise_analysis_view_query_snippets(
+                view_iri,
+                query_snippets,
+            )
+        elif legacy_query_fields_supplied:
+            query_snippet_specs = self._normalise_analysis_view_query_snippets(
+                view_iri,
+                {
+                    "iri": query_snippet_iri,
+                    "label": query_snippet_label,
+                    "description": query_snippet_description,
+                    "query_text": query_text,
+                    "query_language": query_language,
+                    "query_engine": query_engine,
+                },
+            )
+        else:
+            query_snippet_specs = []
+        query_snippets_supplied = query_snippets is not None
         source_dataset_values = self._string_values(
             "source_datasets",
             source_datasets,
@@ -38565,26 +38600,10 @@ class DoxaBase:
                 denominator_basis,
             )
 
-        query_fields_supplied = any(
-            value is not None
-            for value in (
-                query_snippet_iri,
-                query_snippet_label,
-                query_snippet_description,
-                query_text,
-                query_language,
-                query_engine,
-            )
-        )
-        snippet_value = (
-            str(self._resource_ref("query_snippet_iri", query_snippet_iri))
-            if query_snippet_iri is not None
-            else f"{view_iri}/query-snippet/1"
-        )
         snippet_graph = Graph()
         self._bind_prefixes(snippet_graph)
-        if query_fields_supplied:
-            snippet_ref = URIRef(snippet_value)
+        for snippet_spec in query_snippet_specs:
+            snippet_ref = URIRef(snippet_spec["iri"])
             view_graph.add(
                 (
                     subject,
@@ -38610,31 +38629,31 @@ class DoxaBase:
                 snippet_graph,
                 snippet_ref,
                 str(RDFS.label),
-                query_snippet_label,
+                snippet_spec["label"],
             )
             self._add_optional_literal(
                 snippet_graph,
                 snippet_ref,
                 str(RDFS.comment),
-                query_snippet_description,
+                snippet_spec["description"],
             )
             self._add_optional_literal(
                 snippet_graph,
                 snippet_ref,
                 "rc:queryText",
-                query_text,
+                snippet_spec["query_text"],
             )
             self._add_optional_literal(
                 snippet_graph,
                 snippet_ref,
                 "rc:queryLanguage",
-                query_language,
+                snippet_spec["query_language"],
             )
             self._add_optional_literal(
                 snippet_graph,
                 snippet_ref,
                 "rc:queryRuntime",
-                query_engine,
+                snippet_spec["query_engine"],
             )
 
         predicates: list[str] = [str(RDF.type)]
@@ -38650,7 +38669,7 @@ class DoxaBase:
             predicates.append(self.expand_iri("rc:hasKnownCaveat"))
         if denominator_fields_supplied:
             predicates.append(self.expand_iri("rc:hasAnalysisDenominator"))
-        if query_fields_supplied:
+        if query_snippets_supplied or query_snippet_specs:
             predicates.append(self.expand_iri("rc:hasQuerySnippet"))
         triples = self._replace_subject_triples(
             "map",
@@ -38672,10 +38691,10 @@ class DoxaBase:
                 ],
                 denominator_graph,
             )
-        if query_fields_supplied:
+        for snippet_spec in query_snippet_specs:
             triples += self._replace_subject_triples(
                 "map",
-                snippet_value,
+                snippet_spec["iri"],
                 [
                     str(RDF.type),
                     self.expand_iri("rc:forAnalysisView"),
@@ -68480,6 +68499,86 @@ class DoxaBase:
     def _validate_resource_values(self, name: str, values: Iterable[str]) -> None:
         for value in values:
             self._resource_ref(name, value)
+
+    def _normalise_analysis_view_query_snippets(
+        self,
+        view_iri: str,
+        query_snippets: Iterable[Mapping[str, Any]] | Mapping[str, Any],
+    ) -> list[dict[str, str | None]]:
+        if isinstance(query_snippets, MappingABC):
+            snippet_values = [query_snippets]
+        else:
+            snippet_values = list(query_snippets)
+        allowed_fields = {
+            "iri",
+            "query_snippet_iri",
+            "label",
+            "query_snippet_label",
+            "description",
+            "query_snippet_description",
+            "query_text",
+            "query_language",
+            "query_engine",
+        }
+        specs: list[dict[str, str | None]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(snippet_values, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"query_snippets[{index}] must be an object")
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"query_snippets[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+
+            def optional_string(*fields: str) -> str | None:
+                for field in fields:
+                    value = item.get(field)
+                    if value is None:
+                        continue
+                    if not isinstance(value, str):
+                        raise DoxaBaseError(
+                            f"query_snippets[{index}].{field} must be a string"
+                        )
+                    return value
+                return None
+
+            snippet_iri_value = optional_string("iri", "query_snippet_iri")
+            snippet_iri = (
+                str(
+                    self._resource_ref(
+                        f"query_snippets[{index}].iri",
+                        snippet_iri_value,
+                    )
+                )
+                if snippet_iri_value is not None
+                else f"{view_iri}/query-snippet/{index}"
+            )
+            if snippet_iri in seen_iris:
+                raise DoxaBaseError(
+                    f"query_snippets[{index}].iri duplicates {snippet_iri}"
+                )
+            seen_iris.add(snippet_iri)
+            query_text = optional_string("query_text")
+            if query_text is not None and not query_text.strip():
+                raise DoxaBaseError(
+                    f"query_snippets[{index}].query_text must not be empty"
+                )
+            specs.append(
+                {
+                    "iri": snippet_iri,
+                    "label": optional_string("label", "query_snippet_label"),
+                    "description": optional_string(
+                        "description",
+                        "query_snippet_description",
+                    ),
+                    "query_text": query_text,
+                    "query_language": optional_string("query_language"),
+                    "query_engine": optional_string("query_engine"),
+                }
+            )
+        return specs
 
     def _normalise_profiled_parquet_columns(
         self,

@@ -27218,6 +27218,81 @@ def test_record_map_analysis_view_captures_logical_query_context(
     ]
 
 
+def test_record_map_analysis_view_accepts_multiple_query_snippets(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-view#"
+    source = f"{base}messages"
+    view = f"{base}message_like_rows"
+
+    db.record_map_dataset(source, label="Messages", is_table=True)
+    db.record_map_analysis_view(
+        view,
+        label="Message-like rows",
+        source_datasets=[source],
+        denominator_description="Rows that behave like user-authored messages.",
+        query_snippets=[
+            {
+                "label": "DuckDB view definition",
+                "query_text": (
+                    "create or replace view message_like_rows as "
+                    "select * from messages where folder_family <> 'calendar'"
+                ),
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+            },
+            {
+                "iri": f"{view}/query-snippet/count-check",
+                "label": "Count check",
+                "query_text": "select count(*) from message_like_rows",
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+            },
+        ],
+    )
+
+    described = db.describe_analysis_view(view)
+    assert [snippet.iri for snippet in described.query_snippets] == [
+        f"{view}/query-snippet/1",
+        f"{view}/query-snippet/count-check",
+    ]
+    assert [snippet.label for snippet in described.query_snippets] == [
+        "DuckDB view definition",
+        "Count check",
+    ]
+    assert "folder_family" in (described.query_snippets[0].query_text or "")
+    assert db.describe_query_context(view).readiness == "logical_analysis_view"
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+    db.record_map_analysis_view(view, query_snippets=[])
+    assert db.describe_analysis_view(view).query_snippets == []
+
+
+def test_record_map_analysis_view_rejects_mixed_query_snippet_inputs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    view = "https://example.test/analysis-view#message_like_rows"
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="query_snippets cannot be combined"):
+        db.record_map_analysis_view(
+            view,
+            label="Message-like rows",
+            query_text="select * from messages",
+            query_snippets=[
+                {
+                    "query_text": "select count(*) from messages",
+                    "query_language": "DuckDB SQL",
+                }
+            ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_record_map_table_bundle_records_parquet_table_map(
     tmp_path: Path,
 ) -> None:

@@ -1574,6 +1574,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         query_text: str | None = None,
         query_language: str | None = None,
         query_engine: str | None = None,
+        query_snippets: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Record or update a logical analysis view in the map graph."""
 
@@ -1596,6 +1597,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             query_text=query_text,
             query_language=query_language,
             query_engine=query_engine,
+            query_snippets=query_snippets,
         )
 
     @server.tool(name="doxabase.record_map_table_bundle")

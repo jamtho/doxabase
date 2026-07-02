@@ -1681,6 +1681,7 @@ def record_map_analysis_view_tool(
     query_text: str | None = None,
     query_language: str | None = None,
     query_engine: str | None = None,
+    query_snippets: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     result = db.record_map_analysis_view(
         iri=iri,
@@ -1700,6 +1701,7 @@ def record_map_analysis_view_tool(
         query_text=query_text,
         query_language=query_language,
         query_engine=query_engine,
+        query_snippets=query_snippets,
     )
     return to_dict(result)
 

@@ -87,7 +87,9 @@ For named logical populations, denominator definitions, or reusable reviewed
 query recipes, use `record_map_analysis_view` instead of inventing physical
 storage metadata. It records an `rc:AnalysisView` as a table-like map resource,
 can link source datasets and caveats, and can attach one denominator resource
-plus a reviewed query snippet. `describe_query_context` returns
+plus one or more reviewed query snippets. Use `query_snippets=[...]` for several
+recipes on the same logical population, such as a view definition and a count
+check. `describe_query_context` returns
 `readiness="logical_analysis_view"` for these resources and deliberately does
 not produce missing-storage repair actions unless you separately model a
 materialized physical route.
