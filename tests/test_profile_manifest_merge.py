@@ -151,6 +151,47 @@ def test_merge_allows_empty_column_facts_with_row_count(tmp_path: Path) -> None:
     assert "null_count" not in _column(table, "message_id")
 
 
+def test_merge_allows_reviewed_layout_verification_fields(
+    tmp_path: Path,
+) -> None:
+    facts = _profile_facts(columns={})
+    table_facts = facts["tables"][0]
+    table_facts.update(
+        {
+            "layout_verification_status": "rc:VerifiedByListingLayout",
+            "layout_verification_note": (
+                "Reviewer confirmed the dataset path template and Parquet "
+                "footer metadata."
+            ),
+            "physical_layout_verification_status": "rc:VerifiedByListingLayout",
+            "physical_layout_verification_note": (
+                "Reviewer confirmed the Parquet physical layout metadata."
+            ),
+        }
+    )
+
+    merged = merge_reviewed_profile_facts(_scaffold(tmp_path), facts)
+    table = merged["tables"][0]
+
+    assert table["layout_verification_status"] == "rc:VerifiedByListingLayout"
+    assert table["physical_layout_verification_status"] == (
+        "rc:VerifiedByListingLayout"
+    )
+    assert merged["table_defaults"]["layout_verification_status"] == (
+        "rc:CandidateLayout"
+    )
+
+    with DoxaBase.create(tmp_path / "capsule.sqlite") as db:
+        record = db.record_profile_to_capsule_manifest(merged)
+        context = db.describe_query_context(record.table_iris[0])
+        validation = db.validate_graph(scope="all")
+
+    assert validation.conforms, validation.report_text
+    assert record.query_readiness_counts == {"ready_for_query_planning": 1}
+    assert context.readiness == "ready_for_query_planning"
+    assert context.issues == []
+
+
 def test_merge_rejects_empty_column_facts_without_row_count(tmp_path: Path) -> None:
     facts = _profile_facts(columns={})
     del facts["tables"][0]["row_count"]

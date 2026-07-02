@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import json
 import shutil
 import sys
@@ -16,6 +15,7 @@ from doxabase.parquet_manifest import (
     ParquetFileMetadata,
     build_parquet_profile_manifest,
 )
+from doxabase.profile_manifest_merge import merge_reviewed_profile_facts
 from doxabase.profile_to_capsule import apply_manifest_file
 from examples._runtime_paths import example_artifact, example_run_dir
 
@@ -67,7 +67,12 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    reviewed_manifest = _enrich_with_reviewed_profile_facts(scaffold)
+    reviewed_manifest = merge_reviewed_profile_facts(
+        scaffold,
+        _external_profile_facts(),
+        profile_facts_source=str(PROFILE_FACTS_PATH),
+    )
+    _add_reviewed_analysis_view(reviewed_manifest)
     MANIFEST_PATH.write_text(
         json.dumps(reviewed_manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -103,6 +108,7 @@ def main() -> None:
         f"{profile_run.returned_profile_count}/{profile_run.total_profile_count}"
     )
     print(f"Profile draft recommendations: {draft.recommendation_count}")
+    print("Reviewed layout status: rc:VerifiedByListingLayout")
     print(f"Table query readiness: {query_context.readiness}")
     print(f"Table query issues: {[issue.code for issue in query_context.issues]}")
     print(f"Analysis view readiness: {view_context.readiness}")
@@ -150,58 +156,80 @@ def _write_external_profile_facts() -> None:
 
 
 def _external_profile_facts() -> dict[str, object]:
+    table_iri = f"{BASE}messages"
     return {
-        "row_count": 12,
-        "sample_scope": "All rows in the reviewed synthetic message snapshot.",
-        "sample_method": (
-            "External profiler full scan; DoxaBase recorded reviewed aggregates "
-            "and did no row I/O."
-        ),
-        "columns": {
-            "message_id": {"null_count": 0, "distinct_count": 12},
-            "sender_domain": {
-                "null_count": 0,
-                "distinct_count": 4,
-                "value_frequencies": [
-                    {"value": "enron.com", "frequency": 6},
-                    {"value": "example.org", "frequency": 3},
-                    {"value": "partner.test", "frequency": 2},
-                    {"value": "vendor.test", "frequency": 1},
-                ],
-            },
-            "direction": {
-                "null_count": 0,
-                "distinct_count": 3,
-                "value_frequencies": [
-                    {"value": "internal", "frequency": 5},
-                    {"value": "outbound", "frequency": 4},
-                    {"value": "inbound", "frequency": 3},
-                ],
-            },
-            "attachment_count": {
-                "null_count": 0,
-                "distinct_count": 4,
-                "profile_metrics": [
-                    {"metric": "rc:MinimumValue", "value": 0},
-                    {"metric": "rc:MaximumValue", "value": 5},
-                    {"metric": "rc:MeanValue", "value": 1.25},
-                ],
-            },
-            "sent_at": {"null_count": 1, "distinct_count": 11},
-        },
+        "format": "doxabase.reviewed_profile_facts.v1",
+        "tables": [
+            {
+                "iri": table_iri,
+                "row_count": 12,
+                "sample_scope": (
+                    "All rows in the reviewed synthetic message snapshot."
+                ),
+                "sample_method": (
+                    "External profiler full scan; DoxaBase recorded reviewed "
+                    "aggregates and did no row I/O."
+                ),
+                "evidence_summary": (
+                    "Reviewed external profiler facts for the synthetic "
+                    "messages Parquet snapshot."
+                ),
+                "evidence_sources": [str(PROFILE_FACTS_PATH), PARQUET_PATH.as_uri()],
+                "shared_evidence_iri": f"{BASE}messages_profile_evidence",
+                "layout_verification_status": "rc:VerifiedByListingLayout",
+                "layout_verification_note": (
+                    "Reviewer confirmed the dataset-owned Parquet path "
+                    "template and local footer metadata."
+                ),
+                "physical_layout_verification_status": (
+                    "rc:VerifiedByListingLayout"
+                ),
+                "physical_layout_verification_note": (
+                    "Reviewer confirmed the Parquet physical layout metadata."
+                ),
+                "columns": {
+                    "message_id": {"null_count": 0, "distinct_count": 12},
+                    "sender_domain": {
+                        "null_count": 0,
+                        "distinct_count": 4,
+                        "value_frequencies": [
+                            {"value": "enron.com", "frequency": 6},
+                            {"value": "example.org", "frequency": 3},
+                            {"value": "partner.test", "frequency": 2},
+                            {"value": "vendor.test", "frequency": 1},
+                        ],
+                    },
+                    "direction": {
+                        "null_count": 0,
+                        "distinct_count": 3,
+                        "value_frequencies": [
+                            {"value": "internal", "frequency": 5},
+                            {"value": "outbound", "frequency": 4},
+                            {"value": "inbound", "frequency": 3},
+                        ],
+                    },
+                    "attachment_count": {
+                        "null_count": 0,
+                        "distinct_count": 4,
+                        "profile_metrics": [
+                            {"metric": "rc:MinimumValue", "value": 0},
+                            {"metric": "rc:MaximumValue", "value": 5},
+                            {"metric": "rc:MeanValue", "value": 1.25},
+                        ],
+                    },
+                    "sent_at": {"null_count": 1, "distinct_count": 11},
+                },
+            }
+        ],
     }
 
 
-def _enrich_with_reviewed_profile_facts(scaffold: dict[str, object]) -> dict[str, object]:
-    manifest = copy.deepcopy(scaffold)
-    facts = _external_profile_facts()
+def _add_reviewed_analysis_view(manifest: dict[str, object]) -> None:
     table = manifest["tables"][0]
     if not isinstance(table, dict):
         raise RuntimeError("Expected scaffold table object")
     table_iri = str(table["iri"])
-    evidence_iri = f"{BASE}messages_profile_evidence"
     view_iri = f"{BASE}external_domain_messages"
-    profile_caveat_iri = f"{BASE}external_profile_review_caveat"
 
     table.update(
         {
@@ -210,16 +238,6 @@ def _enrich_with_reviewed_profile_facts(scaffold: dict[str, object]) -> dict[str
                 "Messages profile combines Parquet footer/schema metadata with "
                 "reviewed external aggregate profile facts."
             ),
-            "evidence_summary": (
-                "Reviewed external profiler facts for the synthetic messages "
-                "Parquet snapshot."
-            ),
-            "evidence_sources": [str(PROFILE_FACTS_PATH), PARQUET_PATH.as_uri()],
-            "shared_evidence_iri": evidence_iri,
-            "row_count": facts["row_count"],
-            "sample_size": facts["row_count"],
-            "sample_scope": facts["sample_scope"],
-            "sample_method": facts["sample_method"],
             "row_semantics": "rc:EventRow",
             "schema_stability": "rc:InferredSchema",
             "pattern_summary": (
@@ -236,43 +254,6 @@ def _enrich_with_reviewed_profile_facts(scaffold: dict[str, object]) -> dict[str
             ),
         }
     )
-    columns = table.get("columns", [])
-    if not isinstance(columns, list):
-        raise RuntimeError("Expected scaffold column list")
-    column_facts = facts["columns"]
-    if not isinstance(column_facts, dict):
-        raise RuntimeError("Expected profile column fact map")
-    for column in columns:
-        if not isinstance(column, dict):
-            raise RuntimeError("Expected scaffold column object")
-        name = str(column["column_name"])
-        extras = column_facts[name]
-        if not isinstance(extras, dict):
-            raise RuntimeError("Expected column fact object")
-        column.update(extras)
-
-    caveats = manifest.setdefault("caveats", [])
-    if not isinstance(caveats, list):
-        raise RuntimeError("Expected manifest caveat list")
-    caveats.append(
-        {
-            "iri": profile_caveat_iri,
-            "label": "External profile aggregates require review",
-            "description": (
-                "The null counts, distinct counts, value frequencies, and "
-                "metrics came from an external reviewed profiler sidecar, not "
-                "from DoxaBase row scanning."
-            ),
-            "severity": "rc:Minor",
-            "targets": [table_iri],
-        }
-    )
-    table_defaults = manifest.get("table_defaults")
-    if not isinstance(table_defaults, dict):
-        raise RuntimeError("Expected table_defaults object")
-    default_caveats = list(table_defaults.get("caveats", []))
-    default_caveats.append(profile_caveat_iri)
-    table_defaults["caveats"] = default_caveats
 
     manifest["analysis_views"] = [
         {
@@ -306,7 +287,6 @@ def _enrich_with_reviewed_profile_facts(scaffold: dict[str, object]) -> dict[str
             ],
         }
     ]
-    return manifest
 
 
 if __name__ == "__main__":

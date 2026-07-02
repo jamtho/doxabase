@@ -65,14 +65,21 @@ def test_profile_manifest_merge_cli_writes_applyable_manifest(
     assert table["caveats"] == [
         f"{BASE}messages/caveat/external-profile-facts"
     ]
+    assert table["layout_verification_status"] == "rc:VerifiedByListingLayout"
+    assert table["physical_layout_verification_status"] == (
+        "rc:VerifiedByListingLayout"
+    )
 
     with DoxaBase.create(tmp_path / "capsule.sqlite") as db:
         record = db.record_profile_to_capsule_manifest(manifest)
         validation = db.validate_graph(scope="all")
+        context = db.describe_query_context(record.table_iris[0])
 
     assert validation.conforms, validation.report_text
     assert record.table_iris == [f"{BASE}messages"]
     assert record.profile_observation_count == 4
+    assert record.query_readiness_counts == {"ready_for_query_planning": 1}
+    assert context.readiness == "ready_for_query_planning"
 
 
 def test_profile_manifest_merge_cli_rejects_wrong_facts_format(
@@ -146,6 +153,17 @@ def _profile_facts() -> dict[str, object]:
                 "row_count": 8,
                 "sample_scope": "All reviewed message rows.",
                 "sample_method": "External profiler aggregate scan.",
+                "layout_verification_status": "rc:VerifiedByListingLayout",
+                "layout_verification_note": (
+                    "Reviewer confirmed the dataset path template and footer "
+                    "metadata."
+                ),
+                "physical_layout_verification_status": (
+                    "rc:VerifiedByListingLayout"
+                ),
+                "physical_layout_verification_note": (
+                    "Reviewer confirmed the Parquet physical layout metadata."
+                ),
                 "columns": {
                     "sender_domain": {
                         "null_count": 0,

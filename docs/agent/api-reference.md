@@ -1155,7 +1155,13 @@ python -m doxabase.profile_manifest_merge \
 The sidecar declares
 `format="doxabase.reviewed_profile_facts.v1"`, names scaffold table IRIs
 exactly, and supplies table sample metadata plus optional row counts, evidence
-sources, and per-column aggregate facts. The adapter rejects unknown fields,
+sources, per-column aggregate facts, and reviewed table-level layout status
+fields such as `layout_verification_status` and
+`physical_layout_verification_status`, plus the corresponding
+`storage_layout_*` fields when storage-access status should be updated. Use
+those status fields only when the external review has actually confirmed the
+path/layout; otherwise the scaffold stays conservatively `rc:CandidateLayout`
+and query planning remains review-gated. The adapter rejects unknown fields,
 unknown tables, unknown columns, and scaffold/profile row-count mismatches, and
 adds an external-profile caveat by default. It does not scan Parquet files or
 read raw rows.

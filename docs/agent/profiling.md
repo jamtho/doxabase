@@ -76,19 +76,28 @@ The sidecar format is `doxabase.reviewed_profile_facts.v1`. It names scaffold
 table IRIs exactly, requires table `sample_scope` and `sample_method`, accepts
 reviewed table counts/evidence metadata, and accepts per-column aggregate
 fields such as `null_count`, `distinct_count`, `value_frequencies`, and
-`profile_metrics`. The adapter rejects unknown tables, unknown columns,
-unsupported fields, and row-count mismatches. It adds a table caveat by default
-so later agents can see that aggregate facts came from an external reviewed
-sidecar. Apply the merged output with `profile_to_capsule`.
+`profile_metrics`. If the same review also confirms that the path templates and
+physical layout are usable, the sidecar may include
+`layout_verification_status`, `layout_verification_note`,
+`storage_layout_verification_status`, `storage_layout_verification_note`,
+`physical_layout_verification_status`, and
+`physical_layout_verification_note`; use `rc:VerifiedByListingLayout` for
+listing/footer/schema review and `rc:VerifiedByQueryLayout` only when an actual
+query has verified the layout. Without those reviewed status fields the
+scaffold remains `rc:CandidateLayout`, so `profile_to_capsule` validates but
+`describe_query_context` stays in `needs_review`. The adapter rejects unknown
+tables, unknown columns, unsupported fields, and row-count mismatches. It adds a
+table caveat by default so later agents can see that aggregate facts came from
+an external reviewed sidecar. Apply the merged output with `profile_to_capsule`.
 
 For the common next step, run
 `python examples/rich-profile-manifest-smoke.py`. It uses the scaffold shape,
 merges reviewed external aggregate profile facts such as null counts, distinct
-counts, value frequencies, and scalar metrics into the manifest, applies it
-with `profile_to_capsule`, and inspects `describe_profile_run`,
-`draft_profile_map_updates`, `describe_query_context`, and a logical analysis
-view. The example deliberately keeps profiling outside DoxaBase; DoxaBase
-records the reviewed aggregates.
+counts, value frequencies, scalar metrics, and reviewed layout status into the
+manifest, applies it with `profile_to_capsule`, and inspects
+`describe_profile_run`, `draft_profile_map_updates`, `describe_query_context`,
+and a logical analysis view. The example deliberately keeps profiling outside
+DoxaBase; DoxaBase records the reviewed aggregates.
 
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair

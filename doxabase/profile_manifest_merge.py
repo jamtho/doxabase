@@ -24,6 +24,12 @@ _TABLE_FIELDS = {
     "evidence_summary",
     "evidence_sources",
     "shared_evidence_iri",
+    "layout_verification_status",
+    "layout_verification_note",
+    "storage_layout_verification_status",
+    "storage_layout_verification_note",
+    "physical_layout_verification_status",
+    "physical_layout_verification_note",
     "columns",
 }
 _COLUMN_FIELDS = {
@@ -202,6 +208,20 @@ def _merge_table_facts(
             table_context,
         )
     for field in ("observed_at", "observed_by", "evidence_summary"):
+        if field in table_facts:
+            scaffold_table[field] = _optional_non_empty_string(
+                table_facts,
+                field,
+                table_context,
+            )
+    for field in (
+        "layout_verification_status",
+        "layout_verification_note",
+        "storage_layout_verification_status",
+        "storage_layout_verification_note",
+        "physical_layout_verification_status",
+        "physical_layout_verification_note",
+    ):
         if field in table_facts:
             scaffold_table[field] = _optional_non_empty_string(
                 table_facts,

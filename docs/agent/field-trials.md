@@ -4777,6 +4777,13 @@ few useful gaps:
   rows as mechanically `apply_after_review`; generic revision rows and queue
   items now repeat the row-local profile gate and caution so agents can see
   `blocked_by_profile_gate` before following those queues.
+- A refreshed profile-manifest scout found the scaffold plus external profile
+  merge route validated but stayed `needs_review` until a reviewer manually
+  edited layout verification fields from `rc:CandidateLayout`. The
+  `doxabase.reviewed_profile_facts.v1` sidecar can now carry reviewed
+  dataset/storage/physical layout status and notes, and the rich-profile smoke
+  example uses that route to reach `ready_for_query_planning` without weakening
+  conservative scaffold defaults.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -129,8 +129,9 @@ def test_rich_profile_manifest_smoke_example_runs(tmp_path: Path) -> None:
     assert "Dataset columns: 5" in output
     assert "Profile run returned: 6/6" in output
     assert "Profile draft recommendations: 2" in output
-    assert "Table query readiness: needs_review" in output
-    assert "layout_needs_verification" in output
+    assert "Reviewed layout status: rc:VerifiedByListingLayout" in output
+    assert "Table query readiness: ready_for_query_planning" in output
+    assert "Table query issues: []" in output
     assert "Analysis view readiness: logical_analysis_view" in output
     assert "Analysis view snippets: 2" in output
     assert "Validation conforms: True" in output
