@@ -192,6 +192,9 @@ Not implemented yet:
 - `examples/profile-to-capsule-cookbook.py` - maintained cookbook that composes
   table map bundles, profile bundles, logical analysis views, and
   recovery-complete handoff verification from reviewed aggregate facts.
+- `examples/analysis-packet-manifest-smoke.py` - reviewed analysis-packet JSON
+  manifest route for graph-native handoffs over logical views, artifacts,
+  query recipes, and follow-up tasks.
 - `examples/staged-semantic-repair-smoke.py` - scratch semantic same-slot
   staged-revision repair workflow after applying one competing alternative.
 - `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.
@@ -246,6 +249,8 @@ CSV query handoff. Use
 `examples/ais-query-overlay-smoke.py` when you want to exercise the reduced AIS
 fixture's path from reviewed metadata overlay through stale partition-link
 repair to a non-executed DuckDB handoff. Use
+`examples/analysis-packet-manifest-smoke.py` when you want to check the reviewed
+analysis-packet JSON manifest route for sidecar-to-graph handoffs. Use
 `examples/staged-semantic-repair-smoke.py` when you want a compact semantic
 same-slot rebase loop. Use `examples/adversarial-field-trial.py` when you want
 a more demanding staged-revision and systematisation exercise.

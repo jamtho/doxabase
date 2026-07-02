@@ -96,6 +96,26 @@ def test_profile_to_capsule_cookbook_example_runs(tmp_path: Path) -> None:
     assert "Receiver analysis view readiness: logical_analysis_view" in output
 
 
+def test_analysis_packet_manifest_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("analysis-packet-manifest-smoke.py", tmp_path)
+    output = result.stdout
+
+    assert "# DoxaBase Analysis Packet Manifest Smoke" in output
+    assert "Source table before packet: ready_for_query_planning" in output
+    assert "Manifest format: doxabase.analysis_packet_manifest.v1" in output
+    assert "Analysis views: 2" in output
+    assert "Artifacts: 3" in output
+    assert "Query recipes: 2" in output
+    assert "Follow-up tasks: 2" in output
+    assert "Pattern recorded: True" in output
+    assert "View readiness: ['logical_analysis_view', 'logical_analysis_view']" in (
+        output
+    )
+    assert "View query snippets: [2, 1]" in output
+    assert "Source table after packet: ready_for_query_planning" in output
+    assert "Validation conforms: True" in output
+
+
 def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
     result = _run_example("staged-semantic-repair-smoke.py", tmp_path)
     output = result.stdout

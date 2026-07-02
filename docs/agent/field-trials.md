@@ -4683,6 +4683,12 @@ few useful gaps:
   expected limits are that caveats need existing caveat IRIs or narrative
   fields, SQL is not executed or schema-checked, and locator-only artifacts are
   not file/hash verified by the CLI.
+- `examples/analysis-packet-manifest-smoke.py` now preserves the same
+  sidecar-to-graph handoff shape as a maintained local smoke example: create or
+  update a capsule, apply a reviewed analysis-packet JSON manifest, inspect the
+  packet through `describe_context_slice`, and confirm each logical view routes
+  through `describe_query_context(readiness="logical_analysis_view")` rather
+  than physical storage repair.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

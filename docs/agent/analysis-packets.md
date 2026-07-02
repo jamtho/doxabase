@@ -57,6 +57,12 @@ view, artifact, recipe, task, and suggested follow-up handles as JSON. It does
 not read referenced Markdown/JSON/PNG files, parse report text, store artifact
 bytes, or execute query recipes.
 
+For a maintained local smoke route, run
+`python examples/analysis-packet-manifest-smoke.py`; it creates a reviewed
+source table, writes a packet manifest with logical views, artifacts, query
+recipes, and tasks, applies the manifest to the existing capsule, and inspects
+the packet through context slices and logical-view query context.
+
 ## Inputs
 
 Required fields:
