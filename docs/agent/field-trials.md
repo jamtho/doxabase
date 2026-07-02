@@ -4790,9 +4790,9 @@ few useful gaps:
   relationship helpers accept `rc:`/full-IRI class aliases. The remaining
   export safety gap was receiver visibility for deliberately invalid diagnostic
   handoffs: importing such a handoff now warns about the failed export
-  validation and puts a receiver-side `validate_graph` action before recovery
-  or mutation actions. The same wave identified source-view caveat rollup in
-  `describe_analysis_view` as a later useful analysis-packet refinement.
+  validation and gates recovery or mutation actions behind a receiver-side
+  `validate_graph` action. The same wave identified source-view caveat rollup
+  in `describe_analysis_view` as a later useful analysis-packet refinement.
 - An analysis-view caveat-rollup trial confirmed the Enron-style packet route
   can model parent/child logical populations, but child views did not expose
   caveats attached to parent/source views. `describe_analysis_view` now keeps

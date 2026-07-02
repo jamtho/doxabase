@@ -64694,6 +64694,14 @@ class DoxaBase:
                     ]
                     if action is not None
                 ]
+            elif invalid_handoff_validation_action is not None:
+                recovery_plan = (
+                    self._import_handoff_bundle_validation_gated_recovery_plan(
+                        recovery_plan,
+                        invalid_handoff_validation_action,
+                    )
+                )
+                suggested_next_actions = [invalid_handoff_validation_action]
             elif (
                 recovery_plan.mutation_allowed_after
                 == "handoff_preflight_required_before_mutation"
@@ -64738,6 +64746,11 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             privacy_review_required_before_recovery=(
                 privacy_review_required_before_recovery and not dry_run
+            ),
+            validation_review_required_before_recovery=(
+                invalid_handoff_validation_action is not None
+                and not privacy_review_required_before_recovery
+                and not dry_run
             ),
         )
 
@@ -64785,6 +64798,7 @@ class DoxaBase:
         recovery_plan: StagedRevisionRecoveryPlan | None,
         suggested_next_actions: list[SuggestedNextAction],
         privacy_review_required_before_recovery: bool = False,
+        validation_review_required_before_recovery: bool = False,
     ) -> HandoffBundleRecoverySummary:
         snapshot_evidence = self._handoff_recovery_summary_snapshot_evidence(
             snapshot_evidence,
@@ -64814,6 +64828,8 @@ class DoxaBase:
         )
         if privacy_review_required_before_recovery:
             recommended_next_step = "review_handoff_privacy_before_recovery"
+        elif validation_review_required_before_recovery:
+            recommended_next_step = "review_handoff_validation_before_recovery"
         elif recovery_preflight_required:
             recommended_next_step = (
                 "complete_handoff_preflight_before_recovery_mutation"
@@ -64876,6 +64892,7 @@ class DoxaBase:
         first_mutation_action = None
         if (
             not privacy_review_required_before_recovery
+            and not validation_review_required_before_recovery
             and not recovery_preflight_required
             and not imported_session_continuation_required
             and not receiver_session_start_required
@@ -64890,6 +64907,15 @@ class DoxaBase:
             )
             first_safe_action_source = (
                 "handoff_import_privacy_review"
+                if first_safe_action is not None
+                else None
+            )
+        elif validation_review_required_before_recovery:
+            first_safe_action = (
+                suggested_next_actions[0] if suggested_next_actions else None
+            )
+            first_safe_action_source = (
+                "handoff_import_validation_review"
                 if first_safe_action is not None
                 else None
             )
@@ -64974,6 +65000,12 @@ class DoxaBase:
                 "artifact terms; run the suggested export_preflight before "
                 f"following recovery or mutation actions. {note}"
             )
+        elif validation_review_required_before_recovery:
+            note = (
+                "The imported handoff manifest records failed export "
+                "validation; run the suggested validate_graph review before "
+                f"following recovery or mutation actions. {note}"
+            )
         elif imported_session_continuation_required:
             note = (
                 "Continue the imported source recovery session before following "
@@ -65032,6 +65064,7 @@ class DoxaBase:
             first_mutation_frontier_item=(
                 None
                 if privacy_review_required_before_recovery
+                or validation_review_required_before_recovery
                 or recovery_preflight_required
                 or imported_session_continuation_required
                 or receiver_session_start_required
@@ -65288,6 +65321,135 @@ class DoxaBase:
                 *redacted_plan.warnings,
             ],
             note=gated_note(redacted_plan.note),
+        )
+
+    def _import_handoff_bundle_validation_gated_recovery_plan(
+        self,
+        recovery_plan: StagedRevisionRecoveryPlan,
+        validation_action: SuggestedNextAction,
+    ) -> StagedRevisionRecoveryPlan:
+        validation_calls = (
+            [validation_action.call] if validation_action.call else []
+        )
+        validation_note = (
+            "Imported handoff validation review is required before following "
+            "nested recovery or mutation actions."
+        )
+
+        def gated_note(note: str) -> str:
+            return f"{validation_note} {note}"
+
+        def gated_batch_item(
+            item: StagedGraphRevisionBatchRestageItem,
+        ) -> StagedGraphRevisionBatchRestageItem:
+            return replace(
+                item,
+                next_action_after=None,
+                next_action_queue_item_after=None,
+                suggested_next_actions_after=[validation_action],
+                note=gated_note(item.note),
+            )
+
+        def gated_lane(
+            lane: StagedRevisionRecoveryLane,
+        ) -> StagedRevisionRecoveryLane:
+            return replace(
+                lane,
+                next_action=None,
+                next_action_queue_item=None,
+                repair_draft=None,
+                repair_draft_deferred_reason=(
+                    "handoff_import_validation_review_required"
+                ),
+                suggested_next_actions=[validation_action],
+                suggested_next_calls=validation_calls,
+                batch_item=gated_batch_item(lane.batch_item),
+                note=gated_note(lane.note),
+            )
+
+        def gated_summary(
+            summary: StagedGraphRevisionExportSummary,
+        ) -> StagedGraphRevisionExportSummary:
+            return replace(
+                summary,
+                next_action=None,
+                suggested_next_actions=[validation_action],
+                suggested_next_calls=validation_calls,
+            )
+
+        bundle_summary = recovery_plan.bundle_summary
+        if bundle_summary is not None:
+            bundle_summary = replace(
+                bundle_summary,
+                review_sequence=[],
+                next_action_queue={},
+                next_action_queue_items=[],
+                next_action_queue_item_counts={},
+                mutation_frontier_iris=[],
+                warnings=[
+                    validation_note,
+                    *bundle_summary.warnings,
+                ],
+            )
+
+        validation_step_revision_iris = (
+            self._suggested_action_revision_iris(validation_action)
+            or list(recovery_plan.processed_revision_iris)
+        )
+        validation_steps = [
+            self._staged_recovery_unattended_step(
+                step_kind="review_handoff_validation",
+                label="Review handoff validation failures",
+                action=validation_action,
+                can_run_now=True,
+                prerequisite=None,
+                mutates=False,
+                requires_replan_after_completion=True,
+                stop_reason="rerun_plan_after_handoff_validation_review",
+                revision_iris=validation_step_revision_iris,
+                source_revision_iris=list(recovery_plan.processed_revision_iris),
+                target_iris=[],
+                note=(
+                    "Run this validation review before following imported "
+                    "recovery or mutation actions, then rerun the recovery "
+                    "plan."
+                ),
+            )
+        ]
+
+        return replace(
+            recovery_plan,
+            lanes=[gated_lane(lane) for lane in recovery_plan.lanes],
+            next_action_queue={},
+            next_action_queue_items=[],
+            next_action_queue_item_counts={},
+            mutation_frontier_iris=[],
+            mutation_frontier_items=[],
+            first_mutation_action=None,
+            first_mutation_call=None,
+            first_safe_review_or_mutation_action=validation_action,
+            first_safe_review_or_mutation_call=validation_action.call,
+            first_safe_review_or_mutation_source="handoff_import_validation_review",
+            helper_mutation_frontier_actions=[],
+            helper_mutation_frontier_calls=[],
+            mutation_allowed_after=(
+                "handoff_import_validation_review_required_before_recovery"
+            ),
+            blocking_preflight_actions=[validation_action],
+            blocking_preflight_calls=validation_calls,
+            recommended_unattended_steps=validation_steps,
+            revision_summaries=[
+                gated_summary(summary)
+                for summary in recovery_plan.revision_summaries
+            ],
+            bundle_summary=bundle_summary,
+            suggested_next_actions=[validation_action],
+            suggested_next_calls=validation_calls,
+            warnings=[
+                validation_note,
+                *recovery_plan.warnings,
+            ],
+            note=gated_note(recovery_plan.note),
         )
 
     @staticmethod
@@ -65700,7 +65862,7 @@ class DoxaBase:
     def _import_handoff_bundle_validation_review_action(
         self,
         manifest: MappingABC[str, Any],
-    ) -> SuggestedNextAction | None:
+    ) -> EffectAnnotatedSuggestedNextAction | None:
         validation_scope = self._handoff_manifest_invalid_validation_scope(manifest)
         if validation_scope is None:
             return None
@@ -65712,17 +65874,15 @@ class DoxaBase:
             "scope": validation_scope,
             "limit_results": limit_results,
         }
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Inspect imported handoff validation failures",
             tool_name="validate_graph",
-            mcp_tool_name="doxabase.validate_graph",
             arguments=arguments,
             reason=(
                 "The imported handoff manifest records that export validation "
                 "failed for this graph scope. Inspect receiver-side SHACL "
                 "diagnostics before following recovery or mutation actions."
             ),
-            call=self._suggested_call_string("validate_graph", arguments),
         )
 
     def _import_handoff_bundle_privacy_review_action(

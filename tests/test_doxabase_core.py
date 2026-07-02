@@ -3370,6 +3370,142 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert fake_secret not in json.dumps(to_dict(imported))
 
 
+def test_import_handoff_bundle_gates_invalid_manifest_recovery_actions(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    source.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation intentionally keeps the handoff invalid." .
+        }
+        """
+    )
+    staged = source.stage_graph_revision(
+        summary="Stage invalid diagnostic handoff receiver probe",
+        rationale="Create a recoverable staged row in an invalid diagnostic handoff.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:InvalidHandoffImportProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "invalid-project-handoff.trig"
+    snapshot_path = tmp_path / "invalid-revision-snapshots.json"
+    manifest_path = tmp_path / "invalid-handoff-manifest.json"
+    exported = source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[staged.revision_iri],
+        fail_on_invalid=False,
+    )
+    assert exported.would_block_invalid_export is True
+    assert exported.validation_conforms is False
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(manifest_path)
+
+    assert imported.recovery_plan is not None
+    assert imported.recovery_plan.processed_revision_iris == [staged.revision_iri]
+    assert [action.tool_name for action in imported.suggested_next_actions] == [
+        "validate_graph"
+    ]
+    validation_action = imported.suggested_next_actions[0]
+    assert validation_action.mutation_scope == "none"
+    assert validation_action.mutates_project_graph is False
+    assert validation_action.writes_history is False
+    assert validation_action.writes_files is False
+    assert validation_action.writes_storage is False
+    assert validation_action.arguments == {
+        "scope": "all",
+        "limit_results": min(max(exported.validation_result_count, 20), 100),
+    }
+    followup = receiver.validate_graph(**validation_action.arguments)
+    assert followup.conforms is False
+    assert followup.result_count == exported.validation_result_count
+    assert imported.recovery_summary.recommended_next_step == (
+        "review_handoff_validation_before_recovery"
+    )
+    assert imported.recovery_summary.first_suggested_next_action == (
+        validation_action
+    )
+    assert (
+        imported.recovery_summary.first_safe_review_or_mutation_action
+        == validation_action
+    )
+    assert imported.recovery_summary.first_safe_review_or_mutation_source == (
+        "handoff_import_validation_review"
+    )
+    assert imported.recovery_summary.first_mutation_action is None
+    assert imported.recovery_summary.first_mutation_frontier_item is None
+    assert imported.recovery_plan.mutation_allowed_after == (
+        "handoff_import_validation_review_required_before_recovery"
+    )
+    assert imported.recovery_plan.suggested_next_actions == [validation_action]
+    assert imported.recovery_plan.blocking_preflight_actions == [validation_action]
+    assert [
+        step.step_kind
+        for step in imported.recovery_plan.recommended_unattended_steps
+    ] == ["review_handoff_validation"]
+    validation_step = imported.recovery_plan.recommended_unattended_steps[0]
+    assert validation_step.action == validation_action
+    assert validation_step.can_run_now is True
+    assert validation_step.mutates is False
+    assert validation_step.requires_replan_after_completion is True
+    assert validation_step.stop_reason == (
+        "rerun_plan_after_handoff_validation_review"
+    )
+    assert imported.recovery_plan.first_mutation_action is None
+    assert imported.recovery_plan.first_mutation_call is None
+    assert (
+        imported.recovery_plan.first_safe_review_or_mutation_action
+        == validation_action
+    )
+    assert imported.recovery_plan.first_safe_review_or_mutation_call == (
+        validation_action.call
+    )
+    assert imported.recovery_plan.first_safe_review_or_mutation_source == (
+        "handoff_import_validation_review"
+    )
+    assert imported.recovery_plan.mutation_frontier_iris == []
+    assert imported.recovery_plan.mutation_frontier_items == []
+    assert imported.recovery_plan.next_action_queue_items == []
+    assert all(
+        lane.next_action is None
+        and lane.next_action_queue_item is None
+        and lane.suggested_next_actions == [validation_action]
+        for lane in imported.recovery_plan.lanes
+    )
+    assert all(
+        summary.next_action is None
+        and summary.suggested_next_actions == [validation_action]
+        for summary in imported.recovery_plan.revision_summaries
+    )
+    assert "start_staged_revision_recovery_session" not in [
+        action.tool_name for action in imported.suggested_next_actions
+    ]
+    assert "apply_staged_revision" not in json.dumps(
+        to_jsonable(imported.recovery_plan),
+        sort_keys=True,
+    )
+    assert any(
+        "failed export validation" in warning
+        for warning in imported.warnings
+    )
+
+
 def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapshots(
     tmp_path: Path,
 ) -> None:

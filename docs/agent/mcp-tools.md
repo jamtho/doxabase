@@ -2930,7 +2930,8 @@ value such as `run_import_handoff_bundle`,
 `start_receiver_local_recovery_session`,
 `follow_recovery_plan_mutation_frontier`,
 `complete_handoff_preflight_before_recovery_mutation`,
-`review_handoff_privacy_before_recovery`, or `resume_project_frontier`.
+`review_handoff_privacy_before_recovery`,
+`review_handoff_validation_before_recovery`, or `resume_project_frontier`.
 When the manifest records nonzero `sensitive_literal_count`, the import can
 still be useful locally, but its top-level next action is a redacted
 `doxabase.export_preflight(export_kind="handoff_bundle", ...)` privacy review
@@ -2940,6 +2941,14 @@ review is explicit. That privacy-review action carries effect metadata with
 `recovery_plan` action surfaces are also privacy-gated in that case: lane
 actions, revision-summary actions, mutation frontier items, and plan suggested
 actions point back to the same preflight instead of exposing apply/restage calls.
+When the manifest records failed export validation, the import can still be
+useful for local diagnostics, but its top-level next action is
+`doxabase.validate_graph(...)`. Recovery/mutation actions are not promoted as
+continuations until validation review is explicit: nested lanes, revision
+summaries, mutation frontier items, and plan suggestions point back to the same
+validation action, which is effect-annotated as read-only with
+`mutation_scope="none"` and all write flags false. Privacy review takes
+precedence if both privacy and validation gates are present.
 When a manifest revision resolves to a current staged successor that lacks exact
 snapshot rows, the import promotes the blocking `import_revision_snapshots` or
 preflight action ahead of recovery-session setup and suppresses

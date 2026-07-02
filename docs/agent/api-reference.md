@@ -118,7 +118,10 @@ Graph/TriG/handoff exports also validate the selected live graph scope by
 default and raise before writing when SHACL does not conform. Pass
 `fail_on_invalid=False` only for a deliberately reviewed invalid diagnostic
 artifact; results include validation scope, conformance, result count, and
-diagnostics.
+diagnostics. A receiver can still import such a diagnostic handoff locally, but
+`import_handoff_bundle()` gates recovery and mutation actions behind a
+receiver-side `validate_graph` review until the agent explicitly reviews the
+invalid graph state.
 TriG workflow/review exports also include a non-privacy `warnings` entry saying
 they are review context only and omit history plus revision snapshot rows. Use
 `export_context_slice()` when a handoff should include only the selected

@@ -2777,6 +2777,99 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert after_snapshots["exact_snapshot_graph_roles"] == ["map"]
 
 
+def test_import_handoff_bundle_tool_gates_invalid_manifest_recovery(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    source.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation intentionally keeps the handoff invalid." .
+        }
+        """
+    )
+    staged = stage_graph_revision_tool(
+        source,
+        summary="Stage invalid handoff receiver MCP probe",
+        rationale="Create a recoverable staged row in an invalid diagnostic handoff.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:InvalidMcpHandoffImportProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "invalid-project-handoff.trig"
+    snapshot_path = tmp_path / "invalid-revision-snapshots.json"
+    manifest_path = tmp_path / "invalid-handoff-manifest.json"
+    exported = export_handoff_bundle_tool(
+        source,
+        trig_path=str(trig_path),
+        revision_snapshot_path=str(snapshot_path),
+        manifest_path=str(manifest_path),
+        revision_iris=[staged["revision_iri"]],
+        fail_on_invalid=False,
+    )
+    assert exported["would_block_invalid_export"] is True
+    assert exported["validation_conforms"] is False
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = import_handoff_bundle_tool(
+        receiver,
+        manifest_path=str(manifest_path),
+    )
+
+    assert imported["recovery_plan"]["processed_revision_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert [action["tool_name"] for action in imported["suggested_next_actions"]] == [
+        "validate_graph"
+    ]
+    validation_action = imported["suggested_next_actions"][0]
+    assert validation_action["mutation_scope"] == "none"
+    assert validation_action["mutates_project_graph"] is False
+    assert validation_action["writes_history"] is False
+    assert validation_action["writes_files"] is False
+    assert validation_action["writes_storage"] is False
+    assert imported["recovery_summary"]["recommended_next_step"] == (
+        "review_handoff_validation_before_recovery"
+    )
+    assert imported["recovery_summary"]["first_mutation_action"] is None
+    assert imported["recovery_summary"]["first_mutation_frontier_item"] is None
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ] == validation_action
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_source"
+    ] == "handoff_import_validation_review"
+    assert imported["recovery_plan"]["mutation_allowed_after"] == (
+        "handoff_import_validation_review_required_before_recovery"
+    )
+    assert imported["recovery_plan"]["next_action_queue_items"] == []
+    assert imported["recovery_plan"]["mutation_frontier_items"] == []
+    assert [
+        step["step_kind"]
+        for step in imported["recovery_plan"]["recommended_unattended_steps"]
+    ] == ["review_handoff_validation"]
+    assert imported["recovery_plan"]["recommended_unattended_steps"][0][
+        "action"
+    ] == validation_action
+    assert "apply_staged_revision" not in json.dumps(
+        imported["recovery_plan"],
+        sort_keys=True,
+    )
+
+
 def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_session(
     tmp_path: Path,
 ) -> None:

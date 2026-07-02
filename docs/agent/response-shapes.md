@@ -6026,8 +6026,14 @@ all write flags false. If the nested `recovery_plan` is present, it carries the
 same privacy review as `first_safe_review_or_mutation_action`, sets
 `first_safe_review_or_mutation_source="handoff_import_privacy_review"`, and
 clears `first_mutation_action` / `mutation_frontier_items` while the gate is
-active. If the
-recovery plan resolves a manifest revision to a current successor whose exact
+active. If the manifest records failed export validation and no privacy gate
+takes precedence, the real import loads the local diagnostic handoff but sets
+`recommended_next_step="review_handoff_validation_before_recovery"`, makes the
+top-level `first_suggested_next_action` and
+`first_safe_review_or_mutation_action` a read-only `validate_graph` review, sets
+`first_safe_review_or_mutation_source="handoff_import_validation_review"`, and
+clears nested mutation/frontier actions until validation review is explicit. If
+the recovery plan resolves a manifest revision to a current successor whose exact
 snapshot rows are missing, summary snapshot completeness is computed over both
 manifest revisions and resolved recovery targets. In that case
 `recommended_next_step="complete_handoff_preflight_before_recovery_mutation"`,
