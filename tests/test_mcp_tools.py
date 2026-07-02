@@ -2615,6 +2615,33 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     ]["tool_name"] == "describe_staged_revision_recovery_session"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
+    ]["mutation_scope"] == "none"
+    assert (
+        manifest_import["recovery_summary"][
+            "first_safe_review_or_mutation_action"
+        ]["mutates_project_graph"]
+        is False
+    )
+    assert (
+        manifest_import["recovery_summary"][
+            "first_safe_review_or_mutation_action"
+        ]["writes_history"]
+        is False
+    )
+    assert (
+        manifest_import["recovery_summary"][
+            "first_safe_review_or_mutation_action"
+        ]["writes_files"]
+        is False
+    )
+    assert (
+        manifest_import["recovery_summary"][
+            "first_safe_review_or_mutation_action"
+        ]["writes_storage"]
+        is False
+    )
+    assert manifest_import["recovery_summary"][
+        "first_safe_review_or_mutation_action"
     ]["arguments"]["session_iri"] == manifest_import[
         "matching_recovery_session_iris"
     ][0]
@@ -2659,6 +2686,14 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision_recovery_session"
     )
+    assert manifest_import["suggested_next_actions"][0]["mutation_scope"] == "none"
+    assert (
+        manifest_import["suggested_next_actions"][0]["mutates_project_graph"]
+        is False
+    )
+    assert manifest_import["suggested_next_actions"][0]["writes_history"] is False
+    assert manifest_import["suggested_next_actions"][0]["writes_files"] is False
+    assert manifest_import["suggested_next_actions"][0]["writes_storage"] is False
     assert manifest_import["suggested_next_actions"][0]["arguments"] == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
@@ -2776,6 +2811,33 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     ]["tool_name"] == "start_staged_revision_recovery_session"
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
+    ]["mutation_scope"] == "history"
+    assert (
+        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
+            "mutates_project_graph"
+        ]
+        is False
+    )
+    assert (
+        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
+            "writes_history"
+        ]
+        is True
+    )
+    assert (
+        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
+            "writes_files"
+        ]
+        is False
+    )
+    assert (
+        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
+            "writes_storage"
+        ]
+        is False
+    )
+    assert imported["recovery_summary"][
+        "first_safe_review_or_mutation_action"
     ]["arguments"]["revision_iris"] == [staged["revision_iri"]]
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_source"
@@ -2794,6 +2856,11 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     ]
     action = imported["suggested_next_actions"][0]
     assert action["tool_name"] == "start_staged_revision_recovery_session"
+    assert action["mutation_scope"] == "history"
+    assert action["mutates_project_graph"] is False
+    assert action["writes_history"] is True
+    assert action["writes_files"] is False
+    assert action["writes_storage"] is False
     assert action["arguments"]["revision_iris"] == [staged["revision_iri"]]
     assert action["arguments"]["handoff_manifest_path"] == str(manifest_path)
     assert action["arguments"]["current_staged_work_only"] is False

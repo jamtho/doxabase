@@ -5886,18 +5886,28 @@ summary.revision_count
 summary.snapshot_evidence_complete
 summary.snapshot_evidence_status_counts
 summary.incomplete_snapshot_revision_iris
+summary.trig_total_imported
+summary.imported_snapshot_count
+summary.skipped_snapshot_count
 summary.imported_recovery_session_count
 summary.matching_recovery_session_count
+summary.matching_recovery_session_iris
+summary.recovery_plan_available
 summary.recovery_lane_counts
 summary.recovery_next_action_queue_item_counts
 summary.mutation_frontier_iris
+summary.mutation_frontier_count
 summary.first_mutation_frontier_item
 summary.first_mutation_action
+summary.first_safe_review_or_mutation_action
+summary.first_safe_review_or_mutation_call
+summary.first_safe_review_or_mutation_source
 summary.profile_route_revision_count
 summary.profile_route_group_count
 summary.profile_route_keys
 summary.first_suggested_next_action
 summary.recommended_next_step
+summary.note
 ```
 
 It is a compact report over the same imported manifest, snapshot evidence,
@@ -5937,13 +5947,17 @@ frontier counts visible but suppresses `first_mutation_action` and points
 `first_safe_review_or_mutation_action` at
 `describe_staged_revision_recovery_session`. Continue the source session first,
 then rerun receiver-local recovery planning before applying any exposed
-frontier row.
+frontier row. That continuation action is effect-annotated with
+`mutation_scope="none"` and all write flags false.
 When no matching imported source session exists but the import prepends a
 `start_staged_revision_recovery_session` action,
 `recommended_next_step="start_receiver_local_recovery_session"`. The summary
 keeps mutation-frontier counts visible, but
 `first_safe_review_or_mutation_action` points at the session starter and
 `first_mutation_action` stays empty until the receiver-local session exists.
+That session-starter action is effect-annotated with
+`mutation_scope="history"`, `writes_history=True`, and project graph/file/storage
+write flags false.
 
 `doxabase.import_trig(path, replace=False)` returns:
 

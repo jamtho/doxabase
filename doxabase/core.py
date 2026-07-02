@@ -339,6 +339,7 @@ STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES = frozenset(
         "record_staged_revision_review_decision",
         "restage_staged_revision",
         "restage_staged_revisions",
+        "start_staged_revision_recovery_session",
         "stage_graph_revision",
         "stage_map_assertion_change",
         "stage_pattern_promotion",
@@ -63088,20 +63089,15 @@ class DoxaBase:
             arguments["include_drafts"] = include_drafts
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Continue imported recovery session",
             tool_name="describe_staged_revision_recovery_session",
-            mcp_tool_name="doxabase.describe_staged_revision_recovery_session",
             arguments=arguments,
             reason=(
                 "The handoff imported a persisted staged-revision recovery "
                 "session whose source revisions overlap the manifest revisions. "
                 "Describe it before starting a receiver-local session so source "
                 "session provenance and live recovery state stay connected."
-            ),
-            call=self._suggested_call_string(
-                "describe_staged_revision_recovery_session",
-                arguments,
             ),
         )
 
@@ -63124,20 +63120,15 @@ class DoxaBase:
             arguments["handoff_manifest_path"] = manifest_path
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Start receiver-local recovery session",
             tool_name="start_staged_revision_recovery_session",
-            mcp_tool_name="doxabase.start_staged_revision_recovery_session",
             arguments=arguments,
             reason=(
                 "No matching imported recovery session was found. Persist a "
                 "receiver-local session for the imported manifest revisions so "
                 "multi-step restage, repair, and apply work can be replanned "
                 "from one stable session IRI."
-            ),
-            call=self._suggested_call_string(
-                "start_staged_revision_recovery_session",
-                arguments,
             ),
         )
 

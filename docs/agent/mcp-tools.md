@@ -2878,14 +2878,17 @@ If the imported history already contains a staged-revision recovery session for
 the manifest revisions, the result exposes `imported_recovery_session_iris` and
 `matching_recovery_session_iris`, and the first suggested action is
 `doxabase.describe_staged_revision_recovery_session`. Prefer that imported
-session over starting a duplicate receiver-local one. When no matching imported
-session exists, the import prepends a
+session over starting a duplicate receiver-local one. That continuation action
+is effect-annotated as read-only with `mutation_scope="none"` and false write
+flags. When no matching imported session exists, the import prepends a
 `doxabase.start_staged_revision_recovery_session` action for the processed
 revision IRIs before the direct recovery-plan actions. In that receiver-local
 session case, `recovery_summary.recommended_next_step` is
 `start_receiver_local_recovery_session`, the first safe action is the session
 starter, and direct first-mutation shortcuts are suppressed until the session is
-created.
+created. The session-starter action is effect-annotated as a history write with
+`mutation_scope="history"`, `writes_history=true`, and no project graph/file/
+storage writes.
 
 `doxabase.export_graph`
 
