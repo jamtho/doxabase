@@ -4611,6 +4611,13 @@ few useful gaps:
   `source_query_context_readiness` / `source_query_context_issue_codes` fields,
   and S3 storage-owned path templates should usually be relative to the recorded
   `key_prefix` rather than repeating it.
+- A staged recovery-session trial confirmed handoff preflight, batch restage,
+  one-at-a-time apply, and semantic alternative review all work across exported
+  sessions. The exposed friction was first-safe ordering after live replanning:
+  an already-effective informational source could outrank the semantic-gated
+  mutation frontier in an explicit session. Recovery plans now prefer the
+  semantic frontier's read-only review action over unrelated informational rows,
+  reporting `first_safe_review_or_mutation_source="semantic_frontier_review"`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

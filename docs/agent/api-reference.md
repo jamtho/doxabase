@@ -2016,8 +2016,12 @@ populated only when no mutation-frontier item is semantic-review-gated. If the
 frontier is mixed, with one reviewed semantic choice and one mechanically
 restageable sibling, `first_mutation_action` stays empty while
 `mutation_frontier_items[]` preserves each post-review action and reason. The
-safe first action prefers any earlier read-only or `mutation_scope="none"`
-review suggestion before falling back to an ungated mutation.
+safe first action prefers batch restage dry-runs first, then a read-only review
+for a semantic-gated mutation-frontier target before unrelated informational
+rows. That targeted route reports
+`first_safe_review_or_mutation_source="semantic_frontier_review"`. If neither
+route is available, the safe action falls back to another read-only /
+`mutation_scope="none"` review suggestion or an ungated mutation.
 For multi-step or imported recovery work without a matching imported source
 session, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,

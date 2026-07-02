@@ -2423,11 +2423,14 @@ Use `first_safe_review_or_mutation_action` / `first_safe_review_or_mutation_call
 when an unattended caller needs one canonical first hop: while handoff preflight
 is blocking, these fields point at the first blocking import/preflight action
 and `first_mutation_action` is empty; after the preflight clears, they point at
-an earlier read-only or `mutation_scope="none"` review suggestion when present,
-otherwise at the first mutation-frontier action. If every frontier item is still
-gated by `requires_semantic_review_before_mutation`, `first_mutation_action`
-stays empty while `mutation_frontier_items[]` preserves the post-review action
-and reason.
+batch restage dry-runs first, then a read-only review for a semantic-gated
+mutation-frontier target before unrelated informational rows, otherwise at
+another read-only / `mutation_scope="none"` review suggestion or the first
+mutation-frontier action. Semantic-frontier review routes use
+`first_safe_review_or_mutation_source="semantic_frontier_review"`. If every
+frontier item is still gated by `requires_semantic_review_before_mutation`,
+`first_mutation_action` stays empty while `mutation_frontier_items[]` preserves
+the post-review action and reason.
 Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
 `suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
 `writes_history`, `writes_files`, and `writes_storage`; use those fields before

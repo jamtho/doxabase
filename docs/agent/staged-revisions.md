@@ -383,7 +383,11 @@ Compact cookbook for a mixed stale queue:
    mutation-frontier item is semantic-review-gated; use
    `first_safe_review_or_mutation_action` first, then inspect
    `mutation_frontier_items[]` for the reviewed restage/apply actions that
-   remain available after that gate.
+   remain available after that gate. When a semantic-gated frontier row and an
+   unrelated informational row are both present, the first safe action targets
+   the semantic frontier review and reports
+   `first_safe_review_or_mutation_source="semantic_frontier_review"`; batch
+   restage dry-runs and handoff preflight still keep their earlier precedence.
    When a lane has `shared_context_applies=true`, read
    `shared_context_graphs` and the plan or export
    `bundle_summary.shared_context_*` fields before mutating it; shared staged

@@ -46311,6 +46311,100 @@ class DoxaBase:
         return action.tool_name in STAGED_RECOVERY_MUTATING_TOOL_NAMES
 
     @staticmethod
+    def _staged_recovery_action_is_safe_review(
+        action: SuggestedNextAction | RevisionNextAction | None,
+    ) -> bool:
+        if action is None:
+            return False
+        if getattr(action, "mutation_scope", None) == "none":
+            return True
+        return not DoxaBase._staged_recovery_action_is_mutating(action)
+
+    @staticmethod
+    def _staged_recovery_action_is_batch_restage_dry_run(
+        action: SuggestedNextAction | RevisionNextAction | None,
+    ) -> bool:
+        return (
+            action is not None
+            and action.tool_name == "restage_staged_revisions"
+            and action.arguments.get("dry_run") is True
+            and DoxaBase._staged_recovery_action_is_safe_review(action)
+        )
+
+    @staticmethod
+    def _suggested_action_references_any_revision(
+        action: SuggestedNextAction,
+        revision_iris: set[str],
+    ) -> bool:
+        for key in ("iri", "revision_iri"):
+            value = action.arguments.get(key)
+            if isinstance(value, str) and value in revision_iris:
+                return True
+        for key in (
+            "revision_iris",
+            "source_revision_iris",
+            "missing_revision_iris",
+        ):
+            values = action.arguments.get(key)
+            if not isinstance(values, list):
+                continue
+            if any(
+                isinstance(value, str) and value in revision_iris
+                for value in values
+            ):
+                return True
+        return False
+
+    @staticmethod
+    def _staged_recovery_semantic_frontier_review_action(
+        mutation_frontier_items: Iterable[StagedRevisionMutationFrontierItem],
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> SuggestedNextAction | None:
+        review_tool_order = {
+            "describe_staged_revision": 0,
+            "describe_revision_lineage": 1,
+            "export_staged_revision": 2,
+            "export_staged_revisions": 3,
+            "describe_graph_revision": 4,
+            "describe_applied_revision_diff": 5,
+            "draft_staged_revision_rebase": 6,
+        }
+        semantic_target_iris: list[str] = []
+        for item in mutation_frontier_items:
+            if not item.requires_semantic_review_before_mutation:
+                continue
+            for value in (
+                item.target_iri,
+                *item.row_iris,
+                *item.source_revision_iris,
+                item.alternative_set_source_iri,
+                *item.alternative_set_iris,
+                *item.alternative_applied_source_iris,
+                *item.alternative_applied_revision_iris,
+            ):
+                if value is not None and value not in semantic_target_iris:
+                    semantic_target_iris.append(value)
+        if not semantic_target_iris:
+            return None
+
+        semantic_target_set = set(semantic_target_iris)
+        matching_actions = [
+            action
+            for action in suggested_next_actions
+            if action.tool_name in review_tool_order
+            and DoxaBase._staged_recovery_action_is_safe_review(action)
+            and DoxaBase._suggested_action_references_any_revision(
+                action,
+                semantic_target_set,
+            )
+        ]
+        return min(
+            matching_actions,
+            key=lambda action: review_tool_order[action.tool_name],
+            default=None,
+        )
+
+    @staticmethod
     def _staged_recovery_repair_inspection_required(
         lanes: Iterable[StagedRevisionRecoveryLane],
     ) -> bool:
@@ -46419,13 +46513,7 @@ class DoxaBase:
             (
                 action
                 for action in suggested_next_actions
-                if (
-                    not DoxaBase._staged_recovery_action_is_mutating(action)
-                    or (
-                        isinstance(action, EffectAnnotatedSuggestedNextAction)
-                        and action.mutation_scope == "none"
-                    )
-                )
+                if DoxaBase._staged_recovery_action_is_safe_review(action)
             ),
             None,
         )
@@ -46436,6 +46524,20 @@ class DoxaBase:
             item.requires_semantic_review_before_mutation
             for item in mutation_frontier_items
         ):
+            semantic_review_action = (
+                DoxaBase._staged_recovery_semantic_frontier_review_action(
+                    mutation_frontier_items,
+                    suggested_next_actions,
+                )
+            )
+            if semantic_review_action is not None and (
+                first_safe_action is None
+                or not DoxaBase._staged_recovery_action_is_batch_restage_dry_run(
+                    first_safe_action
+                )
+            ):
+                first_safe_action = semantic_review_action
+                first_safe_source = "semantic_frontier_review"
             if first_safe_action is None and suggested_next_actions:
                 first_safe_action = suggested_next_actions[0]
                 first_safe_source = "suggested_next_action"

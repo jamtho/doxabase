@@ -9912,6 +9912,112 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_recovery_first_safe_action_prefers_semantic_frontier_over_informational(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    already_effective = "https://example.test/project#AlreadyEffective"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    event_source = db.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="Choose event-row framing for Orders.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+
+                    <{orders}> a ex:EventRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        validation_scope="all",
+    )
+    db.apply_staged_revision(event_source.revision_iri)
+    informational_source = db.stage_graph_revision(
+        summary="Stage already-effective table",
+        rationale="This staged source will already be current map state.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{already_effective}> a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(already_effective, label="Already effective")
+    semantic_alternative = db.stage_systematisation(
+        summary="Review aggregate row alternative",
+        intent=(
+            "Keep the aggregate-row alternative visible after the event-row "
+            "source was applied."
+        ),
+        anchors=[orders],
+        framings=[
+            {
+                "label": "Aggregate row alternative",
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+
+                    <{orders}> a ex:AggregateRow .
+                """,
+                "alternative_to": event_source.revision_iri,
+            }
+        ],
+        validation_scope="all",
+    )
+    semantic_iri = semantic_alternative.staged_revisions[0].revision_iri
+    revision_iris = [informational_source.revision_iri, semantic_iri]
+
+    plan = db.plan_staged_revision_recovery(
+        revision_iris,
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+
+    assert plan.lane_counts == {"informational": 1, "apply_after_review": 1}
+    assert plan.would_restage_revision_iris == []
+    assert plan.mutation_allowed_after == (
+        "semantic_review_required_before_mutation"
+    )
+    assert plan.first_mutation_action is None
+    assert plan.first_safe_review_or_mutation_action is not None
+    assert plan.first_safe_review_or_mutation_action.tool_name == (
+        "describe_staged_revision"
+    )
+    assert plan.first_safe_review_or_mutation_action.action_label == (
+        "Review semantic alternative"
+    )
+    assert plan.first_safe_review_or_mutation_action.arguments == {
+        "iri": semantic_iri
+    }
+    assert plan.first_safe_review_or_mutation_source == "semantic_frontier_review"
+
+    session = db.start_staged_revision_recovery_session(
+        revision_iris,
+        summary="Semantic frontier with informational source first",
+        current_staged_work_only=False,
+        drift_detail="exact",
+    )
+    described = db.describe_staged_revision_recovery_session(
+        session.session_iri,
+        drift_detail="exact",
+    )
+
+    assert described.current_plan.first_safe_review_or_mutation_action == (
+        plan.first_safe_review_or_mutation_action
+    )
+    assert described.current_plan.first_safe_review_or_mutation_source == (
+        "semantic_frontier_review"
+    )
+
+
 def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     tmp_path: Path,
 ) -> None:

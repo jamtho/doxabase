@@ -6986,9 +6986,12 @@ is semantic-review-gated; mixed plans with even one
 `first_mutation_action` empty so unattended scripts cannot skip the review lane.
 In those plans, `mutation_frontier_items[]` still preserves each post-review
 action, including ungated sibling restages. The first safe action points at an
-earlier read-only or
-`mutation_scope="none"` review suggestion when the plan offers one; otherwise it
-mirrors the first mutation-frontier action with
+earlier batch restage dry-run when available; otherwise it prefers a read-only
+review action for a semantic-gated mutation-frontier target before unrelated
+informational rows, with
+`first_safe_review_or_mutation_source="semantic_frontier_review"`. If neither
+is available, it uses another read-only / `mutation_scope="none"` review
+suggestion or mirrors the first mutation-frontier action with
 `first_safe_review_or_mutation_source="mutation_frontier"`.
 Staged-revision `next_action`, `first_safe_next_action`, and effect-annotated
 `suggested_next_actions` include `mutation_scope`, `mutates_project_graph`,
