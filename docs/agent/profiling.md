@@ -316,7 +316,10 @@ The returned `open_profile_review_lanes` list and Markdown
 a `direct_action` candidate in the bundle. A staged profile-map update may be
 included as `strong_support` or `related_support` for metric/type lanes, but
 those lanes remain open until their own direct promotion or assertion revision
-is staged.
+is staged. Remaining actions include a compact `target_detail`, and the
+Markdown table renders it as `Target / detail`, so a reviewer can see the
+concrete column, metric, observed type/value, scalar value, or assertion target
+without rerunning context first.
 After a metric promotion has been applied, a rerun may still show
 `project_metric_defined` actions for context inspection. Those routes are not
 open metric vocabulary work; `export_profile_insight_review_bundle` suppresses

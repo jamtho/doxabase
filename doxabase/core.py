@@ -112,6 +112,12 @@ SHAREABILITY_HINT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"(?i)(^|[\s'\"=:(])(?:~[/\\]|/(?:Users|home)/[^\s'\"<>]+|[A-Z]:\\Users\\[^\s'\"<>]+)"
         ),
     ),
+    (
+        "absolute_local_runtime_path",
+        re.compile(
+            r"(?i)(^|[\s'\"=:(])(?:file://)?/(?:tmp|var/tmp|private/tmp|work|workspace|workspaces)(?:[/?#]|$)[^\s'\"<>]*"
+        ),
+    ),
 )
 
 SHAREABILITY_HINT_MESSAGES: dict[str, str] = {
@@ -119,6 +125,12 @@ SHAREABILITY_HINT_MESSAGES: dict[str, str] = {
         "Selected export content contains an absolute local home/private path. "
         "This is not a credential match, but the artifact should stay local "
         "until a shareability review decides whether that path is appropriate."
+    ),
+    "absolute_local_runtime_path": (
+        "Selected export content contains an absolute local runtime/workspace "
+        "path. This is not a credential match, but the artifact should stay "
+        "local until a shareability review decides whether the receiver can "
+        "interpret or reproduce that path."
     ),
 }
 
@@ -1884,6 +1896,7 @@ class ProfileInsightOpenReviewAction:
     suggested_next_call: str | None
     source_origin: str | None
     source_summary: dict[str, Any]
+    target_detail: str | None
 
 
 @dataclass(frozen=True)
@@ -33226,6 +33239,68 @@ class DoxaBase:
                         observed_metric_iris,
                         observed_metric_iri,
                     )
+                if isinstance(advisory, ProfileMetricVocabularyAdvisory):
+                    metric_iris = source.setdefault("metric_iris", [])
+                    DoxaBase._append_unique(metric_iris, advisory.metric.iri)
+                    target_iris = source.setdefault("target_iris", [])
+                    if advisory.target is not None:
+                        DoxaBase._append_unique(target_iris, advisory.target.iri)
+                    observed_values = source.setdefault("observed_values", [])
+                    DoxaBase._append_unique(observed_values, advisory.value)
+                if isinstance(advisory, ProfileTypeFindingAdvisory):
+                    observed_column_iris = source.setdefault(
+                        "observed_column_iris",
+                        [],
+                    )
+                    DoxaBase._append_unique(
+                        observed_column_iris,
+                        advisory.observed_column.iri,
+                    )
+                    observed_column_names = source.setdefault(
+                        "observed_column_names",
+                        [],
+                    )
+                    if advisory.observed_column_name:
+                        DoxaBase._append_unique(
+                            observed_column_names,
+                            advisory.observed_column_name,
+                        )
+                    observed_physical_type_iris = source.setdefault(
+                        "observed_physical_type_iris",
+                        [],
+                    )
+                    if advisory.observed_physical_type is not None:
+                        DoxaBase._append_unique(
+                            observed_physical_type_iris,
+                            advisory.observed_physical_type.iri,
+                        )
+                    observed_value_type_iris = source.setdefault(
+                        "observed_value_type_iris",
+                        [],
+                    )
+                    if advisory.observed_value_type is not None:
+                        DoxaBase._append_unique(
+                            observed_value_type_iris,
+                            advisory.observed_value_type.iri,
+                        )
+                    current_physical_type_iris = source.setdefault(
+                        "current_physical_type_iris",
+                        [],
+                    )
+                    if advisory.current_physical_type is not None:
+                        DoxaBase._append_unique(
+                            current_physical_type_iris,
+                            advisory.current_physical_type.iri,
+                        )
+                    current_value_type_iris = source.setdefault(
+                        "current_value_type_iris",
+                        [],
+                    )
+                    if advisory.current_value_type is not None:
+                        DoxaBase._append_unique(
+                            current_value_type_iris,
+                            advisory.current_value_type.iri,
+                        )
                 pending_staged_promotion_iris = getattr(
                     advisory,
                     "pending_staged_promotion_iris",
@@ -33649,6 +33724,11 @@ class DoxaBase:
             source["duplicate_group_keys"] = [advisory.duplicate_group_key]
         if isinstance(advisory, ProfileMetricVocabularyAdvisory):
             source["observed_metric_iris"] = [advisory.observed_metric_iri]
+            source["metric_iris"] = [advisory.metric.iri]
+            source["target_iris"] = (
+                [advisory.target.iri] if advisory.target is not None else []
+            )
+            source["observed_values"] = [advisory.value]
             if advisory.pending_staged_promotion_iris:
                 source["pending_staged_promotion_iris"] = list(
                     advisory.pending_staged_promotion_iris
@@ -33657,6 +33737,32 @@ class DoxaBase:
                     advisory.pending_staged_promotion_iris
                 )
         if isinstance(advisory, ProfileTypeFindingAdvisory):
+            source["observed_column_iris"] = [advisory.observed_column.iri]
+            source["observed_column_names"] = (
+                [advisory.observed_column_name]
+                if advisory.observed_column_name
+                else []
+            )
+            source["observed_physical_type_iris"] = (
+                [advisory.observed_physical_type.iri]
+                if advisory.observed_physical_type is not None
+                else []
+            )
+            source["observed_value_type_iris"] = (
+                [advisory.observed_value_type.iri]
+                if advisory.observed_value_type is not None
+                else []
+            )
+            source["current_physical_type_iris"] = (
+                [advisory.current_physical_type.iri]
+                if advisory.current_physical_type is not None
+                else []
+            )
+            source["current_value_type_iris"] = (
+                [advisory.current_value_type.iri]
+                if advisory.current_value_type is not None
+                else []
+            )
             if advisory.pending_staged_promotion_iris:
                 source["pending_staged_promotion_iris"] = list(
                     advisory.pending_staged_promotion_iris
@@ -51104,7 +51210,7 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=bool(privacy_warnings),
             )
         )
-        shareability_hints = self._shareability_hints_for_text(data)
+        shareability_hints = self._shareability_hints_for_markdown(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -52439,6 +52545,12 @@ class DoxaBase:
                     source
                 )
             ),
+            target_detail=(
+                DoxaBase._profile_insight_open_review_action_target_detail(
+                    source,
+                    arguments,
+                )
+            ),
         )
 
     @staticmethod
@@ -52459,6 +52571,104 @@ class DoxaBase:
                 continue
             summary[key] = to_jsonable(value)
         return summary
+
+    @staticmethod
+    def _compact_profile_review_detail_value(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        for prefix, namespace in sorted(
+            PREFIXES.items(),
+            key=lambda item: len(item[1]),
+            reverse=True,
+        ):
+            if text.startswith(namespace):
+                local = text[len(namespace) :]
+                if local and re.match(r"^[A-Za-z_][A-Za-z0-9._-]*$", local):
+                    return f"{prefix}:{local}"
+        if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", text):
+            local = re.split(r"[/#]", text.rstrip("/#"))[-1]
+            return local or text
+        return text
+
+    @staticmethod
+    def _compact_profile_review_detail_values(value: Any) -> list[str]:
+        values = DoxaBase._string_values_from_any(value)
+        compacted: list[str] = []
+        for item in values:
+            compact = DoxaBase._compact_profile_review_detail_value(item)
+            if compact is not None:
+                DoxaBase._append_unique(compacted, compact)
+        return compacted
+
+    @staticmethod
+    def _profile_review_detail_part(label: str, values: Iterable[str]) -> str | None:
+        value_list = list(values)
+        if not value_list:
+            return None
+        return f"{label} {', '.join(value_list)}"
+
+    @staticmethod
+    def _profile_insight_open_review_action_target_detail(
+        source: MappingABC[str, Any],
+        arguments: MappingABC[str, Any],
+    ) -> str | None:
+        review_lane = source.get("review_lane")
+        parts: list[str] = []
+        if review_lane == "profile_scalar_conflict_review":
+            for label, key in (
+                ("kind", "kind"),
+                ("resource", "resource_iri"),
+                ("observed", "observed_value"),
+                ("current", "current_value"),
+            ):
+                value = DoxaBase._compact_profile_review_detail_value(
+                    source.get(key)
+                )
+                if value is not None:
+                    parts.append(f"{label} {value}")
+        elif review_lane == "metric_vocabulary_review":
+            for label, key in (
+                ("metric", "metric_iris"),
+                ("target", "target_iris"),
+                ("value", "observed_values"),
+                ("status", "advisory_statuses"),
+            ):
+                part = DoxaBase._profile_review_detail_part(
+                    label,
+                    DoxaBase._compact_profile_review_detail_values(source.get(key)),
+                )
+                if part is not None:
+                    parts.append(part)
+        elif review_lane == "profile_type_review":
+            for label, key in (
+                ("column", "observed_column_names"),
+                ("column IRI", "observed_column_iris"),
+                ("physical type", "observed_physical_type_iris"),
+                ("value type", "observed_value_type_iris"),
+                ("current physical type", "current_physical_type_iris"),
+                ("current value type", "current_value_type_iris"),
+                ("status", "advisory_statuses"),
+            ):
+                part = DoxaBase._profile_review_detail_part(
+                    label,
+                    DoxaBase._compact_profile_review_detail_values(source.get(key)),
+                )
+                if part is not None:
+                    parts.append(part)
+
+        action_values: list[str] = []
+        for key in ("subject", "predicate", "object"):
+            value = DoxaBase._compact_profile_review_detail_value(
+                arguments.get(key)
+            )
+            if value is not None:
+                action_values.append(f"{key} {value}")
+        if action_values:
+            parts.append("action " + "; ".join(action_values))
+        return "; ".join(parts) if parts else None
 
     @staticmethod
     def _profile_insight_open_review_lanes(
@@ -53277,9 +53487,10 @@ class DoxaBase:
             (
                 "| Review lane | Route groups | Actions | "
                 "Closed moves | Remaining moves | Remaining route steps | "
-                "First remaining action | Matched exported revisions | Next step |"
+                "First remaining action | Target / detail | "
+                "Matched exported revisions | Next step |"
             ),
-            "|---|---:|---:|---|---|---|---|---|---|",
+            "|---|---:|---:|---|---|---|---|---|---|---|",
         ]
         for lane in open_profile_review_lanes:
             matched_revisions = ", ".join(
@@ -53312,6 +53523,12 @@ class DoxaBase:
                             ", ".join(lane.route_step_keys) or "none"
                         ),
                         self._markdown_table_cell(first_action_label),
+                        self._markdown_table_cell(
+                            first_action.target_detail
+                            if first_action is not None
+                            and first_action.target_detail is not None
+                            else "none"
+                        ),
                         self._markdown_table_cell(
                             matched_revisions or "none"
                         ),
@@ -53489,7 +53706,7 @@ class DoxaBase:
                 final_privacy_warning_line_numbers=bool(privacy_warnings),
             )
         )
-        shareability_hints = self._shareability_hints_for_text(data)
+        shareability_hints = self._shareability_hints_for_markdown(data)
         self._raise_if_markdown_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -64332,6 +64549,31 @@ class DoxaBase:
         return self._shareability_hints_for_values([text])
 
     @staticmethod
+    def _markdown_shareability_hint_codes_for_line(line: str) -> list[str]:
+        hint_codes = DoxaBase._shareability_hint_codes_for_value(line)
+        if (
+            "absolute_local_runtime_path" in hint_codes
+            and "path='/tmp/" in line
+            and (
+                "export_staged_revision(" in line
+                or "export_staged_revisions(" in line
+                or "export_profile_insight_review_bundle(" in line
+            )
+        ):
+            hint_codes = [
+                hint_code
+                for hint_code in hint_codes
+                if hint_code != "absolute_local_runtime_path"
+            ]
+        return hint_codes
+
+    def _shareability_hints_for_markdown(self, text: str) -> list[str]:
+        hints: list[str] = []
+        for line in text.splitlines():
+            hints.extend(self._markdown_shareability_hint_codes_for_line(line))
+        return list(dict.fromkeys(hints))
+
+    @staticmethod
     def _shareability_hint_match_id(
         *,
         export_part: str,
@@ -64544,7 +64786,7 @@ class DoxaBase:
                 if line_number > insertion_after_line
                 else line_number
             )
-            for hint_code in self._shareability_hint_codes_for_value(line):
+            for hint_code in self._markdown_shareability_hint_codes_for_line(line):
                 match_count += 1
                 if len(matches) >= limit:
                     continue

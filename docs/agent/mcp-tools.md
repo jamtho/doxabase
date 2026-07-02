@@ -90,7 +90,8 @@ sets `shareability_review_required=true` and
 `shareability_review_status="required_not_completed"` because scanner-clean is
 not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. It also reports `shareability_hints` for non-credential
-risks such as absolute local home/private paths, plus
+risks such as absolute local home/private paths and local runtime/workspace
+paths, plus
 `shareability_hint_matches`, `artifact_disposition`, and `git_safe`; while
 review status is incomplete, `git_safe=false` means keep the artifact local.
 Use the locator matches to find the graph term, snapshot row, or Markdown line
@@ -957,7 +958,10 @@ metric or type lane while that lane remains open. Each lane includes
 `describe_query_context` and stage or record the query/storage repair before
 applying profile-derived map updates. Prefer `remaining_actions[]` over
 semantic-move labels for unattended continuation, because a single remaining
-semantic move can contain multiple exact tool calls or predicates.
+semantic move can contain multiple exact tool calls or predicates. Each
+remaining action also exposes `target_detail`, mirrored in the Markdown
+`Target / detail` column, so a reviewer can see the concrete column, metric,
+value, or assertion target before deciding which action to run.
 The grouped
 payload also includes `executor_decision_summary`, a compact routing object over
 the semantic apply gate. Read its `decision`, `mutation_policy`,

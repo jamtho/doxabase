@@ -245,6 +245,11 @@ Context-slice export records include preflight-style routing fields:
 `handoff_fit`. They also include `shareability_hints`,
 `artifact_disposition`, and `git_safe`; use these fields for unattended routing
 instead of inferring shareability from `sensitive_literal_count` alone.
+Hints can include scanner-clean local paths such as home/private paths or
+runtime/workspace paths under `/tmp`, `/work`, or `/workspaces`. These are not
+credential matches, but they mean the artifact should stay local until a
+shareability review decides whether a receiver can interpret or reproduce the
+path.
 When `decision="block"`, the preflight does not suggest a direct
 `export_context_slice` write. Follow the read-only suggested actions first:
 inspect the selected slice locally with `describe_context_slice`, narrow to

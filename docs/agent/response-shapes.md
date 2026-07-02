@@ -2912,7 +2912,9 @@ Use `lane.remaining_actions[]` for unattended continuation before falling back
 to semantic-move labels. Each row carries the exact `route_step_key`,
 `semantic_move`, `tool_name`, `mcp_tool_name`, `action_label`, callable
 `arguments`, `suggested_next_call`, `source_origin`, and compact
-`source_summary`. This matters when one semantic move such as
+`source_summary`, plus `target_detail` for the concrete reviewer-facing target
+such as a column/type finding, metric/value, scalar conflict value, or
+assertion subject-predicate-object. This matters when one semantic move such as
 `assert_map_type` contains several concrete route steps, for example separate
 `rc:valueType` and `rc:physicalType` assertion actions.
 `closed_semantic_moves`, `remaining_semantic_moves`, and
@@ -5682,9 +5684,9 @@ match.line_number
 ```
 
 These records intentionally locate scanner-clean shareability hints without
-including the raw matched local path or endpoint text. Graph and snapshot
-matches use graph/subject/predicate/term fields; Markdown review exports use
-`line_number`.
+including the raw matched local path, runtime/workspace path, or endpoint text.
+Graph and snapshot matches use graph/subject/predicate/term fields; Markdown
+review exports use `line_number`.
 
 `match_id` is stable over redacted locator fields and does not hash the raw
 sensitive-looking value. `export_part` is `graphs` or `revision_snapshots`, so

@@ -13282,6 +13282,17 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         for action in open_lanes["profile_type_review"]["remaining_actions"]
         if action["tool_name"] == "stage_map_assertion_change"
     } == {"rc:valueType"}
+    type_action_details = [
+        action["target_detail"]
+        for action in open_lanes["profile_type_review"]["remaining_actions"]
+        if action["target_detail"]
+    ]
+    assert any(
+        "column status" in detail
+        and "value type StatusCodeValue" in detail
+        and "status type_finding_missing_map_type" in detail
+        for detail in type_action_details
+    )
     assert result["executor_decision_summary"]["decision"] == (
         "review_or_stage_open_lanes"
     )
@@ -13332,9 +13343,13 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         "### Profile Route Bridge",
         1,
     )[0]
+    assert "Target / detail" in open_section
     assert "| profile_scalar_conflict_review | 1 | 2 | none |" in open_section
     assert "metric_vocabulary_review" in open_section
     assert "profile_type_review" in open_section
+    assert "column status" in open_section
+    assert "value type StatusCodeValue" in open_section
+    assert "status type_finding_missing_map_type" in open_section
     assert "\n| profile_map_updates |" not in open_section
 
 

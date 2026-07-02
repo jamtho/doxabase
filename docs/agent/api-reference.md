@@ -150,9 +150,10 @@ preflight reports `decision="clean_by_scanner_only"` and still sets
 `shareability_review_status="required_not_completed"`; agents must separately
 decide whether paths, endpoints, history payloads, or project facts are
 appropriate to share. Non-credential hygiene signals such as absolute local
-home/private paths appear in `shareability_hints`, and export records expose
-`artifact_disposition` plus `git_safe`; with the current incomplete review
-status, `git_safe` remains false.
+home/private paths and local runtime/workspace paths appear in
+`shareability_hints`, and export records expose `artifact_disposition` plus
+`git_safe`; with the current incomplete review status, `git_safe` remains
+false.
 When a broad graph/TriG/handoff preflight blocks and the task has a known target
 resource, follow the suggested
 `preflight_context_slice_export(seed_iris=["<target-resource-iri>"])` route to

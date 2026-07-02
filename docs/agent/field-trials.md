@@ -4485,6 +4485,18 @@ few useful gaps:
   staged/profile Markdown review exports now expose bounded
   `shareability_hint_matches` with stable IDs and non-secret locators while
   preserving the original hint-code list.
+- A query-result handoff trial then showed that scanner-clean evidence slices
+  can still contain local runtime paths under `/tmp`, `/work`, or `/workspaces`
+  with no hint that the receiver may not be able to reproduce them.
+  Shareability scans now report `absolute_local_runtime_path` alongside the
+  existing home/private-path hint; it remains advisory and does not block
+  `fail_on_sensitive=True` exports.
+- A profile insight review-bundle trial showed that open review lanes preserved
+  unresolved type/metric alternatives structurally, but the Markdown table made
+  a cold reviewer infer the concrete target from route keys. Remaining actions
+  now expose `target_detail`, and `Open Profile Review Lanes` renders a
+  `Target / detail` column with the column, metric, observed type/value,
+  scalar conflict value, or assertion target.
 - A deeper Enron handoff review showed that reviewed Parquet schema/profile
   manifests still required agents to manually compose `record_map_table_bundle`
   and `record_profile_bundle` for every table. `record_profiled_parquet_table`

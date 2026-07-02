@@ -32641,6 +32641,77 @@ def test_dataset_context_slice_includes_query_result_observation_evidence(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_query_result_context_preflight_flags_scanner_clean_local_runtime_paths(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    query_path = tmp_path / "orders_status.sql"
+    result_path = tmp_path / "orders_status_result.json"
+
+    result = db.record_query_result(
+        summary="Orders status aggregate ran through an external Python CSV script.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        result_sources=[str(result_path)],
+        scanned_source_paths=["/work/local-data/orders.csv"],
+        sample_scope="Grouped aggregate rows written to a local runtime artifact.",
+        sample_method="External read-only aggregate query.",
+    )
+
+    context = db.describe_context_slice(
+        [result.evidence_iri],
+        profile="resource_brief",
+    )
+    assert context.sensitive_literal_count == 0
+    assert "absolute_local_runtime_path" in context.shareability_hints
+    assert any(
+        match.hint_code == "absolute_local_runtime_path"
+        and match.export_part == "context_slice"
+        for match in context.shareability_hint_matches
+    )
+
+    preflight = db.preflight_context_slice_export(
+        [result.evidence_iri],
+        profile="resource_brief",
+    )
+
+    assert preflight.decision == "clean_by_scanner_only"
+    assert preflight.scanner_clean is True
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.sensitive_literal_count == 0
+    assert "absolute_local_runtime_path" in preflight.shareability_hints
+    assert preflight.shareability_hint_count >= 2
+    assert preflight.git_safe is False
+    assert any(
+        match.hint_code == "absolute_local_runtime_path"
+        and match.export_part == "context_slice_export"
+        for match in preflight.shareability_hint_matches
+    )
+    assert str(query_path) not in json.dumps(
+        to_jsonable(preflight.shareability_hint_matches)
+    )
+    assert str(result_path) not in json.dumps(
+        to_jsonable(preflight.shareability_hint_matches)
+    )
+
+    exported = db.export_context_slice(
+        tmp_path / "query-result-context.trig",
+        [result.evidence_iri],
+        profile="resource_brief",
+        fail_on_sensitive=True,
+    )
+    assert exported.scanner_clean is True
+    assert "absolute_local_runtime_path" in exported.shareability_hints
+    assert exported.artifact_disposition == (
+        "local_only_pending_shareability_review"
+    )
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_query_result_rejects_conflicting_source_span_reuse_without_mutation(
     tmp_path: Path,
 ) -> None:
