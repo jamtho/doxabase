@@ -4646,6 +4646,13 @@ few useful gaps:
   existing `staged_frontier_review` queue but points it at
   `describe_staged_revision_recovery_session` when a persisted session overlaps
   current staged work.
+- A later Enron sidecar review found the graph-native `record_analysis_packet`
+  model was adequate, but reviewed analysis packet metadata still needed a
+  bespoke `json.load` script whenever it existed as a local sidecar. The
+  `python -m doxabase.analysis_packet` CLI now applies a reviewed
+  `doxabase.analysis_packet_manifest.v1` JSON file, validates the graph, and
+  returns packet/view/artifact/query-recipe/task handles without parsing report
+  text or ingesting artifact bytes.
 - The same Enron handoff scout found `draft_profile_map_updates(...,
   evidence_iri=None)` raised a raw `AttributeError`; required IRI validation now
   returns a clear `DoxaBaseError` for non-string missing identifiers.

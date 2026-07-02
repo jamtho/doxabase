@@ -116,6 +116,9 @@ Implemented:
 - `record_analysis_packet()` for preserving reviewed analysis-view links,
   aggregate artifact locators, visual metadata, follow-up tasks, and optional
   pattern support as one graph-native handoff node.
+- `python -m doxabase.analysis_packet` for applying a reviewed
+  `doxabase.analysis_packet_manifest.v1` JSON handoff without parsing artifact
+  contents.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
@@ -340,36 +343,38 @@ Useful first tool calls for an agent:
     metadata should become a reviewable profile-to-capsule manifest scaffold
 25. `doxabase.record_analysis_packet` when reviewed analysis-view links,
     aggregate artifacts, visuals, and follow-up tasks need one handoff seed
-26. `doxabase.record_pattern` for syntheses over related findings
-27. `doxabase.stage_graph_revision` for reviewable additions/removals that
+26. `python -m doxabase.analysis_packet` when that reviewed packet already
+    lives as a local `doxabase.analysis_packet_manifest.v1` JSON file
+27. `doxabase.record_pattern` for syntheses over related findings
+28. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-28. `doxabase.stage_systematisation` for alternative RDF framings of one
+29. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-29. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+30. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
-30. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-31. `doxabase.check_staged_revision_apply` before turning a staged proposal
+31. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
+32. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-32. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
+33. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
     repair or replacement before a successor should be authored
-33. `doxabase.restage_staged_revision` when count or digest drift made a
+34. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
-34. `doxabase.describe_applied_revision_diff` when an applied staged revision
+35. `doxabase.describe_applied_revision_diff` when an applied staged revision
     needs stored before/after snapshot diff counts or opt-in exact triples
-35. `doxabase.describe_graph_version_diff` when a stored graph version should
+36. `doxabase.describe_graph_version_diff` when a stored graph version should
     be compared with another stored version or the current live graph
-36. `doxabase.apply_staged_revision` when a staged proposal should become
+37. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-37. `doxabase.record_map_dataset` and related map helpers for current-best facts
-38. `doxabase.validate_graph` with `scope="all"`
-39. `doxabase.export_preflight` before unattended or shareable RDF/snapshot
+38. `doxabase.record_map_dataset` and related map helpers for current-best facts
+39. `doxabase.validate_graph` with `scope="all"`
+40. `doxabase.export_preflight` before unattended or shareable RDF/snapshot
     exports, so scanner-clean and block decisions are explicit before choosing
     paths
-40. `doxabase.export_trig` when you need a named-graph project review bundle
-41. `doxabase.record_graph_revision` when the bundle/change rationale should be
+41. `doxabase.export_trig` when you need a named-graph project review bundle
+42. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-42. `doxabase.describe_graph_revision` when reviewing a history record
+43. `doxabase.describe_graph_revision` when reviewing a history record
 
 Use `doxabase.load_example_fixtures` only in a fresh scratch or example capsule,
 after confirming you are not attached to a real project capsule.

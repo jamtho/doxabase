@@ -38,6 +38,25 @@ The call preflights the full structured packet on a scratch capsule before
 writing to the live capsule, so a later invalid view, artifact, or task does
 not leave earlier packet resources behind.
 
+## Reviewed JSON Adapter
+
+When a reviewed packet already lives on disk as JSON, use the CLI adapter
+instead of writing a one-off `json.load` script:
+
+```bash
+python -m doxabase.analysis_packet \
+  --capsule capsule.sqlite \
+  --manifest analysis-packet.json
+```
+
+The manifest must use
+`"format": "doxabase.analysis_packet_manifest.v1"` and the same packet fields
+described below, with `packet_iri` accepted as an alias for `iri`. The command
+applies the reviewed metadata, runs graph validation, and prints the packet,
+view, artifact, recipe, task, and suggested follow-up handles as JSON. It does
+not read referenced Markdown/JSON/PNG files, parse report text, store artifact
+bytes, or execute query recipes.
+
 ## Inputs
 
 Required fields:

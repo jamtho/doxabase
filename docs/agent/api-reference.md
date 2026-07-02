@@ -1148,6 +1148,12 @@ for setup SQL, joins, or other starter recipes that are not themselves logical
 views. It preflights the full structured packet on a scratch capsule before
 writing and does not read files, store raw artifact bytes, parse Markdown/JSON,
 or execute queries.
+For a reviewed packet stored as JSON, run
+`python -m doxabase.analysis_packet --capsule capsule.sqlite --manifest analysis-packet.json`
+to apply a `doxabase.analysis_packet_manifest.v1` manifest, validate the graph,
+and print packet/view/artifact/query-recipe/task handles without adding report
+parsers or raw artifact ingestion.
+
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,
 optional domain-pair/domain-frequency counts, shared evidence, and optional
