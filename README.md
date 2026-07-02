@@ -192,6 +192,9 @@ Not implemented yet:
 - `examples/profile-to-capsule-cookbook.py` - maintained cookbook that composes
   table map bundles, profile bundles, logical analysis views, and
   recovery-complete handoff verification from reviewed aggregate facts.
+- `examples/rich-profile-manifest-smoke.py` - scaffold-plus-external-profile
+  manifest route that records reviewed aggregate profile facts without local
+  row scanning.
 - `examples/analysis-packet-manifest-smoke.py` - reviewed analysis-packet JSON
   manifest route for graph-native handoffs over logical views, artifacts,
   query recipes, and follow-up tasks.
@@ -249,6 +252,9 @@ CSV query handoff. Use
 `examples/ais-query-overlay-smoke.py` when you want to exercise the reduced AIS
 fixture's path from reviewed metadata overlay through stale partition-link
 repair to a non-executed DuckDB handoff. Use
+`examples/rich-profile-manifest-smoke.py` when you want to check the route from
+a Parquet footer/schema scaffold plus reviewed external aggregate profile facts
+to a capsule. Use
 `examples/analysis-packet-manifest-smoke.py` when you want to check the reviewed
 analysis-packet JSON manifest route for sidecar-to-graph handoffs. Use
 `examples/staged-semantic-repair-smoke.py` when you want a compact semantic

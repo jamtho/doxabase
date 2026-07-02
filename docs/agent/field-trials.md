@@ -4689,6 +4689,16 @@ few useful gaps:
   packet through `describe_context_slice`, and confirm each logical view routes
   through `describe_query_context(readiness="logical_analysis_view")` rather
   than physical storage repair.
+- A rich Parquet profile trial found no missing DoxaBase recording primitive:
+  `record_profiled_parquet_table` and
+  `record_profile_to_capsule_manifest` already accept reviewed row counts,
+  column null/distinct counts, value frequencies, scalar profile metrics,
+  caveats, and logical analysis views. The intentionally external part is
+  computing those aggregates and reviewing shareability before manifest apply.
+  `examples/rich-profile-manifest-smoke.py` now preserves the adoption route:
+  start from a scaffold-shaped manifest, merge external reviewed aggregate
+  profile facts, apply with `profile_to_capsule`, and inspect profile/query
+  handoff helpers without adding local row scanning to DoxaBase.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

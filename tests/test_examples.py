@@ -116,6 +116,26 @@ def test_analysis_packet_manifest_smoke_example_runs(tmp_path: Path) -> None:
     assert "Validation conforms: True" in output
 
 
+def test_rich_profile_manifest_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("rich-profile-manifest-smoke.py", tmp_path)
+    output = result.stdout
+
+    assert "# DoxaBase Rich Profile Manifest Smoke" in output
+    assert "Scaffold tables: 1" in output
+    assert "Reviewed manifest tables: 1" in output
+    assert "Caveats: 2" in output
+    assert "Profile observations: 6" in output
+    assert "Analysis views: 1" in output
+    assert "Dataset columns: 5" in output
+    assert "Profile run returned: 6/6" in output
+    assert "Profile draft recommendations: 2" in output
+    assert "Table query readiness: needs_review" in output
+    assert "layout_needs_verification" in output
+    assert "Analysis view readiness: logical_analysis_view" in output
+    assert "Analysis view snippets: 2" in output
+    assert "Validation conforms: True" in output
+
+
 def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
     result = _run_example("staged-semantic-repair-smoke.py", tmp_path)
     output = result.stdout

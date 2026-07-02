@@ -61,6 +61,16 @@ shareability before applying the manifest with `profile_to_capsule`. Generated
 single-file templates are dataset-owned `path_templates`; the scaffold does not
 also put the same value on storage access `storage_path_templates`, because that
 would create duplicate same-path query candidates.
+
+For the common next step, run
+`python examples/rich-profile-manifest-smoke.py`. It uses the scaffold shape,
+merges reviewed external aggregate profile facts such as null counts, distinct
+counts, value frequencies, and scalar metrics into the manifest, applies it
+with `profile_to_capsule`, and inspects `describe_profile_run`,
+`draft_profile_map_updates`, `describe_query_context`, and a logical analysis
+view. The example deliberately keeps profiling outside DoxaBase; DoxaBase
+records the reviewed aggregates.
+
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and
