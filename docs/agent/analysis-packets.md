@@ -152,6 +152,10 @@ query recipes, pattern, and other bounded handoff context. The packet slice
 also suggests `describe_analysis_view` for linked logical views so agents can
 inspect denominators, source datasets, caveats, and query snippets from the
 slice without hunting through generic outgoing references.
+For packet seeds with many artifact links, `resource_brief` prioritizes
+`rc:packetAnalysisView`, `rc:hasQueryRecipe`, and `rc:hasFollowupTask`
+outgoing references ahead of artifact bulk so the first slice page still
+contains the main review entry points.
 When one logical view sources another, `describe_analysis_view` reports caveats
 attached to the parent/source view as `source_caveats`; do not duplicate every
 parent caveat on child views unless the child population itself owns the caveat.

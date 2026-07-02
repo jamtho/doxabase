@@ -242,6 +242,15 @@ reimport without fake columns. Treat those surfaces as recently validated; run
 new trials there only when the workflow shape changes or a concrete failure
 appears.
 
+A later Enron analysis-packet packaging trial found that graph-native packets
+can carry reviewed populations, query recipes, aggregate artifacts,
+visualization outputs, and follow-up tasks into `project_brief` and
+`resource_brief` cleanly. The useful retrieval gap was route-cap ordering:
+large packets could crowd out views, recipes, or tasks with bulk artifact
+links. Packet action predicates now win the first outgoing-reference page, but
+artifact-heavy packets still need `describe_resource` paging for exhaustive
+artifact review.
+
 ## Safety
 
 Use a scratch capsule, for example:

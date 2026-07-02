@@ -28690,6 +28690,87 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert validation.conforms, validation.report_text
 
 
+def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifacts(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-packet-priority#"
+    source = f"{base}messages"
+    packet = f"{base}packet"
+    view = f"{base}z_review_view"
+    recipe = f"{base}z_query_recipe"
+    task = f"{base}z_followup_task"
+    artifacts = [
+        {
+            "iri": f"{base}a_artifact_{index:02d}",
+            "label": f"Bulk artifact {index:02d}",
+            "summary": "Bulk visualization or aggregate output.",
+            "source_path": f"scratch://bulk-artifact-{index:02d}.json",
+            "artifact_role": "bulk output",
+            "media_type": "application/json",
+            "supports": [view],
+        }
+        for index in range(40)
+    ]
+
+    db.record_map_dataset(source, label="Messages", is_table=True)
+    result = db.record_analysis_packet(
+        packet,
+        summary="Packet with many artifacts and a few action links.",
+        analysis_views=[
+            {
+                "iri": view,
+                "label": "Reviewed message population",
+                "source_datasets": [source],
+                "denominator_description": "Reviewed message rows.",
+            },
+        ],
+        artifacts=artifacts,
+        query_recipes=[
+            {
+                "iri": recipe,
+                "label": "Review query",
+                "query_text": "select * from messages where reviewed",
+                "query_language": "DuckDB SQL",
+                "query_engine": "duckdb",
+                "targets": [view],
+            }
+        ],
+        followup_tasks=[
+            {
+                "iri": task,
+                "label": "Inspect reviewed population",
+                "task_text": "Read the packet view before bulk artifacts.",
+                "targets": [view],
+            }
+        ],
+    )
+
+    context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
+    outgoing_iris = {
+        resource["iri"]
+        for resource in context["resources"]
+        if any(
+            route["route"] == "outgoing_reference"
+            and route["source_iri"] == packet
+            for route in resource["routes"]
+        )
+    }
+
+    assert context["route_counts"]["outgoing_reference"] == 25
+    assert result.artifact_iris[-1] not in outgoing_iris
+    assert {view, recipe, task}.issubset(outgoing_iris)
+    assert any(
+        action["tool_name"] == "describe_analysis_view"
+        and action["arguments"]["iri"] == view
+        for action in context["suggested_next_actions"]
+    )
+    assert any(
+        "omitted" in warning and "outgoing reference" in warning
+        for warning in context["warnings"]
+    )
+
+
 def test_record_analysis_packet_requires_existing_linked_analysis_views(
     tmp_path: Path,
 ) -> None:

@@ -15930,19 +15930,47 @@ class DoxaBase:
         limit: int,
     ) -> tuple[list[str], int]:
         graph_filter, graph_params = self._graph_filter(graphs, alias="q")
-        where = """
-            q.subject = ?
-            AND q.object_kind = 'uri'
-            AND q.predicate != ?
-        """
-        params: list[Any] = [subject, str(RDF.type), *graph_params]
-        return self._resource_brief_distinct_iris(
-            where,
-            params,
-            graph_filter=graph_filter,
-            select_column="q.object",
-            limit=limit,
+        packet_action_predicates = (
+            self.expand_iri("rc:packetAnalysisView"),
+            self.expand_iri("rc:hasQueryRecipe"),
+            self.expand_iri("rc:hasFollowupTask"),
         )
+        priority_case = """
+            CASE q.predicate
+                WHEN ? THEN 0
+                WHEN ? THEN 1
+                WHEN ? THEN 2
+                ELSE 100
+            END
+        """
+        base_query = f"""
+            SELECT q.object AS iri, MIN({priority_case}) AS priority
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.object_kind = 'uri'
+              AND q.predicate != ?
+              {graph_filter}
+            GROUP BY q.object
+        """
+        params: list[Any] = [
+            *packet_action_predicates,
+            subject,
+            str(RDF.type),
+            *graph_params,
+        ]
+        rows = self._conn.execute(
+            f"""
+            {base_query}
+            ORDER BY priority, iri
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+        count_row = self._conn.execute(
+            f"SELECT COUNT(*) AS count FROM ({base_query})",
+            params,
+        ).fetchone()
+        return [row["iri"] for row in rows], int(count_row["count"])
 
     def _resource_brief_incoming_subjects(
         self,
