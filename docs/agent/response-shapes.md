@@ -3115,6 +3115,22 @@ view.suggested_next_calls
 one logical view. Omitted snippet IRIs default to
 `{view_iri}/query-snippet/{index}`. Do not combine `query_snippets` with the
 legacy single-snippet fields; pass `query_snippets=[]` to clear snippet links.
+`record_map_analysis_view_bundle(views=[...])` records several reviewed
+structured view specs and returns an `AnalysisViewBundleRecord`:
+
+```python
+bundle.records
+bundle.analysis_views
+bundle.view_iris
+bundle.view_count
+bundle.query_snippet_count
+bundle.suggested_next_actions
+bundle.suggested_next_calls
+```
+
+Each `views[]` item accepts the single-view helper fields, with `view_iri` as
+an alias for `iri`. The helper is for structured sidecars or query cookbooks; it
+does not parse Markdown or execute queries.
 
 When the same resource is passed to `describe_query_context`, the planning
 context has `readiness="logical_analysis_view"`,

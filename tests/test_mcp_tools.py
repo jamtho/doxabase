@@ -63,6 +63,7 @@ from doxabase.mcp_tools import (
     record_column_profile_tool,
     record_dataset_profile_tool,
     record_domain_network_profile_tool,
+    record_map_analysis_view_bundle_tool,
     record_map_analysis_view_tool,
     record_map_asset_transform_tool,
     record_map_caveat_tool,
@@ -203,6 +204,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_analysis_view" in tool_names
+    assert "doxabase.record_map_analysis_view_bundle" in tool_names
     assert "doxabase.record_map_table_bundle" in tool_names
     assert "doxabase.record_profiled_parquet_table" in tool_names
     assert "doxabase.record_map_column" in tool_names
@@ -7065,6 +7067,69 @@ def test_analysis_view_tool_accepts_multiple_query_snippets(tmp_path: Path) -> N
     )
     assert (
         describe_query_context_tool(db, iri=view)["readiness"]
+        == "logical_analysis_view"
+    )
+
+
+def test_analysis_view_bundle_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-analysis-view-bundle#"
+    source = f"{base}messages"
+    plausible_view = f"{base}plausible_messages"
+    message_like_view = f"{base}message_like_rows"
+
+    record_map_dataset_tool(db, iri=source, label="Messages", is_table=True)
+    result = record_map_analysis_view_bundle_tool(
+        db,
+        views=[
+            {
+                "iri": plausible_view,
+                "label": "Plausible messages",
+                "source_datasets": [source],
+                "row_count_snapshot": 120,
+                "denominator_description": "Messages dated inside the reviewed window.",
+                "query_snippets": [
+                    {
+                        "label": "View definition",
+                        "query_text": (
+                            "create view plausible_messages as "
+                            "select * from messages where date_sent is not null"
+                        ),
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    }
+                ],
+            },
+            {
+                "iri": message_like_view,
+                "label": "Message-like rows",
+                "source_datasets": [source],
+                "query_snippets": [
+                    {
+                        "label": "View definition",
+                        "query_text": (
+                            "create view message_like_rows as "
+                            "select * from plausible_messages "
+                            "where folder_family <> 'calendar'"
+                        ),
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    }
+                ],
+            },
+        ],
+    )
+
+    assert result["view_count"] == 2
+    assert result["view_iris"] == [plausible_view, message_like_view]
+    assert result["query_snippet_count"] == 2
+    assert result["analysis_views"][0]["query_snippets"][0]["query_engine"] == "duckdb"
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "describe_query_context",
+        "describe_query_context",
+    ]
+    assert (
+        describe_query_context_tool(db, iri=message_like_view)["readiness"]
         == "logical_analysis_view"
     )
 

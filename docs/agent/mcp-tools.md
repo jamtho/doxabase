@@ -1845,6 +1845,17 @@ the view's snippet links. The MCP/Python argument `query_engine` records
 snippet runtime context with `rc:queryRuntime`; it is separate from evidence
 `rc:queryEngine`, which describes an executed or attempted query.
 
+`doxabase.record_map_analysis_view_bundle`
+
+Records or updates several logical analysis views from reviewed structured
+specs. Pass `views=[...]` with the same fields accepted by
+`record_map_analysis_view`; `view_iri` is accepted as an alias for `iri` inside
+each item. Use this for sidecar manifests or query cookbooks that already name
+several denominators and snippets. The helper does not parse Markdown or run
+queries; it records reviewed specs and returns `analysis_views`,
+`query_snippet_count`, and `describe_query_context` follow-up actions for each
+view.
+
 `doxabase.describe_analysis_view`
 
 Returns bounded logical-view context: label, description, RDF types, source

@@ -93,6 +93,10 @@ check. `describe_query_context` returns
 `readiness="logical_analysis_view"` for these resources and deliberately does
 not produce missing-storage repair actions unless you separately model a
 materialized physical route.
+Use `record_map_analysis_view_bundle(views=[...])` when a reviewed sidecar or
+manifest defines several logical populations at once. It is a structured
+orchestrator over the same single-view helper; supply one object per reviewed
+view rather than asking DoxaBase to parse arbitrary Markdown.
 
 For reviewed table schemas from Parquet, CSV, database catalogs, or profiler
 output, use `record_map_table_bundle` when you want one no-I/O map mutation for

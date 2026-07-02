@@ -1218,6 +1218,11 @@ physical routes. It writes an `rc:AnalysisView`, optional
 multiple reviewed recipes, and do not combine that list with legacy
 single-snippet fields such as `query_text`; `query_snippets=[]` clears snippet
 links.
+Use `record_map_analysis_view_bundle(views=[...])` when a reviewed structured
+sidecar defines several logical views; each item accepts the same fields as the
+single-view helper, with `view_iri` as an `iri` alias. The bundle helper records
+those reviewed specs and returns described views plus query-context follow-up
+actions. It does not parse Markdown or execute SQL.
 `describe_analysis_view()` reads that logical definition, while
 `describe_query_context()` reports `readiness="logical_analysis_view"` and does
 not offer missing-storage repair groups for the view itself.

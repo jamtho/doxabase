@@ -27442,6 +27442,107 @@ def test_record_map_analysis_view_accepts_multiple_query_snippets(
     assert db.describe_analysis_view(view).query_snippets == []
 
 
+def test_record_map_analysis_view_bundle_records_reviewed_sidecar_specs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-view-bundle#"
+    source = f"{base}messages"
+    plausible_view = f"{base}plausible_messages"
+    message_like_view = f"{base}message_like_rows"
+
+    db.record_map_dataset(source, label="Messages", is_table=True)
+    result = db.record_map_analysis_view_bundle(
+        [
+            {
+                "view_iri": plausible_view,
+                "label": "Plausible messages",
+                "source_datasets": [source],
+                "row_count_snapshot": 120,
+                "denominator_description": "Messages dated inside the reviewed window.",
+                "denominator_row_count_snapshot": 120,
+                "denominator_basis": "date_sent between 1997-01-01 and 2004-12-31",
+                "query_snippets": [
+                    {
+                        "label": "View definition",
+                        "query_text": (
+                            "create view plausible_messages as "
+                            "select * from messages where date_sent between "
+                            "'1997-01-01' and '2004-12-31'"
+                        ),
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    },
+                    {
+                        "label": "Count check",
+                        "query_text": "select count(*) from plausible_messages",
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    },
+                ],
+            },
+            {
+                "iri": message_like_view,
+                "label": "Message-like rows",
+                "source_datasets": [source],
+                "row_count_snapshot": 98,
+                "denominator_description": (
+                    "Plausible messages excluding calendar and contact rows."
+                ),
+                "query_snippets": [
+                    {
+                        "label": "View definition",
+                        "query_text": (
+                            "create view message_like_rows as "
+                            "select * from plausible_messages "
+                            "where folder_family not in ('calendar', 'contacts')"
+                        ),
+                        "query_language": "DuckDB SQL",
+                        "query_engine": "duckdb",
+                    }
+                ],
+            },
+        ]
+    )
+
+    assert result.view_count == 2
+    assert result.view_iris == [plausible_view, message_like_view]
+    assert result.query_snippet_count == 3
+    assert [view.label for view in result.analysis_views] == [
+        "Plausible messages",
+        "Message-like rows",
+    ]
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_query_context",
+        "describe_query_context",
+    ]
+    assert all(
+        db.describe_query_context(view_iri).readiness == "logical_analysis_view"
+        for view_iri in result.view_iris
+    )
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_map_analysis_view_bundle_rejects_duplicate_views_before_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/analysis-view-bundle#"
+    view = f"{base}message_like_rows"
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="duplicates"):
+        db.record_map_analysis_view_bundle(
+            [
+                {"iri": view, "label": "Message-like rows"},
+                {"view_iri": view, "label": "Duplicate message-like rows"},
+            ]
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_record_map_analysis_view_rejects_mixed_query_snippet_inputs(
     tmp_path: Path,
 ) -> None:

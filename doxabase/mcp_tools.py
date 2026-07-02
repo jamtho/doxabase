@@ -1706,6 +1706,14 @@ def record_map_analysis_view_tool(
     return to_dict(result)
 
 
+def record_map_analysis_view_bundle_tool(
+    db: DoxaBase,
+    views: list[dict[str, Any]],
+) -> dict[str, Any]:
+    result = db.record_map_analysis_view_bundle(views)
+    return to_dict(result)
+
+
 def record_map_column_tool(
     db: DoxaBase,
     iri: str,

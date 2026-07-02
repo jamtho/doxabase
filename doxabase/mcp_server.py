@@ -63,6 +63,7 @@ from doxabase.mcp_tools import (
     record_dataset_profile_tool,
     record_domain_network_profile_tool,
     record_map_caveat_tool,
+    record_map_analysis_view_bundle_tool,
     record_map_analysis_view_tool,
     record_map_asset_transform_tool,
     record_map_column_tool,
@@ -1599,6 +1600,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             query_engine=query_engine,
             query_snippets=query_snippets,
         )
+
+    @server.tool(name="doxabase.record_map_analysis_view_bundle")
+    def record_map_analysis_view_bundle(views: list[dict[str, Any]]) -> dict[str, Any]:
+        """Record or update several logical analysis views from reviewed specs."""
+
+        return record_map_analysis_view_bundle_tool(db, views=views)
 
     @server.tool(name="doxabase.record_map_table_bundle")
     def record_map_table_bundle(

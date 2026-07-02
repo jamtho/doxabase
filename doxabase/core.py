@@ -3477,6 +3477,17 @@ class AnalysisViewDescription:
 
 
 @dataclass(frozen=True)
+class AnalysisViewBundleRecord:
+    records: list[MapResourceRecord]
+    analysis_views: list[AnalysisViewDescription]
+    view_iris: list[str]
+    view_count: int
+    query_snippet_count: int
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class AggregatedColumnDescription:
     iri: str
     target_column: ResourceSummary | None
@@ -38713,6 +38724,35 @@ class DoxaBase:
             triples=triples,
         )
 
+    def record_map_analysis_view_bundle(
+        self,
+        views: Iterable[Mapping[str, Any]] | Mapping[str, Any],
+    ) -> AnalysisViewBundleRecord:
+        view_specs = self._normalise_analysis_view_bundle_specs(views)
+        records: list[MapResourceRecord] = []
+        analysis_views: list[AnalysisViewDescription] = []
+        for view_spec in view_specs:
+            record = self.record_map_analysis_view(**view_spec)
+            records.append(record)
+            analysis_views.append(self.describe_analysis_view(record.iri))
+
+        suggested_next_actions = self._dedupe_suggested_next_actions(
+            action
+            for analysis_view in analysis_views
+            for action in analysis_view.suggested_next_actions
+        )
+        return AnalysisViewBundleRecord(
+            records=records,
+            analysis_views=analysis_views,
+            view_iris=[record.iri for record in records],
+            view_count=len(records),
+            query_snippet_count=sum(
+                len(analysis_view.query_snippets) for analysis_view in analysis_views
+            ),
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def record_map_column(
         self,
         iri: str,
@@ -68596,6 +68636,70 @@ class DoxaBase:
                     "query_engine": optional_string("query_engine"),
                 }
             )
+        return specs
+
+    def _normalise_analysis_view_bundle_specs(
+        self,
+        views: Iterable[Mapping[str, Any]] | Mapping[str, Any],
+    ) -> list[dict[str, Any]]:
+        if isinstance(views, MappingABC):
+            view_values = [views]
+        elif isinstance(views, str):
+            raise DoxaBaseError("views must be an object or a list of objects")
+        else:
+            view_values = list(views)
+        if not view_values:
+            raise DoxaBaseError("views must contain at least one analysis view")
+        allowed_fields = {
+            "iri",
+            "view_iri",
+            "label",
+            "description",
+            "source_datasets",
+            "row_count_snapshot",
+            "caveats",
+            "denominator_iri",
+            "denominator_label",
+            "denominator_description",
+            "denominator_row_count_snapshot",
+            "denominator_basis",
+            "query_snippet_iri",
+            "query_snippet_label",
+            "query_snippet_description",
+            "query_text",
+            "query_language",
+            "query_engine",
+            "query_snippets",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(view_values, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"views[{index}] must be an object")
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"views[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+
+            iri_value = item.get("iri", item.get("view_iri"))
+            if not isinstance(iri_value, str) or not iri_value.strip():
+                raise DoxaBaseError(
+                    f"views[{index}].iri must be a non-empty IRI or CURIE string"
+                )
+            view_iri = str(self._resource_ref(f"views[{index}].iri", iri_value))
+            if view_iri in seen_iris:
+                raise DoxaBaseError(f"views[{index}].iri duplicates {view_iri}")
+            seen_iris.add(view_iri)
+
+            spec = {
+                field: item[field]
+                for field in allowed_fields
+                if field in item and field != "view_iri"
+            }
+            spec["iri"] = view_iri
+            specs.append(spec)
         return specs
 
     def _normalise_profiled_parquet_columns(

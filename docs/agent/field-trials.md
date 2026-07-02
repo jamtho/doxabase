@@ -4458,6 +4458,12 @@ few useful gaps:
   Logical views now surface as `analysis_view_review` with a
   `describe_analysis_view` action, keeping denominator/query-recipe inspection
   visible without implying missing physical storage metadata.
+- A later Enron sidecar inspection found the capsule could still have zero
+  graph-native analysis views while Markdown cookbooks defined many reviewed
+  denominators and SQL snippets. `record_map_analysis_view_bundle` now gives
+  agents a structured batch route from reviewed sidecar specs to
+  `rc:AnalysisView` resources without parsing arbitrary Markdown or inventing
+  physical storage routes.
 - Parallel read-only scouts from the same wave identified three larger next
   candidates that are not implemented here: a no-I/O profile-to-capsule manifest
   helper that composes table bundles, profile bundles, analysis views, and
