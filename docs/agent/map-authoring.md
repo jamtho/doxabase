@@ -117,6 +117,12 @@ When the reviewed inputs are already in a structured JSON-like sidecar, use
 `record_map_analysis_view_bundle` specs in one no-I/O pass. This helper records
 ingestion context into the capsule; it is separate from
 `export_handoff_bundle` manifests.
+When the sidecar does not exist yet and the source files are local Parquet, use
+`python -m doxabase.parquet_manifest --base-iri ... --output profile-to-capsule.json ...`
+to generate a reviewable manifest scaffold from Parquet footer/schema metadata.
+It requires optional `pyarrow`, records conservative candidate layout statuses,
+and should be reviewed before applying with
+`python -m doxabase.profile_to_capsule`.
 
 ## When To Use Map Helpers
 

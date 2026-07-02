@@ -4618,6 +4618,14 @@ few useful gaps:
   mutation frontier in an explicit session. Recovery plans now prefer the
   semantic frontier's read-only review action over unrelated informational rows,
   reporting `first_safe_review_or_mutation_source="semantic_frontier_review"`.
+- An Enron code-owner feedback pass found most original product/API complaints
+  had been resolved by later work: guarded graph/TriG/handoff exports, compact
+  and ontology-facing relationship aliases, profile-to-capsule manifests, and
+  analysis packets all have docs and tests. The remaining bounded gap was
+  generating the reviewed profile-to-capsule JSON sidecar from local Parquet
+  files. `python -m doxabase.parquet_manifest` now emits a reviewable scaffold
+  from optional `pyarrow` footer/schema metadata, with conservative layout
+  statuses and a generated review caveat before the existing apply step.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

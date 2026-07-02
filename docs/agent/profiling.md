@@ -43,6 +43,21 @@ When the reviewed manifest is already in a JSON file, use
 `python -m doxabase.profile_to_capsule --capsule capsule.sqlite --manifest profile-to-capsule.json`
 to apply it and print a compact validation/readiness summary. This command is a
 file adapter for the structured manifest; it does not scan Parquet files.
+When you only have local Parquet files and need a starting manifest, use the
+optional footer/schema scaffold:
+
+```bash
+python -m doxabase.parquet_manifest \
+  --base-iri https://example.test/project# \
+  --output profile-to-capsule.json \
+  data/orders.parquet data/tickets.parquet
+```
+
+This command requires `pyarrow` in the environment. It reads Parquet footer and
+schema metadata only, emits a reviewable
+`doxabase.profile_to_capsule_manifest.v1` JSON file, and adds a caveat reminding
+agents to review table identity, storage paths, type mapping, row counts, and
+shareability before applying the manifest with `profile_to_capsule`.
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and

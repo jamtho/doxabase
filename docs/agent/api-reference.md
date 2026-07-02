@@ -1119,6 +1119,20 @@ For a reviewed manifest stored as JSON, run
 `python -m doxabase.profile_to_capsule --capsule capsule.sqlite --manifest profile-to-capsule.json`
 to load the file, apply the manifest, run validation, and print a compact JSON
 summary without adding Parquet dependencies.
+If the JSON sidecar does not exist yet, `python -m doxabase.parquet_manifest`
+can generate a reviewable manifest scaffold from local Parquet footer/schema
+metadata:
+
+```bash
+python -m doxabase.parquet_manifest \
+  --base-iri https://example.test/project# \
+  --output profile-to-capsule.json \
+  data/orders.parquet data/tickets.parquet
+```
+
+That scaffold command requires optional `pyarrow`, does not preserve raw rows,
+and records conservative candidate layout statuses plus a default review caveat.
+Review the JSON before applying it with `profile_to_capsule`.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add
