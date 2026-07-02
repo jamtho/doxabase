@@ -82,6 +82,8 @@ def scaffold_manifest_from_sidecars(
     label: str | None = None,
     source_prefix: str | None = None,
     hash_artifacts: bool = False,
+    extract_markdown_views: bool = False,
+    analysis_view_base_iri: str | None = None,
     output_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a reviewable analysis-packet manifest skeleton from sidecar files."""
@@ -116,6 +118,16 @@ def scaffold_manifest_from_sidecars(
         )
         for index, path in enumerate(sidecar_files, start=1)
     ]
+    analysis_views = (
+        _scaffold_analysis_views_from_markdown(
+            sidecar_files,
+            sidecar_root=sidecar_root,
+            packet_iri=packet_iri,
+            analysis_view_base_iri=analysis_view_base_iri,
+        )
+        if extract_markdown_views
+        else []
+    )
     manifest = {
         "format": ANALYSIS_PACKET_MANIFEST_FORMAT,
         "packet_iri": packet_iri,
@@ -126,7 +138,7 @@ def scaffold_manifest_from_sidecars(
             "summary before applying this manifest."
         ),
         "evidence_sources": [],
-        "analysis_views": [],
+        "analysis_views": analysis_views,
         "query_recipes": [],
         "artifacts": artifacts,
         "followup_tasks": [],
@@ -136,9 +148,199 @@ def scaffold_manifest_from_sidecars(
         "packet_iri": packet_iri,
         "sidecar_dir": str(sidecar_root),
         "artifact_count": len(artifacts),
+        "candidate_analysis_view_count": len(analysis_views),
         "hash_artifacts": hash_artifacts,
         "manifest": manifest,
     }
+
+
+_MARKDOWN_CODE_FENCE_RE = re.compile(
+    r"```(?P<language>[^\n`]*)\n(?P<code>.*?)\n```",
+    re.DOTALL,
+)
+
+_CREATE_VIEW_RE = re.compile(
+    r"""
+    \bcreate\s+
+    (?:or\s+replace\s+)?
+    (?:(?:temporary|temp)\s+)?
+    view\s+
+    (?:if\s+not\s+exists\s+)?
+    (?P<name>
+        (?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[A-Za-z_][\w$]*)
+        (?:\s*\.\s*(?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[A-Za-z_][\w$]*))?
+    )
+    \s+as\b
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+_OBSERVED_ROW_COUNT_RE = re.compile(
+    r"\bObserved\s+row\s+count\s*:\s*([0-9][0-9,]*)\b",
+    re.IGNORECASE,
+)
+
+
+def _scaffold_analysis_views_from_markdown(
+    sidecar_files: list[Path],
+    *,
+    sidecar_root: Path,
+    packet_iri: str,
+    analysis_view_base_iri: str | None,
+) -> list[dict[str, Any]]:
+    view_base = _normalise_analysis_view_base_iri(
+        analysis_view_base_iri,
+        packet_iri=packet_iri,
+    )
+    views: list[dict[str, Any]] = []
+    used_iris: set[str] = set()
+    for path in sidecar_files:
+        if _media_type_for_path(path) != "text/markdown":
+            continue
+        text = path.read_text(encoding="utf-8")
+        relative_source = path.relative_to(sidecar_root).as_posix()
+        for match in _MARKDOWN_CODE_FENCE_RE.finditer(text):
+            code = match.group("code").strip()
+            if not code:
+                continue
+            view_match = _CREATE_VIEW_RE.search(code)
+            if view_match is None:
+                continue
+            if _is_probable_physical_registration_view(code):
+                continue
+            view_name = _normalise_sql_identifier(view_match.group("name"))
+            slug = _artifact_slug(view_name.replace(".", "-"), len(views) + 1)
+            view_iri = _unique_iri(_join_iri_prefix(view_base, slug), used_iris)
+            row_count = _observed_row_count_after(text, match.end())
+            label = _artifact_label(Path(view_name.replace(".", "_")))
+            basis = (
+                "Scaffolded from a Markdown CREATE VIEW block in "
+                f"{relative_source}; review source datasets, caveats, and "
+                "denominator semantics before applying."
+            )
+            view: dict[str, Any] = {
+                "iri": view_iri,
+                "label": label,
+                "description": (
+                    "TODO: Review this scaffolded analysis view before applying "
+                    "the manifest."
+                ),
+                "denominator_description": (
+                    f"TODO: Review the denominator represented by CREATE VIEW "
+                    f"{view_name}."
+                ),
+                "denominator_basis": basis,
+                "query_snippets": [
+                    {
+                        "label": f"Candidate definition for {label}",
+                        "description": (
+                            "Scaffolded from a Markdown SQL fence in "
+                            f"{relative_source}; review before applying."
+                        ),
+                        "query_text": code,
+                        "query_language": _query_language_for_fence(
+                            match.group("language")
+                        ),
+                        "query_engine": _query_engine_for_fence(
+                            match.group("language")
+                        ),
+                    }
+                ],
+            }
+            if row_count is not None:
+                view["row_count_snapshot"] = row_count
+                view["denominator_row_count_snapshot"] = row_count
+            views.append(view)
+    return views
+
+
+def _normalise_analysis_view_base_iri(
+    analysis_view_base_iri: str | None,
+    *,
+    packet_iri: str,
+) -> str:
+    base = (
+        analysis_view_base_iri.strip()
+        if analysis_view_base_iri is not None and analysis_view_base_iri.strip()
+        else f"{packet_iri.rstrip('/#')}/analysis-view/"
+    )
+    if base.endswith(("/", "#")):
+        return base
+    return f"{base}/"
+
+
+def _join_iri_prefix(prefix: str, suffix: str) -> str:
+    if prefix.endswith(("/", "#")):
+        return prefix + suffix
+    return f"{prefix}/{suffix}"
+
+
+def _unique_iri(candidate: str, used_iris: set[str]) -> str:
+    if candidate not in used_iris:
+        used_iris.add(candidate)
+        return candidate
+    index = 2
+    while f"{candidate}-{index}" in used_iris:
+        index += 1
+    unique = f"{candidate}-{index}"
+    used_iris.add(unique)
+    return unique
+
+
+def _normalise_sql_identifier(identifier: str) -> str:
+    parts = [part.strip() for part in identifier.split(".")]
+    return ".".join(_strip_sql_identifier_quotes(part) for part in parts if part)
+
+
+def _strip_sql_identifier_quotes(identifier: str) -> str:
+    text = identifier.strip()
+    if len(text) >= 2 and (
+        (text[0] == '"' and text[-1] == '"')
+        or (text[0] == "`" and text[-1] == "`")
+        or (text[0] == "[" and text[-1] == "]")
+    ):
+        return text[1:-1]
+    return text
+
+
+def _observed_row_count_after(text: str, offset: int) -> int | None:
+    next_fence = text.find("```", offset)
+    window_end = next_fence if next_fence != -1 else min(len(text), offset + 600)
+    match = _OBSERVED_ROW_COUNT_RE.search(text[offset:window_end])
+    if match is None:
+        return None
+    return int(match.group(1).replace(",", ""))
+
+
+def _is_probable_physical_registration_view(code: str) -> bool:
+    lowered = code.lower()
+    return any(
+        reader in lowered
+        for reader in (
+            "read_parquet(",
+            "read_csv(",
+            "read_csv_auto(",
+            "read_json(",
+            "read_json_auto(",
+            "read_ndjson(",
+        )
+    )
+
+
+def _query_language_for_fence(language: str | None) -> str:
+    text = (language or "").strip().lower()
+    if "duckdb" in text:
+        return "DuckDB SQL"
+    if "sql" in text:
+        return "SQL"
+    return "SQL"
+
+
+def _query_engine_for_fence(language: str | None) -> str | None:
+    text = (language or "").strip().lower()
+    if "duckdb" in text:
+        return "duckdb"
+    return None
 
 
 def _scaffold_artifact_spec(
@@ -427,6 +629,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include sha256:<hex> content_hash values in scaffolded artifacts.",
     )
     parser.add_argument(
+        "--extract-markdown-views",
+        action="store_true",
+        help=(
+            "When --init-manifest is set, also scan Markdown sidecars for "
+            "SQL fences containing CREATE VIEW statements and emit review-only "
+            "candidate analysis_views."
+        ),
+    )
+    parser.add_argument(
+        "--analysis-view-base-iri",
+        help=(
+            "Base IRI for candidate analysis view IRIs produced by "
+            "--extract-markdown-views. Defaults to "
+            "<packet-iri>/analysis-view/."
+        ),
+    )
+    parser.add_argument(
         "--output",
         help=(
             "Write a scaffolded manifest to this path. When omitted, the "
@@ -463,6 +682,8 @@ def main(argv: list[str] | None = None) -> int:
                 label=args.label,
                 source_prefix=args.source_prefix,
                 hash_artifacts=args.hash_artifacts,
+                extract_markdown_views=args.extract_markdown_views,
+                analysis_view_base_iri=args.analysis_view_base_iri,
                 output_path=args.output,
             )
             manifest = result["manifest"]

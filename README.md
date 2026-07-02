@@ -120,8 +120,8 @@ Implemented:
   aggregate artifact locators, visual metadata, follow-up tasks, and optional
   pattern support as one graph-native handoff node.
 - `python -m doxabase.analysis_packet` for applying a reviewed
-  `doxabase.analysis_packet_manifest.v1` JSON handoff without parsing artifact
-  contents.
+  `doxabase.analysis_packet_manifest.v1` JSON handoff, or scaffolding one from
+  sidecar locators with optional review-only Markdown `CREATE VIEW` extraction.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
@@ -363,7 +363,8 @@ Useful first tool calls for an agent:
 26. `doxabase.record_analysis_packet` when reviewed analysis-view links,
     aggregate artifacts, visuals, and follow-up tasks need one handoff seed
 27. `python -m doxabase.analysis_packet` when that reviewed packet already
-    lives as a local `doxabase.analysis_packet_manifest.v1` JSON file
+    lives as a local `doxabase.analysis_packet_manifest.v1` JSON file, or when
+    sidecar files need a reviewable scaffold before graph-native recording
 28. `doxabase.record_pattern` for syntheses over related findings
 29. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed

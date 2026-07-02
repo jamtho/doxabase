@@ -312,3 +312,113 @@ def test_analysis_packet_cli_scaffold_handles_unknown_and_empty_sidecars(
     )
     assert empty_result.returncode == 1
     assert "No sidecar files found" in empty_result.stderr
+
+
+def test_analysis_packet_cli_scaffold_extracts_markdown_create_views(
+    tmp_path: Path,
+) -> None:
+    sidecar_dir = tmp_path / "handoff"
+    sidecar_dir.mkdir()
+    (sidecar_dir / "analysis_views.md").write_text(
+        """
+# Recommended Views
+
+```sql
+create or replace view eml_messages_plausible_1997_2004 as
+select *
+from eml_messages
+where date >= timestamp '1997-01-01'
+  and date < timestamp '2005-01-01';
+```
+
+Observed row count: 1,210,548.
+
+```duckdb-sql
+create view eml_messages_plausible_message_like as
+select *
+from eml_messages_plausible_1997_2004
+where folder_family not in ('calendar', 'contacts', 'meetings');
+```
+
+Observed row count: 980,561.
+
+```duckdb-sql
+create or replace view eml_messages as
+select *
+from read_parquet('s3://example/eml_messages.parquet');
+```
+
+```python
+print("not a view")
+```
+""".lstrip(),
+        encoding="utf-8",
+    )
+    packet_iri = "https://example.test/analysis-cli#packet"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--init-manifest",
+            "--sidecar-dir",
+            str(sidecar_dir),
+            "--packet-iri",
+            packet_iri,
+            "--extract-markdown-views",
+            "--analysis-view-base-iri",
+            "https://example.test/enron-analysis#",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    manifest = json.loads(result.stdout)
+    assert [view["iri"] for view in manifest["analysis_views"]] == [
+        "https://example.test/enron-analysis#eml_messages_plausible_1997_2004",
+        "https://example.test/enron-analysis#eml_messages_plausible_message_like",
+    ]
+    assert [view["row_count_snapshot"] for view in manifest["analysis_views"]] == [
+        1210548,
+        980561,
+    ]
+    assert manifest["analysis_views"][0]["denominator_row_count_snapshot"] == 1210548
+    first_snippet = manifest["analysis_views"][0]["query_snippets"][0]
+    second_snippet = manifest["analysis_views"][1]["query_snippets"][0]
+    assert "create or replace view eml_messages_plausible_1997_2004" in (
+        first_snippet["query_text"]
+    )
+    assert first_snippet["query_language"] == "SQL"
+    assert first_snippet["query_engine"] is None
+    assert second_snippet["query_language"] == "DuckDB SQL"
+    assert second_snippet["query_engine"] == "duckdb"
+    assert "TODO: Review" in manifest["analysis_views"][0]["description"]
+
+    capsule_path = tmp_path / "capsule.sqlite"
+    manifest_path = tmp_path / "analysis-packet.json"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    apply_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--capsule",
+            str(capsule_path),
+            "--manifest",
+            str(manifest_path),
+            "--overwrite",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    applied = json.loads(apply_result.stdout)
+    assert applied["analysis_view_count"] == 2
+    assert applied["validation_conforms"] is True

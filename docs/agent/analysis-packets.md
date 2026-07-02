@@ -77,6 +77,28 @@ decide which caveats are map facts. Review the generated JSON, fill
 `analysis_views`, `query_recipes`, and `followup_tasks` from the sidecar
 contents, then apply it with `--capsule ... --manifest ...`.
 
+When a reviewed Markdown sidecar already contains SQL fenced code blocks with
+`CREATE VIEW ... AS` definitions, add `--extract-markdown-views` to seed
+review-only candidate `analysis_views`:
+
+```bash
+python -m doxabase.analysis_packet \
+  --init-manifest \
+  --sidecar-dir /tmp/enron-doxabase-handoff \
+  --packet-iri https://example.test/enron-emails#analysis_packet \
+  --analysis-view-base-iri https://example.test/enron-emails# \
+  --extract-markdown-views \
+  --output /tmp/enron-doxabase-handoff/analysis-packet.json
+```
+
+This mode captures the view name, SQL query text, and adjacent `Observed row
+count: ...` notes into a manifest skeleton. It still does not infer source
+datasets, caveats, denominator prose, or correctness. Treat generated view
+descriptions and denominator fields as TODOs to review before applying.
+Common physical registration views built directly from readers such as
+`read_parquet(...)` are skipped so cookbook setup does not masquerade as a
+logical analysis population.
+
 Markdown sidecars remain locator evidence until someone translates the reviewed
 denominators, SQL snippets, artifact locators, caveats, and follow-up tasks into
 structured packet fields. If a handoff directory contains only

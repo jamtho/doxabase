@@ -250,6 +250,12 @@ large packets could crowd out views, recipes, or tasks with bulk artifact
 links. Packet action predicates now win the first outgoing-reference page, but
 artifact-heavy packets still need `describe_resource` paging for exhaustive
 artifact review.
+A follow-up graph-native Enron trial confirmed that locator-only sidecar
+scaffolds still leave Markdown view semantics invisible. Use
+`python -m doxabase.analysis_packet --init-manifest --extract-markdown-views`
+when reviewed Markdown contains fenced `CREATE VIEW` definitions; it emits
+candidate view specs and row-count snapshots for review without applying or
+trusting inferred semantics.
 
 ## Safety
 
