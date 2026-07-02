@@ -10,6 +10,11 @@ from doxabase import DoxaBase
 
 ROOT = Path(__file__).resolve().parents[1]
 
+PNG_1X1 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de"
+    "0000000c49444154789c6360600000000400010d0a2db40000000049454e44ae426082"
+)
+
 
 def test_analysis_packet_cli_applies_manifest_file(tmp_path: Path) -> None:
     capsule_path = tmp_path / "capsule.sqlite"
@@ -169,3 +174,141 @@ def test_analysis_packet_cli_rejects_wrong_manifest_format(tmp_path: Path) -> No
     assert result.returncode == 1
     assert "analysis-packet manifest format must be" in result.stderr
     assert not capsule_path.exists()
+
+
+def test_analysis_packet_cli_scaffolds_sidecar_manifest(tmp_path: Path) -> None:
+    sidecar_dir = tmp_path / "handoff"
+    visuals_dir = sidecar_dir / "visuals"
+    visuals_dir.mkdir(parents=True)
+    (sidecar_dir / "analysis_views.md").write_text(
+        "# Views\n\nReviewed logical views.\n",
+        encoding="utf-8",
+    )
+    (sidecar_dir / "topic_counts.json").write_text(
+        json.dumps({"rows": 12}),
+        encoding="utf-8",
+    )
+    (visuals_dir / "lane_chart.png").write_bytes(PNG_1X1)
+    manifest_path = tmp_path / "analysis-packet-scaffold.json"
+    packet_iri = "https://example.test/analysis-cli#packet"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--init-manifest",
+            "--sidecar-dir",
+            str(sidecar_dir),
+            "--packet-iri",
+            packet_iri,
+            "--summary",
+            "Reviewed sidecar scaffold for Enron analysis artifacts.",
+            "--label",
+            "Enron analysis sidecars",
+            "--hash-artifacts",
+            "--output",
+            str(manifest_path),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    scaffold_summary = json.loads(result.stdout)
+    assert scaffold_summary["manifest_path"] == str(manifest_path)
+    assert scaffold_summary["artifact_count"] == 3
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["format"] == "doxabase.analysis_packet_manifest.v1"
+    assert manifest["packet_iri"] == packet_iri
+    assert manifest["analysis_views"] == []
+    assert manifest["query_recipes"] == []
+    assert manifest["followup_tasks"] == []
+    artifacts = {artifact["source_path"]: artifact for artifact in manifest["artifacts"]}
+    assert artifacts["analysis_views.md"]["media_type"] == "text/markdown"
+    assert artifacts["topic_counts.json"]["media_type"] == "application/json"
+    chart = artifacts["visuals/lane_chart.png"]
+    assert chart["artifact_role"] == "visualization"
+    assert chart["media_type"] == "image/png"
+    assert chart["byte_size"] == len(PNG_1X1)
+    assert chart["content_hash"].startswith("sha256:")
+    assert chart["image_width"] == 1
+    assert chart["image_height"] == 1
+
+    capsule_path = tmp_path / "capsule.sqlite"
+    apply_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--capsule",
+            str(capsule_path),
+            "--manifest",
+            str(manifest_path),
+            "--overwrite",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    applied = json.loads(apply_result.stdout)
+    assert applied["packet_iri"] == packet_iri
+    assert applied["artifact_count"] == 3
+    assert applied["validation_conforms"] is True
+
+
+def test_analysis_packet_cli_scaffold_handles_unknown_and_empty_sidecars(
+    tmp_path: Path,
+) -> None:
+    sidecar_dir = tmp_path / "sidecars"
+    sidecar_dir.mkdir()
+    (sidecar_dir / "artifact.unknownext").write_text(
+        "opaque sidecar",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--init-manifest",
+            "--sidecar-dir",
+            str(sidecar_dir),
+            "--packet-iri",
+            "https://example.test/analysis-cli#unknown_packet",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    manifest = json.loads(result.stdout)
+    artifact = manifest["artifacts"][0]
+    assert artifact["source_path"] == "artifact.unknownext"
+    assert artifact["media_type"] == "application/octet-stream"
+    assert artifact["artifact_role"] == "sidecar"
+    assert "content_hash" not in artifact
+
+    empty_dir = tmp_path / "empty-sidecars"
+    empty_dir.mkdir()
+    empty_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--init-manifest",
+            "--sidecar-dir",
+            str(empty_dir),
+            "--packet-iri",
+            "https://example.test/analysis-cli#empty_packet",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert empty_result.returncode == 1
+    assert "No sidecar files found" in empty_result.stderr

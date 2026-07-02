@@ -4653,6 +4653,13 @@ few useful gaps:
   `doxabase.analysis_packet_manifest.v1` JSON file, validates the graph, and
   returns packet/view/artifact/query-recipe/task handles without parsing report
   text or ingesting artifact bytes.
+- A follow-up Enron sidecar-packaging pass found the remaining gap was the
+  repetitive locator packaging step before review. The same CLI now supports
+  `--init-manifest --sidecar-dir ... --packet-iri ...` to scaffold
+  `doxabase.analysis_packet_manifest.v1` JSON from sidecar files, including
+  artifact media types, byte sizes, optional content hashes, and image
+  dimensions, while leaving semantic view/recipe/task extraction to agent
+  review.
 - The same Enron handoff scout found `draft_profile_map_updates(...,
   evidence_iri=None)` raised a raw `AttributeError`; required IRI validation now
   returns a clear `DoxaBaseError` for non-string missing identifiers.

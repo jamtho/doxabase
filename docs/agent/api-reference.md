@@ -1176,6 +1176,10 @@ For a reviewed packet stored as JSON, run
 to apply a `doxabase.analysis_packet_manifest.v1` manifest, validate the graph,
 and print packet/view/artifact/query-recipe/task handles without adding report
 parsers or raw artifact ingestion.
+For a sidecar directory that still needs review, run
+`python -m doxabase.analysis_packet --init-manifest --sidecar-dir path --packet-iri iri --output analysis-packet.json`
+to scaffold artifact locators and file metadata before filling the reviewed
+view, recipe, and task fields.
 
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,

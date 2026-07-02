@@ -334,6 +334,8 @@ def test_analysis_packet_doc_names_query_recipes() -> None:
     assert "analysis_views" in content
     assert "denominators" in content
     assert "Markdown sidecars remain locator evidence" in content
+    assert "--init-manifest" in content
+    assert "--sidecar-dir" in content
 
 
 def test_systematisation_doc_names_core_workflow_tools() -> None:

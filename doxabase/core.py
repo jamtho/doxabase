@@ -71072,9 +71072,14 @@ class DoxaBase:
             raise DoxaBaseError("summary must be a non-empty string")
         self._preflight_optional_string("label", label)
         source_values = self._string_values("evidence_sources", evidence_sources)
-        view_specs = (
-            self._normalise_analysis_view_bundle_specs(analysis_views)
+        analysis_view_values = (
+            self._normalise_manifest_object_list("analysis_views", analysis_views)
             if analysis_views is not None
+            else []
+        )
+        view_specs = (
+            self._normalise_analysis_view_bundle_specs(analysis_view_values)
+            if analysis_view_values
             else []
         )
         existing_view_iris = [

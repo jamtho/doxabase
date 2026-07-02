@@ -57,6 +57,26 @@ view, artifact, recipe, task, and suggested follow-up handles as JSON. It does
 not read referenced Markdown/JSON/PNG files, parse report text, store artifact
 bytes, or execute query recipes.
 
+When the handoff is still a directory of sidecar files, scaffold a manifest
+before translating the reviewed semantic content:
+
+```bash
+python -m doxabase.analysis_packet \
+  --init-manifest \
+  --sidecar-dir /tmp/enron-doxabase-handoff \
+  --packet-iri https://example.test/enron-emails#analysis_packet \
+  --summary "Reviewed Enron sidecar analysis packet." \
+  --output /tmp/enron-doxabase-handoff/analysis-packet.json
+```
+
+The scaffold mode enumerates sidecar file locators into `artifacts`, infers
+media type, byte size, and image dimensions when available, and includes
+`sha256:<hex>` content hashes when `--hash-artifacts` is passed. It does not
+parse Markdown prose, extract SQL, execute queries, choose denominators, or
+decide which caveats are map facts. Review the generated JSON, fill
+`analysis_views`, `query_recipes`, and `followup_tasks` from the sidecar
+contents, then apply it with `--capsule ... --manifest ...`.
+
 Markdown sidecars remain locator evidence until someone translates the reviewed
 denominators, SQL snippets, artifact locators, caveats, and follow-up tasks into
 structured packet fields. If a handoff directory contains only

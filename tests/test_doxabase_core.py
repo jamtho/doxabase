@@ -28325,6 +28325,35 @@ def test_record_analysis_packet_requires_existing_linked_analysis_views(
     assert _mutable_graph_counts(db) == before_counts
 
 
+def test_record_analysis_packet_allows_empty_optional_manifest_sections(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    packet = "https://example.test/analysis-packet#sidecar_packet"
+
+    result = db.record_analysis_packet(
+        packet,
+        summary="Reviewed sidecar packet with artifact locators only.",
+        analysis_views=[],
+        query_recipes=[],
+        artifacts=[
+            {
+                "source_path": "scratch://analysis_views.md",
+                "artifact_role": "report",
+            }
+        ],
+        followup_tasks=[],
+    )
+
+    assert result.packet_iri == packet
+    assert result.analysis_view_iris == []
+    assert result.query_recipe_iris == []
+    assert len(result.artifact_iris) == 1
+    assert result.followup_task_iris == []
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 @pytest.mark.parametrize(
     ("query_recipes", "match"),
     [
