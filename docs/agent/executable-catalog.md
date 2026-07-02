@@ -37,6 +37,10 @@ are safe to share with project collaborators:
   Do not use a value such as `local_path`: local filesystem is a
   `storageProtocol`, while `locationKind` describes the shape of the recorded
   root.
+  For S3/object-store routes, avoid repeating the key prefix in storage-owned
+  templates unless that duplication is intentional and reviewed. For example,
+  with `key_prefix="messages/"`, prefer `path_templates=["month={month}/*.parquet"]`
+  over `path_templates=["messages/month={month}/*.parquet"]`.
 - `rc:endpointProfile` names a locally resolved endpoint profile, such as
   `local-minio`.
 - `rc:pathStyleAccess` records an S3-compatible access quirk that query engines

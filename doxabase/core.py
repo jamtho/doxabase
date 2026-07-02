@@ -569,6 +569,11 @@ class ProjectBriefProfileDraftSummary:
     type_advisory_count: int
     type_advisory_status_counts: dict[str, int]
     action_group_names: list[str]
+    pending_staged_profile_advisory_iris: list[str]
+    pending_staged_profile_advisory_count: int
+    pending_staged_profile_advisory_actions: list[SuggestedNextAction]
+    pending_staged_profile_advisory_calls: list[str]
+    task_advisories: list[dict[str, Any]]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -5569,6 +5574,21 @@ class DoxaBase:
                 self._privacy_redacted_suggested_next_action(action)
                 for action in draft.suggested_next_actions[:3]
             ]
+            pending_staged_advisory_actions = (
+                self._project_brief_pending_staged_profile_advisory_actions(
+                    draft,
+                )
+            )
+            pending_staged_advisory_iris = (
+                self._project_brief_pending_staged_profile_advisory_iris(
+                    pending_staged_advisory_actions,
+                )
+            )
+            task_advisories = (
+                self._project_brief_profile_task_advisories(
+                    pending_staged_advisory_actions,
+                )
+            )
             drafts.append(
                 ProjectBriefProfileDraftSummary(
                     evidence_iri=evidence_iri,
@@ -5583,6 +5603,20 @@ class DoxaBase:
                     type_advisory_count=draft.type_advisory_count,
                     type_advisory_status_counts=draft.type_advisory_status_counts,
                     action_group_names=list(draft.suggested_next_action_groups),
+                    pending_staged_profile_advisory_iris=(
+                        pending_staged_advisory_iris
+                    ),
+                    pending_staged_profile_advisory_count=len(
+                        pending_staged_advisory_iris
+                    ),
+                    pending_staged_profile_advisory_actions=(
+                        pending_staged_advisory_actions[:3]
+                    ),
+                    pending_staged_profile_advisory_calls=[
+                        action.call
+                        for action in pending_staged_advisory_actions[:3]
+                    ],
+                    task_advisories=task_advisories,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
                         action.call for action in suggested_next_actions
@@ -5606,6 +5640,120 @@ class DoxaBase:
             draft_evidence_iris=[draft.evidence_iri for draft in drafts],
             drafts=drafts,
         )
+
+    def _project_brief_pending_staged_profile_advisory_actions(
+        self,
+        draft: ProfileMapUpdateDraft,
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        for group_name in ("metric_vocabulary_review", "profile_type_review"):
+            for action in draft.suggested_next_action_groups.get(group_name, []):
+                source = getattr(action, "source_profile_advisory", None)
+                if not isinstance(source, MappingABC):
+                    continue
+                if source.get("action_status") != "already_pending":
+                    continue
+                if not self._project_brief_profile_advisory_pending_iris(source):
+                    continue
+                actions.append(self._privacy_redacted_suggested_next_action(action))
+        return self._dedupe_suggested_next_actions(actions)
+
+    @staticmethod
+    def _project_brief_profile_advisory_pending_iris(
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> list[str]:
+        pending_iris: list[str] = []
+        for field_name in (
+            "pending_staged_promotion_iris",
+            "pending_staged_assertion_iris",
+            "pending_staged_fallback_iris",
+        ):
+            for iri in DoxaBase._string_values_from_any(
+                source_profile_advisory.get(field_name),
+            ):
+                DoxaBase._append_unique(pending_iris, iri)
+        return pending_iris
+
+    @staticmethod
+    def _project_brief_pending_staged_profile_advisory_iris(
+        actions: Iterable[SuggestedNextAction],
+    ) -> list[str]:
+        pending_iris: list[str] = []
+        for action in actions:
+            source = getattr(action, "source_profile_advisory", None)
+            if not isinstance(source, MappingABC):
+                continue
+            for iri in DoxaBase._project_brief_profile_advisory_pending_iris(
+                source,
+            ):
+                DoxaBase._append_unique(pending_iris, iri)
+        return pending_iris
+
+    @staticmethod
+    def _project_brief_profile_task_advisories(
+        pending_staged_advisory_actions: Iterable[SuggestedNextAction],
+    ) -> list[dict[str, Any]]:
+        advisories: list[dict[str, Any]] = []
+        seen_keys: set[tuple[Any, ...]] = set()
+        for action in pending_staged_advisory_actions:
+            source = getattr(action, "source_profile_advisory", None)
+            if not isinstance(source, MappingABC):
+                continue
+            pending_iris = (
+                DoxaBase._project_brief_profile_advisory_pending_iris(source)
+            )
+            if not pending_iris:
+                continue
+            key = (
+                source.get("review_lane"),
+                source.get("semantic_move"),
+                source.get("route_group_key"),
+                tuple(pending_iris),
+            )
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            advisory = {
+                "code": "pending_staged_profile_advisory_review",
+                "severity": "warning",
+                "source": "draft_profile_map_updates",
+                "recommended_handling": (
+                    "inspect_pending_staged_revision_before_restaging"
+                ),
+                "reason": (
+                    "A profile advisory route already has pending staged work; "
+                    "inspect that staged revision before staging duplicate "
+                    "advisory follow-through."
+                ),
+                "review_lane": source.get("review_lane"),
+                "semantic_move": source.get("semantic_move"),
+                "route_group_key": source.get("route_group_key"),
+                "route_step_key": source.get("route_step_key"),
+                "action_status": source.get("action_status"),
+                "advisory_statuses": to_jsonable(
+                    source.get("advisory_statuses", []),
+                ),
+                "pending_staged_revision_iris": pending_iris,
+                "pending_staged_promotion_iris": (
+                    DoxaBase._string_values_from_any(
+                        source.get("pending_staged_promotion_iris"),
+                    )
+                ),
+                "pending_staged_assertion_iris": (
+                    DoxaBase._string_values_from_any(
+                        source.get("pending_staged_assertion_iris"),
+                    )
+                ),
+                "pending_staged_fallback_iris": (
+                    DoxaBase._string_values_from_any(
+                        source.get("pending_staged_fallback_iris"),
+                    )
+                ),
+                "suggested_next_action": to_jsonable(action),
+                "suggested_next_call": action.call,
+            }
+            advisories.append(advisory)
+        return advisories
 
     @staticmethod
     def _project_brief_profile_draft_status(
@@ -6665,6 +6813,8 @@ class DoxaBase:
                 )
                 if pending_staged_profile_update_iris:
                     action = inspection_action
+                elif draft.pending_staged_profile_advisory_actions:
+                    action = draft.pending_staged_profile_advisory_actions[0]
                 else:
                     action = (
                         draft.suggested_next_actions[0]
@@ -6686,12 +6836,24 @@ class DoxaBase:
                     )
                 else:
                     pending_note = ""
+                if draft.pending_staged_profile_advisory_count:
+                    pending_note += (
+                        " Pending staged profile advisory follow-through "
+                        "already exists for this dataset/evidence; inspect "
+                        "the staged advisory revision(s) before staging "
+                        "duplicate advisory work."
+                    )
                 tasks.append(
                     ProjectBriefRecommendedTask(
                         priority=(
                             55
-                            if pending_staged_profile_update_iris
-                            and not open_profile_advisory_count
+                            if (
+                                (
+                                    pending_staged_profile_update_iris
+                                    and not open_profile_advisory_count
+                                )
+                                or draft.pending_staged_profile_advisory_count
+                            )
                             else 30
                         ),
                         task_type="profile_review",
@@ -6709,6 +6871,7 @@ class DoxaBase:
                         pending_staged_profile_update_iris=(
                             pending_staged_profile_update_iris
                         ),
+                        task_advisories=draft.task_advisories,
                     )
                 )
         return tasks

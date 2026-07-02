@@ -38137,6 +38137,46 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         "pending_staged_assertion_iris"
     ] == [staged_assertion.revision_iri]
 
+    brief_after_assertion = db.project_brief(limit=10, profile_candidate_limit=1)
+    profile_task = next(
+        task
+        for task in brief_after_assertion.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+    profile_draft = brief_after_assertion.datasets[0].profile.drafts[0]
+    assert set(profile_draft.pending_staged_profile_advisory_iris) == {
+        staged.iri,
+        staged_assertion.revision_iri,
+    }
+    assert profile_draft.pending_staged_profile_advisory_count == 2
+    assert profile_draft.pending_staged_profile_advisory_actions[0].tool_name == (
+        "describe_staged_revision"
+    )
+    assert profile_task.priority == 55
+    assert profile_task.suggested_next_action is not None
+    assert profile_task.suggested_next_action.tool_name == "describe_staged_revision"
+    assert set(profile_task.suggested_next_action.arguments.values()) & {
+        staged.iri,
+        staged_assertion.revision_iri,
+    }
+    assert "Pending staged profile advisory follow-through" in (
+        profile_task.reason
+    )
+    assert {
+        advisory["code"] for advisory in profile_task.task_advisories
+    } == {"pending_staged_profile_advisory_review"}
+    advisories_by_move = {
+        advisory["semantic_move"]: advisory
+        for advisory in profile_task.task_advisories
+    }
+    assert set(advisories_by_move) == {"assert_map_type", "define_value_type"}
+    assert advisories_by_move["assert_map_type"][
+        "pending_staged_assertion_iris"
+    ] == [staged_assertion.revision_iri]
+    assert advisories_by_move["define_value_type"][
+        "pending_staged_promotion_iris"
+    ] == [staged.iri]
+
     final_review = db.export_profile_insight_review_bundle(
         dataset,
         evidence,

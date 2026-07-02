@@ -205,6 +205,11 @@ advisory rather than a safety gate, but affected `query_repair_review` rows carr
 `suppression_policy="review_group_before_member_mutation"` so scripts that
 consume `recommended_next_tasks[]` do not need to separately correlate
 `health_tasks[]`.
+Profile review rows can also carry
+`task_advisories[].code="pending_staged_profile_advisory_review"` when metric
+or type advisory follow-through already has staged work. In that case follow
+the task's read-only staged-revision inspection/export action before staging
+another advisory mutation for the same route.
 `profile_queue_counts["profile_candidate_omitted"]` and the
 `expand_profile_candidate_limit` health task mean some profile evidence was not
 drafted at all under the current candidate bound; rerun `project_brief` with the
@@ -1390,7 +1395,9 @@ response echoes those reviewed values in `reviewed_overlay`, including generated
 or caller-supplied storage/layout IRIs, labels, access mode,
 endpoint/bucket/prefix/region/path-style fields, credential reference,
 compression, and replaced dataset/storage/layout verification values. It also
-reports the source query context and source profile/query evidence, previews
+reports compact source query-context fields as
+`source_query_context_readiness` and `source_query_context_issue_codes`, carries
+the source profile/query evidence in `source_query_evidence`, previews
 validation for the Turtle addition, and returns `stage_arguments` plus a
 `stage_graph_revision` suggested action. Treat
 `source_query_evidence.scanned_source_handles` /

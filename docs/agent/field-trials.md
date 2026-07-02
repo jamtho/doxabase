@@ -4597,6 +4597,20 @@ few useful gaps:
   `describe_analysis_view` for reached `rc:AnalysisView` resources, so packet
   slices route agents from generic outgoing references to denominators, source
   datasets, caveats, and view-level query snippets.
+- A broad profile-followthrough trial confirmed the profile map-update,
+  metric/type advisory, type-assertion batch, and completed-profile paths work
+  end to end. The remaining cold-agent risk was after staging advisory
+  follow-through: lower-level drafts knew about pending staged assertion,
+  promotion, or fallback revisions, but `project_brief` still looked like fresh
+  advisory work. Profile draft summaries and `profile_review` tasks now surface
+  pending staged advisory IRIs, compact task advisories, and staged-revision
+  inspection/export actions before duplicate advisory staging.
+- A storage/query handoff trial found local, database, logical-view, query
+  evidence overlay, and shareability preflight routes behaved correctly. The
+  remaining fixes were documentation accuracy: overlay drafts expose compact
+  `source_query_context_readiness` / `source_query_context_issue_codes` fields,
+  and S3 storage-owned path templates should usually be relative to the recorded
+  `key_prefix` rather than repeating it.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

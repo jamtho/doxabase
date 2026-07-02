@@ -392,6 +392,14 @@ populate `pending_staged_profile_update_iris`. Like query pending detection, thi
 can name current staged rows outside the returned staged-review slice. Pending profile-map updates only
 demote pure map-update reruns; if scalar conflict, metric vocabulary, or type
 advisory lanes remain open, the profile task stays at normal priority.
+When metric/type advisory follow-through already has staged work, profile draft
+summaries carry `pending_staged_profile_advisory_iris`,
+`pending_staged_profile_advisory_count`, and read-only
+`pending_staged_profile_advisory_actions`. The corresponding `profile_review`
+task repeats compact `task_advisories[]` with
+`code="pending_staged_profile_advisory_review"` and points its suggested action
+at the staged-revision inspection/export route, so unattended agents inspect
+pending advisory work before restaging the same semantic move.
 Metric advisories whose only status is `project_metric_defined` are context
 handoffs, not open vocabulary review lanes: they remain visible in profile draft
 summaries and `profile_queue_counts`, but do not create a `profile_review`
