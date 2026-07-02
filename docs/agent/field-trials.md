@@ -4435,6 +4435,12 @@ few useful gaps:
   address-looking values and low-frequency domain pairs by default; it still
   does not parse addresses, infer internal-domain rules, or assert that a
   network analysis is valid.
+- Re-verifying the copied Enron handoff package exposed a portability gap:
+  manifests can preserve absolute artifact paths from the source run even when
+  the TriG and revision-snapshot JSON have been copied beside the manifest.
+  `import_handoff_bundle` now falls back to same-basename sibling artifacts when
+  a recorded path is stale, so receivers do not need to hand-edit copied
+  manifests before import.
 - A profile-to-capsule/Enron handoff check found `describe_query_context`
   correctly marked `rc:AnalysisView` resources as `logical_analysis_view`, but
   `project_brief` still routed those views through `query_context_review`.

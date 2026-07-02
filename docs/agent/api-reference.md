@@ -192,8 +192,11 @@ the receiving capsule, prefer
 `import_handoff_bundle(manifest_path, dry_run=True)` followed by
 `import_handoff_bundle(manifest_path)` when that manifest is available; the
 helper imports the paired TriG before snapshot JSON and returns snapshot
-evidence plus a staged recovery plan. If the imported history already contains
-a matching `rc:StagedRevisionRecoverySession`, follow the returned
+evidence plus a staged recovery plan. Relative artifact paths resolve from the
+manifest directory, and copied manifests with stale absolute artifact paths can
+still import when the paired artifacts with matching basenames sit next to the
+manifest. If the imported history already contains a matching
+`rc:StagedRevisionRecoverySession`, follow the returned
 `describe_staged_revision_recovery_session` action before creating a
 receiver-local session. Treat `scanner_clean=true` as scanner output only while
 `shareability_review_status="required_not_completed"`.

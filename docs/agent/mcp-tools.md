@@ -2774,9 +2774,11 @@ follow its `import_trig` action.
 Imports a handoff manifest written by `doxabase.export_handoff_bundle`. Use it
 when a receiver has the manifest as well as the paired project/history TriG and
 revision snapshot JSON artifacts. The helper resolves relative artifact paths
-from the manifest directory, reports pre-import snapshot evidence, imports the
-TriG first and snapshot JSON second, then returns post-import snapshot evidence
-plus `plan_staged_revision_recovery` for the manifest revisions. Manifest
+from the manifest directory. If a copied manifest still records stale absolute
+artifact paths, the helper also accepts paired artifacts with the same basenames
+next to the manifest. It reports pre-import snapshot evidence, imports the TriG
+first and snapshot JSON second, then returns post-import snapshot evidence plus
+`plan_staged_revision_recovery` for the manifest revisions. Manifest
 revision lists may include ordinary non-staged `rc:GraphRevision` history or
 snapshot context alongside staged patch rows; those import as informational
 recovery lanes and should be inspected with `describe_graph_revision`, not

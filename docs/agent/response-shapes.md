@@ -5747,7 +5747,9 @@ handoff.recovery_complete
 ```
 
 The helper consumes a `doxabase.handoff_bundle.v1` manifest and resolves paired
-artifact paths relative to the manifest directory. A dry run reports the paths,
+artifact paths relative to the manifest directory. If a copied manifest still
+records stale absolute paths, same-basename artifacts beside the manifest are
+accepted and reported in `handoff.paths`. A dry run reports the paths,
 warnings, pre-import evidence, and the `import_handoff_bundle(...,
 dry_run=False)` action without importing anything. A real import loads the
 project/history TriG first, imports revision snapshot rows second, then runs

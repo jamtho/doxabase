@@ -62537,13 +62537,16 @@ class DoxaBase:
         path = Path(path_value)
         if not path.is_absolute():
             path = base_path / path
-        if not path.exists():
-            raise DoxaBaseError(
-                "Handoff bundle artifact path does not exist: "
-                f"{path}. Check the manifest path or move the paired artifacts "
-                "next to the manifest."
-            )
-        return path
+        if path.exists():
+            return path
+        sibling_path = base_path / path.name
+        if sibling_path != path and sibling_path.exists():
+            return sibling_path
+        raise DoxaBaseError(
+            "Handoff bundle artifact path does not exist: "
+            f"{path}. Check the manifest path or move the paired artifacts "
+            "next to the manifest."
+        )
 
     @staticmethod
     def _handoff_manifest_revision_iris(

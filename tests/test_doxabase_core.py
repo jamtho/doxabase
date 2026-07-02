@@ -2969,6 +2969,70 @@ def test_import_handoff_bundle_routes_non_staged_revision_context(
     assert validation.conforms, validation.report_text
 
 
+def test_import_handoff_bundle_resolves_moved_absolute_artifacts_next_to_manifest(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = source.stage_graph_revision(
+        summary="Stage shipment table",
+        rationale="Create a portable handoff manifest regression fixture.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Shipments a rc:Dataset, rc:Table .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    manifest_path = tmp_path / "handoff-manifest.json"
+    source.export_handoff_bundle(
+        trig_path,
+        snapshot_path,
+        manifest_path=manifest_path,
+        revision_iris=[staged.revision_iri],
+        fail_on_sensitive=True,
+    )
+
+    portable_dir = tmp_path / "portable"
+    portable_dir.mkdir()
+    portable_trig = portable_dir / trig_path.name
+    portable_snapshot = portable_dir / snapshot_path.name
+    portable_trig.write_bytes(trig_path.read_bytes())
+    portable_snapshot.write_bytes(snapshot_path.read_bytes())
+    portable_manifest = portable_dir / manifest_path.name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    stale_root = Path("/source-machine/doxabase-run")
+    manifest["artifacts"]["trig"]["path"] = str(stale_root / trig_path.name)
+    manifest["artifacts"]["revision_snapshots"]["path"] = str(
+        stale_root / snapshot_path.name
+    )
+    manifest["recommended_import_sequence"][0]["path"] = str(
+        stale_root / trig_path.name
+    )
+    manifest["recommended_import_sequence"][1]["path"] = str(
+        stale_root / snapshot_path.name
+    )
+    portable_manifest.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = receiver.import_handoff_bundle(portable_manifest)
+
+    assert imported.paths["trig"] == str(portable_trig)
+    assert imported.paths["revision_snapshots"] == str(portable_snapshot)
+    assert {
+        row.revision_iri: row.status for row in imported.post_import_snapshot_evidence
+    } == {staged.revision_iri: "history_plus_snapshot_rows"}
+
+
 def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     tmp_path: Path,
 ) -> None:
