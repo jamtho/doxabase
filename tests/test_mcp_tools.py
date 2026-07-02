@@ -7299,6 +7299,14 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
         profile="resource_brief",
     )
     assert recipe in {resource["iri"] for resource in context["resources"]}
+    analysis_view_actions = [
+        action
+        for action in context["suggested_next_actions"]
+        if action["tool_name"] == "describe_analysis_view"
+    ]
+    assert [action["arguments"]["iri"] for action in analysis_view_actions] == [
+        view
+    ]
     assert "parent_doc_id" in json.dumps(context)
     export_path = tmp_path / "analysis-packet-slice.trig"
     export = export_context_slice_tool(

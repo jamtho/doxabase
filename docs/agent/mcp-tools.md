@@ -1904,7 +1904,9 @@ registration snippets, joins, or cookbook steps that should not be modeled as
 views. The helper does not read files, parse Markdown or JSON, store raw
 artifact content, or execute queries. Follow the returned
 `describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
-action to inspect the bounded handoff.
+action to inspect the bounded handoff. That packet slice suggests
+`describe_analysis_view` for linked logical views, so continue there for
+denominators, source datasets, caveats, and view-level query snippets.
 
 `doxabase.describe_analysis_view`
 

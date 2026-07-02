@@ -92,4 +92,7 @@ starter SQL or setup snippets that are not denominators. Use
 After recording a packet, follow the returned
 `describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
 action to review the packet, linked views, artifacts, tasks, and optional
-query recipes, pattern, and other bounded handoff context.
+query recipes, pattern, and other bounded handoff context. The packet slice
+also suggests `describe_analysis_view` for linked logical views so agents can
+inspect denominators, source datasets, caveats, and query snippets from the
+slice without hunting through generic outgoing references.

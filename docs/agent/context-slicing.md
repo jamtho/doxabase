@@ -32,7 +32,11 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   handoffs do not stop at a generic evidence card. Storage access,
   physical-layout, and partition-scheme seeds also suggest
   `describe_query_context` when they reach exactly one queryable owner table,
-  even if that owner is already ready.
+  even if that owner is already ready. When a resource brief reaches an
+  `rc:AnalysisView`, for example through an `rc:AnalysisPacket`, it suggests
+  `describe_analysis_view` so agents inspect the logical denominator, source
+  datasets, caveats, and query snippets instead of treating the view as a
+  physical query route.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds

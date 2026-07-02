@@ -14904,6 +14904,41 @@ class DoxaBase:
                     continue
             dataset_context_list = list(dataset_context_by_iri.values())
 
+        analysis_view_type_iri = self.expand_iri("rc:AnalysisView")
+        if profile == "resource_brief":
+            seen_analysis_view_iris: set[str] = set()
+            for resource_iri, routes in resources.items():
+                if resource_iri in seen_analysis_view_iris:
+                    continue
+                if not resource_reached_from_seed(resource_iri, routes):
+                    continue
+                if (
+                    analysis_view_type_iri
+                    not in self._types_from_graphs(lookup_graphs, resource_iri)
+                ):
+                    continue
+                seen_analysis_view_iris.add(resource_iri)
+                arguments = {"iri": resource_iri}
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Inspect analysis view",
+                        tool_name="describe_analysis_view",
+                        mcp_tool_name="doxabase.describe_analysis_view",
+                        arguments=arguments,
+                        reason=(
+                            "resource_brief reached this rc:AnalysisView from "
+                            "the seed. describe_analysis_view exposes its "
+                            "logical denominator, source datasets, caveats, and "
+                            "query snippets before treating it as a physical "
+                            "query route."
+                        ),
+                        call=self._suggested_call_string(
+                            "describe_analysis_view",
+                            arguments,
+                        ),
+                    )
+                )
+
         def dataset_reached_from_seed(dataset_iri: str) -> bool:
             return resource_reached_from_seed(
                 dataset_iri,

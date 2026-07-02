@@ -27902,6 +27902,15 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert register_tables_recipe in {
         resource["iri"] for resource in context["resources"]
     }
+    analysis_view_actions = [
+        action
+        for action in context["suggested_next_actions"]
+        if action["tool_name"] == "describe_analysis_view"
+    ]
+    assert {action["arguments"]["iri"] for action in analysis_view_actions} == {
+        parent_view,
+        lane_view,
+    }
     assert "read_parquet" in json.dumps(context)
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text

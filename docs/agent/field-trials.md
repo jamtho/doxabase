@@ -4588,6 +4588,15 @@ few useful gaps:
   descriptions. Dataset endpoint fields now reject known `rc:Column` resources;
   use `source_columns` / `derived_columns` for column transforms and
   `record_map_asset_transform` outputs for data assets.
+- An Enron analysis-view/cookbook trial showed a good sidecar handoff folder is
+  not automatically a graph-native handoff. The current `record_analysis_packet`
+  surface already models logical views, query recipes, artifacts, and follow-up
+  tasks; the Enron capsule should be regenerated or augmented with a packet
+  before export. The generic ergonomics gap was smaller:
+  `describe_context_slice(profile="resource_brief")` now suggests
+  `describe_analysis_view` for reached `rc:AnalysisView` resources, so packet
+  slices route agents from generic outgoing references to denominators, source
+  datasets, caveats, and view-level query snippets.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
