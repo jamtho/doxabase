@@ -4640,6 +4640,12 @@ few useful gaps:
   now keeps the generated single-file template on the dataset only; use
   storage-owned templates for reviewed shared wildcards or database relation
   handles, not as a duplicate of the dataset file path.
+- A staged handoff recovery trial found manifest import correctly routed to a
+  matching imported recovery session, but a later cold `project_brief` fell back
+  to the generic current-staged-work planner. `project_brief` now keeps the
+  existing `staged_frontier_review` queue but points it at
+  `describe_staged_revision_recovery_session` when a persisted session overlaps
+  current staged work.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -5831,6 +5831,11 @@ class DoxaBase:
     ) -> ProjectBriefRecommendedTask | None:
         if staged_review.count <= 0:
             return None
+        session_task = self._project_brief_recovery_session_frontier_task(
+            staged_review
+        )
+        if session_task is not None:
+            return session_task
         action = self._project_brief_plan_staged_revision_recovery_action()
         return ProjectBriefRecommendedTask(
             priority=5,
@@ -5844,6 +5849,179 @@ class DoxaBase:
             ),
             suggested_next_action=action,
             suggested_next_call=action.call,
+        )
+
+    def _project_brief_recovery_session_frontier_task(
+        self,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> ProjectBriefRecommendedTask | None:
+        revision_iris = self._project_brief_current_staged_revision_iris(
+            staged_review
+        )
+        if not revision_iris:
+            return None
+        history_graphs = self._expand_graphs(["history"])
+        matching_session_iris = self._project_brief_matching_recovery_session_iris(
+            revision_iris,
+            history_graphs=history_graphs,
+        )
+        if not matching_session_iris:
+            return None
+        ordered_session_iris = self._project_brief_order_recovery_session_iris(
+            matching_session_iris,
+            history_graphs=history_graphs,
+        )
+        session_iri = ordered_session_iris[0]
+        session_summary = self._first_object(
+            history_graphs,
+            session_iri,
+            "rc:summary",
+        )
+        action = self._project_brief_describe_recovery_session_action(
+            session_iri,
+            history_graphs=history_graphs,
+        )
+        return ProjectBriefRecommendedTask(
+            priority=5,
+            task_type="staged_frontier_review",
+            source="staged_revision_recovery_session",
+            resource=ResourceSummary(
+                iri=session_iri,
+                label=session_summary,
+                description=None,
+            ),
+            reason=(
+                "A persisted staged-revision recovery session overlaps current "
+                "staged work; continue that session before starting a generic "
+                "frontier plan so multi-step handoff or recovery provenance is "
+                "preserved."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            task_group={
+                "matching_recovery_session_count": len(matching_session_iris),
+                "matching_recovery_session_iris": ordered_session_iris,
+                "current_staged_revision_count": len(revision_iris),
+            },
+        )
+
+    def _project_brief_matching_recovery_session_iris(
+        self,
+        current_staged_revision_iris: list[str],
+        *,
+        history_graphs: list[str],
+    ) -> list[str]:
+        current_staged = {
+            self.expand_iri(revision_iri)
+            for revision_iri in current_staged_revision_iris
+        }
+        if not current_staged:
+            return []
+        matching: list[str] = []
+        for session_iri in self._recovery_session_iris(history_graphs):
+            source_revision_iris = (
+                self._staged_recovery_session_source_revision_iris(
+                    session_iri,
+                    history_graphs=history_graphs,
+                )
+            )
+            live_revision_iris = set(source_revision_iris)
+            try:
+                description = self.describe_staged_revision_recovery_session(
+                    session_iri,
+                )
+            except DoxaBaseError:
+                description = None
+            if description is not None:
+                live_revision_iris.update(
+                    description.current_revision_by_source.values()
+                )
+                live_revision_iris.update(description.mutation_frontier_iris)
+                live_revision_iris.update(
+                    description.active_source_revision_iris
+                )
+            if current_staged.intersection(live_revision_iris):
+                matching.append(session_iri)
+        return matching
+
+    def _project_brief_current_staged_revision_iris(
+        self,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> list[str]:
+        if staged_review.omitted_count <= 0:
+            return [item.revision_iri for item in staged_review.items]
+        listing = self.list_graph_revisions(
+            current_staged_work_only=True,
+            include_apply_checks=True,
+            limit=staged_review.count,
+        )
+        return [revision.iri for revision in listing.revisions]
+
+    def _project_brief_order_recovery_session_iris(
+        self,
+        session_iris: list[str],
+        *,
+        history_graphs: list[str],
+    ) -> list[str]:
+        return sorted(
+            session_iris,
+            key=lambda session_iri: (
+                self._first_object(
+                    history_graphs,
+                    session_iri,
+                    "rc:sessionCreatedAt",
+                )
+                or "",
+                session_iri,
+            ),
+            reverse=True,
+        )
+
+    def _project_brief_describe_recovery_session_action(
+        self,
+        session_iri: str,
+        *,
+        history_graphs: list[str],
+    ) -> EffectAnnotatedSuggestedNextAction:
+        include_drafts = self._optional_bool_object(
+            self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionIncludeDrafts",
+            ),
+            default=True,
+        )
+        validation_scope = self._first_object(
+            history_graphs,
+            session_iri,
+            "rc:recoverySessionValidationScope",
+        )
+        drift_detail = (
+            self._first_object(
+                history_graphs,
+                session_iri,
+                "rc:recoverySessionDriftDetail",
+            )
+            or "summary"
+        )
+        arguments: dict[str, Any] = {
+            "session_iri": session_iri,
+            "drift_detail": drift_detail,
+        }
+        if include_drafts is not True:
+            arguments["include_drafts"] = include_drafts
+        if validation_scope is not None:
+            arguments["validation_scope"] = validation_scope
+        return self._effect_annotated_suggested_next_action(
+            action_label="Continue staged recovery session",
+            tool_name="describe_staged_revision_recovery_session",
+            arguments=arguments,
+            reason=(
+                "A persisted staged-revision recovery session overlaps current "
+                "staged work. Describe it so live recovery state, imported "
+                "session provenance, and apply-one-then-recheck hazards stay "
+                "connected."
+            ),
         )
 
     def _project_brief_plan_staged_revision_recovery_action(

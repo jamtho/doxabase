@@ -354,7 +354,10 @@ parsing prose. Use it before creating successors; row-level
 review.
 `project_brief` surfaces this route as `staged_frontier_review` whenever current
 staged work exists; follow it before adding new profile-map or query-repair
-staged revisions for the same frontier.
+staged revisions for the same frontier. When a persisted recovery session
+overlaps current staged work, the brief points this task at
+`describe_staged_revision_recovery_session(session_iri=...)` instead of the
+generic planner so imported or multi-step recovery provenance stays connected.
 For mixed unattended recovery loops, use this sequence: plan current staged
 recovery, dry-run batch restage when the plan points at stale mechanical rows,
 restage only `would_restage_revision_iris`, apply at most one ready row, then

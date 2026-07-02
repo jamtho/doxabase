@@ -9888,6 +9888,20 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert after_restage.source_states[0].next_action_tool_name == (
         "apply_staged_revision"
     )
+    after_restage_brief = db.project_brief(limit=10)
+    assert after_restage_brief.frontier_first_action is not None
+    assert after_restage_brief.frontier_first_action.tool_name == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert after_restage_brief.frontier_first_action.arguments == {
+        "session_iri": session.session_iri,
+        "drift_detail": "exact",
+    }
+    assert after_restage_brief.recommended_next_tasks[0].task_group == {
+        "matching_recovery_session_count": 1,
+        "matching_recovery_session_iris": [session.session_iri],
+        "current_staged_revision_count": 1,
+    }
 
     applied = db.apply_staged_revision(restaged.revision_iri)
     after_apply = db.describe_staged_revision_recovery_session(
@@ -32096,6 +32110,32 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
         imported.suggested_next_actions[0].call
     )
     manifest_resume_iri = imported.manifest["recovery_sessions"][0]["session_iri"]
+    receiver_brief = receiver.project_brief(limit=10)
+    assert receiver_brief.queue_counts["staged_frontier_review"] == 1
+    assert receiver_brief.frontier_first_source == (
+        "recommended_next_tasks:staged_frontier_review"
+    )
+    assert receiver_brief.frontier_first_action is not None
+    assert receiver_brief.frontier_first_action.tool_name == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert receiver_brief.frontier_first_action.arguments == {
+        "session_iri": session.session_iri,
+        "drift_detail": "exact",
+    }
+    assert receiver_brief.first_unattended_action == (
+        receiver_brief.frontier_first_action
+    )
+    frontier_task = receiver_brief.recommended_next_tasks[0]
+    assert frontier_task.task_type == "staged_frontier_review"
+    assert frontier_task.source == "staged_revision_recovery_session"
+    assert frontier_task.resource is not None
+    assert frontier_task.resource.iri == session.session_iri
+    assert frontier_task.task_group == {
+        "matching_recovery_session_count": 1,
+        "matching_recovery_session_iris": [session.session_iri],
+        "current_staged_revision_count": 2,
+    }
     described_session = receiver.describe_staged_revision_recovery_session(
         manifest_resume_iri,
         drift_detail="exact",

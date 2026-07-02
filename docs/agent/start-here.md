@@ -57,8 +57,11 @@ When arriving cold, use this route before reading every reference doc.
    handling so the next trial wave is chosen from broader build priorities, not
    only the currently visible capsule queue.
 4. If `project_brief.recommended_next_tasks[]` includes
-   `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
-   before staging more profile or query repair work.
+   `staged_frontier_review`, follow that task's suggested action before staging
+   more profile or query repair work. It may continue a persisted
+   `describe_staged_revision_recovery_session(session_iri=...)` when an
+   imported or local recovery session overlaps current staged work; otherwise it
+   routes to `doxabase.plan_staged_revision_recovery`.
    If it includes `profile_review`, keep the task's `profile_evidence_iri`
    with your notes; multiple profile drafts on one dataset may first route to
    the same dataset-level blocker action. For read-only review, follow

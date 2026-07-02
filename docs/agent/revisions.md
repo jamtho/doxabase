@@ -201,9 +201,11 @@ On the receiving capsule:
    continue the imported session before applying receiver-local frontier rows.
    The manifest-scoped recovery plan can include applied events and historical
    snapshot rows that are useful context but noisy for choosing the next live
-   mutation. After import, rerun
+   mutation. After import, rerun `project_brief` or
    `plan_staged_revision_recovery(current_staged_work_only=True)` before
-   selecting any mutation from the receiver queue.
+   selecting any mutation from the receiver queue; `project_brief` will
+   foreground a matching imported recovery session when one still overlaps
+   current staged work.
    If the first safe action is `Import broader source snapshot bundle`, the
    paired manifest snapshot JSON has already been tried and does not contain
    the resolved target revision named in `missing_revision_iris`; get a broader
