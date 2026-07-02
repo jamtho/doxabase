@@ -57,6 +57,17 @@ view, artifact, recipe, task, and suggested follow-up handles as JSON. It does
 not read referenced Markdown/JSON/PNG files, parse report text, store artifact
 bytes, or execute query recipes.
 
+Markdown sidecars remain locator evidence until someone translates the reviewed
+denominators, SQL snippets, artifact locators, caveats, and follow-up tasks into
+structured packet fields. If a handoff directory contains only
+`analysis_views.md`, `query_cookbook.md`, or narrative report files, cold-start
+agents can still find those files by search or evidence source links, but
+`project_brief` will not report `analysis_packet_review`, `analysis_view_review`,
+or executable query-snippet counts. For graph-native handoff, create or request a
+reviewed `doxabase.analysis_packet_manifest.v1`, apply it to the existing
+capsule, and then verify nonzero `analysis_packets`, `analysis_views`, and
+`executable_query_snippets` before re-exporting a bundle.
+
 For a maintained local smoke route, run
 `python examples/analysis-packet-manifest-smoke.py`; it creates a reviewed
 source table, writes a packet manifest with logical views, artifacts, query

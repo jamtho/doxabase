@@ -4754,6 +4754,15 @@ few useful gaps:
   find safe apply routing. `list_graph_versions(include_apply_checks=True)` now
   projects live staged status, blockers, stale state, `next_action`, and
   `next_action_queue_item` onto version rows for that route.
+- A refreshed Enron query-planning/domain-network trial found the current APIs
+  already cover the core routes: `describe_query_context` / `draft_query_plan`
+  can produce safe physical DuckDB starter handoffs, and
+  `record_domain_network_profile` records aggregate-only sender/recipient
+  extractability and domain-pair profiles without individual addresses. The
+  remaining adoption gap is content packaging: Markdown cookbooks, analysis-view
+  notes, and visualization reports stay sidecar evidence until translated into a
+  reviewed `doxabase.analysis_packet_manifest.v1` and applied, so `project_brief`
+  can surface `analysis_packet_review`, `analysis_views`, and query recipes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -130,6 +130,10 @@ Done signals:
 - agents do not execute unreviewed or secret-bearing access paths;
 - query plans carry relation/path provenance and review gates;
 - recorded results link back to query source, scanned source, output, and caveats.
+- reviewed cookbook/view sidecars that should guide future agents are promoted
+  into `record_analysis_packet` or `record_map_analysis_view_bundle`, rather
+  than remaining only as Markdown evidence locators invisible to `project_brief`
+  packet/view queues.
 
 ## When To Leave Local Queue Work
 
