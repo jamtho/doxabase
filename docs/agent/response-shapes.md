@@ -2966,6 +2966,9 @@ aggregations, use `group_by_columns` and `aggregated_columns` when columns are
 involved, and `source_datasets` / `target_datasets` for no-column asset-level
 rollups. The singular `source_dataset` and `target_dataset` fields are
 compatibility shortcuts to the first endpoint when present.
+When authoring relationship column fields, pass existing mapped `rc:Column`
+IRIs; fresh unrecorded column-shaped IRIs are rejected because they validate but
+do not give future `describe_dataset` calls a visible relationship.
 `source_datasets` and `target_datasets` are simple endpoint sets. When source or
 target role/order matters, use `source_endpoints` and `target_endpoints`; each
 endpoint carries `dataset`, `direction`, `direction_label`, `role`, and

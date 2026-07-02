@@ -4413,6 +4413,12 @@ few useful gaps:
   `rc:Column` resources. Raw column names or dataset/table IRIs in
   `source_columns` / `derived_columns` should fail; uncertain transform lore
   belongs in observations, claims, patterns, or caveats until promoted.
+- A follow-up transform trial found a fresh full IRI could be accepted as a
+  relationship column and validate, while remaining invisible to
+  `describe_dataset` because no `rc:Column` map fact existed. Relationship
+  column slots now require existing recorded columns, so agents must call
+  `record_map_column` before authoring column-level derivations, keys, or
+  aggregations.
 - The Enron ingestion feedback showed that the missing Parquet path was mostly
   authoring ceremony, not RDF vocabulary or file I/O. `record_map_table_bundle`
   now gives agents one no-I/O map helper for a reviewed table schema plus

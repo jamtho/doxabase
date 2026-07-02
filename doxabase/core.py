@@ -40504,18 +40504,27 @@ class DoxaBase:
             self.expand_iri("rc:Dataset"),
             self.expand_iri("rc:Table"),
         }
-        matching_types = sorted(
-            set(self._types_from_graphs(self._expand_graphs(["all"]), column_iri))
-            & data_asset_types
+        resource_types = set(
+            self._types_from_graphs(self._expand_graphs(["all"]), column_iri)
         )
-        if not matching_types:
+        matching_types = sorted(resource_types & data_asset_types)
+        if matching_types:
+            type_labels = ", ".join(
+                self._compact_iri(type_iri) for type_iri in matching_types
+            )
+            raise DoxaBaseError(
+                f"{field_name} points to a data asset resource, not an rc:Column: "
+                f"{column_iri} ({type_labels}). Use source_dataset/target_dataset "
+                "for dataset endpoints, or record_map_asset_transform for asset-level "
+                "transform conditions, formulas, and tuple grain."
+            )
+        column_type = self.expand_iri("rc:Column")
+        if column_type in resource_types:
             return
-        type_labels = ", ".join(self._compact_iri(type_iri) for type_iri in matching_types)
         raise DoxaBaseError(
-            f"{field_name} points to a data asset resource, not an rc:Column: "
-            f"{column_iri} ({type_labels}). Use source_dataset/target_dataset "
-            "for dataset endpoints, or record_map_asset_transform for asset-level "
-            "transform conditions, formulas, and tuple grain."
+            f"{field_name} points to {column_iri}, which is not a recorded "
+            "rc:Column. Record the column first with record_map_column, then "
+            "reference the column IRI in relationship column fields."
         )
 
     def _normalise_aggregated_column_specs(

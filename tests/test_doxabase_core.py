@@ -28019,6 +28019,32 @@ def test_record_map_relationship_rejects_data_assets_in_column_slots(
     assert db.triple_count("map") == before_map_count
 
 
+def test_record_map_relationship_rejects_unrecorded_column_iris(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    messages = f"{base}messages"
+    body = f"{base}messages__body"
+    body_top = f"{base}messages__body_top"
+
+    db.record_map_dataset(messages, label="Messages", is_table=True)
+    before_map_count = db.triple_count("map")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match=r"source_columns.*not a recorded rc:Column",
+    ):
+        db.record_map_relationship(
+            f"{base}body_preview_derivation",
+            relationship_type="derivation",
+            source_columns=[body],
+            derived_columns=[body_top],
+        )
+
+    assert db.triple_count("map") == before_map_count
+
+
 def test_validation_rejects_data_assets_in_relationship_column_predicates(
     tmp_path: Path,
 ) -> None:

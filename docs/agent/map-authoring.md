@@ -328,14 +328,15 @@ columns such as cleaned text, normalized subjects, or generated features. Use
 `aggregation` for grouped summaries, rollups, and index tables that compute
 target columns from source columns.
 
-Relationship column fields are for column resources. The helper rejects known
-data assets, datasets, or tables in `from_column`, `to_column`,
+Relationship column fields are for existing mapped `rc:Column` resources. The
+helper rejects known data assets, datasets, tables, and fresh IRIs that have not
+first been recorded as columns in `from_column`, `to_column`,
 `identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
 and aggregate mapping column fields.
 
 For column-to-column transforms such as cleaned text, normalized subjects, or
-`body -> body_top`, first record the real columns with `record_map_column`, then
-use `record_map_relationship(..., relationship_type="derivation",
+`body -> body_top`, first record the real columns with `record_map_column`,
+then use `record_map_relationship(..., relationship_type="derivation",
 source_columns=[source_column_iri], derived_columns=[derived_column_iri])`.
 Do not pass raw column names or the owning dataset IRI in those column slots.
 If the transform is only a tentative interpretation, keep it in observations,

@@ -13250,6 +13250,8 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     base = "https://example.test/project#"
     table = f"{base}messages"
     column = f"{base}messages__doc_id"
+    other_table = f"{base}other_messages"
+    other_column = f"{base}other_messages__doc_id"
     caveat = f"{base}messages_caveat"
     storage = f"{base}local_access"
     layout = f"{base}parquet_layout"
@@ -13264,11 +13266,25 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         layout_verification_status="rc:CandidateLayout",
         layout_verification_note="A plausible test path before query verification.",
     )
+    record_map_dataset_tool(
+        db,
+        iri=other_table,
+        label="Other messages",
+        is_table=True,
+    )
     column_result = record_map_column_tool(
         db,
         iri=column,
         table_iri=table,
         column_name="doc_id",
+        physical_type="rc:Varchar",
+        nullable=False,
+    )
+    record_map_column_tool(
+        db,
+        iri=other_column,
+        table_iri=other_table,
+        column_name="other_messages__doc_id",
         physical_type="rc:Varchar",
         nullable=False,
     )
@@ -13313,7 +13329,7 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         db,
         iri=f"{base}messages_doc_id_shared",
         relationship_type="shared_identifier",
-        identifying_columns=[column, f"{base}other_messages__doc_id"],
+        identifying_columns=[column, other_column],
     )
     record_pattern_tool(
         db,

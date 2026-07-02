@@ -1946,8 +1946,10 @@ relationship descriptions expose `relationship_kind` as the RDF class IRI and
 The helper also accepts matching core class CURIEs or full IRIs, such as
 `rc:ForeignKey`, `rc:SharedIdentifier`, `rc:Derivation`, and `rc:Aggregation`,
 and normalizes them to the same helper tokens in descriptions.
-Column fields must point to column resources; known data assets, datasets, and
-tables are rejected in those slots.
+Column fields must point to resources already recorded as `rc:Column`; known
+data assets, datasets, tables, and fresh unrecorded IRIs are rejected in those
+slots. Record columns with `record_map_column` before referencing them from
+relationship column fields.
 
 `doxabase.record_map_asset_transform`
 

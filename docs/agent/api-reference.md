@@ -1251,7 +1251,8 @@ precedence matters for asset endpoints, pass `source_endpoints` or
 `{"dataset": "ex:RawImages", "role": "primary image input", "order": 1}`.
 Endpoint specs also write the compatibility `sourceDataset` / `targetDataset`
 edges. Relationship column fields must point to column
-resources; known data assets, datasets, and tables are rejected in those slots.
+resources already recorded as `rc:Column`; known data assets, datasets, tables,
+and fresh unrecorded IRIs are rejected in those slots.
 For `relationship_type`, use helper tokens such as `foreign_key` or the
 matching core class CURIE/full IRI such as `rc:ForeignKey`; descriptions always
 return the normalized helper token plus the RDF class IRI.
