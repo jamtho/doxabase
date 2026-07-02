@@ -361,6 +361,54 @@ def test_project_brief_marks_completed_profile_draft(
     assert "profile_review" not in brief.queue_counts
 
 
+def test_project_brief_names_advisory_only_profile_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    amount_column = "https://example.test/project#OrdersAmount"
+    money_value_type = "https://example.test/project#MoneyAmountValue"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled and amount was mapped directly.",
+        evidence_summary="Synthetic amount profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_profiles=[
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Amount was observed as decimal money.",
+                "physical_type": "rc:Decimal",
+                "value_type": money_value_type,
+                "update_map_column": True,
+            }
+        ],
+    )
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=1)
+    profile_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+
+    assert brief.datasets[0].profile.drafts[0].recommendation_count == 0
+    assert brief.datasets[0].profile.drafts[0].type_advisory_status_counts == {
+        "type_finding_current_map_undefined_value_type": 1,
+    }
+    assert "no pending map recommendations" in profile_task.reason
+    assert "profile type advisory count=1" in profile_task.reason
+    assert "type_finding_current_map_undefined_value_type=1" in (
+        profile_task.reason
+    )
+    assert "map updates" not in profile_task.reason
+
+
 def test_project_brief_uses_profile_inspection_for_unattended_route(
     tmp_path: Path,
 ) -> None:

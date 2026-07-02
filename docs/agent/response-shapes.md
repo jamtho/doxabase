@@ -419,6 +419,10 @@ candidates are nonzero, `health_tasks` includes
 `expand_profile_candidate_limit` with a `project_brief` action whose
 `profile_candidate_limit` is large enough to include the largest currently
 truncated dataset.
+When a profile task has `recommendation_count=0` but open type, metric, or
+conflict advisory counts, its `reason` starts from the advisory counts and says
+there are no pending map recommendations. Treat those as vocabulary or review
+lanes, not as unreviewed map-update recommendations.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue

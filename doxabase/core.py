@@ -6667,9 +6667,9 @@ class DoxaBase:
                         task_type="profile_review",
                         source="draft_profile_map_updates",
                         resource=dataset.dataset,
-                        reason=(
-                            "Profile evidence has map updates, conflicts, "
-                            f"metric vocabulary, or type findings to review.{pending_note}"
+                        reason=self._project_brief_profile_review_reason(
+                            draft,
+                            pending_note=pending_note,
                         ),
                         suggested_next_action=action,
                         suggested_next_call=action.call,
@@ -6682,6 +6682,47 @@ class DoxaBase:
                     )
                 )
         return tasks
+
+    @staticmethod
+    def _project_brief_profile_review_reason(
+        draft: ProjectBriefProfileDraftSummary,
+        *,
+        pending_note: str,
+    ) -> str:
+        review_parts: list[str] = []
+        if draft.recommendation_count:
+            review_parts.append(
+                f"map recommendation count={draft.recommendation_count}"
+            )
+        if draft.scalar_conflict_group_count:
+            review_parts.append(
+                "scalar conflict group count="
+                f"{draft.scalar_conflict_group_count}"
+            )
+        metric_review_count = DoxaBase._project_brief_metric_advisory_review_count(
+            draft
+        )
+        if metric_review_count:
+            review_parts.append(
+                f"metric vocabulary advisory count={metric_review_count}"
+            )
+        if draft.type_advisory_count:
+            status_counts = ", ".join(
+                f"{status}={count}"
+                for status, count in sorted(draft.type_advisory_status_counts.items())
+            )
+            review_parts.append(
+                "profile type advisory count="
+                f"{draft.type_advisory_count}"
+                + (f" ({status_counts})" if status_counts else "")
+            )
+        detail = "; ".join(review_parts)
+        if draft.recommendation_count:
+            return f"Profile evidence has {detail} to review.{pending_note}"
+        return (
+            "Profile evidence has no pending map recommendations; review "
+            f"{detail}.{pending_note}"
+        )
 
     @staticmethod
     def _project_brief_profile_draft_requires_review(

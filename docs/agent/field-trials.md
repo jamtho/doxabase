@@ -4547,6 +4547,12 @@ few useful gaps:
   `rc:ExecutableQuerySnippet` recipes via `query_recipes`, linked by
   `rc:hasQueryRecipe`, while keeping `analysis_views` for named populations and
   denominators.
+- The same Enron handoff still surfaced four `profile_review` tasks with
+  `recommendation_count=0`; the work was real undefined-value-type review, but
+  the generic project-brief reason made it look like pending map updates.
+  `project_brief` reasons now say when no map recommendations remain and report
+  the actual advisory counts/statuses, so cold-start agents can distinguish
+  vocabulary review from map-update queues.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

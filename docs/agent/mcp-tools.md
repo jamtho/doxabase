@@ -256,6 +256,9 @@ top-level `frontier_first_action` / `first_unattended_action`, the brief uses
 the read-only `inspection_next_action` (`draft_profile_map_updates`) rather than
 the task's stage action. The task-level `suggested_next_action` remains the
 primary route to use after inspecting and accepting the draft lane.
+If the task reason says there are no pending map recommendations and names only
+advisory counts, treat the task as vocabulary/type/conflict review rather than
+as a map-update recommendation queue.
 
 `doxabase.list_entities`
 
