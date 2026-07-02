@@ -840,6 +840,11 @@ trying to execute it. A resolved paired
 `arguments.supporting_patterns` and annotated under
 `arguments.profile_route_sources[].resolved_result_bindings`, preserving the
 route source that profile insight review bundles use as `direct_action`.
+`profile_type_assertion_batch_plan` is a conservative read-only summary over
+those resolved actions. It batches only call-ready
+`type_finding_missing_map_type` `rc:physicalType` assertions and reports skipped
+counts for conflicts, value-type assertions, pending staged assertion routes,
+and actions that still need result bindings. It does not stage or apply a batch.
 
 Pass `staged_revision_iris` to recheck related staged rows. By default this is
 read-only and echoes the existing `check_staged_revision_apply` next actions.

@@ -3973,6 +3973,7 @@ class ProfileFollowthroughPlan:
     suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
     suggested_next_call_groups: dict[str, list[str]]
+    profile_type_assertion_batch_plan: dict[str, Any]
     suggested_next_action_summaries: list[ProfileActionRouteSummary]
     suggested_next_action_group_summaries: dict[
         str,
@@ -17849,6 +17850,9 @@ class DoxaBase:
                 suggested_next_action_groups
             )
         )
+        profile_type_assertion_batch_plan = (
+            self._profile_type_assertion_batch_plan(action_resolutions)
+        )
         suggested_next_action_summaries = (
             self._profile_action_route_summaries_from_groups(
                 suggested_next_action_group_summaries
@@ -17897,6 +17901,7 @@ class DoxaBase:
                 group_name: [action.call for action in actions if action.call]
                 for group_name, actions in suggested_next_action_groups.items()
             },
+            profile_type_assertion_batch_plan=profile_type_assertion_batch_plan,
             suggested_next_action_summaries=suggested_next_action_summaries,
             suggested_next_action_group_summaries=(
                 suggested_next_action_group_summaries
@@ -17910,6 +17915,223 @@ class DoxaBase:
                 "graph changes."
             ),
         )
+
+    def _profile_type_assertion_batch_plan(
+        self,
+        action_resolutions: list[ProfileFollowthroughActionResolution],
+    ) -> dict[str, Any]:
+        batches: dict[tuple[str, str], dict[str, Any]] = {}
+        batch_order: list[tuple[str, str]] = []
+        skipped_status_counts: dict[str, int] = {}
+        skipped_reason_counts: dict[str, int] = {}
+        skipped_reasons: list[dict[str, Any]] = []
+
+        for resolution in action_resolutions:
+            if resolution.tool_name != "stage_map_assertion_change":
+                continue
+            source = getattr(resolution.action, "source_profile_advisory", None)
+            if not isinstance(source, MappingABC):
+                continue
+            if source.get("review_lane") != "profile_type_review":
+                continue
+            if source.get("semantic_move") != "assert_map_type":
+                continue
+            source_statuses = self._profile_advisory_status_set(source)
+            for status in source_statuses or {"unknown"}:
+                skipped_status_counts.setdefault(status, 0)
+            reason = self._profile_type_assertion_batch_skip_reason(
+                resolution,
+                source,
+                source_statuses=source_statuses,
+            )
+            if reason is not None:
+                for status in source_statuses or {"unknown"}:
+                    skipped_status_counts[status] += 1
+                skipped_reason_counts[reason] = (
+                    skipped_reason_counts.get(reason, 0) + 1
+                )
+                skipped_reasons.append(
+                    self._profile_type_assertion_batch_skip_record(
+                        resolution,
+                        source,
+                        reason=reason,
+                        source_statuses=source_statuses,
+                    )
+                )
+                continue
+
+            predicate = str(resolution.action.arguments["predicate"])
+            object_value = str(resolution.action.arguments["object"])
+            key = (predicate, object_value)
+            if key not in batches:
+                batch_key = self._profile_type_assertion_batch_key(
+                    predicate,
+                    object_value,
+                )
+                batches[key] = {
+                    "batch_key": batch_key,
+                    "semantic_move": "assert_map_type",
+                    "review_lane": "profile_type_review",
+                    "advisory_status": "type_finding_missing_map_type",
+                    "predicate": predicate,
+                    "object": object_value,
+                    "items": [],
+                    "item_count": 0,
+                    "type_advisory_indexes": [],
+                    "duplicate_advisory_indexes": [],
+                    "duplicate_group_keys": [],
+                    "route_group_keys": [],
+                    "route_step_keys": [],
+                }
+                batch_order.append(key)
+            batch = batches[key]
+            item = self._profile_type_assertion_batch_item(resolution, source)
+            batch["items"].append(item)
+            batch["item_count"] = len(batch["items"])
+            for field_name in (
+                "type_advisory_indexes",
+                "duplicate_advisory_indexes",
+                "duplicate_group_keys",
+                "route_group_keys",
+                "route_step_keys",
+            ):
+                for value in item[field_name]:
+                    self._append_unique(batch[field_name], value)
+
+        ordered_batches = [batches[key] for key in batch_order]
+        eligible_action_count = sum(
+            int(batch["item_count"]) for batch in ordered_batches
+        )
+        skipped_action_count = len(skipped_reasons)
+        return {
+            "result_kind": "profile_type_assertion_batch_plan",
+            "policy": "safe_missing_physical_type",
+            "eligible_action_count": eligible_action_count,
+            "skipped_action_count": skipped_action_count,
+            "batch_count": len(ordered_batches),
+            "batches": ordered_batches,
+            "skipped_status_counts": {
+                key: value
+                for key, value in sorted(skipped_status_counts.items())
+                if value
+            },
+            "skipped_reason_counts": dict(sorted(skipped_reason_counts.items())),
+            "skipped_reasons": skipped_reasons,
+            "note": (
+                "This is a read-only batching aid for call-ready profile type "
+                "assertions. It only groups missing-map physical type assertions "
+                "whose result bindings are already resolved; review and stage "
+                "each returned action explicitly."
+            ),
+        }
+
+    @staticmethod
+    def _profile_type_assertion_batch_skip_reason(
+        resolution: ProfileFollowthroughActionResolution,
+        source_profile_advisory: MappingABC[str, Any],
+        *,
+        source_statuses: set[str],
+    ) -> str | None:
+        if source_statuses != {"type_finding_missing_map_type"}:
+            return "unsupported_advisory_status"
+        if resolution.binding_status == "missing_bindings":
+            return "requires_result_binding"
+        if resolution.binding_status not in {"resolved", "not_applicable"}:
+            return f"unsupported_binding_status:{resolution.binding_status}"
+        if source_profile_advisory.get("pending_staged_assertion_iris"):
+            return "pending_staged_assertion"
+        predicate = resolution.action.arguments.get("predicate")
+        if predicate != "rc:physicalType":
+            return "unsupported_predicate"
+        for required_field in ("subject", "object"):
+            if not isinstance(resolution.action.arguments.get(required_field), str):
+                return f"missing_{required_field}"
+        route_group_key = source_profile_advisory.get("route_group_key")
+        route_step_key = source_profile_advisory.get("route_step_key")
+        if not isinstance(route_group_key, str) or not isinstance(
+            route_step_key,
+            str,
+        ):
+            return "missing_route_keys"
+        return None
+
+    @staticmethod
+    def _profile_type_assertion_batch_skip_record(
+        resolution: ProfileFollowthroughActionResolution,
+        source_profile_advisory: MappingABC[str, Any],
+        *,
+        reason: str,
+        source_statuses: set[str],
+    ) -> dict[str, Any]:
+        return {
+            "reason": reason,
+            "action_group": resolution.action_group,
+            "action_index": resolution.action_index,
+            "tool_name": resolution.tool_name,
+            "binding_status": resolution.binding_status,
+            "missing_binding_keys": list(resolution.missing_binding_keys),
+            "route_group_key": source_profile_advisory.get("route_group_key"),
+            "route_step_key": source_profile_advisory.get("route_step_key"),
+            "advisory_statuses": sorted(source_statuses),
+            "type_advisory_indexes": DoxaBase._int_values(
+                source_profile_advisory.get("advisory_indexes"),
+            ),
+            "duplicate_advisory_indexes": DoxaBase._int_values(
+                source_profile_advisory.get("duplicate_advisory_indexes"),
+            ),
+            "predicate": resolution.action.arguments.get("predicate"),
+            "object": resolution.action.arguments.get("object"),
+        }
+
+    @staticmethod
+    def _profile_type_assertion_batch_item(
+        resolution: ProfileFollowthroughActionResolution,
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> dict[str, Any]:
+        route_group_key = str(source_profile_advisory["route_group_key"])
+        route_step_key = str(source_profile_advisory["route_step_key"])
+        type_advisory_indexes = DoxaBase._int_values(
+            source_profile_advisory.get("advisory_indexes"),
+        )
+        duplicate_advisory_indexes = DoxaBase._int_values(
+            source_profile_advisory.get("duplicate_advisory_indexes"),
+        )
+        duplicate_group_keys = DoxaBase._string_values_from_any(
+            source_profile_advisory.get("duplicate_group_keys"),
+        )
+        return {
+            "action_group": resolution.action_group,
+            "action_index": resolution.action_index,
+            "route_group_key": route_group_key,
+            "route_step_key": route_step_key,
+            "type_advisory_indexes": type_advisory_indexes,
+            "duplicate_advisory_indexes": duplicate_advisory_indexes,
+            "duplicate_group_keys": duplicate_group_keys,
+            "route_group_keys": [route_group_key],
+            "route_step_keys": [route_step_key],
+            "subject": resolution.action.arguments["subject"],
+            "predicate": resolution.action.arguments["predicate"],
+            "object": resolution.action.arguments["object"],
+            "supporting_observations": list(
+                resolution.action.arguments.get("supporting_observations", [])
+            ),
+            "supporting_patterns": list(
+                resolution.action.arguments.get("supporting_patterns", [])
+            ),
+            "action": resolution.action,
+            "call": resolution.action.call,
+        }
+
+    @staticmethod
+    def _profile_type_assertion_batch_key(
+        predicate: str,
+        object_value: str,
+    ) -> str:
+        payload = {"predicate": predicate, "object": object_value}
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()[:16]
+        return f"profile-type-assertion-batch:{digest}"
 
     def _profile_followthrough_action_resolution_groups(
         self,

@@ -2086,6 +2086,7 @@ plan.suggested_next_actions
 plan.suggested_next_calls
 plan.suggested_next_action_groups
 plan.suggested_next_call_groups
+plan.profile_type_assertion_batch_plan
 plan.review_note
 ```
 
@@ -2099,6 +2100,25 @@ When a profile type assertion already has same-evidence support patterns, the
 assertion action can be call-ready without a binding: its
 `action.arguments.supporting_patterns` is prefilled and the route source omits
 `consumes_result_bindings`.
+`profile_type_assertion_batch_plan` is a JSON-like read-only summary:
+
+```python
+plan.profile_type_assertion_batch_plan["result_kind"]
+plan.profile_type_assertion_batch_plan["policy"]
+plan.profile_type_assertion_batch_plan["eligible_action_count"]
+plan.profile_type_assertion_batch_plan["skipped_action_count"]
+plan.profile_type_assertion_batch_plan["batch_count"]
+plan.profile_type_assertion_batch_plan["batches"]
+plan.profile_type_assertion_batch_plan["skipped_status_counts"]
+plan.profile_type_assertion_batch_plan["skipped_reason_counts"]
+plan.profile_type_assertion_batch_plan["skipped_reasons"]
+```
+
+It batches only call-ready missing physical-type assertions from
+`profile_type_review`; conflicts, value-type assertions, pending staged
+assertions, and routes still waiting for result bindings stay in skipped counts.
+Each batch item keeps the original `stage_map_assertion_change` action so a
+script can stage the reviewed assertion explicitly.
 Use `missing_binding_keys` as the compact script-facing worklist when the first
 follow-through call says some actions still need a prior result such as a
 `record_pattern().pattern_iri`. The detailed `action_resolutions[]` rows still

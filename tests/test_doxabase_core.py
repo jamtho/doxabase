@@ -37087,6 +37087,135 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_plan_profile_followthrough_batches_safe_missing_physical_type_assertions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    priority_column = "https://example.test/project#OrdersPriority"
+    channel_column = "https://example.test/project#OrdersChannel"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+    db.record_map_column(
+        priority_column,
+        table_iri=dataset,
+        column_name="priority",
+    )
+    db.record_map_column(
+        channel_column,
+        table_iri=dataset,
+        column_name="channel",
+        physical_type="rc:Varchar",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled for type follow-through.",
+        evidence_summary="Synthetic profile run with mixed type findings.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked varchar in the profile.",
+                "physical_type": "rc:Varchar",
+            },
+            {
+                "column_iri": priority_column,
+                "column_name": "priority",
+                "summary": "Priority looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+            },
+            {
+                "column_iri": channel_column,
+                "column_name": "channel",
+                "summary": "Channel conflicted with the map type.",
+                "physical_type": "rc:Integer",
+            },
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.type_advisory_status_counts == {
+        "type_finding_conflicts_current_map": 1,
+        "type_finding_missing_map_type": 2,
+    }
+
+    missing_binding_plan = db.plan_profile_followthrough(dataset, evidence)
+    missing_batch = missing_binding_plan.profile_type_assertion_batch_plan
+    assert missing_batch["eligible_action_count"] == 0
+    assert missing_batch["batch_count"] == 0
+    assert missing_batch["skipped_reason_counts"] == {
+        "requires_result_binding": 2,
+        "unsupported_advisory_status": 1,
+    }
+    assert missing_batch["skipped_status_counts"] == {
+        "type_finding_conflicts_current_map": 1,
+        "type_finding_missing_map_type": 2,
+    }
+
+    result_bindings: dict[str, str] = {}
+    for action in draft.suggested_next_action_groups["profile_type_review"]:
+        source = getattr(action, "source_profile_advisory", {})
+        if (
+            action.tool_name != "record_pattern"
+            or source.get("advisory_statuses")
+            != ["type_finding_missing_map_type"]
+        ):
+            continue
+        produced = source["produces_result_bindings"][0]
+        pattern = db.record_pattern(**action.arguments)
+        result_bindings[produced["binding_key"]] = pattern.pattern_iri
+
+    ready_plan = db.plan_profile_followthrough(
+        dataset,
+        evidence,
+        result_bindings=result_bindings,
+    )
+    ready_batch = ready_plan.profile_type_assertion_batch_plan
+
+    assert ready_batch["result_kind"] == "profile_type_assertion_batch_plan"
+    assert ready_batch["policy"] == "safe_missing_physical_type"
+    assert ready_batch["eligible_action_count"] == 2
+    assert ready_batch["skipped_reason_counts"] == {
+        "unsupported_advisory_status": 1,
+    }
+    assert ready_batch["skipped_status_counts"] == {
+        "type_finding_conflicts_current_map": 1,
+    }
+    assert {
+        batch["object"] for batch in ready_batch["batches"]
+    } == {
+        RC + "Integer",
+        RC + "Varchar",
+    }
+    assert {
+        item["subject"]
+        for batch in ready_batch["batches"]
+        for item in batch["items"]
+    } == {priority_column, status_column}
+    assert {
+        item["predicate"]
+        for batch in ready_batch["batches"]
+        for item in batch["items"]
+    } == {"rc:physicalType"}
+    assert all(
+        item["action"].tool_name == "stage_map_assertion_change"
+        and item["supporting_patterns"]
+        for batch in ready_batch["batches"]
+        for item in batch["items"]
+    )
+
+
 def test_plan_profile_followthrough_rechecks_and_restages_stale_sibling(
     tmp_path: Path,
 ) -> None:

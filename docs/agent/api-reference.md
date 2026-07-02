@@ -865,6 +865,11 @@ the paired `stage_map_assertion_change` actions come back with
 updated. The helper also returns `produced_bindings`,
 `binding_resolutions`, `action_resolutions`, and fresh
 `suggested_next_actions` / `suggested_next_calls`.
+It also returns `profile_type_assertion_batch_plan`, a read-only grouping of
+call-ready missing physical-type assertion actions. The batch plan excludes
+conflicts, value-type assertions, pending staged assertion routes, and actions
+that still need `result_bindings`; use its skipped counts to see why a large
+type-review queue is not yet batchable.
 When `staged_revision_iris` are supplied, the helper rechecks those rows with
 `check_staged_revision_apply`. It restages only when
 `restage_stale_revisions=True` and the staged row's next action is

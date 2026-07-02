@@ -9,6 +9,10 @@ Use `plan_profile_followthrough` after `draft_profile_map_updates` when a
 profile advisory needs a fresh, binding-aware next step, such as carrying a
 returned `record_pattern().pattern_iri` into a staged map type assertion or
 rechecking sibling staged rows after an apply.
+Its `profile_type_assertion_batch_plan` is a read-only aid for large
+type-review queues; it groups only call-ready missing physical-type assertions
+and reports why conflicts, value-type assertions, pending staged work, or
+missing bindings were skipped.
 
 For an end-to-end maintained cookbook, run
 `examples/profile-to-capsule-cookbook.py`. It starts from reviewed schema,
@@ -514,6 +518,12 @@ the producing action for those keys, then pass the returned values back through
 `result_bindings`. For example, a type assertion without an existing
 same-evidence support pattern may need the `pattern_iri` produced by
 `record_pattern` before its `stage_map_assertion_change` arguments are complete.
+`profile_type_assertion_batch_plan` is a read-only batching aid on the
+follow-through response. It groups only call-ready
+`type_finding_missing_map_type` physical-type assertions whose support-pattern
+bindings have already been resolved. Conflicts, value-type assertions, pending
+staged assertions, and actions still waiting on `missing_binding_keys` appear
+under skipped counts instead of eligible batches.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

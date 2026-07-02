@@ -11913,6 +11913,13 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
             "ready_resolved_mutations"
         ]
     ]
+    batch_plan = result["profile_type_assertion_batch_plan"]
+    assert batch_plan["result_kind"] == "profile_type_assertion_batch_plan"
+    assert batch_plan["policy"] == "safe_missing_physical_type"
+    assert batch_plan["eligible_action_count"] == 0
+    assert batch_plan["skipped_reason_counts"] == {
+        "unsupported_advisory_status": 2,
+    }
     ready_route_summary = result["suggested_next_action_group_summaries"][
         "ready_resolved_mutations"
     ][0]
@@ -11937,6 +11944,96 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     ]
     assert "resolved_result_bindings" not in (
         value_type_resolution["action"]["arguments"]["profile_route_sources"][0]
+    )
+
+
+def test_plan_profile_followthrough_tool_serializes_eligible_type_batch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/profile-batch#Orders"
+    status_column = f"{table}Status"
+    priority_column = f"{table}Priority"
+    shared_evidence = f"{table}ProfileEvidence"
+
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+    )
+    db.record_map_column(
+        priority_column,
+        table_iri=table,
+        column_name="priority",
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled for missing map types.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked varchar in the profile.",
+                "physical_type": "rc:Varchar",
+            },
+            {
+                "column_iri": priority_column,
+                "column_name": "priority",
+                "summary": "Priority looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+            },
+        ],
+    )
+
+    draft = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    result_bindings: dict[str, str] = {}
+    for action in draft["suggested_next_action_groups"]["profile_type_review"]:
+        source = action["source_profile_advisory"]
+        if (
+            action["tool_name"] != "record_pattern"
+            or source.get("advisory_statuses")
+            != ["type_finding_missing_map_type"]
+        ):
+            continue
+        produced = source["produces_result_bindings"][0]
+        pattern = record_pattern_tool(db, **action["arguments"])
+        result_bindings[produced["binding_key"]] = pattern["pattern_iri"]
+
+    result = plan_profile_followthrough_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        result_bindings=result_bindings,
+    )
+    json.dumps(result)
+    batch_plan = result["profile_type_assertion_batch_plan"]
+    assert batch_plan["eligible_action_count"] == 2
+    assert batch_plan["batch_count"] == 2
+    assert batch_plan["skipped_reason_counts"] == {}
+    items = [
+        item for batch in batch_plan["batches"] for item in batch["items"]
+    ]
+    assert {item["subject"] for item in items} == {
+        priority_column,
+        status_column,
+    }
+    assert all(isinstance(item["action"], dict) for item in items)
+    assert {
+        item["action"]["tool_name"] for item in items
+    } == {"stage_map_assertion_change"}
+    assert all(
+        item["action"]["arguments"]["supporting_patterns"] for item in items
     )
 
 
