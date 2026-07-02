@@ -72,4 +72,6 @@ Important V1 limits:
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.
-- SHACL validation is explicit and diagnostic, not a commit gate.
+- SHACL validation is explicit and diagnostic, not a mutation commit gate.
+  Importable graph exports gate invalid live graphs by default; pass
+  `fail_on_invalid=False` only for reviewed diagnostic exports.

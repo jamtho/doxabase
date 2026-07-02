@@ -274,6 +274,41 @@ print(
 )
 ```
 
+For S3-compatible buckets, keep the same shape but record the bucket route
+explicitly and keep credentials outside the graph:
+
+```python
+storage = f"{base}retail_events_s3_storage"
+db.record_map_storage_access(
+    storage,
+    label="retail events S3 bucket route",
+    route_roles=["rc:ProductionRoute"],
+    storage_protocol="rc:S3CompatibleStorage",
+    access_mode="rc:ReadOnlyAccess",
+    location_kind="bucket",
+    bucket_name="retail-warehouse",
+    key_prefix="retail/events/",
+    endpoint_profile="local-minio",
+    credential_reference="external:intentionally-unrecorded",
+    path_templates=["event_date={date}/*.parquet"],
+    datasets=[table],
+    layout_verification_status="rc:CandidateLayout",
+    layout_verification_note=(
+        "Bucket and prefix came from a handoff note; credentials stay outside "
+        "the graph."
+    ),
+)
+
+query = db.describe_query_context(table)
+plan = db.draft_query_plan(table)
+```
+
+`location_kind="bucket"` is only an input convenience; the stored graph value is
+`prefix`. Use relative `path_templates` under the recorded `key_prefix`, and use
+`credential_reference="external:intentionally-unrecorded"` when credentials
+exist only in local runtime configuration or are intentionally unavailable to
+the handoff.
+
 `redundant_partition_key` names a resource, usually the partition column IRI or
 CURIE. The placeholder token stays in `path_template`; do not pass `"date"` or
 `"event_date"` as the redundant key unless you have deliberately minted that as

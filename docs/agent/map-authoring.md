@@ -382,6 +382,23 @@ Do not pass raw column names or the owning dataset IRI in those column slots.
 If the transform is only a tentative interpretation, keep it in observations,
 claims, patterns, or caveats until it is current-best map structure.
 
+```python
+body = "https://example.test/enron#eml_messages__body"
+body_top = "https://example.test/enron#eml_messages__body_top"
+messages = "https://example.test/enron#eml_messages"
+
+db.record_map_column(body, table_iri=messages, column_name="body")
+db.record_map_column(body_top, table_iri=messages, column_name="body_top")
+db.record_map_relationship(
+    "https://example.test/enron#body_top_derivation",
+    relationship_type="derivation",
+    label="body_top derivation",
+    source_columns=[body],
+    derived_columns=[body_top],
+    derivation_properties=["rc:Deterministic", "rc:Lossy"],
+)
+```
+
 For no-column asset-level derivation or aggregation, use `source_datasets` and
 `target_datasets` without column fields. The singular `source_dataset` and
 `target_dataset` arguments are still accepted as compatibility shortcuts for

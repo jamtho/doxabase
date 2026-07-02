@@ -115,6 +115,30 @@ def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
         assert "storage_root" in content
 
 
+def test_executable_catalog_doc_includes_s3_bucket_credential_recipe() -> None:
+    doc = get_agent_doc("executable_catalog", max_chars=80_000)
+    content = str(doc["content"])
+
+    assert 'storage_protocol="rc:S3CompatibleStorage"' in content
+    assert 'location_kind="bucket"' in content
+    assert "bucket_name" in content
+    assert "key_prefix" in content
+    assert 'credential_reference="external:intentionally-unrecorded"' in content
+    assert "describe_query_context" in content
+    assert "draft_query_plan" in content
+
+
+def test_map_authoring_doc_includes_column_derivation_recipe() -> None:
+    doc = get_agent_doc("map_authoring", max_chars=80_000)
+    content = str(doc["content"])
+
+    assert "body_top derivation" in content
+    assert 'relationship_type="derivation"' in content
+    assert "source_columns=[body]" in content
+    assert "derived_columns=[body_top]" in content
+    assert 'derivation_properties=["rc:Deterministic", "rc:Lossy"]' in content
+
+
 def test_context_slicing_docs_explain_column_owner_query_routing() -> None:
     doc = get_agent_doc("context_slicing", max_chars=50_000)
     content = str(doc["content"])

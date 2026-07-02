@@ -29108,6 +29108,17 @@ def test_record_map_relationship_accepts_core_class_aliases(
         "shared_identifier",
         "derivation",
     }
+    derivation = next(
+        relationship
+        for relationship in relationships
+        if relationship.relationship_type == "derivation"
+    )
+    assert [column.iri for column in derivation.source_columns] == [body]
+    assert [column.column_name for column in derivation.source_columns] == ["body"]
+    assert [column.iri for column in derivation.derived_columns] == [body_top]
+    assert [column.column_name for column in derivation.derived_columns] == [
+        "body_top"
+    ]
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
 

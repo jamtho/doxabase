@@ -146,6 +146,7 @@ Supported scopes:
 
 - `map`
 - `ontology`
+- `patterns`
 - `shapes`
 - `all`
 
