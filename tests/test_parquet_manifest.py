@@ -69,7 +69,7 @@ def test_build_parquet_profile_manifest_from_metadata_reader(tmp_path: Path) -> 
     assert orders["iri"] == "https://example.test/profile-scaffold#orders"
     assert orders["label"] == "Orders"
     assert orders["path_templates"] == ["orders.parquet"]
-    assert orders["storage_path_templates"] == ["orders.parquet"]
+    assert "storage_path_templates" not in orders
     assert orders["row_count"] == 6
     assert orders["sample_size"] == 6
     assert orders["compression_codec"] == "rc:ZstdCompression"
@@ -109,11 +109,17 @@ def test_parquet_profile_manifest_applies_to_capsule(
 
     with DoxaBase.create(tmp_path / "capsule.sqlite") as db:
         record = db.record_profile_to_capsule_manifest(manifest)
+        context = db.describe_query_context(record.table_iris[0])
         validation = db.validate_graph(scope="all")
 
     assert record.table_iris == ["https://example.test/profile-apply#orders"]
     assert record.caveat_count == 1
     assert record.profile_observation_count == 3
+    assert len(context.query_target_candidates) == 1
+    candidate = context.query_target_candidates[0]
+    assert candidate.template == "orders.parquet"
+    assert candidate.template_source == "dataset"
+    assert candidate.candidate_path == str(path.resolve())
     assert validation.conforms, validation.report_text
 
 

@@ -4633,6 +4633,13 @@ few useful gaps:
   `record_query_result` scanned-source evidence,
   `draft_query_evidence_storage_overlay_candidate_arguments`,
   staged overlay application, and the final `execution_attempt_ready` plan.
+- A Parquet profile-manifest query-context trial found generated scaffolds
+  wrote the same relative Parquet path to both dataset `path_templates` and
+  storage-access `storage_path_templates`, producing duplicate same-path query
+  candidates once the manifest was applied. `python -m doxabase.parquet_manifest`
+  now keeps the generated single-file template on the dataset only; use
+  storage-owned templates for reviewed shared wildcards or database relation
+  handles, not as a duplicate of the dataset file path.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

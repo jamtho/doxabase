@@ -1132,7 +1132,10 @@ python -m doxabase.parquet_manifest \
 
 That scaffold command requires optional `pyarrow`, does not preserve raw rows,
 and records conservative candidate layout statuses plus a default review caveat.
-Review the JSON before applying it with `profile_to_capsule`.
+Review the JSON before applying it with `profile_to_capsule`. The generated
+single-file path is kept on table `path_templates`, not duplicated onto
+`storage_path_templates`, so query context shows one dataset-sourced route
+instead of two same-path candidates.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add

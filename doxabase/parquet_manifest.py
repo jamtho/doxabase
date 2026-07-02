@@ -188,7 +188,6 @@ def _manifest_table_entry(
         ),
         "evidence_sources": [metadata_path.as_uri()],
         "path_templates": [relative_path],
-        "storage_path_templates": [relative_path],
         "sample_scope": (
             f"Parquet metadata for local file {relative_path}; row count, when "
             "present, is the file metadata row count."

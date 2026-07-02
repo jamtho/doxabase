@@ -57,7 +57,10 @@ This command requires `pyarrow` in the environment. It reads Parquet footer and
 schema metadata only, emits a reviewable
 `doxabase.profile_to_capsule_manifest.v1` JSON file, and adds a caveat reminding
 agents to review table identity, storage paths, type mapping, row counts, and
-shareability before applying the manifest with `profile_to_capsule`.
+shareability before applying the manifest with `profile_to_capsule`. Generated
+single-file templates are dataset-owned `path_templates`; the scaffold does not
+also put the same value on storage access `storage_path_templates`, because that
+would create duplicate same-path query candidates.
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and
