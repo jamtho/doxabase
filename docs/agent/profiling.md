@@ -130,6 +130,12 @@ For exact response fields, read the `response_shapes` section
 capped, expand it first, then call `draft_profile_map_updates`; otherwise the
 draft action is the direct next step.
 
+For profile-focused scouting, do not treat a safety or query-planning
+`project_brief.first_unattended_action` as proof that profile work is absent.
+Obey safety gates first, then use `profile_queue_counts` and each
+`profile_review.inspection_next_action` after any needed expansion to reach the
+profile draft without bypassing higher-priority blockers.
+
 For route-explained handoffs, use `describe_context_slice` with
 `profile="dataset_brief"` for table/profile summaries or seed the slice with a
 specific profile observation, metric node, or project-specific metric-kind IRI.

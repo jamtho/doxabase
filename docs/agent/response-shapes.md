@@ -3566,6 +3566,11 @@ action.unattended_caution
 action.unattended_review_reason_codes
 ```
 
+The bracket notation above matches MCP/JSON responses and `to_dict(...)`
+output. In direct Python scripts, nested route-card values such as
+`route_roles` contain dataclass objects, so use attributes like `role.label` or
+convert the whole response with `to_dict()` before dict-style access.
+
 Prefer the route card over parsing `reason` text when choosing peer routes.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per
@@ -5921,9 +5926,10 @@ opening the nested plan first. If the manifest records nonzero
 sets `recommended_next_step="review_handoff_privacy_before_recovery"`, makes the
 top-level `first_suggested_next_action` and
 `first_safe_review_or_mutation_action` an `export_preflight` privacy review, and
-suppresses `first_mutation_action` until that review is explicit. If the
-nested `recovery_plan` is present, it carries the same privacy review as
-`first_safe_review_or_mutation_action`, sets
+suppresses `first_mutation_action` until that review is explicit. The privacy
+review action is effect-annotated as read-only with `mutation_scope="none"` and
+all write flags false. If the nested `recovery_plan` is present, it carries the
+same privacy review as `first_safe_review_or_mutation_action`, sets
 `first_safe_review_or_mutation_source="handoff_import_privacy_review"`, and
 clears `first_mutation_action` / `mutation_frontier_items` while the gate is
 active. If the

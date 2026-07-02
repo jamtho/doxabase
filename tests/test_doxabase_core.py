@@ -3147,6 +3147,11 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
         "export_preflight"
     ]
     privacy_action = imported.suggested_next_actions[0]
+    assert privacy_action.mutation_scope == "none"
+    assert privacy_action.mutates_project_graph is False
+    assert privacy_action.writes_history is False
+    assert privacy_action.writes_files is False
+    assert privacy_action.writes_storage is False
     assert privacy_action.arguments == {
         "export_kind": "handoff_bundle",
         "graphs": exported.graph_roles,

@@ -2861,10 +2861,11 @@ When the manifest records nonzero `sensitive_literal_count`, the import can
 still be useful locally, but its top-level next action is a redacted
 `doxabase.export_preflight(export_kind="handoff_bundle", ...)` privacy review
 and recovery/mutation actions are not promoted as continuations until that
-review is explicit. Detailed nested `recovery_plan` action surfaces are also
-privacy-gated in that case: lane actions, revision-summary actions, mutation
-frontier items, and plan suggested actions point back to the same preflight
-instead of exposing apply/restage calls.
+review is explicit. That privacy-review action carries effect metadata with
+`mutation_scope="none"` and all write flags false. Detailed nested
+`recovery_plan` action surfaces are also privacy-gated in that case: lane
+actions, revision-summary actions, mutation frontier items, and plan suggested
+actions point back to the same preflight instead of exposing apply/restage calls.
 When a manifest revision resolves to a current staged successor that lacks exact
 snapshot rows, the import promotes the blocking `import_revision_snapshots` or
 preflight action ahead of recovery-session setup and suppresses

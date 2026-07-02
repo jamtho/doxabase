@@ -63269,7 +63269,7 @@ class DoxaBase:
         revision_iris: list[str],
         snapshot_graph_roles: list[str],
         sensitive_literal_count: int,
-    ) -> SuggestedNextAction:
+    ) -> EffectAnnotatedSuggestedNextAction:
         arguments: dict[str, Any] = {
             "export_kind": "handoff_bundle",
             "graphs": graph_roles or ["project"],
@@ -63279,17 +63279,15 @@ class DoxaBase:
             arguments["revision_iris"] = revision_iris
         if snapshot_graph_roles:
             arguments["snapshot_graph_roles"] = snapshot_graph_roles
-        return SuggestedNextAction(
+        return self._effect_annotated_suggested_next_action(
             action_label="Review imported handoff privacy",
             tool_name="export_preflight",
-            mcp_tool_name="doxabase.export_preflight",
             arguments=arguments,
             reason=(
                 "The imported handoff manifest records sensitive-looking "
                 "artifact terms. Run this redacted receiver-side preflight "
                 "before following staged recovery or mutation actions."
             ),
-            call=self._suggested_call_string("export_preflight", arguments),
         )
 
     def _import_handoff_bundle_suggested_action(
