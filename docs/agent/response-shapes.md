@@ -3069,7 +3069,10 @@ Outputs include `target_dataset`, `role`, `formula`, `expression_language`,
 `function`, linked `conditions`, and optional `tuple_grain`. Dataset-level
 `tuple_grains[]` exposes the same tuple grain objects directly from the output
 asset; each grain has ordered `components[]` whose component can carry one of
-`column`, `dataset`, or `expression`.
+`column`, `dataset`, or `expression`. `transform_outputs[].target_dataset` and
+tuple-grain component `dataset` values summarize output/input assets, not
+columns. Use relationship `source_columns` and `derived_columns` for
+column-level transforms.
 
 `dataset.profile_observations` contains recent dataset-scoped
 `ProfileObservationSummary` items for observations whose `observed_asset` is the
@@ -5621,6 +5624,11 @@ preflight.matches
 preflight.privacy_warnings
 preflight.warnings
 preflight.scanner_note
+preflight.validation_scope
+preflight.validation_conforms
+preflight.validation_result_count
+preflight.validation_results
+preflight.would_block_invalid_export
 preflight.suggested_next_actions
 preflight.suggested_next_calls
 preflight.shareability_hint_count
@@ -5633,9 +5641,10 @@ preflight.shareability_hint_matches
 `handoff_bundle`. The helper does not check output paths or write artifacts; it
 selects the same graph roles and snapshot rows that the matching export helper
 would inspect for privacy warnings. `decision="block"` means
-`fail_on_sensitive=True` would block that export. `decision="clean_by_scanner_only"`
-means no selected graph/snapshot terms matched the conservative credential-like
-patterns, but `shareability_review_required` remains true because scanner-clean
+the guarded export would block on sensitive-looking terms or failed live
+validation. `decision="clean_by_scanner_only"` means no selected graph/snapshot
+terms matched the conservative credential-like patterns and live validation did
+not block, but `shareability_review_required` remains true because scanner-clean
 does not prove the artifact is appropriate to share.
 `shareability_review_status="required_not_completed"` is the machine-readable
 gate for that separate non-scanner review.
@@ -5709,6 +5718,11 @@ export.bytes_written
 export.sensitive_literal_count
 export.privacy_warnings
 export.warnings
+export.validation_scope
+export.validation_conforms
+export.validation_result_count
+export.validation_results
+export.would_block_invalid_export
 export.shareability_review_required
 export.shareability_review_status
 export.shareability_hints
@@ -5799,6 +5813,11 @@ handoff.scanner_clean
 handoff.shareability_review_required
 handoff.shareability_review_status
 handoff.would_block_sensitive_export
+handoff.validation_scope
+handoff.validation_conforms
+handoff.validation_result_count
+handoff.validation_results
+handoff.would_block_invalid_export
 handoff.shareability_hints
 handoff.artifact_disposition
 handoff.git_safe

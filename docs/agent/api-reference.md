@@ -143,7 +143,8 @@ artifact because it pairs project/history RDF with revision snapshot JSON.
 `export_trig()`, `export_revision_snapshots()`, and `export_handoff_bundle()`.
 It selects the same graph roles and snapshot rows, returns redacted match
 locators with stable non-secret `match_id` values, and reports `decision="block"`
-when `fail_on_sensitive=True` would block the corresponding write. A clean
+when sensitive terms or failed live SHACL validation would block the
+corresponding write under the default guarded export settings. A clean
 preflight reports `decision="clean_by_scanner_only"` and still sets
 `shareability_review_required=True` plus
 `shareability_review_status="required_not_completed"`; agents must separately
@@ -1112,6 +1113,10 @@ It composes `record_profiled_parquet_table()` and
 capsule before writing, and returns aggregate table, evidence, view, readiness,
 and suggested-action handles. It is not the same as an `export_handoff_bundle`
 manifest and does not read Parquet files or parse Markdown.
+For a reviewed manifest stored as JSON, run
+`python -m doxabase.profile_to_capsule --capsule capsule.sqlite --manifest profile-to-capsule.json`
+to load the file, apply the manifest, run validation, and print a compact JSON
+summary without adding Parquet dependencies.
 `record_analysis_packet()` records one reviewed analysis handoff as an
 `rc:AnalysisPacket` evidence resource. It can create logical analysis views,
 link existing analysis views, preserve locator-only artifact metadata, add

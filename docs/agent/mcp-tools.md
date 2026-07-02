@@ -83,11 +83,12 @@ before unattended or shareable exports when you need a single decision object
 rather than remembering separate scan and `fail_on_sensitive` steps. The result
 selects the same graph roles and snapshot rows as the corresponding export
 helper, returns redacted match locators with stable non-secret `match_id` values,
-and reports `decision="block"` when `fail_on_sensitive=true` would block the
-write. When no credential-like terms match, the decision is
-`clean_by_scanner_only`; this still sets `shareability_review_required=true`
-and `shareability_review_status="required_not_completed"` because scanner-clean
-is not proof that paths, endpoints, project facts, or history payloads are
+and reports `decision="block"` when sensitive terms or failed live validation
+would block the default guarded write. When no credential-like terms match and
+validation does not block, the decision is `clean_by_scanner_only`; this still
+sets `shareability_review_required=true` and
+`shareability_review_status="required_not_completed"` because scanner-clean is
+not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. It also reports `shareability_hints` for non-credential
 risks such as absolute local home/private paths, plus
 `shareability_hint_matches`, `artifact_disposition`, and `git_safe`; while
@@ -2023,7 +2024,11 @@ required reviewed `expression`, optional `expression_language`, and optional
 `target_dataset` and can carry `role`, `formula`, `expression_language`,
 `function`, linked `conditions`, and a `tuple_grain`. Tuple grain components
 accept exactly one of `column`, `dataset`, or `expression`; `column` must be an
-actual column resource, not a dataset/table asset.
+actual column resource, not a dataset/table asset. The dataset-valued fields are
+asset endpoints; do not put mapped column IRIs in `target_dataset`,
+`applies_to_datasets`, endpoint `dataset`, or tuple-grain `dataset`. Use
+`record_map_relationship(..., source_columns=[...], derived_columns=[...])` for
+column transforms.
 
 `doxabase.record_graph_revision`
 

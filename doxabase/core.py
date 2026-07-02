@@ -40061,6 +40061,19 @@ class DoxaBase:
             group_by_columns=group_by_column_values,
             aggregated_columns=aggregated_column_values,
         )
+        self._validate_dataset_endpoint_resources(
+            [
+                *(
+                    (endpoint_spec["field"], endpoint_spec["dataset"])
+                    for endpoint_spec in [
+                        *source_endpoint_specs,
+                        *target_endpoint_specs,
+                    ]
+                ),
+                *(("source_datasets", value) for value in source_dataset_values),
+                *(("target_datasets", value) for value in target_dataset_values),
+            ]
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -40707,6 +40720,12 @@ class DoxaBase:
                 f"{item_name}.applies_to_datasets",
                 applies_to_datasets,
             )
+            self._validate_dataset_endpoint_resources(
+                (
+                    (f"{item_name}.applies_to_datasets", value)
+                    for value in applies_to_datasets
+                )
+            )
             self._validate_resource_values(
                 f"{item_name}.applies_to_endpoints",
                 applies_to_endpoints,
@@ -40787,6 +40806,10 @@ class DoxaBase:
                 ),
             )
             self._resource_ref(f"{item_name}.target_dataset", target_dataset)
+            self._validate_dataset_endpoint_resource(
+                f"{item_name}.target_dataset",
+                target_dataset,
+            )
             if function is not None:
                 self._resource_ref(f"{item_name}.function", function)
             self._validate_resource_values(f"{item_name}.conditions", condition_values)
@@ -40915,6 +40938,10 @@ class DoxaBase:
                 )
             if dataset is not None:
                 self._resource_ref(f"{component_name}.dataset", dataset)
+                self._validate_dataset_endpoint_resource(
+                    f"{component_name}.dataset",
+                    dataset,
+                )
             component_iri = self._mapping_string(component_name, component, "iri", "id")
             normalised_components.append(
                 {
@@ -41161,6 +41188,32 @@ class DoxaBase:
             f"{field_name} points to {column_iri}, which is not a recorded "
             "rc:Column. Record the column first with record_map_column, then "
             "reference the column IRI in relationship column fields."
+        )
+
+    def _validate_dataset_endpoint_resources(
+        self,
+        fields: Iterable[tuple[str, str]],
+    ) -> None:
+        for field_name, value in fields:
+            self._validate_dataset_endpoint_resource(field_name, value)
+
+    def _validate_dataset_endpoint_resource(
+        self,
+        field_name: str,
+        value: str,
+    ) -> None:
+        endpoint_iri = str(self._resource_ref(field_name, value))
+        resource_types = set(
+            self._types_from_graphs(self._expand_graphs(["all"]), endpoint_iri)
+        )
+        if self.expand_iri("rc:Column") not in resource_types:
+            return
+        raise DoxaBaseError(
+            f"{field_name} points to a recorded rc:Column, not a data asset "
+            f"endpoint: {endpoint_iri}. Use source_columns/derived_columns for "
+            "column derivations such as body -> body_top; "
+            "record_map_asset_transform dataset endpoints and outputs are for "
+            "data assets."
         )
 
     def _normalise_aggregated_column_specs(

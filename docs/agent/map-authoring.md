@@ -446,6 +446,12 @@ record_map_asset_transform_tool(
 )
 ```
 
+`outputs[].target_dataset`, condition `applies_to_datasets`, endpoint
+`dataset`, and tuple-grain `dataset` values are asset endpoints, not column
+outputs. For column transforms such as `body -> body_top`, record both columns
+and use `record_map_relationship(..., source_columns=[...],
+derived_columns=[...])` instead.
+
 Derivation relationships can name `source_columns`, `derived_columns`,
 `derivation_function`, and `derivation_properties`. Treat those as relationship
 level context, not per-output formulas. `derivation_properties` is restricted to

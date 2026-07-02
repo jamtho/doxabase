@@ -28725,6 +28725,34 @@ def test_record_map_relationship_rejects_unrecorded_column_iris(
     assert db.triple_count("map") == before_map_count
 
 
+def test_record_map_relationship_rejects_columns_in_dataset_endpoints(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    messages = f"{base}messages"
+    body = f"{base}messages__body"
+    body_top = f"{base}messages__body_top"
+
+    db.record_map_dataset(messages, label="Messages", is_table=True)
+    db.record_map_column(body, table_iri=messages, column_name="body")
+    db.record_map_column(body_top, table_iri=messages, column_name="body_top")
+    before_map_count = db.triple_count("map")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="source_datasets.*recorded rc:Column.*source_columns/derived_columns",
+    ):
+        db.record_map_relationship(
+            f"{base}body_preview_derivation",
+            relationship_type="derivation",
+            source_datasets=[body],
+            target_datasets=[body_top],
+        )
+
+    assert db.triple_count("map") == before_map_count
+
+
 def test_validation_rejects_data_assets_in_relationship_column_predicates(
     tmp_path: Path,
 ) -> None:
@@ -29009,6 +29037,30 @@ def test_record_map_asset_transform_captures_conditions_outputs_and_tuple_grain(
                             {"expression": "tile coordinate"},
                         ],
                     },
+                }
+            ],
+        )
+    assert db.triple_count("map") == before_map_count
+
+    db.record_map_column(
+        f"{base}survey_mosaic_geotiff__body_top",
+        table_iri=mosaic,
+        column_name="body_top",
+    )
+    before_map_count = db.triple_count("map")
+    with pytest.raises(
+        DoxaBaseError,
+        match=r"outputs\[1\]\.target_dataset.*recorded rc:Column.*data assets",
+    ):
+        db.record_map_asset_transform(
+            f"{base}bad_output_dataset",
+            relationship_type="derivation",
+            source_datasets=[raw_bags],
+            target_datasets=[mosaic],
+            outputs=[
+                {
+                    "target_dataset": f"{base}survey_mosaic_geotiff__body_top",
+                    "formula": "clean top-level message text",
                 }
             ],
         )

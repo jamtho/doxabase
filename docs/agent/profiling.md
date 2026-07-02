@@ -39,6 +39,10 @@ manifest format is `doxabase.profile_to_capsule_manifest.v1`; it is an
 ingestion/orchestration manifest, not an export handoff manifest. DoxaBase
 preflights the whole manifest on a scratch capsule before writing, but it still
 does no Parquet I/O, Markdown parsing, or raw row preservation.
+When the reviewed manifest is already in a JSON file, use
+`python -m doxabase.profile_to_capsule --capsule capsule.sqlite --manifest profile-to-capsule.json`
+to apply it and print a compact validation/readiness summary. This command is a
+file adapter for the structured manifest; it does not scan Parquet files.
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and

@@ -4553,6 +4553,18 @@ few useful gaps:
   `project_brief` reasons now say when no map recommendations remain and report
   the actual advisory counts/statuses, so cold-start agents can distinguish
   vocabulary review from map-update queues.
+- A follow-up profile-to-capsule scout found graph-native manifest recording
+  was solved, but agents still needed a one-off `json.load` adapter when the
+  reviewed manifest lived on disk. `python -m doxabase.profile_to_capsule`
+  now applies a local `doxabase.profile_to_capsule_manifest.v1` JSON file,
+  runs validation, and prints table/evidence/view/readiness handles without
+  adding Parquet readers or raw-row ingestion.
+- A relationship/transform scout found ontology-facing relationship aliases and
+  column derivation docs were aligned, but asset-level transform dataset fields
+  could still accept mapped column IRIs and then disappear from owning table
+  descriptions. Dataset endpoint fields now reject known `rc:Column` resources;
+  use `source_columns` / `derived_columns` for column transforms and
+  `record_map_asset_transform` outputs for data assets.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
