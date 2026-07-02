@@ -114,6 +114,8 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "profile_draft_candidates": 3,
         "profile_candidate_omitted": 1,
         "profile_drafts": 2,
+        "profile_review_drafts": 1,
+        "profile_completed_drafts": 1,
         "profile_draft_recommendations": 3,
         "profile_scalar_conflict_groups": 0,
         "profile_metric_advisories": 1,
@@ -275,11 +277,15 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
                 "profile_run_candidate_count": 1,
                 "profile_run_evidence_iris": ["https://..."],
                 "draft_count": 1,
+                "review_draft_count": 1,
+                "completed_draft_count": 0,
+                "draft_status_counts": {"pending map recommendations": 1},
                 "draft_evidence_iris": ["https://..."],
                 "drafts": [
                     {
                         "evidence_iri": "https://...",
                         "status": "pending map recommendations",
+                        "requires_review": True,
                         "profile_observation_count": 4,
                         "recommendation_count": 2,
                         "scalar_conflict_group_count": 0,
@@ -352,8 +358,11 @@ the returned staged row, and `evidence_iris` lists its direct revision evidence.
 Profile draft summaries include `status`, for example
 `pending map recommendations`, `pending profile advisory review`,
 `pending staged profile update review`, or
-`profile evidence captured; no pending map recommendations`. Use that compact
-status before treating nonzero `profile_drafts` as unresolved work.
+`profile evidence captured; no pending map recommendations`. Use
+`drafts[].requires_review`, dataset-level `review_draft_count`, and top-level
+`profile_queue_counts["profile_review_drafts"]` for open work. `profile_drafts`
+is the total number of returned draft summaries, including completed/context-only
+drafts that remain useful handoff context.
 When current staged work exists, `staged_review` tasks are ordered ahead of
 fresh mutation-capable `query_repair_review` and `profile_review` tasks; omitted
 fresh queues are reported through `omitted_queue_counts` and `health_tasks`.

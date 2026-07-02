@@ -225,6 +225,10 @@ For profile-focused scouting, do not treat a safety or query-planning
 Obey safety gates first, then use `profile_queue_counts` and each
 `profile_review.inspection_next_action` after any needed expansion to reach the
 profile draft without bypassing higher-priority blockers.
+Use `profile_queue_counts["profile_review_drafts"]` for open profile-review
+work. `profile_queue_counts["profile_drafts"]` is the total returned draft
+summary count and can include completed or context-only profile evidence whose
+status says no map recommendations remain.
 
 For route-explained handoffs, use `describe_context_slice` with
 `profile="dataset_brief"` for table/profile summaries or seed the slice with a

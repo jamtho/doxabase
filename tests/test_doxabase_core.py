@@ -299,12 +299,18 @@ def test_project_brief_surfaces_singleton_profile_draft(
     assert profile.profile_evidence_iris == [evidence]
     assert profile.draft_evidence_iris == [evidence]
     assert profile.draft_count == 1
+    assert profile.review_draft_count == 1
+    assert profile.completed_draft_count == 0
+    assert profile.draft_status_counts == {"pending map recommendations": 1}
     assert profile.drafts[0].status == "pending map recommendations"
+    assert profile.drafts[0].requires_review is True
     assert profile.drafts[0].recommendation_count == 1
     draft = db.draft_profile_map_updates(dataset, evidence)
     assert draft.status == "pending map recommendations"
     assert brief.profile_queue_counts["profile_observations"] == 1
     assert brief.profile_queue_counts["profile_drafts"] == 1
+    assert brief.profile_queue_counts["profile_review_drafts"] == 1
+    assert brief.profile_queue_counts["profile_completed_drafts"] == 0
     assert brief.profile_queue_counts["profile_draft_recommendations"] == 1
     assert "profile_review" in brief.queue_counts
     profile_task = next(
@@ -356,10 +362,19 @@ def test_project_brief_marks_completed_profile_draft(
     profile = brief.datasets[0].profile
 
     assert profile.draft_count == 1
+    assert profile.review_draft_count == 0
+    assert profile.completed_draft_count == 1
+    assert profile.draft_status_counts == {
+        "profile evidence captured; no pending map recommendations": 1
+    }
     assert profile.drafts[0].status == (
         "profile evidence captured; no pending map recommendations"
     )
+    assert profile.drafts[0].requires_review is False
     assert profile.drafts[0].recommendation_count == 0
+    assert brief.profile_queue_counts["profile_drafts"] == 1
+    assert brief.profile_queue_counts["profile_review_drafts"] == 0
+    assert brief.profile_queue_counts["profile_completed_drafts"] == 1
     draft = db.draft_profile_map_updates(dataset, evidence)
     assert draft.status == (
         "profile evidence captured; no pending map recommendations"
@@ -404,9 +419,17 @@ def test_project_brief_names_advisory_only_profile_review(
     )
 
     assert brief.datasets[0].profile.drafts[0].recommendation_count == 0
+    assert brief.datasets[0].profile.drafts[0].requires_review is True
+    assert brief.datasets[0].profile.review_draft_count == 1
+    assert brief.datasets[0].profile.completed_draft_count == 0
     assert brief.datasets[0].profile.drafts[0].status == (
         "pending profile advisory review"
     )
+    assert brief.datasets[0].profile.draft_status_counts == {
+        "pending profile advisory review": 1
+    }
+    assert brief.profile_queue_counts["profile_review_drafts"] == 1
+    assert brief.profile_queue_counts["profile_completed_drafts"] == 0
     draft = db.draft_profile_map_updates(dataset, evidence)
     assert draft.status == "pending profile advisory review"
     assert brief.datasets[0].profile.drafts[0].type_advisory_status_counts == {

@@ -4830,6 +4830,13 @@ few useful gaps:
   `domain_network_profiles` that pass through `record_domain_network_profile`,
   preserving extraction coverage and optional domain-pair counts while keeping
   address parsing and raw row inspection outside DoxaBase.
+- A project-brief profile-status scout found completed profile draft summaries
+  were accurate but still easy to misread because `profile_drafts` counted both
+  open and completed/context-only drafts. Project brief profile summaries now
+  expose `drafts[].requires_review`, dataset-level `review_draft_count` /
+  `completed_draft_count`, and top-level `profile_review_drafts` /
+  `profile_completed_drafts` so agents can distinguish open work from useful
+  completed handoff context without losing total draft counts.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

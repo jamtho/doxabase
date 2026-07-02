@@ -561,6 +561,7 @@ class ProjectBriefDatasetQuerySummary:
 class ProjectBriefProfileDraftSummary:
     evidence_iri: str
     status: str
+    requires_review: bool
     profile_observation_count: int
     recommendation_count: int
     scalar_conflict_group_count: int
@@ -591,6 +592,9 @@ class ProjectBriefDatasetProfileSummary:
     profile_candidate_omitted_count: int
     omitted_draft_evidence_iris: list[str]
     draft_count: int
+    review_draft_count: int
+    completed_draft_count: int
+    draft_status_counts: dict[str, int]
     draft_evidence_iris: list[str]
     drafts: list[ProjectBriefProfileDraftSummary]
 
@@ -5679,40 +5683,47 @@ class DoxaBase:
                     pending_staged_advisory_actions,
                 )
             )
+            draft_summary = ProjectBriefProfileDraftSummary(
+                evidence_iri=evidence_iri,
+                status=self._project_brief_profile_draft_status(draft),
+                requires_review=False,
+                profile_observation_count=len(draft.profile_observation_iris),
+                recommendation_count=draft.recommendation_count,
+                scalar_conflict_group_count=draft.scalar_conflict_group_count,
+                metric_advisory_count=draft.metric_advisory_count,
+                metric_advisory_status_counts=draft.metric_advisory_status_counts,
+                type_advisory_count=draft.type_advisory_count,
+                type_advisory_status_counts=draft.type_advisory_status_counts,
+                action_group_names=list(draft.suggested_next_action_groups),
+                pending_staged_profile_advisory_iris=pending_staged_advisory_iris,
+                pending_staged_profile_advisory_count=len(
+                    pending_staged_advisory_iris
+                ),
+                pending_staged_profile_advisory_actions=(
+                    pending_staged_advisory_actions[:3]
+                ),
+                pending_staged_profile_advisory_calls=[
+                    action.call for action in pending_staged_advisory_actions[:3]
+                ],
+                task_advisories=task_advisories,
+                suggested_next_actions=suggested_next_actions,
+                suggested_next_calls=[action.call for action in suggested_next_actions],
+            )
             drafts.append(
-                ProjectBriefProfileDraftSummary(
-                    evidence_iri=evidence_iri,
-                    status=self._project_brief_profile_draft_status(draft),
-                    profile_observation_count=len(draft.profile_observation_iris),
-                    recommendation_count=draft.recommendation_count,
-                    scalar_conflict_group_count=draft.scalar_conflict_group_count,
-                    metric_advisory_count=draft.metric_advisory_count,
-                    metric_advisory_status_counts=(
-                        draft.metric_advisory_status_counts
+                replace(
+                    draft_summary,
+                    requires_review=self._project_brief_profile_draft_requires_review(
+                        draft_summary,
                     ),
-                    type_advisory_count=draft.type_advisory_count,
-                    type_advisory_status_counts=draft.type_advisory_status_counts,
-                    action_group_names=list(draft.suggested_next_action_groups),
-                    pending_staged_profile_advisory_iris=(
-                        pending_staged_advisory_iris
-                    ),
-                    pending_staged_profile_advisory_count=len(
-                        pending_staged_advisory_iris
-                    ),
-                    pending_staged_profile_advisory_actions=(
-                        pending_staged_advisory_actions[:3]
-                    ),
-                    pending_staged_profile_advisory_calls=[
-                        action.call
-                        for action in pending_staged_advisory_actions[:3]
-                    ],
-                    task_advisories=task_advisories,
-                    suggested_next_actions=suggested_next_actions,
-                    suggested_next_calls=[
-                        action.call for action in suggested_next_actions
-                    ],
                 )
             )
+        draft_status_counts: dict[str, int] = {}
+        for draft in drafts:
+            draft_status_counts[draft.status] = draft_status_counts.get(
+                draft.status,
+                0,
+            ) + 1
+        review_draft_count = sum(1 for draft in drafts if draft.requires_review)
         return ProjectBriefDatasetProfileSummary(
             total_profile_count=profile_summary.total_profile_count,
             returned_profile_count=profile_summary.returned_profile_count,
@@ -5727,6 +5738,9 @@ class DoxaBase:
             profile_candidate_omitted_count=len(omitted_draft_evidence_iris),
             omitted_draft_evidence_iris=omitted_draft_evidence_iris,
             draft_count=len(drafts),
+            review_draft_count=review_draft_count,
+            completed_draft_count=len(drafts) - review_draft_count,
+            draft_status_counts=draft_status_counts,
             draft_evidence_iris=[draft.evidence_iri for draft in drafts],
             drafts=drafts,
         )
@@ -7062,7 +7076,7 @@ class DoxaBase:
                 )
 
         for draft in dataset.profile.drafts:
-            if self._project_brief_profile_draft_requires_review(draft):
+            if draft.requires_review:
                 inspection_action = self._project_brief_draft_profile_action(
                     dataset.dataset.iri,
                     draft.evidence_iri,
@@ -7482,6 +7496,12 @@ class DoxaBase:
                 for dataset in datasets
             ),
             "profile_drafts": len(drafts),
+            "profile_review_drafts": sum(
+                1 for draft in drafts if draft.requires_review
+            ),
+            "profile_completed_drafts": sum(
+                1 for draft in drafts if not draft.requires_review
+            ),
             "profile_draft_recommendations": sum(
                 draft.recommendation_count for draft in drafts
             ),

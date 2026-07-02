@@ -631,12 +631,21 @@ def test_project_brief_tool_serializes_profile_draft_status(
     )
 
     result = project_brief_tool(db, limit=2, profile_candidate_limit=1)
-    draft = result["datasets"][0]["profile"]["drafts"][0]
+    profile = result["datasets"][0]["profile"]
+    draft = profile["drafts"][0]
 
     assert draft["status"] == (
         "profile evidence captured; no pending map recommendations"
     )
+    assert draft["requires_review"] is False
     assert draft["recommendation_count"] == 0
+    assert profile["review_draft_count"] == 0
+    assert profile["completed_draft_count"] == 1
+    assert profile["draft_status_counts"] == {
+        "profile evidence captured; no pending map recommendations": 1
+    }
+    assert result["profile_queue_counts"]["profile_review_drafts"] == 0
+    assert result["profile_queue_counts"]["profile_completed_drafts"] == 1
 
 
 def test_project_brief_tool_serializes_fixture_storage_health_task(
