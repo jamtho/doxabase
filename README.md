@@ -180,6 +180,9 @@ Not implemented yet:
   result-capture smoke workflow.
 - `examples/missing-metadata-query-repair-smoke.py` - staged storage/layout
   repair workflow from missing physical metadata to a query-plan handoff.
+- `examples/query-evidence-storage-overlay-smoke.py` - query-result evidence
+  overlay workflow from a scanned local CSV to staged storage/layout metadata
+  and a ready query-plan handoff.
 - `examples/ais-query-overlay-smoke.py` - scratch AIS DailyIndex overlay and
   stale-link repair workflow for the documented query-planning pressure test.
 - `examples/profile-frontier-workflow.py` - scratch workflow for profile-derived map updates and staged-frontier review.
@@ -233,6 +236,10 @@ query-planning and result-capture smoke test. Use
 `examples/missing-metadata-query-repair-smoke.py` when you want to exercise
 staged query metadata repair from `missing_storage_access` through
 `missing_physical_layout` to a ready local CSV query handoff. Use
+`examples/query-evidence-storage-overlay-smoke.py` when you want to exercise
+the evidence-first route from `record_query_result` through
+`draft_query_evidence_storage_overlay` and staged application to a ready local
+CSV query handoff. Use
 `examples/ais-query-overlay-smoke.py` when you want to exercise the reduced AIS
 fixture's path from reviewed metadata overlay through stale partition-link
 repair to a non-executed DuckDB handoff. Use

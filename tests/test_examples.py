@@ -156,6 +156,40 @@ def test_missing_metadata_query_repair_smoke_example_runs(tmp_path: Path) -> Non
     assert "Validation conforms: True" in output
 
 
+def test_query_evidence_storage_overlay_smoke_example_runs(tmp_path: Path) -> None:
+    result = _run_example("query-evidence-storage-overlay-smoke.py", tmp_path)
+    output = result.stdout
+
+    assert "# DoxaBase Query Evidence Storage Overlay Smoke" in output
+    assert "Baseline readiness: insufficient_metadata" in output
+    assert "Baseline candidates: 0" in output
+    assert "Recorded evidence status: succeeded" in output
+    assert "Profile inspection action: describe_profile_run" in output
+    assert (
+        "Overlay action required extras: "
+        "['storage_protocol', 'storage_root', 'location_kind', 'file_format']"
+        in output
+    )
+    assert "Route candidate kind: local_path_from_query_evidence" in output
+    assert "Candidate path templates: ['orders.csv']" in output
+    assert (
+        "Candidate argument keys: "
+        "file_format, location_kind, path_templates, storage_protocol, storage_root"
+        in output
+    )
+    assert "Draft result: query_evidence_storage_overlay_draft" in output
+    assert "Draft source readiness: insufficient_metadata" in output
+    assert "Draft validation conforms: True" in output
+    assert "Still before apply readiness: insufficient_metadata" in output
+    assert "Staged overlay check: ready / review_then_apply" in output
+    assert "Applied overlay: 1 patch" in output
+    assert "Final readiness: ready_for_query_planning" in output
+    assert "Draft handoff: execution_attempt_ready" in output
+    assert "Ready for execution: True" in output
+    assert "Scan function: read_csv_auto" in output
+    assert "Validation conforms: True" in output
+
+
 def test_ais_query_overlay_smoke_example_runs(tmp_path: Path) -> None:
     result = _run_example("ais-query-overlay-smoke.py", tmp_path)
     output = result.stdout

@@ -4626,6 +4626,13 @@ few useful gaps:
   files. `python -m doxabase.parquet_manifest` now emits a reviewable scaffold
   from optional `pyarrow` footer/schema metadata, with conservative layout
   statuses and a generated review caveat before the existing apply step.
+- A storage-aware query-planning trial confirmed the fixture and minimal local
+  CSV paths both work end to end, but cold agents benefited from a maintained
+  example for the evidence-first overlay route. Use
+  `examples/query-evidence-storage-overlay-smoke.py` when validating
+  `record_query_result` scanned-source evidence,
+  `draft_query_evidence_storage_overlay_candidate_arguments`,
+  staged overlay application, and the final `execution_attempt_ready` plan.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

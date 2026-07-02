@@ -679,6 +679,11 @@ metadata yet, use this sequence:
 5. Run `check_staged_revision_apply`, apply the ready row, rerun
    `describe_query_context`, and only then call `draft_query_plan`.
 
+The maintained executable example for this path is
+`examples/query-evidence-storage-overlay-smoke.py`; use it when you need to
+verify the exact candidate-argument, stage, apply, and final-plan sequence
+without relying on fixture object-store metadata.
+
 If that evidence identifies a reviewed source but the map still lacks physical
 query-planning metadata, call `draft_query_evidence_storage_overlay` with the
 dataset IRI, evidence IRI, and reviewed storage/path/layout values. The helper
