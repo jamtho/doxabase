@@ -26262,6 +26262,94 @@ def test_record_map_storage_access_rejects_unknown_location_kind(
     assert "'directory'" in error
 
 
+def test_record_map_storage_access_normalizes_bucket_location_kind_to_prefix(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 bucket",
+        storage_protocol="rc:S3CompatibleStorage",
+        location_kind="bucket",
+        bucket_name="orders",
+        key_prefix="current",
+        path_templates=["dt={date}.parquet"],
+        credential_reference="env:ORDERS_READONLY",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    description = db.describe_dataset(dataset)
+    assert description.storage_accesses[0].location_kind == "prefix"
+    context = db.describe_query_context(dataset)
+    assert context.query_target_candidates[0].location_kind == "prefix"
+    assert context.query_target_candidates[0].candidate_path == (
+        "s3://orders/current/dt={date}.parquet"
+    )
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_external_intentionally_unrecorded_credential_reference_is_non_secret_marker(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        location_kind="prefix",
+        bucket_name="orders",
+        key_prefix="current",
+        path_templates=["dt={date}.parquet"],
+        credential_reference="external:intentionally-unrecorded",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    assert context.storage_accesses[0].credential_reference == (
+        "external:intentionally-unrecorded"
+    )
+    assert "s3_access_resolution_unrecorded" not in {
+        issue.code for issue in context.issues
+    }
+    plan = db.draft_query_plan(dataset)
+    assert plan.storage_environment.credential_reference == (
+        "external:intentionally-unrecorded"
+    )
+    scan = db.scan_sensitive_literals(graphs=["map"])
+    assert scan.match_count == 0
+    preflight = db.export_preflight(export_kind="graph", graphs=["map"])
+    assert preflight.scanner_clean is True
+
+
 def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(
     tmp_path: Path,
 ) -> None:

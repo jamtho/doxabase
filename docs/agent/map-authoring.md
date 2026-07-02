@@ -119,6 +119,13 @@ Use `record_observation` for a single noticing. Use `record_pattern` when
 several noticings or claims explain why a map fact seems right. Then use map
 helpers to systematize the current-best facts.
 
+For storage access, keep credentials and root shape boring. Use only
+non-secret `credential_reference` markers such as `profile:<name>`,
+`env:<VAR_NAME>`, or `external:intentionally-unrecorded`. Stored
+`location_kind` values are `object`, `directory`, `prefix`, or `connection`;
+`record_map_storage_access(location_kind="bucket")` is an input convenience for
+S3-shaped bucket/key-prefix routes and is stored as `prefix`.
+
 ## Profile-Derived Updates
 
 When a shared-evidence profile run suggests map changes, call

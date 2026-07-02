@@ -32,6 +32,8 @@ are safe to share with project collaborators:
 - `rc:locationKind` says whether a root names an exact `object`/location,
   `directory`, `prefix`, or `connection`. Root-only query targets are executable
   candidates only when this is `object`; broader roots need path templates.
+  The authoring helper accepts `location_kind="bucket"` as a convenience for
+  S3-shaped bucket/key-prefix routes, but stores the graph value as `prefix`.
   Do not use a value such as `local_path`: local filesystem is a
   `storageProtocol`, while `locationKind` describes the shape of the recorded
   root.
@@ -39,7 +41,9 @@ are safe to share with project collaborators:
   `local-minio`.
 - `rc:pathStyleAccess` records an S3-compatible access quirk that query engines
   often need.
-- `rc:credentialReference` names credential material without storing it.
+- `rc:credentialReference` names credential material without storing it. Use
+  non-secret markers such as `profile:<name>`, `env:<VAR_NAME>`, or
+  `external:intentionally-unrecorded`.
 - `rc:accessMode` records whether the intended use is read-only or read-write.
 - `rc:compressionCodec` records file compression on a physical layout.
 - `rc:layoutVerificationStatus` records whether path/layout metadata is
@@ -70,8 +74,10 @@ Do not put secrets in DoxaBase:
 - user-specific absolute paths that should not travel with the project
 
 Use `rc:credentialReference` or `rc:endpointProfile` to point at local runtime
-configuration instead. The graph can say "use profile X"; the user's machine or
-agent runtime decides how profile X resolves.
+configuration instead. The graph can say `profile:<name>`,
+`env:<VAR_NAME>`, or `external:intentionally-unrecorded`; the user's machine or
+agent runtime decides how the marker resolves, and the last form means the
+credential exists outside the graph or is intentionally unavailable.
 Before sharing exports, run `doxabase.export_preflight` for the export kind you
 intend to create. It covers RDF graph roles and, for handoff bundles, stored
 revision snapshot rows before any path is chosen or artifact is written. Treat

@@ -1780,6 +1780,12 @@ storage.layout_verification_status
 storage.layout_verification_note
 ```
 
+`storage.location_kind` is a stored graph value: `object`, `directory`,
+`prefix`, or `connection`. Authoring helpers may accept `bucket` as an input
+alias, but response rows return the normalized `prefix`. Use
+`storage.credential_reference` only for non-secret runtime markers such as
+`profile:<name>`, `env:<VAR_NAME>`, or `external:intentionally-unrecorded`.
+
 Each `dataset.related_datasets[]` row is the compact peer summary:
 
 ```python
@@ -3599,6 +3605,8 @@ database candidate is review-only with `database_relation_template_missing`
 until a storage-access-owned template records the relation identifier. If
 `location_kind` is absent or is `directory`, `prefix`, or `connection`, the
 candidate is review-only and needs a path template before running a query.
+Input aliases such as `bucket` are normalized before response construction, so
+candidate rows also report bucket/key-prefix roots as `location_kind="prefix"`.
 Partition-specific blockers are candidate-local only for the partition that
 owns them; sibling partition candidates should carry
 `query_context_has_other_blockers` instead of the sibling's direct
@@ -3630,6 +3638,10 @@ candidate.review_reasons
 candidate.direct_review_required
 candidate.direct_review_reasons
 ```
+
+`candidate.credential_reference` follows the same non-secret marker convention
+as storage rows: `profile:<name>`, `env:<VAR_NAME>`, or
+`external:intentionally-unrecorded`.
 
 `candidate_path_status` is `ready` when the path is suitable as a planning
 input after normal review, `orientation_only` when warnings/errors make it a

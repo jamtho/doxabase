@@ -512,8 +512,11 @@ structured card instead of parsing action prose when choosing peer,
 production/current, sample/archive, or layout-selection routes. Candidate cards
 and route cards include non-secret storage orientation such as `access_mode`,
 `region`, `endpoint_profile`, `credential_reference`, `path_style_access`, and
-`requires_endpoint_profile`; DoxaBase still does not resolve credentials,
-endpoint profiles, or object existence. Candidate cards also include
+`requires_endpoint_profile`; use `credential_reference` markers such as
+`profile:<name>`, `env:<VAR_NAME>`, or
+`external:intentionally-unrecorded`, never secret material. DoxaBase still does
+not resolve credentials, endpoint profiles, or object existence. Candidate cards
+also include
 `required_bindings`, `required_binding_details`, `binding_example`, and
 `binding_examples` so scripts can compare runtime parameter needs before
 drafting a selected route.
@@ -1180,7 +1183,9 @@ layout verification belongs to one part of the executable catalog rather than
 to the whole dataset. For storage access, set `location_kind="object"` only when
 `storage_root` names the dataset object/location exactly; use `directory`,
 `prefix`, or `connection` for broader roots and add path templates for
-executable query planning. Do not use `location_kind="local_path"`; local
+executable query planning. The helper accepts `location_kind="bucket"` as an
+input alias for S3-shaped bucket/key-prefix routes and stores it as `prefix`.
+Do not use `location_kind="local_path"`; local
 filesystem belongs in `storage_protocol="rc:LocalFilesystemStorage"` and
 `location_kind` describes the root shape. Resource-valued fields across these
 helpers expect IRIs/CURIEs, not prose: use terms such as `rc:EventRow`,

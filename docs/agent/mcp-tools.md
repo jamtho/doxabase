@@ -21,11 +21,13 @@ compaction.
 For query planning and executable-catalog work, keep storage protocol separate
 from root shape. `storage_protocol` values include `local_path`, S3-style
 object storage, and database-backed storage such as `rc:DatabaseStorage`;
-`location_kind` is one of `"object"`, `"directory"`, `"prefix"`, or
-`"connection"`, never `"local_path"`. Local filesystem roots usually use
-`rc:LocalFilesystemStorage`; database relation identifiers belong on storage
-access records, and `path_templates` may live on the dataset, partition scheme,
-or storage access. Always keep `storage_root` explicit enough for
+stored `location_kind` is one of `"object"`, `"directory"`, `"prefix"`, or
+`"connection"`, never `"local_path"`. As an input convenience,
+`location_kind="bucket"` is accepted for S3-shaped routes and stored/read back
+as `"prefix"`, because the graph models a bucket plus key prefix as a prefix
+root. Local filesystem roots usually use `rc:LocalFilesystemStorage`; database relation identifiers
+belong on storage access records, and `path_templates` may live on the dataset,
+partition scheme, or storage access. Always keep `storage_root` explicit enough for
 `describe_query_context` to distinguish a real object from a directory/prefix
 or database connection.
 
@@ -1871,6 +1873,10 @@ datasets. Use IRIs or CURIEs for resource-valued controls such as
 `storage_protocol`, `access_mode`, `layout_verification_status`, and
 `datasets`. For S3-compatible storage, include enough non-secret runtime
 orientation such as `endpoint_profile`, `credential_reference`, or `region`.
+Use `credential_reference` only for non-secret markers such as
+`profile:<name>`, `env:<VAR_NAME>`, or
+`external:intentionally-unrecorded`; never store an access key, token, password,
+or private connection string.
 For non-S3 protocols, prefer protocol-appropriate roots, URLs, or connection
 references rather than S3-shaped `bucket_name`/`key_prefix` alone. Complete
 path templates are checked against the protocol and bucket/prefix metadata, and
@@ -1885,7 +1891,9 @@ file/object path templates here; if the relation is not reviewed yet, omit
 `path_templates` and let `describe_query_context` surface the missing database
 relation template.
 `location_kind` is a root-shape value, not a protocol value: use exactly one of
-`"object"`, `"directory"`, `"prefix"`, or `"connection"`. Do not use
+`"object"`, `"directory"`, `"prefix"`, or `"connection"` in stored graph facts.
+The helper also accepts `location_kind="bucket"` as an input alias and
+normalizes it to `"prefix"` for bucket plus key-prefix routes. Do not use
 `"local_path"`; localness belongs in
 `storage_protocol="rc:LocalFilesystemStorage"`. When the storage root itself is
 the only candidate dataset location, set `location_kind="object"` only if that

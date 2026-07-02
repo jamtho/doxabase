@@ -69180,12 +69180,15 @@ class DoxaBase:
         kind = value.strip().lower()
         if not kind:
             return None
+        if kind == "bucket":
+            return "prefix"
         allowed = {"object", "directory", "prefix", "connection"}
         if kind not in allowed:
             raise DoxaBaseError(
                 "location_kind must be one of: object, directory, prefix, "
-                "connection. Do not use 'local_path': local filesystem belongs "
-                "in storage_protocol='rc:LocalFilesystemStorage', while "
+                "connection; 'bucket' is accepted as an input alias for "
+                "'prefix'. Do not use 'local_path': local filesystem belongs in "
+                "storage_protocol='rc:LocalFilesystemStorage', while "
                 "location_kind describes the storage_root shape. Use 'object' "
                 "when the root is the exact file/object/location, or "
                 "'directory' when it is a local folder."

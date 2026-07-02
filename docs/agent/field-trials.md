@@ -1780,6 +1780,12 @@ few useful gaps:
   `location_kind` is only the root shape (`object`, `directory`, `prefix`, or
   `connection`). Keep errors and docs explicit so agents choose exact file/object
   roots versus local folders deliberately.
+- A storage-ergonomics follow-up found agents naturally describe S3 bucket plus
+  key-prefix routes as `location_kind="bucket"` and use ad hoc phrases when
+  credentials are deliberately outside the graph. DoxaBase now accepts the
+  `bucket` input alias and stores it as `prefix`, while docs standardize
+  non-secret credential markers: `profile:<name>`, `env:<VAR_NAME>`, and
+  `external:intentionally-unrecorded`.
 - Query-planning partition-template trials found agents could miss likely runtime
   handoff columns when a partition-owned placeholder was not one of the declared
   partition columns. Draft binding requirements now keep matched partition
