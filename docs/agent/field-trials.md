@@ -4416,7 +4416,9 @@ few useful gaps:
 - A follow-up transform trial found a fresh full IRI could be accepted as a
   relationship column and validate, while remaining invisible to
   `describe_dataset` because no `rc:Column` map fact existed. Relationship
-  column slots now require existing recorded columns, so agents must call
+  column slots now require existing recorded columns, and generic Turtle/staged
+  validation requires concrete `rc:columnName` evidence instead of trusting an
+  `rc:Column` type inferred from RDFS range. Agents must call
   `record_map_column` before authoring column-level derivations, keys, or
   aggregations.
 - The Enron ingestion feedback showed that the missing Parquet path was mostly

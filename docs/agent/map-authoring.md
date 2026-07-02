@@ -379,6 +379,9 @@ helper rejects known data assets, datasets, tables, and fresh IRIs that have not
 first been recorded as columns in `from_column`, `to_column`,
 `identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
 and aggregate mapping column fields.
+Hand-authored Turtle and staged patches follow the same rule: relationship
+column predicate objects must carry concrete `rc:columnName` evidence, not only
+an `rc:Column` type inferred by RDFS range.
 
 For column-to-column transforms such as cleaned text, normalized subjects, or
 `body -> body_top`, first record the real columns with `record_map_column`,

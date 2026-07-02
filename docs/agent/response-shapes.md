@@ -3108,8 +3108,10 @@ involved, and `source_datasets` / `target_datasets` for no-column asset-level
 rollups. The singular `source_dataset` and `target_dataset` fields are
 compatibility shortcuts to the first endpoint when present.
 When authoring relationship column fields, pass existing mapped `rc:Column`
-IRIs; fresh unrecorded column-shaped IRIs are rejected because they validate but
-do not give future `describe_dataset` calls a visible relationship.
+IRIs; fresh unrecorded column-shaped IRIs are rejected because they do not give
+future `describe_dataset` calls a visible relationship. In hand-authored Turtle
+or staged patches, an inferred `rc:Column` type is not enough: the column target
+must carry `rc:columnName` evidence.
 `source_datasets` and `target_datasets` are simple endpoint sets. When source or
 target role/order matters, use `source_endpoints` and `target_endpoints`; each
 endpoint carries `dataset`, `direction`, `direction_label`, `role`, and

@@ -592,7 +592,13 @@ rc:RelationshipColumnReferenceShape a sh:NodeShape ;
     sh:not [
         sh:class rc:DataAsset
     ] ;
-    sh:message "Relationship column predicates must not point to data asset resources; use sourceDataset/targetDataset or observations/patterns for asset-level relationships." .
+    sh:property [
+        sh:path rc:columnName ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Relationship column predicates must point to explicitly mapped column resources with columnName evidence." ;
+    ] ;
+    sh:message "Relationship column predicates must point to explicitly mapped column resources, not data asset resources or fresh column-looking IRIs; use sourceDataset/targetDataset or observations/patterns for asset-level relationships." .
 
 rc:PhysicalLayoutShape a sh:NodeShape ;
     sh:targetClass rc:PhysicalLayout ;

@@ -131,7 +131,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     graphs = {graph.name: graph for graph in overview.named_graphs}
     assert graphs["base_ontology"].triple_count == 1527
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1535
+    assert graphs["base_shapes"].triple_count == 1540
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -29761,8 +29761,10 @@ def test_validation_rejects_data_assets_in_relationship_column_predicates(
         @prefix ex: <https://example.test/project#> .
         @prefix rc: <https://richcanopy.org/ns/rc#> .
 
-        ex:raw_files a rc:Dataset .
-        ex:clean_files__filename a rc:Column .
+        ex:raw_files a rc:Dataset ;
+            rc:columnName "raw_files" .
+        ex:clean_files__filename a rc:Column ;
+            rc:columnName "filename" .
         ex:bad_asset_derivation a rc:Derivation ;
             rc:sourceColumn ex:raw_files ;
             rc:derivedColumn ex:clean_files__filename .
@@ -29773,8 +29775,81 @@ def test_validation_rejects_data_assets_in_relationship_column_predicates(
     validation = db.validate_graph(scope="all")
 
     assert not validation.conforms
-    assert "Relationship column predicates must not point to data asset resources" in (
-        validation.report_text
+    assert "not data asset resources" in validation.report_text
+
+
+def test_validation_rejects_unmapped_relationship_column_predicates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:messages a rc:Dataset, rc:Table .
+        ex:body_preview_derivation a rc:Derivation ;
+            rc:sourceColumn ex:messages__body ;
+            rc:derivedColumn ex:messages__body_top .
+        """,
+        graph="map",
+    )
+
+    validation = db.validate_graph(scope="all")
+
+    assert not validation.conforms
+    assert validation.result_count >= 2
+    assert "columnName evidence" in validation.report_text
+
+
+def test_staged_revision_apply_check_rejects_unmapped_relationship_columns(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage unrecorded column derivation",
+        rationale=(
+            "Exercise generic staged validation for relationship column slots "
+            "whose objects are only inferred as columns from predicate ranges."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:messages a rc:Dataset, rc:Table .
+                    ex:body_preview_derivation a rc:Derivation ;
+                        rc:sourceColumn ex:messages__body ;
+                        rc:derivedColumn ex:messages__body_top .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert staged.validation_conforms is False
+    assert staged.validation_result_count >= 2
+    assert any(
+        "columnName evidence" in message
+        for diagnostic in staged.validation_results
+        for message in diagnostic.messages
+    )
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+
+    assert check.can_apply is False
+    assert check.status == "validation_failed"
+    assert check.decision == "inspect_validation_results"
+    assert check.blocking_reasons == ["validation_failed"]
+    assert check.validation_conforms is False
+    assert check.validation_result_count is not None
+    assert check.validation_result_count >= 2
+    assert any(
+        "columnName evidence" in message
+        for diagnostic in check.validation_results
+        for message in diagnostic.messages
     )
 
 
