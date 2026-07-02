@@ -64354,6 +64354,9 @@ class DoxaBase:
             trig_path=trig_path,
             snapshot_path=snapshot_path,
         )
+        invalid_handoff_validation_action = (
+            self._import_handoff_bundle_validation_review_action(payload)
+        )
         privacy_review_required_before_recovery = (
             self._handoff_manifest_sensitive_literal_count(payload) > 0
         )
@@ -64473,7 +64476,12 @@ class DoxaBase:
                     )
                 )
                 suggested_next_actions = [
-                    privacy_review_action
+                    action
+                    for action in [
+                        privacy_review_action,
+                        invalid_handoff_validation_action,
+                    ]
+                    if action is not None
                 ]
             elif (
                 recovery_plan.mutation_allowed_after
@@ -64482,12 +64490,26 @@ class DoxaBase:
             ):
                 suggested_next_actions = self._dedupe_suggested_next_actions(
                     [
+                        *(
+                            [invalid_handoff_validation_action]
+                            if invalid_handoff_validation_action is not None
+                            else []
+                        ),
                         *recovery_plan.blocking_preflight_actions,
                         *recovery_suggested_next_actions,
                     ]
                 )
             else:
-                suggested_next_actions = recovery_suggested_next_actions
+                suggested_next_actions = self._dedupe_suggested_next_actions(
+                    [
+                        *(
+                            [invalid_handoff_validation_action]
+                            if invalid_handoff_validation_action is not None
+                            else []
+                        ),
+                        *recovery_suggested_next_actions,
+                    ]
+                )
             if not suggested_next_actions and not recovery_plan.processed_revision_iris:
                 suggested_next_actions = [
                     self._post_handoff_import_project_brief_action()
@@ -65409,6 +65431,20 @@ class DoxaBase:
                 "the same path; import is likely to fail unless the manifest is "
                 "repaired."
             )
+        invalid_scope = DoxaBase._handoff_manifest_invalid_validation_scope(manifest)
+        if invalid_scope is not None:
+            result_count = manifest.get("validation_result_count")
+            result_text = (
+                f" with {result_count} SHACL result(s)"
+                if isinstance(result_count, int) and result_count > 0
+                else ""
+            )
+            warnings.append(
+                "Handoff bundle manifest records a failed export validation "
+                f"for scope {invalid_scope!r}{result_text}. Import is faithful "
+                "for local diagnostics, but run validate_graph on the receiver "
+                "before following recovery or mutation actions."
+            )
         return warnings
 
     @staticmethod
@@ -65419,6 +65455,64 @@ class DoxaBase:
         if isinstance(sensitive_literal_count, int) and sensitive_literal_count > 0:
             return sensitive_literal_count
         return 0
+
+    @staticmethod
+    def _handoff_manifest_invalid_validation_scope(
+        manifest: MappingABC[str, Any],
+    ) -> str | None:
+        candidate: MappingABC[str, Any] = manifest
+        if (
+            candidate.get("would_block_invalid_export") is not True
+            and candidate.get("validation_conforms") is not False
+        ):
+            artifacts = manifest.get("artifacts")
+            if isinstance(artifacts, MappingABC):
+                trig_artifact = artifacts.get("trig")
+                if isinstance(trig_artifact, MappingABC):
+                    candidate = trig_artifact
+        if (
+            candidate.get("would_block_invalid_export") is not True
+            and candidate.get("validation_conforms") is not False
+        ):
+            return None
+        scope = candidate.get("validation_scope") or manifest.get("validation_scope")
+        if isinstance(scope, str) and scope in {
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        }:
+            return scope
+        return "all"
+
+    def _import_handoff_bundle_validation_review_action(
+        self,
+        manifest: MappingABC[str, Any],
+    ) -> SuggestedNextAction | None:
+        validation_scope = self._handoff_manifest_invalid_validation_scope(manifest)
+        if validation_scope is None:
+            return None
+        result_count = manifest.get("validation_result_count")
+        limit_results = 20
+        if isinstance(result_count, int):
+            limit_results = max(20, min(result_count, 100))
+        arguments: dict[str, Any] = {
+            "scope": validation_scope,
+            "limit_results": limit_results,
+        }
+        return SuggestedNextAction(
+            action_label="Inspect imported handoff validation failures",
+            tool_name="validate_graph",
+            mcp_tool_name="doxabase.validate_graph",
+            arguments=arguments,
+            reason=(
+                "The imported handoff manifest records that export validation "
+                "failed for this graph scope. Inspect receiver-side SHACL "
+                "diagnostics before following recovery or mutation actions."
+            ),
+            call=self._suggested_call_string("validate_graph", arguments),
+        )
 
     def _import_handoff_bundle_privacy_review_action(
         self,

@@ -19,10 +19,11 @@ compaction.
 ## Storage Access Primer
 
 For query planning and executable-catalog work, keep storage protocol separate
-from root shape. `storage_protocol` values include `local_path`, S3-style
-object storage, and database-backed storage such as `rc:DatabaseStorage`;
-stored `location_kind` is one of `"object"`, `"directory"`, `"prefix"`, or
-`"connection"`, never `"local_path"`. As an input convenience,
+from root shape. `storage_protocol` values include
+`rc:LocalFilesystemStorage`, S3-style object storage, and database-backed
+storage such as `rc:DatabaseStorage`; stored `location_kind` is one of
+`"object"`, `"directory"`, `"prefix"`, or `"connection"`, never
+`"local_path"`. As an input convenience,
 `location_kind="bucket"` is accepted for S3-shaped routes and stored/read back
 as `"prefix"`, because the graph models a bucket plus key prefix as a prefix
 root. Local filesystem roots usually use `rc:LocalFilesystemStorage`; database relation identifiers

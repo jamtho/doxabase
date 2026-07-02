@@ -113,6 +113,8 @@ def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
         assert "path_templates" in content
         assert "database relation identifiers" in content
         assert "storage_root" in content
+        assert "`storage_protocol` values include `local_path`" not in content
+        assert "storage_protocol values include `local_path`" not in content
 
 
 def test_executable_catalog_doc_includes_s3_bucket_credential_recipe() -> None:

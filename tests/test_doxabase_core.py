@@ -32799,6 +32799,23 @@ def test_export_preflight_and_writes_gate_invalid_graphs(tmp_path: Path) -> None
     assert manifest["validation_result_count"] == handoff.validation_result_count
     assert manifest["artifacts"]["trig"]["validation_conforms"] is False
 
+    receiver = DoxaBase.create(tmp_path / "invalid-handoff-receiver.sqlite")
+    imported = receiver.import_handoff_bundle(handoff_manifest)
+
+    assert any(
+        "failed export validation" in warning for warning in imported.warnings
+    )
+    assert imported.suggested_next_actions[0].tool_name == "validate_graph"
+    assert imported.suggested_next_actions[0].arguments == {
+        "scope": "all",
+        "limit_results": min(max(handoff.validation_result_count, 20), 100),
+    }
+    assert (
+        imported.recovery_summary.first_suggested_next_action.tool_name
+        == "validate_graph"
+    )
+    assert receiver.validate_graph(scope="all").conforms is False
+
 
 def test_context_slice_export_gates_invalid_graphs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")

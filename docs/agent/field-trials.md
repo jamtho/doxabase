@@ -4784,6 +4784,15 @@ few useful gaps:
   dataset/storage/physical layout status and notes, and the rich-profile smoke
   example uses that route to reach `ready_for_query_planning` without weakening
   conservative scaffold defaults.
+- A refreshed Enron handoff/product-feedback wave found several original
+  friction points had already been fixed: export/handoff writes gate invalid
+  live graphs by default, S3 bucket input normalizes to a prefix route, and
+  relationship helpers accept `rc:`/full-IRI class aliases. The remaining
+  export safety gap was receiver visibility for deliberately invalid diagnostic
+  handoffs: importing such a handoff now warns about the failed export
+  validation and puts a receiver-side `validate_graph` action before recovery
+  or mutation actions. The same wave identified source-view caveat rollup in
+  `describe_analysis_view` as a later useful analysis-packet refinement.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
