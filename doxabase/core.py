@@ -2605,6 +2605,12 @@ class GraphVersionListItem:
     is_current_staged_work: bool
     not_current_staged_work_reason: str | None
     review_resolution: StagedRevisionReviewResolutionSummary | None
+    staged_validation_status: str
+    stale_resolution_state: str | None
+    application_status: str | None
+    application_decision: str | None
+    application_can_apply: bool | None
+    application_blocking_reasons: list[str]
     alternative_gate_status: str | None
     alternative_semantic_review_required: bool
     alternative_applied_source_iri: str | None
@@ -2616,6 +2622,8 @@ class GraphVersionListItem:
     exact_snapshot_available: bool
     snapshot_evidence_status: str
     snapshot_evidence: RevisionSnapshotEvidenceStatus
+    next_action: RevisionNextAction | None
+    next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -2626,6 +2634,8 @@ class GraphVersionList:
     graph: str | None
     exact_only: bool
     include_current: bool
+    include_apply_checks: bool
+    drift_detail: str
     record_kind: str | None
     limit: int
     offset: int
@@ -10058,6 +10068,8 @@ class DoxaBase:
         graph: str | None = "history",
         exact_only: bool = False,
         include_current: bool = True,
+        include_apply_checks: bool = False,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
         record_kind: str | None = None,
         limit: int = 50,
         offset: int = 0,
@@ -10067,18 +10079,25 @@ class DoxaBase:
         self._ensure_non_negative("limit", limit)
         self._ensure_non_negative("offset", offset)
 
-        revisions = self.list_graph_revisions(
+        revision_list = self.list_graph_revisions(
             graph=graph,
             record_kind=record_kind,
-            include_apply_checks=False,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
             limit=1_000_000,
-        ).revisions
+        )
+        revisions = revision_list.revisions
+        queue_item_by_row = {
+            item.row_iri: item for item in revision_list.next_action_queue_items
+        }
         versions: list[GraphVersionListItem] = []
         for revision in revisions:
             snapshot = self._graph_version_snapshot_for_revision(
                 revision,
                 graph_role,
                 graph=graph,
+                include_apply_checks=include_apply_checks,
+                next_action_queue_item=queue_item_by_row.get(revision.iri),
             )
             if snapshot is None:
                 continue
@@ -10110,6 +10129,8 @@ class DoxaBase:
             graph=graph,
             exact_only=exact_only,
             include_current=include_current,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
             record_kind=record_kind,
             limit=limit,
             offset=offset,
@@ -10394,6 +10415,8 @@ class DoxaBase:
         graph_role: str,
         *,
         graph: str | None,
+        include_apply_checks: bool,
+        next_action_queue_item: RevisionNextActionQueueItem | None,
     ) -> GraphVersionListItem | None:
         snapshot = self.describe_revision_graph_snapshot(
             revision.iri,
@@ -10426,7 +10449,7 @@ class DoxaBase:
                 ),
             )
         ]
-        if any(
+        if include_apply_checks or any(
             value is not None
             for value in (
                 revision.applies_staged_revision,
@@ -10504,6 +10527,12 @@ class DoxaBase:
                 revision.not_current_staged_work_reason
             ),
             review_resolution=revision.review_resolution,
+            staged_validation_status=revision.staged_validation_status,
+            stale_resolution_state=revision.stale_resolution_state,
+            application_status=revision.application_status,
+            application_decision=revision.application_decision,
+            application_can_apply=revision.application_can_apply,
+            application_blocking_reasons=revision.application_blocking_reasons,
             alternative_gate_status=revision.alternative_gate.status,
             alternative_semantic_review_required=(
                 revision.alternative_gate.semantic_review_required
@@ -10521,6 +10550,8 @@ class DoxaBase:
             exact_snapshot_available=snapshot.exact_snapshot_available,
             snapshot_evidence_status=snapshot.snapshot_evidence.status,
             snapshot_evidence=snapshot.snapshot_evidence,
+            next_action=revision.next_action,
+            next_action_queue_item=next_action_queue_item,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions

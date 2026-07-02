@@ -284,6 +284,8 @@ def list_graph_versions_tool(
     graph: str | None = "history",
     exact_only: bool = False,
     include_current: bool = True,
+    include_apply_checks: bool = False,
+    drift_detail: str = "summary",
     record_kind: str | None = None,
     limit: int = 50,
     offset: int = 0,
@@ -294,6 +296,8 @@ def list_graph_versions_tool(
             graph=graph,
             exact_only=exact_only,
             include_current=include_current,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,  # type: ignore[arg-type]
             record_kind=record_kind,
             limit=limit,
             offset=offset,

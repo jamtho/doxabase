@@ -4748,6 +4748,12 @@ few useful gaps:
   plus a low-priority `analysis_packet_review` task pointing to packet
   `resource_brief` context so cold-start agents can find cookbook recipes,
   artifact locators, and follow-up tasks.
+- A version-first staged-revision trial found the stored graph timeline worked
+  for stage, drift, restage, apply, diff, and lineage review, but agents using
+  `list_graph_versions` as their first screen had to jump to revision triage to
+  find safe apply routing. `list_graph_versions(include_apply_checks=True)` now
+  projects live staged status, blockers, stale state, `next_action`, and
+  `next_action_queue_item` onto version rows for that route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

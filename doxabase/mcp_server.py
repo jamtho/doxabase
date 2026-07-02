@@ -753,11 +753,19 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graph: str | None = "history",
         exact_only: bool = False,
         include_current: bool = True,
+        include_apply_checks: bool = False,
+        drift_detail: str = "summary",
         record_kind: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """List stored graph-version snapshots for one graph role."""
+        """List stored graph-version snapshots for one graph role.
+
+        Pass include_apply_checks=True for version-first staged review. Then
+        staged patch rows also carry application_status, stale/restage blockers,
+        next_action, and next_action_queue_item routing fields copied from the
+        revision triage surface.
+        """
 
         return list_graph_versions_tool(
             db,
@@ -765,6 +773,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graph=graph,
             exact_only=exact_only,
             include_current=include_current,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
             record_kind=record_kind,
             limit=limit,
             offset=offset,

@@ -443,6 +443,11 @@ calls to `describe_revision_graph_snapshot` and, for exact rows,
 `describe_revision_lineage` directly, so version-first agents do not need to
 infer that route from `applied_by`, `applies_staged_revision`, or `restaged_by`
 fields.
+Pass `include_apply_checks=true` when the version list is the first staged
+review surface. Staged patch rows then include live `application_status`,
+`application_decision`, blockers, stale state, `next_action`, and
+`next_action_queue_item`; `drift_detail` controls whether those checks use
+summary or exact drift detail.
 `snapshot_semantics` distinguishes `staged_before_graph`,
 `applied_after_graph`, and `recorded_graph_snapshot`. Set `exact_only=True` to
 hide RDF-only count/digest snapshots, and `include_current=False` when a caller

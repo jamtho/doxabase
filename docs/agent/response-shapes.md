@@ -4759,6 +4759,8 @@ versions.graph_role
 versions.graph
 versions.exact_only
 versions.include_current
+versions.include_apply_checks
+versions.drift_detail
 versions.record_kind
 versions.limit
 versions.offset
@@ -4793,6 +4795,12 @@ item.current_restaged_by
 item.is_current_staged_work
 item.not_current_staged_work_reason
 item.review_resolution
+item.staged_validation_status
+item.stale_resolution_state
+item.application_status
+item.application_decision
+item.application_can_apply
+item.application_blocking_reasons
 item.alternative_gate_status
 item.alternative_semantic_review_required
 item.alternative_applied_source_iri
@@ -4804,6 +4812,8 @@ item.stored_at
 item.exact_snapshot_available
 item.snapshot_evidence_status
 item.snapshot_evidence
+item.next_action
+item.next_action_queue_item
 item.suggested_next_actions
 item.suggested_next_calls
 ```
@@ -4816,7 +4826,10 @@ history rows as `recorded_graph_snapshot`. The current live graph summary is in
 `current_graph` unless `include_current=False`. This helper lists stored
 snapshots and their count/digest evidence; it does not checkout historical graph
 state or replay revisions. Version rows also project staged-closure fields from
-the revision list: if `is_current_staged_work=False` and
+the revision list. Pass `include_apply_checks=True` when the version list is the
+first staged-review screen and rows should include live `application_status`,
+`application_decision`, blockers, stale state, `next_action`, and
+`next_action_queue_item`. If `is_current_staged_work=False` and
 `not_current_staged_work_reason=="review_resolved"`, read
 `review_resolution` before treating stale `application_status` values as
 unresolved work. Exact version rows suggest

@@ -83,6 +83,9 @@ count/digest and snapshot-evidence status. It is not checkout/replay; call
 stored version with the current graph, or
 `describe_revision_graph_snapshot(..., include_triples=True)` for exact stored
 triples on a specific version when that is necessary and safe to inspect.
+Use `include_apply_checks=True` when a version-first staged-review route needs
+row-local live `application_status`, blockers, stale state, `next_action`, and
+`next_action_queue_item` fields without first switching to the revision list.
 For singleton-slot drift repair, prefer a no-string-parsing route:
 `list_graph_versions("map", exact_only=True)` to orient on available snapshots,
 `describe_graph_version_diff("map", revision_iri)` to inspect the exact current
@@ -99,7 +102,9 @@ For a cold version-browsing pass after apply, use this sequence:
 1. `list_graph_revisions(include_apply_checks=True)` to find staged sources,
    applied events, application status, and preserved rationale.
 2. `list_graph_versions(graph_role="map", exact_only=True)` to see the available
-   before/after snapshots, `snapshot_semantics`, count, and digest.
+   before/after snapshots, `snapshot_semantics`, count, and digest. Add
+   `include_apply_checks=True` if you plan to route staged rows from the version
+   list itself.
 3. `describe_graph_version_diff(graph_role="map", before_revision_iri=...)` when
    comparing a stored version to the current graph, or
    `describe_applied_revision_diff(iri=applied_event_iri, include_triples=True)`
@@ -394,7 +399,10 @@ includes live `application_status`, blocker, and suggested-action fields.
 When inspecting a mixed history list, use `not_current_staged_work_reason` to see
 why a false `is_current_staged_work` row was excluded from that queue.
 Graph-version rows and graph-version diff revision contexts project the same
-closure fields. If a version-first route shows a stale-looking
+closure fields. Pass `include_apply_checks=True` to `list_graph_versions()` when
+the version list itself should carry live `application_status`,
+`application_decision`, blocking reasons, stale state, `next_action`, and
+`next_action_queue_item`. If a version-first route shows a stale-looking
 `application_status` but `not_current_staged_work_reason=="review_resolved"`,
 inspect `review_resolution` before treating it as unresolved staged work.
 If you keep the mixed page, `returned_application_status_counts` still counts
@@ -820,13 +828,17 @@ diff helpers promote those evidence import actions into top-level
 after an incomplete handoff import.
 
 For a graph-role timeline over stored snapshots, use
-`list_graph_versions(graph_role="map")`. The applied event gives counts and
-content digests; `applied_source` gives compact intent context; the staged
-source gives the full intended patch. The diff helper compares the staged
-source's before snapshots with the applied event's after snapshots for changed
-graphs. Use `describe_graph_version_diff(graph_role, before_revision_iri)` for
-arbitrary stored-version-to-current comparison, or pass `after_revision_iri` to
-compare two stored versions. `describe_graph_version_diff` also carries compact
+`list_graph_versions(graph_role="map")`. Add `include_apply_checks=True` when
+you are using that timeline as the first staged-review screen and need the same
+apply status, blocker, stale-state, `next_action`, and queue-item routing fields
+that `list_graph_revisions(include_apply_checks=True)` exposes. The applied
+event gives counts and content digests; `applied_source` gives compact intent
+context; the staged source gives the full intended patch. The diff helper
+compares the staged source's before snapshots with the applied event's after
+snapshots for changed graphs. Use
+`describe_graph_version_diff(graph_role, before_revision_iri)` for arbitrary
+stored-version-to-current comparison, or pass `after_revision_iri` to compare
+two stored versions. `describe_graph_version_diff` also carries compact
 before/after revision context plus lineage/applied-diff follow-up actions; use
 those when a zero or small graph delta might hide staged/applied/restaged
 recovery state. When exact snapshot rows are available, it also returns capped

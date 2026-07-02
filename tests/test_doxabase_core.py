@@ -15334,6 +15334,66 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert second_page.versions[0].revision_iri == staged.revision_iri
 
 
+def test_list_graph_versions_can_include_staged_apply_checks(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#UnrelatedDrift",
+        label="Unrelated drift dataset",
+        is_table=True,
+    )
+
+    versions = db.list_graph_versions(
+        "map",
+        exact_only=True,
+        include_apply_checks=True,
+        drift_detail="exact",
+    )
+
+    assert versions.include_apply_checks is True
+    assert versions.drift_detail == "exact"
+    assert [item.revision_iri for item in versions.versions] == [
+        staged.revision_iri
+    ]
+    row = versions.versions[0]
+    assert row.is_current_staged_work is True
+    assert row.application_status == "conflict"
+    assert row.application_decision == "restage_against_current_graph"
+    assert row.application_can_apply is False
+    assert row.application_blocking_reasons == ["target_count_drift"]
+    assert row.stale_resolution_state == "stale_unresolved"
+    assert row.next_action is not None
+    assert row.next_action.queue == "restage_after_review"
+    assert row.next_action.arguments == {"iri": staged.revision_iri}
+    assert row.next_action_queue_item is not None
+    assert row.next_action_queue_item.queue == "restage_after_review"
+    assert row.next_action_queue_item.resolved_target_iri == staged.revision_iri
+    assert [
+        action.tool_name for action in row.suggested_next_actions[:3]
+    ] == [
+        "describe_revision_graph_snapshot",
+        "describe_revision_lineage",
+        "describe_graph_version_diff",
+    ]
+
+
 def test_graph_versions_surface_review_resolved_staged_rows(
     tmp_path: Path,
 ) -> None:

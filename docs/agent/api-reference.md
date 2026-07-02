@@ -1950,14 +1950,17 @@ stored rows are missing, it falls back to RDF count/digest metadata and leaves
 triple arrays empty; the snapshot-evidence import action is also promoted into
 top-level `suggested_next_actions`.
 `list_graph_versions(graph_role, graph="history", exact_only=False,
-include_current=True, record_kind=None, limit=50, offset=0)` lists stored
-snapshot versions for one graph role, newest first. Each row carries the source
-revision IRI, `record_kind`, lineage links, role-local count/digest,
-`snapshot_evidence`, and `snapshot_semantics` values such as
-`staged_before_graph`, `applied_after_graph`, or `recorded_graph_snapshot`.
-Set `exact_only=True` to keep only rows with exact stored snapshot quads. This
-is a read-only timeline browser over stored revision snapshots, not a graph
-checkout or replay API.
+include_current=True, include_apply_checks=False, drift_detail="summary",
+record_kind=None, limit=50, offset=0)` lists stored snapshot versions for one
+graph role, newest first. Each row carries the source revision IRI,
+`record_kind`, lineage links, role-local count/digest, `snapshot_evidence`, and
+`snapshot_semantics` values such as `staged_before_graph`,
+`applied_after_graph`, or `recorded_graph_snapshot`. Set `exact_only=True` to
+keep only rows with exact stored snapshot quads. Pass
+`include_apply_checks=True` for version-first staged review rows with live
+`application_status`, blockers, stale state, `next_action`, and
+`next_action_queue_item`. This is a read-only timeline browser over stored
+revision snapshots, not a graph checkout or replay API.
 `describe_graph_version_diff(graph_role, before_revision_iri,
 after_revision_iri=None, compare_to_current=True, graph="history",
 include_triples=False, max_triples=500)` compares a stored graph-version
