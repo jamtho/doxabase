@@ -30031,6 +30031,20 @@ class DoxaBase:
             severity="warning",
             message=message,
             resource=access_resource,
+            details={
+                "storage_access_iri": storage_access.iri,
+                "storage_protocol_iri": (
+                    storage_access.storage_protocol.iri
+                    if storage_access.storage_protocol is not None
+                    else None
+                ),
+                "storage_root": storage_access.storage_root,
+                "location_kind": storage_access.location_kind,
+                "allowed_template_sources": ["storage_access"],
+                "repair_hint": (
+                    self._query_storage_location_kind_repair_hint(storage_access)
+                ),
+            },
         )
 
     def _query_database_relation_template_missing_issue(
@@ -30065,6 +30079,89 @@ class DoxaBase:
                 ),
             },
         )
+
+    def _query_storage_location_kind_repair_hint(
+        self,
+        storage_access: StorageAccessDescription,
+    ) -> dict[str, Any]:
+        set_object_change_kind = (
+            "add" if storage_access.location_kind is None else "replace"
+        )
+        return {
+            "action_type": "record_file_object_path_template_or_exact_root",
+            "choice_mode": "choose_one",
+            "requires_review": True,
+            "source": {
+                "storage_access_iri": storage_access.iri,
+                "storage_root": storage_access.storage_root,
+                "location_kind": storage_access.location_kind,
+            },
+            "target": {
+                "storage_access_iri": storage_access.iri,
+                "predicate": "rc:pathTemplate",
+                "required_template_source": "storage_access",
+            },
+            "candidate_path_template": {
+                "value": "<reviewed_relative_path_template>",
+                "requires_review": True,
+                "review_note": (
+                    "Review the path below the recorded storage root before "
+                    "staging. Use this when the storage root is a directory, "
+                    "prefix, or other broader container."
+                ),
+            },
+            "actions": [
+                {
+                    "action_type": "add_reviewed_path_template",
+                    "action_label": "Add reviewed path template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["object", "rationale"],
+                    "rationale_template": (
+                        "Reviewed file/object path template for storage access "
+                        f"{storage_access.iri}."
+                    ),
+                    "arguments_template": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": "<reviewed_relative_path_template>",
+                        "object_kind": "literal",
+                        "change_kind": "add",
+                        "graph": "map",
+                    },
+                    "placeholder_fields": ["object"],
+                    "reviewed_value_fields": ["object"],
+                    "condition": (
+                        "Replace the placeholder object with the reviewed "
+                        "dataset path template relative to the storage root."
+                    ),
+                },
+                {
+                    "action_type": "set_root_as_exact_object_location",
+                    "action_label": "Mark root as exact object location",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed storage root as the exact dataset object or "
+                        f"location for {storage_access.iri}."
+                    ),
+                    "arguments": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:locationKind",
+                        "object": "object",
+                        "object_kind": "literal",
+                        "change_kind": set_object_change_kind,
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Use only when review shows the storage root itself "
+                        "names the exact dataset file, object, or location and "
+                        "no path template should be appended."
+                    ),
+                },
+            ],
+        }
 
     def _query_candidate_path_status(
         self,

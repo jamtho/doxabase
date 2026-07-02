@@ -4799,6 +4799,12 @@ few useful gaps:
   direct caveats in `caveats` and immediate source-dataset or parent-view
   caveats in `source_caveats`, so agents can inspect inherited population
   warnings without duplicating every caveat onto every child logical view.
+- A storage-metadata-assisted query-planning scout found root-only local or
+  object-store directory/prefix routes correctly stayed review-only with
+  `storage_location_kind_needs_path_template`, but exposed no repair handoff.
+  That issue now carries a repair hint and lifted `suggested_repair_action_groups`
+  choices to add a reviewed storage-owned `rc:pathTemplate` or mark the root as
+  the exact object with `rc:locationKind "object"` after review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

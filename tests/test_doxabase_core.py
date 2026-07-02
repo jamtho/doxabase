@@ -26920,6 +26920,88 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert {issue.code for issue in context.issues} == {
         "storage_location_kind_needs_path_template"
     }
+    details = context.issues[0].details
+    assert details is not None
+    assert {
+        key: details[key]
+        for key in [
+            "storage_access_iri",
+            "storage_protocol_iri",
+            "storage_root",
+            "location_kind",
+            "allowed_template_sources",
+        ]
+    } == {
+        "storage_access_iri": storage.iri,
+        "storage_protocol_iri": RC + "LocalFilesystemStorage",
+        "storage_root": storage_root,
+        "location_kind": location_kind,
+        "allowed_template_sources": ["storage_access"],
+    }
+    repair_hint = details["repair_hint"]
+    assert repair_hint["action_type"] == (
+        "record_file_object_path_template_or_exact_root"
+    )
+    assert repair_hint["choice_mode"] == "choose_one"
+    assert repair_hint["requires_review"] is True
+    assert repair_hint["source"] == {
+        "storage_access_iri": storage.iri,
+        "storage_root": storage_root,
+        "location_kind": location_kind,
+    }
+    assert repair_hint["target"] == {
+        "storage_access_iri": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "required_template_source": "storage_access",
+    }
+    assert [action["action_type"] for action in repair_hint["actions"]] == [
+        "add_reviewed_path_template",
+        "set_root_as_exact_object_location",
+    ]
+    add_action = repair_hint["actions"][0]
+    assert add_action["action_label"] == "Add reviewed path template"
+    assert add_action["tool_name"] == "stage_map_assertion_change"
+    assert add_action["arguments_template"] == {
+        "subject": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_relative_path_template>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
+    }
+    assert add_action["required_extra_arguments"] == ["object", "rationale"]
+    assert add_action["placeholder_fields"] == ["object"]
+    assert add_action["reviewed_value_fields"] == ["object"]
+    exact_root_action = repair_hint["actions"][1]
+    assert exact_root_action["action_label"] == "Mark root as exact object location"
+    assert exact_root_action["arguments"] == {
+        "subject": storage.iri,
+        "predicate": "rc:locationKind",
+        "object": "object",
+        "object_kind": "literal",
+        "change_kind": "add" if location_kind is None else "replace",
+        "graph": "map",
+    }
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_index == 0
+    assert repair_group.issue_code == "storage_location_kind_needs_path_template"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == storage.iri
+    assert repair_group.repair_action_type == (
+        "record_file_object_path_template_or_exact_root"
+    )
+    assert repair_group.choice_mode == "choose_one"
+    assert [action["action_type"] for action in repair_group.actions] == [
+        "add_reviewed_path_template",
+        "set_root_as_exact_object_location",
+    ]
+    assert [
+        action["action_label"] for action in repair_group.pending_action_options
+    ] == [
+        "Add reviewed path template",
+        "Mark root as exact object location",
+    ]
     assert context.storage_accesses[0].location_kind == location_kind
     target = context.query_target_candidates[0]
     assert target.template_source == "storage_access_location"

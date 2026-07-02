@@ -819,6 +819,15 @@ storage access. After applying each query-planning metadata repair, rerun
 drafting a plan; apply responses route staged frontier recovery, not the full
 query-context repair checklist.
 
+For root-only non-database storage whose `location_kind` is absent,
+`directory`, `prefix`, or `connection`, the storage root is also review-only
+until a reviewed template or exact-object decision exists. The
+`storage_location_kind_needs_path_template` issue carries
+`details.repair_hint`, and `suggested_repair_action_groups` lifts two reviewed
+choices: add a storage-owned `rc:pathTemplate`, or set `rc:locationKind` to
+`"object"` when review confirms the root itself is the exact dataset file,
+object, or location.
+
 For database storage, `runtime_resolution_required=True` is the normal execution
 gate until an external runtime resolves the connection, schema, table, and
 source access. If older or unusual metadata yields

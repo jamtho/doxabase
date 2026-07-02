@@ -10171,6 +10171,47 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
 
     assert result["readiness"] == "needs_review"
     assert result["storage_accesses"][0]["location_kind"] == "directory"
+    assert result["suggested_repair_action_group_count"] == 1
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "storage_location_kind_needs_path_template"
+    assert repair_group["repair_action_type"] == (
+        "record_file_object_path_template_or_exact_root"
+    )
+    assert repair_group["choice_mode"] == "choose_one"
+    assert [
+        action["action_label"] for action in repair_group["pending_action_options"]
+    ] == [
+        "Add reviewed path template",
+        "Mark root as exact object location",
+    ]
+    details = result["issues"][0]["details"]
+    repair_hint = details["repair_hint"]
+    assert repair_hint["source"] == {
+        "storage_access_iri": storage["iri"],
+        "storage_root": storage_root,
+        "location_kind": "directory",
+    }
+    assert repair_hint["target"] == {
+        "storage_access_iri": storage["iri"],
+        "predicate": "rc:pathTemplate",
+        "required_template_source": "storage_access",
+    }
+    assert repair_hint["actions"][0]["arguments_template"] == {
+        "subject": storage["iri"],
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_relative_path_template>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
+    }
+    assert repair_hint["actions"][1]["arguments"] == {
+        "subject": storage["iri"],
+        "predicate": "rc:locationKind",
+        "object": "object",
+        "object_kind": "literal",
+        "change_kind": "replace",
+        "graph": "map",
+    }
     target = result["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"
     assert target["location_kind"] == "directory"

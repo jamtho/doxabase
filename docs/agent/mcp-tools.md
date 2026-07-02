@@ -1157,6 +1157,12 @@ exact dataset object/location. `describe_query_context` still exposes that
 `storage_access_location` candidate when dataset or partition templates are
 present, and any candidate that would append a template to the object root is
 review-only with `storage_object_location_has_path_template`.
+Root-only non-database storage with missing, directory, prefix, or connection
+`location_kind` is also review-only with
+`storage_location_kind_needs_path_template`; use the lifted
+`suggested_repair_action_groups` row to either add a reviewed storage-owned
+`rc:pathTemplate` or, when review confirms the root is exact, set
+`rc:locationKind` to `"object"`.
 For storage protocol/location mismatch repairs, templated actions also name
 `placeholder_fields` and `reviewed_value_fields` for the reviewed value to fill
 in.
