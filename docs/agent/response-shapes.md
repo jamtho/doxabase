@@ -1605,6 +1605,38 @@ or a stable dataset-derived `/profile-evidence/parquet` IRI. Use it with
 helper does no Parquet I/O; its counts, frequencies, physical types, and
 storage/layout metadata are caller-reviewed facts.
 
+`db.record_profile_to_capsule_manifest(manifest)` returns a
+`ProfileToCapsuleManifestRecord`:
+
+```python
+record.manifest_format
+record.caveat_records
+record.table_records
+record.analysis_view_bundle
+record.caveat_iris
+record.table_iris
+record.shared_evidence_iris
+record.analysis_view_iris
+record.caveat_count
+record.table_count
+record.analysis_view_count
+record.profile_observation_count
+record.query_readiness_counts
+record.query_issue_code_counts
+record.suggested_next_actions
+record.suggested_next_calls
+```
+
+The manifest must declare
+`format="doxabase.profile_to_capsule_manifest.v1"`. It may include
+`table_defaults`, `caveats`, `tables`, and `analysis_views`. Table specs pass
+through `record_profiled_parquet_table`; `table_iri` and `dataset_iri` are
+aliases for `iri`. Analysis-view specs pass through
+`record_map_analysis_view_bundle`. The helper preflights the whole structured
+manifest on a scratch capsule before writing, so a later invalid table or view
+does not leave earlier manifest rows in the live capsule. It is not a handoff
+export manifest and does not read files or parse Markdown.
+
 `bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
 
 ```python

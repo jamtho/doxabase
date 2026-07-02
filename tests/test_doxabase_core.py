@@ -27806,6 +27806,197 @@ def test_record_profiled_parquet_table_preflights_without_mutation(
     assert _mutable_graph_counts(db) == before_counts
 
 
+def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-manifest#"
+    caveat = f"{base}reviewed_aggregate_caveat"
+    orders = f"{base}orders"
+    tickets = f"{base}tickets"
+    paid_orders_view = f"{base}paid_orders_view"
+    open_tickets_view = f"{base}open_tickets_view"
+
+    result = db.record_profile_to_capsule_manifest(
+        {
+            "format": "doxabase.profile_to_capsule_manifest.v1",
+            "table_defaults": {
+                "observed_by": "urn:agent:profile-manifest-test",
+                "sample_method": "Reviewed no-I/O aggregate manifest.",
+                "row_semantics": "rc:EventRow",
+                "schema_stability": "rc:FixedSchema",
+                "layout_verification_status": "rc:VerifiedByQueryLayout",
+                "storage_protocol": "rc:LocalFilesystemStorage",
+                "access_mode": "rc:ReadOnlyAccess",
+                "location_kind": "directory",
+                "storage_root": str(tmp_path),
+                "storage_layout_verification_status": "rc:VerifiedByListingLayout",
+                "physical_layout_verification_status": "rc:VerifiedByQueryLayout",
+                "caveats": [caveat],
+            },
+            "caveats": [
+                {
+                    "iri": caveat,
+                    "label": "Reviewed aggregate caveat",
+                    "description": (
+                        "Manifest facts are reviewed aggregate metadata; "
+                        "DoxaBase did no file I/O."
+                    ),
+                    "severity": "rc:Minor",
+                    "targets": [orders, tickets],
+                }
+            ],
+            "tables": [
+                {
+                    "table_iri": orders,
+                    "label": "Orders",
+                    "dataset_summary": "Orders profile captured reviewed counts.",
+                    "evidence_summary": "Reviewed Orders profile manifest.",
+                    "evidence_sources": ["scratch://profiles/orders.json"],
+                    "path_templates": ["orders/current.parquet"],
+                    "storage_path_templates": ["orders/current.parquet"],
+                    "row_count": 6,
+                    "columns": [
+                        {
+                            "column_name": "order_id",
+                            "physical_type": "rc:Integer",
+                            "null_count": 0,
+                        },
+                        {
+                            "column_name": "status",
+                            "physical_type": "rc:Varchar",
+                            "null_count": 0,
+                            "distinct_count": 3,
+                        },
+                    ],
+                },
+                {
+                    "dataset_iri": tickets,
+                    "label": "Tickets",
+                    "dataset_summary": "Tickets profile captured reviewed counts.",
+                    "evidence_summary": "Reviewed Tickets profile manifest.",
+                    "evidence_sources": ["scratch://profiles/tickets.json"],
+                    "path_templates": ["tickets/current.parquet"],
+                    "storage_path_templates": ["tickets/current.parquet"],
+                    "sample_method": "Reviewed ticket profiler output.",
+                    "row_count": 4,
+                    "columns": [
+                        {
+                            "column_name": "ticket_id",
+                            "physical_type": "rc:Integer",
+                            "null_count": 0,
+                        }
+                    ],
+                },
+            ],
+            "analysis_views": [
+                {
+                    "view_iri": paid_orders_view,
+                    "label": "Paid orders logical view",
+                    "source_datasets": [orders],
+                    "row_count_snapshot": 3,
+                    "caveats": [caveat],
+                    "denominator_label": "Paid orders denominator",
+                    "denominator_description": "Rows from Orders where status is paid.",
+                    "denominator_row_count_snapshot": 3,
+                    "denominator_basis": "Reviewed manifest count.",
+                    "query_snippets": [
+                        {
+                            "label": "View definition",
+                            "query_text": "select * from orders where status = 'paid'",
+                            "query_language": "DuckDB SQL",
+                            "query_engine": "duckdb",
+                        }
+                    ],
+                },
+                {
+                    "iri": open_tickets_view,
+                    "label": "Open tickets logical view",
+                    "source_datasets": [tickets],
+                    "row_count_snapshot": 2,
+                    "denominator_label": "Open tickets denominator",
+                    "denominator_description": (
+                        "Rows from Tickets where status is open."
+                    ),
+                    "denominator_row_count_snapshot": 2,
+                    "denominator_basis": "Reviewed manifest count.",
+                },
+            ],
+        }
+    )
+
+    assert result.manifest_format == "doxabase.profile_to_capsule_manifest.v1"
+    assert result.caveat_iris == [caveat]
+    assert result.table_iris == [orders, tickets]
+    assert result.analysis_view_iris == [paid_orders_view, open_tickets_view]
+    assert result.caveat_count == 1
+    assert result.table_count == 2
+    assert result.analysis_view_count == 2
+    assert result.profile_observation_count == 5
+    assert result.query_readiness_counts == {"ready_for_query_planning": 2}
+    assert result.analysis_view_bundle is not None
+    assert result.analysis_view_bundle.query_snippet_count == 1
+    assert {action.tool_name for action in result.suggested_next_actions} >= {
+        "describe_dataset",
+        "describe_profile_run",
+        "describe_query_context",
+    }
+
+    orders_run = db.describe_profile_run(orders, result.shared_evidence_iris[0])
+    assert orders_run.total_profile_count == 3
+    assert db.describe_query_context(paid_orders_view).readiness == (
+        "logical_analysis_view"
+    )
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_profile_to_capsule_manifest_preflights_all_tables_before_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+    base = "https://example.test/profile-manifest-preflight#"
+
+    with pytest.raises(DoxaBaseError, match="columns\\[1\\] has unsupported field"):
+        db.record_profile_to_capsule_manifest(
+            {
+                "format": "doxabase.profile_to_capsule_manifest.v1",
+                "table_defaults": {
+                    "storage_protocol": "rc:LocalFilesystemStorage",
+                    "access_mode": "rc:ReadOnlyAccess",
+                    "location_kind": "directory",
+                    "storage_root": str(tmp_path),
+                },
+                "tables": [
+                    {
+                        "iri": f"{base}orders",
+                        "dataset_summary": "Orders profile captured reviewed counts.",
+                        "evidence_summary": "Reviewed Orders profile manifest.",
+                        "evidence_sources": ["scratch://profiles/orders.json"],
+                        "row_count": 6,
+                        "columns": [{"column_name": "order_id"}],
+                    },
+                    {
+                        "iri": f"{base}tickets",
+                        "dataset_summary": "Tickets profile captured reviewed counts.",
+                        "evidence_summary": "Reviewed Tickets profile manifest.",
+                        "evidence_sources": ["scratch://profiles/tickets.json"],
+                        "row_count": 4,
+                        "columns": [
+                            {
+                                "column_name": "ticket_id",
+                                "unexpected": "caught by cloned preflight",
+                            }
+                        ],
+                    },
+                ],
+            }
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_record_domain_network_profile_records_reviewed_aggregates(
     tmp_path: Path,
 ) -> None:

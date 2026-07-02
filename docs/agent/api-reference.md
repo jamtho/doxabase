@@ -1098,6 +1098,15 @@ count, query readiness, issue codes, and suggested next actions. Use it when an
 external profiler or case-study script has already produced reviewed schema,
 storage/layout, and aggregate profile facts; do not use it as a Parquet scanner
 or a place to preserve raw row samples.
+`record_profile_to_capsule_manifest()` records a reviewed
+`doxabase.profile_to_capsule_manifest.v1` ingestion manifest in one no-I/O pass.
+Use it when a case-study script or sidecar has already produced several
+reviewed table/profile specs plus optional caveats and logical analysis views.
+It composes `record_profiled_parquet_table()` and
+`record_map_analysis_view_bundle()`, preflights the full manifest on a scratch
+capsule before writing, and returns aggregate table, evidence, view, readiness,
+and suggested-action handles. It is not the same as an `export_handoff_bundle`
+manifest and does not read Parquet files or parse Markdown.
 `record_domain_network_profile()` is the aggregate communication-network
 profile helper. It records reviewed sender/recipient extractability buckets,
 optional domain-pair/domain-frequency counts, shared evidence, and optional

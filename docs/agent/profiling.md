@@ -29,6 +29,12 @@ Parquet schema/storage/layout metadata and aggregate profile facts for one
 table. It records the table map bundle and shared profile bundle together,
 defaults the physical layout to `rc:Parquet`, returns profile/query follow-up
 actions, and still performs no Parquet I/O.
+Use `record_profile_to_capsule_manifest` when a reviewed structured manifest
+contains several such table specs plus optional caveats and analysis views. The
+manifest format is `doxabase.profile_to_capsule_manifest.v1`; it is an
+ingestion/orchestration manifest, not an export handoff manifest. DoxaBase
+preflights the whole manifest on a scratch capsule before writing, but it still
+does no Parquet I/O, Markdown parsing, or raw row preservation.
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair
 counts, and a named denominator. It records aggregate profile observations and

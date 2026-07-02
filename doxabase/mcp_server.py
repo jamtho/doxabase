@@ -74,6 +74,7 @@ from doxabase.mcp_tools import (
     record_map_relationship_tool,
     record_map_storage_access_tool,
     record_profiled_parquet_table_tool,
+    record_profile_to_capsule_manifest_tool,
     record_graph_revision_tool,
     record_staged_revision_review_decision_tool,
     record_observation_tool,
@@ -1816,6 +1817,14 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_map_implications=pattern_map_implications,
             pattern_support_scope=pattern_support_scope,
         )
+
+    @server.tool(name="doxabase.record_profile_to_capsule_manifest")
+    def record_profile_to_capsule_manifest(
+        manifest: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Record reviewed profile-to-capsule manifest specs in one no-I/O pass."""
+
+        return record_profile_to_capsule_manifest_tool(db, manifest=manifest)
 
     @server.tool(name="doxabase.record_map_column")
     def record_map_column(

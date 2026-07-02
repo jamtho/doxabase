@@ -1714,6 +1714,14 @@ def record_map_analysis_view_bundle_tool(
     return to_dict(result)
 
 
+def record_profile_to_capsule_manifest_tool(
+    db: DoxaBase,
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
+    result = db.record_profile_to_capsule_manifest(manifest)
+    return to_dict(result)
+
+
 def record_map_column_tool(
     db: DoxaBase,
     iri: str,

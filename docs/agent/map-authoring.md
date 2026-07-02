@@ -108,6 +108,12 @@ and returns the records plus `describe_dataset` / `describe_query_context`
 follow-up actions.
 For a full route from reviewed table/profile facts to a verified handoff, run
 `examples/profile-to-capsule-cookbook.py`.
+When the reviewed inputs are already in a structured JSON-like sidecar, use
+`record_profile_to_capsule_manifest` to compose optional caveats, multiple
+`record_profiled_parquet_table` specs, and optional
+`record_map_analysis_view_bundle` specs in one no-I/O pass. This helper records
+ingestion context into the capsule; it is separate from
+`export_handoff_bundle` manifests.
 
 ## When To Use Map Helpers
 

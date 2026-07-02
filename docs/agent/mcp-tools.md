@@ -1829,6 +1829,18 @@ fields still require IRIs or CURIEs. Treat `value_frequencies` as reviewed
 aggregate facts; do not include raw message bodies, individual addresses,
 tokens, or other row-level samples.
 
+`doxabase.record_profile_to_capsule_manifest`
+
+Records a reviewed profile-to-capsule manifest in one no-I/O pass. The payload
+must include `format="doxabase.profile_to_capsule_manifest.v1"`, optional
+`table_defaults`, optional `caveats`, required `tables`, and optional
+`analysis_views`. Table specs use the same fields as
+`record_profiled_parquet_table`, with `table_iri` and `dataset_iri` accepted as
+aliases for `iri`; analysis views use the same structured fields as
+`record_map_analysis_view_bundle`. DoxaBase preflights the full manifest on a
+scratch capsule before writing to the live capsule. This is not a Parquet
+scanner, Markdown parser, or `export_handoff_bundle` manifest.
+
 `doxabase.record_map_analysis_view`
 
 Records or updates a logical analysis view in the `map` graph. Use it for

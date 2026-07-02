@@ -124,6 +124,7 @@ SHAREABILITY_HINT_MESSAGES: dict[str, str] = {
 
 DEFAULT_ARTIFACT_DISPOSITION = "local_only_pending_shareability_review"
 DEFAULT_SHAREABILITY_HINT_MATCH_LIMIT = 20
+PROFILE_TO_CAPSULE_MANIFEST_FORMAT = "doxabase.profile_to_capsule_manifest.v1"
 
 MISSING_STORAGE_GENERIC_TOKENS = {
     "archive",
@@ -4368,6 +4369,26 @@ class ProfiledParquetTableRecord:
 
 
 @dataclass(frozen=True)
+class ProfileToCapsuleManifestRecord:
+    manifest_format: str
+    caveat_records: list[MapResourceRecord]
+    table_records: list[ProfiledParquetTableRecord]
+    analysis_view_bundle: AnalysisViewBundleRecord | None
+    caveat_iris: list[str]
+    table_iris: list[str]
+    shared_evidence_iris: list[str]
+    analysis_view_iris: list[str]
+    caveat_count: int
+    table_count: int
+    analysis_view_count: int
+    profile_observation_count: int
+    query_readiness_counts: dict[str, int]
+    query_issue_code_counts: dict[str, int]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ResourceTriple:
     graph: str
     subject: str
@@ -5014,6 +5035,21 @@ class DoxaBase:
             yield active_cache
         finally:
             self._staged_apply_check_cache = previous_cache
+
+    @contextmanager
+    def _preflight_clone(self) -> Iterator["DoxaBase"]:
+        clone = object.__new__(DoxaBase)
+        clone.path = Path(":memory:")
+        clone.read_only = False
+        clone._conn = sqlite3.connect(":memory:")
+        clone._conn.row_factory = sqlite3.Row
+        clone._search_index_error = None
+        clone._staged_apply_check_cache = None
+        self._conn.backup(clone._conn)
+        try:
+            yield clone
+        finally:
+            clone.close()
 
     @classmethod
     def create(
@@ -38437,6 +38473,93 @@ class DoxaBase:
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
 
+    def record_profile_to_capsule_manifest(
+        self,
+        manifest: Mapping[str, Any],
+    ) -> ProfileToCapsuleManifestRecord:
+        if self.read_only:
+            raise DoxaBaseError(
+                "record_profile_to_capsule_manifest requires a writable capsule; "
+                "open read-only capsules with DoxaBase.open_readonly(path) for "
+                "inspection only"
+            )
+        manifest_spec = self._normalise_profile_to_capsule_manifest(manifest)
+        with self._preflight_clone() as clone:
+            clone._apply_profile_to_capsule_manifest(manifest_spec)
+        return self._apply_profile_to_capsule_manifest(manifest_spec)
+
+    def _apply_profile_to_capsule_manifest(
+        self,
+        manifest_spec: Mapping[str, Any],
+    ) -> ProfileToCapsuleManifestRecord:
+        caveat_records = [
+            self.record_map_caveat(**caveat_spec)
+            for caveat_spec in manifest_spec["caveats"]
+        ]
+        table_records = [
+            self.record_profiled_parquet_table(**table_spec)
+            for table_spec in manifest_spec["tables"]
+        ]
+        analysis_view_bundle = (
+            self.record_map_analysis_view_bundle(manifest_spec["analysis_views"])
+            if manifest_spec["analysis_views"]
+            else None
+        )
+        query_readiness_counts: dict[str, int] = {}
+        query_issue_code_counts: dict[str, int] = {}
+        for table_record in table_records:
+            query_readiness_counts[table_record.query_readiness] = (
+                query_readiness_counts.get(table_record.query_readiness, 0) + 1
+            )
+            for issue_code in table_record.query_issue_codes:
+                query_issue_code_counts[issue_code] = (
+                    query_issue_code_counts.get(issue_code, 0) + 1
+                )
+        suggested_next_actions = self._dedupe_suggested_next_actions(
+            [
+                *(
+                    action
+                    for table_record in table_records
+                    for action in table_record.suggested_next_actions
+                ),
+                *(
+                    analysis_view_bundle.suggested_next_actions
+                    if analysis_view_bundle is not None
+                    else []
+                ),
+            ]
+        )
+        return ProfileToCapsuleManifestRecord(
+            manifest_format=manifest_spec["format"],
+            caveat_records=caveat_records,
+            table_records=table_records,
+            analysis_view_bundle=analysis_view_bundle,
+            caveat_iris=[record.iri for record in caveat_records],
+            table_iris=[record.dataset_iri for record in table_records],
+            shared_evidence_iris=[
+                record.shared_evidence_iri for record in table_records
+            ],
+            analysis_view_iris=(
+                analysis_view_bundle.view_iris
+                if analysis_view_bundle is not None
+                else []
+            ),
+            caveat_count=len(caveat_records),
+            table_count=len(table_records),
+            analysis_view_count=(
+                analysis_view_bundle.view_count
+                if analysis_view_bundle is not None
+                else 0
+            ),
+            profile_observation_count=sum(
+                record.profile_observation_count for record in table_records
+            ),
+            query_readiness_counts=query_readiness_counts,
+            query_issue_code_counts=query_issue_code_counts,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
     def record_map_analysis_view(
         self,
         iri: str,
@@ -68701,6 +68824,274 @@ class DoxaBase:
             spec["iri"] = view_iri
             specs.append(spec)
         return specs
+
+    def _normalise_profile_to_capsule_manifest(
+        self,
+        manifest: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        if not isinstance(manifest, MappingABC):
+            raise DoxaBaseError("manifest must be an object")
+        allowed_fields = {
+            "format",
+            "table_defaults",
+            "caveats",
+            "tables",
+            "analysis_views",
+        }
+        unknown_fields = sorted(set(manifest) - allowed_fields)
+        if unknown_fields:
+            raise DoxaBaseError(
+                "manifest has unsupported field(s): " + ", ".join(unknown_fields)
+            )
+        manifest_format = manifest.get("format")
+        if manifest_format != PROFILE_TO_CAPSULE_MANIFEST_FORMAT:
+            raise DoxaBaseError(
+                "manifest format must be "
+                f"{PROFILE_TO_CAPSULE_MANIFEST_FORMAT!r}"
+            )
+        table_defaults_value = manifest.get("table_defaults")
+        if table_defaults_value is None:
+            table_defaults: Mapping[str, Any] = {}
+        elif isinstance(table_defaults_value, MappingABC):
+            table_defaults = table_defaults_value
+        else:
+            raise DoxaBaseError("table_defaults must be an object")
+        caveat_specs = self._normalise_profile_manifest_caveats(
+            manifest.get("caveats"),
+        )
+        table_specs = self._normalise_profile_manifest_tables(
+            manifest.get("tables"),
+            table_defaults=table_defaults,
+        )
+        analysis_view_values = self._normalise_manifest_object_list(
+            "analysis_views",
+            manifest.get("analysis_views"),
+        )
+        analysis_view_specs = (
+            self._normalise_analysis_view_bundle_specs(analysis_view_values)
+            if analysis_view_values
+            else []
+        )
+        used_iris = {spec["iri"] for spec in table_specs}
+        for view_spec in analysis_view_specs:
+            view_iri = view_spec["iri"]
+            if view_iri in used_iris:
+                raise DoxaBaseError(
+                    f"analysis view IRI duplicates another manifest resource: {view_iri}"
+                )
+            used_iris.add(view_iri)
+        return {
+            "format": manifest_format,
+            "caveats": caveat_specs,
+            "tables": table_specs,
+            "analysis_views": analysis_view_specs,
+        }
+
+    def _normalise_profile_manifest_caveats(
+        self,
+        caveats: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        caveat_values = self._normalise_manifest_object_list(
+            "caveats",
+            caveats,
+        )
+        allowed_fields = {
+            "iri",
+            "label",
+            "description",
+            "impact",
+            "severity",
+            "targets",
+        }
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        for index, item in enumerate(caveat_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"caveats[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            iri_value = item.get("iri")
+            if not isinstance(iri_value, str) or not iri_value.strip():
+                raise DoxaBaseError(
+                    f"caveats[{index}].iri must be a non-empty IRI or CURIE string"
+                )
+            caveat_iri = str(self._resource_ref(f"caveats[{index}].iri", iri_value))
+            if caveat_iri in seen_iris:
+                raise DoxaBaseError(f"caveats[{index}].iri duplicates {caveat_iri}")
+            seen_iris.add(caveat_iri)
+            spec = {field: copy.deepcopy(item[field]) for field in item}
+            spec["iri"] = caveat_iri
+            specs.append(spec)
+        return specs
+
+    def _normalise_profile_manifest_tables(
+        self,
+        tables: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        *,
+        table_defaults: Mapping[str, Any],
+    ) -> list[dict[str, Any]]:
+        default_unknown_fields = sorted(
+            set(table_defaults) - self._profile_manifest_table_fields()
+        )
+        if default_unknown_fields:
+            raise DoxaBaseError(
+                "table_defaults has unsupported field(s): "
+                + ", ".join(default_unknown_fields)
+            )
+        default_identity_fields = (
+            {"iri", "table_iri", "dataset_iri"} & set(table_defaults)
+        )
+        if default_identity_fields:
+            raise DoxaBaseError(
+                "table_defaults cannot include table identity field(s): "
+                + ", ".join(sorted(default_identity_fields))
+            )
+        table_values = self._normalise_manifest_object_list(
+            "tables",
+            tables,
+            required=True,
+        )
+        specs: list[dict[str, Any]] = []
+        seen_iris: set[str] = set()
+        allowed_fields = self._profile_manifest_table_fields()
+        for index, item in enumerate(table_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"tables[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            spec = copy.deepcopy(dict(table_defaults))
+            spec.update(copy.deepcopy(dict(item)))
+            table_iri = self._profile_manifest_table_iri(spec, index=index)
+            if table_iri in seen_iris:
+                raise DoxaBaseError(f"tables[{index}].iri duplicates {table_iri}")
+            seen_iris.add(table_iri)
+            spec.pop("table_iri", None)
+            spec.pop("dataset_iri", None)
+            spec["iri"] = table_iri
+            specs.append(spec)
+        return specs
+
+    @staticmethod
+    def _profile_manifest_table_fields() -> set[str]:
+        return {
+            "iri",
+            "table_iri",
+            "dataset_iri",
+            "dataset_summary",
+            "evidence_summary",
+            "columns",
+            "label",
+            "description",
+            "path_templates",
+            "row_count",
+            "sample_size",
+            "sample_scope",
+            "sample_method",
+            "observed_at",
+            "observed_by",
+            "evidence_sources",
+            "shared_evidence_iri",
+            "null_count",
+            "distinct_count",
+            "value_frequencies",
+            "profile_metrics",
+            "row_semantics",
+            "entity_key",
+            "schema_stability",
+            "layout_verification_status",
+            "layout_verification_note",
+            "caveats",
+            "companion_datasets",
+            "extra_types",
+            "storage_access_iri",
+            "storage_label",
+            "storage_description",
+            "route_roles",
+            "storage_protocol",
+            "access_mode",
+            "location_kind",
+            "storage_root",
+            "endpoint_profile",
+            "bucket_name",
+            "key_prefix",
+            "region",
+            "path_style_access",
+            "credential_reference",
+            "storage_path_templates",
+            "storage_layout_verification_status",
+            "storage_layout_verification_note",
+            "physical_layout_iri",
+            "physical_layout_label",
+            "physical_layout_description",
+            "compression_codec",
+            "physical_layout_verification_status",
+            "physical_layout_verification_note",
+            "pattern_summary",
+            "pattern_text",
+            "pattern_rationale",
+            "pattern_confidence",
+            "pattern_status",
+            "pattern_stability",
+            "pattern_map_implications",
+            "pattern_support_scope",
+        }
+
+    def _profile_manifest_table_iri(
+        self,
+        spec: Mapping[str, Any],
+        *,
+        index: int,
+    ) -> str:
+        identity_fields = [
+            field for field in ("iri", "table_iri", "dataset_iri") if field in spec
+        ]
+        if not identity_fields:
+            raise DoxaBaseError(
+                f"tables[{index}].iri must be a non-empty IRI or CURIE string"
+            )
+        expanded_values: list[str] = []
+        for field in identity_fields:
+            value = spec.get(field)
+            if not isinstance(value, str) or not value.strip():
+                raise DoxaBaseError(
+                    f"tables[{index}].{field} must be a non-empty IRI or CURIE string"
+                )
+            expanded_values.append(
+                str(self._resource_ref(f"tables[{index}].{field}", value))
+            )
+        unique_values = list(dict.fromkeys(expanded_values))
+        if len(unique_values) > 1:
+            raise DoxaBaseError(
+                f"tables[{index}] identity fields disagree: "
+                + ", ".join(unique_values)
+            )
+        return unique_values[0]
+
+    @staticmethod
+    def _normalise_manifest_object_list(
+        name: str,
+        value: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+        *,
+        required: bool = False,
+    ) -> list[Mapping[str, Any]]:
+        if value is None:
+            values: list[Mapping[str, Any]] = []
+        elif isinstance(value, MappingABC):
+            values = [value]
+        elif isinstance(value, str):
+            raise DoxaBaseError(f"{name} must be an object or a list of objects")
+        else:
+            values = list(value)
+        if required and not values:
+            raise DoxaBaseError(f"{name} must contain at least one object")
+        for index, item in enumerate(values, start=1):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"{name}[{index}] must be an object")
+        return values
 
     def _normalise_profiled_parquet_columns(
         self,

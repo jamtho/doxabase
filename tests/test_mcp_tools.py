@@ -75,6 +75,7 @@ from doxabase.mcp_tools import (
     record_map_relationship_tool,
     record_map_storage_access_tool,
     record_profiled_parquet_table_tool,
+    record_profile_to_capsule_manifest_tool,
     record_graph_revision_tool,
     record_staged_revision_review_decision_tool,
     record_observation_tool,
@@ -207,6 +208,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_analysis_view_bundle" in tool_names
     assert "doxabase.record_map_table_bundle" in tool_names
     assert "doxabase.record_profiled_parquet_table" in tool_names
+    assert "doxabase.record_profile_to_capsule_manifest" in tool_names
     assert "doxabase.record_map_column" in tool_names
     assert "doxabase.record_map_caveat" in tool_names
     assert "doxabase.record_map_storage_access" in tool_names
@@ -7256,6 +7258,78 @@ def test_record_profiled_parquet_table_tool_returns_json_like_payload(
         limit=None,
     )
     assert profile_run["total_profile_count"] == 3
+    assert db.validate_graph(scope="all").conforms
+
+
+def test_record_profile_to_capsule_manifest_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/mcp-profile-manifest#"
+    table = f"{base}orders"
+    view = f"{base}paid_orders"
+
+    result = record_profile_to_capsule_manifest_tool(
+        db,
+        manifest={
+            "format": "doxabase.profile_to_capsule_manifest.v1",
+            "table_defaults": {
+                "storage_protocol": "rc:LocalFilesystemStorage",
+                "access_mode": "rc:ReadOnlyAccess",
+                "location_kind": "directory",
+                "storage_root": str(tmp_path),
+                "layout_verification_status": "rc:VerifiedByQueryLayout",
+                "physical_layout_verification_status": "rc:VerifiedByQueryLayout",
+            },
+            "tables": [
+                {
+                    "iri": table,
+                    "label": "Orders",
+                    "dataset_summary": "Orders profile captured reviewed counts.",
+                    "evidence_summary": "Reviewed Orders profile manifest.",
+                    "evidence_sources": ["scratch://profiles/orders.json"],
+                    "path_templates": ["orders/current.parquet"],
+                    "storage_path_templates": ["orders/current.parquet"],
+                    "row_count": 6,
+                    "columns": [
+                        {"column_name": "order_id", "physical_type": "rc:Integer"},
+                        {"column_name": "status", "physical_type": "rc:Varchar"},
+                    ],
+                }
+            ],
+            "analysis_views": [
+                {
+                    "iri": view,
+                    "label": "Paid orders",
+                    "source_datasets": [table],
+                    "row_count_snapshot": 3,
+                    "query_snippets": [
+                        {
+                            "query_text": "select * from orders where status = 'paid'",
+                            "query_language": "DuckDB SQL",
+                            "query_engine": "duckdb",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert result["manifest_format"] == "doxabase.profile_to_capsule_manifest.v1"
+    assert result["table_iris"] == [table]
+    assert result["analysis_view_iris"] == [view]
+    assert result["table_count"] == 1
+    assert result["analysis_view_count"] == 1
+    assert result["profile_observation_count"] == 3
+    assert result["query_readiness_counts"] == {"ready_for_query_planning": 1}
+    assert result["analysis_view_bundle"]["query_snippet_count"] == 1
+    assert "describe_query_context" in {
+        action["tool_name"] for action in result["suggested_next_actions"]
+    }
+    assert (
+        describe_query_context_tool(db, iri=view)["readiness"]
+        == "logical_analysis_view"
+    )
     assert db.validate_graph(scope="all").conforms
 
 

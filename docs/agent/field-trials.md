@@ -4498,6 +4498,20 @@ few useful gaps:
   keeping the legacy single-snippet fields for compatibility; logical views
   still route through `describe_analysis_view` and never become physical storage
   routes by having executable-looking SQL attached.
+- The updated Enron handoff and profile-to-capsule scouts showed that repeated
+  table/profile/view orchestration remained a broader workflow gap after the
+  single-table helper. `record_profile_to_capsule_manifest` now applies a
+  reviewed `doxabase.profile_to_capsule_manifest.v1` ingestion manifest with
+  optional caveats, multiple `record_profiled_parquet_table` specs, and
+  optional analysis-view bundle specs. It preflights the full structured
+  manifest on a scratch capsule before writing and still does no file I/O or
+  Markdown parsing.
+
+  Two larger gaps remain useful candidates for later loops: an analysis-packet
+  helper for tying named subcorpora, lane definitions, aggregate artifacts,
+  visuals, caveats, and follow-up tasks into one graph-native handoff node; and
+  a profile type-advisory batch plan in `plan_profile_followthrough` that
+  reduces large advisory queues without collapsing distinct column judgements.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
