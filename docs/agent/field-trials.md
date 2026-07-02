@@ -4699,6 +4699,27 @@ few useful gaps:
   start from a scaffold-shaped manifest, merge external reviewed aggregate
   profile facts, apply with `profile_to_capsule`, and inspect profile/query
   handoff helpers without adding local row scanning to DoxaBase.
+- A refreshed Enron adoption trial on a copied capsule found current
+  `record_analysis_packet` / `python -m doxabase.analysis_packet` can turn the
+  Western power policy sidecars into graph-native handoff content: five
+  logical analysis views, nine artifact locators, three query recipes, four
+  follow-up tasks, and one supporting pattern validated cleanly. The remaining
+  work is reviewed manifest authorship and choosing caveat IRIs, not a missing
+  DoxaBase primitive.
+- A project-frontier routing trial found mixed capsules route in the intended
+  order when agents follow `safety_first_action` and `frontier_first_action`:
+  privacy/export safety first, low-limit expansion before narrow work, then
+  staged recovery before query/profile queues. The main caution is to avoid
+  reading `frontier_status.is_complete` as a safety approval; use the explicit
+  routed actions.
+- A staged multi-patch frontier trial found single-assertion same-slot repair
+  was structured, but a larger stale row with one same-slot subpatch, one
+  already-effective patch, and one independent patch first routed to mechanical
+  restage and only exposed the row-semantics validation failure after mutation.
+  Apply checks now expose `patch_repair_plan`, route guarded same-slot subpatch
+  rows to `repair_or_replace` with `Draft patch repair plan`, and make direct
+  and batch restage skip these mixed rows with
+  `not_restageable_reason="patch_repair_plan"`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

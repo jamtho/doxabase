@@ -1203,6 +1203,25 @@ class StagedPatchApplyCheck:
 
 
 @dataclass(frozen=True)
+class StagedPatchRepairPlan:
+    patch_iri: str
+    patch_sequence_index: int | None
+    target_graph: str | None
+    operation: str | None
+    operation_label: str | None
+    patch_role: str | None
+    patch_role_label: str | None
+    triple_count: int | None
+    patch_triple_status: str | None
+    effect_class: str
+    recommended_action_kind: str
+    action: SuggestedNextAction | None
+    current_same_subject_predicate_triples: list[ResourceTriple]
+    proposed_triples: list[GraphTripleDescription]
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionEffectiveDeltaSummary:
     replayable_triples_to_add: int
     replayable_triples_to_remove: int
@@ -1383,6 +1402,7 @@ class StagedRevisionApplyCheck:
     alternative_gate: StagedRevisionAlternativeGate
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
+    patch_repair_plan: list[StagedPatchRepairPlan]
     count_drifts: list[StagedGraphCountDrift]
     snapshot_drifts: list[StagedGraphSnapshotDrift]
     conflicts: list[str]
@@ -42725,6 +42745,20 @@ class DoxaBase:
                     "same-slot replacement."
                 ),
             )
+        if self._staged_patch_repair_plan_has_semantic_repair(
+            check.patch_repair_plan
+        ):
+            return (
+                "not_drafted",
+                "patch_repair_plan",
+                list(dict.fromkeys(["patch_repair_plan", *check.blocking_reasons])),
+                (
+                    "Patch-level repair planning found a semantic same-slot "
+                    "subpatch inside a larger stale revision. Inspect "
+                    "apply_check.patch_repair_plan and author a complete "
+                    "repaired successor; the helper did not stage or apply it."
+                ),
+            )
         if source_staged_validation_status == "failed":
             reason_codes = list(
                 dict.fromkeys(["staged_validation_failed", *check.blocking_reasons])
@@ -43280,6 +43314,16 @@ class DoxaBase:
             )
         if (
             check.next_action is not None
+            and check.next_action.action_label == "Draft patch repair plan"
+        ):
+            raise DoxaBaseError(
+                "restage_staged_revision will not create a mechanical restage "
+                "for a mixed patch repair-plan conflict. Inspect "
+                "draft_staged_revision_rebase().apply_check.patch_repair_plan "
+                "and stage a complete repaired successor instead."
+            )
+        if (
+            check.next_action is not None
             and check.next_action.action_type == "inspect_no_effective_change"
         ):
             raise DoxaBaseError(
@@ -43561,6 +43605,10 @@ class DoxaBase:
             ambiguous_same_slot_route = (
                 self._staged_apply_check_has_ambiguous_same_slot_review(check)
             )
+            patch_repair_plan_route = (
+                check.next_action is not None
+                and check.next_action.action_label == "Draft patch repair plan"
+            )
             already_effective_route = (
                 check.next_action is not None
                 and check.next_action.action_type == "inspect_no_effective_change"
@@ -43570,6 +43618,7 @@ class DoxaBase:
                 and restaged_by is None
                 and repair_route is None
                 and not ambiguous_same_slot_route
+                and not patch_repair_plan_route
                 and not already_effective_route
             ):
                 if dry_run:
@@ -43602,6 +43651,7 @@ class DoxaBase:
                 and (
                     repair_route is not None
                     or ambiguous_same_slot_route
+                    or patch_repair_plan_route
                     or already_effective_route
                 )
             ):
@@ -43621,7 +43671,11 @@ class DoxaBase:
                     else (
                         "ambiguous same-slot review"
                         if ambiguous_same_slot_route
-                        else "repair or replacement"
+                        else (
+                            "patch repair planning"
+                            if patch_repair_plan_route
+                            else "repair or replacement"
+                        )
                     )
                 )
                 note = (
@@ -46450,6 +46504,7 @@ class DoxaBase:
             in {
                 "same_slot_replacement",
                 "ambiguous_same_slot",
+                "patch_repair_plan",
                 "validation_failed",
                 "patch_conflict",
                 "inspect_restaged_source_validation_failure",
@@ -46796,6 +46851,11 @@ class DoxaBase:
             return "same_slot_replacement"
         if self._staged_apply_check_has_ambiguous_same_slot_review(check):
             return "ambiguous_same_slot"
+        if (
+            check.next_action is not None
+            and check.next_action.action_label == "Draft patch repair plan"
+        ):
+            return "patch_repair_plan"
         if (
             check.next_action is not None
             and check.next_action.action_type == "inspect_no_effective_change"
@@ -48625,6 +48685,7 @@ class DoxaBase:
                 alternative_gate=staged.alternative_gate,
                 changed_graphs=changed_graphs,
                 patch_checks=[],
+                patch_repair_plan=[],
                 count_drifts=[],
                 snapshot_drifts=[],
                 conflicts=[
@@ -48877,6 +48938,12 @@ class DoxaBase:
             replayable_triples_to_add=triples_to_add,
             replayable_triples_to_remove=triples_to_remove,
         )
+        patch_repair_plan = self._staged_patch_repair_plan(
+            staged,
+            patch_checks=patch_checks,
+            snapshot_drifts=snapshot_drifts,
+            validation_scope=validation_scope_value,
+        )
         can_apply = (
             not conflicts
             and validation_conforms is True
@@ -48926,6 +48993,7 @@ class DoxaBase:
             restaged_by=restaged_by_iri,
             current_restaged_by=current_restaged_by_iri,
             patch_checks=patch_checks,
+            patch_repair_plan=patch_repair_plan,
             snapshot_drifts=snapshot_drifts,
             validation_scope=validation_scope_value,
             restaged_source_validation_warning=(
@@ -49010,6 +49078,7 @@ class DoxaBase:
             alternative_gate=staged.alternative_gate,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
+            patch_repair_plan=patch_repair_plan,
             count_drifts=count_drifts,
             snapshot_drifts=snapshot_drifts,
             conflicts=conflicts,
@@ -50147,6 +50216,17 @@ class DoxaBase:
                 "source patch."
             )
         if status == "conflict" and any(
+            action.action_label == "Draft patch repair plan"
+            for action in suggested_next_actions or []
+        ):
+            return (
+                "Patch-level repair planning found a semantic same-slot "
+                "subpatch inside a larger stale staged revision. Inspect the "
+                "read-only patch_repair_plan and author a complete repaired "
+                "successor instead of mechanically restaging the mixed patch "
+                "set."
+            )
+        if status == "conflict" and any(
             action.action_label == "Inspect already-effective stale source"
             for action in suggested_next_actions or []
         ):
@@ -50227,6 +50307,7 @@ class DoxaBase:
         restaged_by: str | None,
         current_restaged_by: str | None,
         patch_checks: list[StagedPatchApplyCheck] | None = None,
+        patch_repair_plan: list[StagedPatchRepairPlan] | None = None,
         snapshot_drifts: list[StagedGraphSnapshotDrift] | None = None,
         validation_scope: str | None = None,
         restaged_source_validation_warning: str | None = None,
@@ -50620,6 +50701,21 @@ class DoxaBase:
                 )
             if ambiguous_same_slot_review_action is not None:
                 actions.append(ambiguous_same_slot_review_action)
+            patch_repair_plan_action = None
+            if (
+                same_slot_replacement_action is None
+                and ambiguous_same_slot_review_action is None
+                and self._staged_patch_repair_plan_has_semantic_repair(
+                    patch_repair_plan
+                )
+            ):
+                patch_repair_plan_action = (
+                    self._staged_patch_repair_plan_action(
+                        staged_revision_iri,
+                        validation_scope=validation_scope,
+                    )
+                )
+                actions.append(patch_repair_plan_action)
             if (
                 restaged_by is None
                 and is_restageable_conflict
@@ -50643,6 +50739,7 @@ class DoxaBase:
                 and not already_effective_stale
                 and same_slot_replacement_action is None
                 and ambiguous_same_slot_review_action is None
+                and patch_repair_plan_action is None
             ):
                 add_action(
                     "restage_staged_revision",
@@ -50746,6 +50843,307 @@ class DoxaBase:
                 action_label="Inspect staged revision",
             )
         return actions
+
+    def _staged_patch_repair_plan(
+        self,
+        staged: StagedGraphRevisionDescription,
+        *,
+        patch_checks: list[StagedPatchApplyCheck],
+        snapshot_drifts: list[StagedGraphSnapshotDrift],
+        validation_scope: str,
+    ) -> list[StagedPatchRepairPlan]:
+        if not staged.patches:
+            return []
+        if len(staged.patches) != len(patch_checks):
+            return []
+
+        plan: list[StagedPatchRepairPlan] = []
+        for patch, patch_check in zip(staged.patches, patch_checks, strict=True):
+            patch_triple_status = (
+                self._staged_patch_triple_presence_status_from_apply_check(
+                    patch_check
+                )
+            )
+            effect_class, recommended_action_kind, note = (
+                self._staged_patch_repair_default_classification(
+                    patch_check,
+                    patch_triple_status=patch_triple_status,
+                )
+            )
+            action: SuggestedNextAction | None = None
+            current_same_slot_triples: list[ResourceTriple] = []
+            proposed_triples: list[GraphTripleDescription] = []
+            try:
+                same_slot_details = (
+                    self._staged_patch_same_slot_replacement_details(
+                        staged,
+                        patch,
+                        snapshot_drifts=snapshot_drifts,
+                        validation_scope=validation_scope,
+                    )
+                )
+            except DoxaBaseError:
+                same_slot_details = None
+            if same_slot_details is not None:
+                action, current_same_slot_triples, proposed_triples = (
+                    same_slot_details
+                )
+                effect_class = "same_slot_replace"
+                recommended_action_kind = "stage_map_assertion_change"
+                note = (
+                    "This single-triple subpatch targets a guarded "
+                    "single-valued map slot whose current value changed since "
+                    "the staged snapshot. Stage the suggested replacement "
+                    "after reviewing whether the staged value should supersede "
+                    "the current value; split or restage any independent "
+                    "patches separately."
+                )
+
+            plan.append(
+                StagedPatchRepairPlan(
+                    patch_iri=patch.iri,
+                    patch_sequence_index=patch.sequence_index,
+                    target_graph=patch_check.target_graph,
+                    operation=patch_check.operation,
+                    operation_label=patch_check.operation_label,
+                    patch_role=patch_check.patch_role,
+                    patch_role_label=patch_check.patch_role_label,
+                    triple_count=patch_check.triple_count,
+                    patch_triple_status=patch_triple_status,
+                    effect_class=effect_class,
+                    recommended_action_kind=recommended_action_kind,
+                    action=action,
+                    current_same_subject_predicate_triples=(
+                        current_same_slot_triples
+                    ),
+                    proposed_triples=proposed_triples,
+                    note=note,
+                )
+            )
+        return plan
+
+    def _staged_patch_repair_default_classification(
+        self,
+        patch_check: StagedPatchApplyCheck,
+        *,
+        patch_triple_status: str | None,
+    ) -> tuple[str, str, str]:
+        effective_add = patch_check.effective_triples_to_add or 0
+        effective_remove = patch_check.effective_triples_to_remove or 0
+        effective_delta = effective_add + effective_remove
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        if (
+            patch_check.operation == addition_operation
+            and patch_triple_status == "all_patch_triples_present"
+        ):
+            return (
+                "already_effective_drop_or_inspect",
+                "inspect_or_drop_from_repaired_successor",
+                (
+                    "All triples in this addition patch are already present in "
+                    "the current graph. A repaired successor usually should not "
+                    "add them again; inspect before dropping if the duplicate "
+                    "presence carries semantic meaning."
+                ),
+            )
+        if (
+            patch_check.operation == removal_operation
+            and patch_triple_status == "all_patch_triples_absent"
+        ):
+            return (
+                "removal_already_absent",
+                "inspect_or_drop_from_repaired_successor",
+                (
+                    "All triples in this removal patch are already absent in "
+                    "the current graph. A repaired successor usually should "
+                    "drop this no-op removal after review."
+                ),
+            )
+        if patch_check.conflict is None:
+            if effective_delta == 0:
+                return (
+                    "already_effective_drop_or_inspect",
+                    "inspect_or_drop_from_repaired_successor",
+                    (
+                        "This patch replays cleanly but has no effective graph "
+                        "delta in current state; inspect before dropping it."
+                    ),
+                )
+            return (
+                "keep_effective",
+                "keep_in_repaired_successor",
+                (
+                    "This patch replays cleanly and still has an effective "
+                    "graph delta."
+                ),
+            )
+        if effective_delta > 0:
+            return (
+                "blocked_keep_or_repair",
+                "review_before_restage_or_repair",
+                (
+                    "This patch is blocked by graph drift but still has an "
+                    "effective payload. Review whether to restage it unchanged "
+                    "or author a repaired subpatch."
+                ),
+            )
+        return (
+            "needs_review",
+            "inspect_patch",
+            (
+                "This patch is blocked and DoxaBase did not recognize a safe "
+                "mechanical subpatch repair."
+            ),
+        )
+
+    def _staged_patch_same_slot_replacement_details(
+        self,
+        staged: StagedGraphRevisionDescription,
+        patch: StagedGraphPatchDescription,
+        *,
+        snapshot_drifts: list[StagedGraphSnapshotDrift],
+        validation_scope: str,
+    ) -> tuple[SuggestedNextAction, list[ResourceTriple], list[GraphTripleDescription]] | None:
+        if patch.target_graph != "map":
+            return None
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        if patch.operation != addition_operation:
+            return None
+        patch_graph = self._parse_staged_patch_description(patch)
+        rows = self._sort_graph_storage_rows(self._rdf_graph_storage_rows(patch_graph))
+        if len(rows) != 1:
+            return None
+        row = rows[0]
+        subject, subject_kind, predicate, object_value, object_kind, datatype, lang = row
+        if subject_kind != "uri" or object_kind == "bnode":
+            return None
+        normalized_object_kind = "iri" if object_kind == "uri" else object_kind
+        replacement_label = self._staged_same_slot_replacement_label(
+            subject,
+            predicate,
+        )
+        if replacement_label is None:
+            return None
+        if not self._staged_same_slot_replacement_object_allowed(
+            predicate,
+            normalized_object_kind,
+            datatype,
+        ):
+            return None
+        drift = next(
+            (
+                item
+                for item in snapshot_drifts
+                if item.graph_role == "map"
+                and item.exact_changed_triples_available
+                and item.exact_changed_triples_included
+            ),
+            None,
+        )
+        if drift is None:
+            return None
+        same_slot_added = [
+            triple
+            for triple in drift.triples_added_since_snapshot
+            if triple.subject == subject
+            and triple.predicate == predicate
+            and not self._graph_triple_object_matches_assertion_candidate(
+                triple,
+                object_value=object_value,
+                object_kind=normalized_object_kind,
+                object_datatype=datatype,
+                object_lang=lang,
+            )
+        ]
+        if not same_slot_added:
+            return None
+        current_same_slot_triples = self._assertion_triples(
+            ["map"],
+            subject=subject,
+            predicate=predicate,
+            object_filter=None,
+            limit=10,
+        )
+        if len(current_same_slot_triples) != 1:
+            return None
+        current = current_same_slot_triples[0]
+        if (
+            current.object == object_value
+            and current.object_kind == object_kind
+            and current.object_datatype == datatype
+            and current.object_lang == lang
+        ):
+            return None
+        rationale = (
+            f"Repair patch {patch.sequence_index or 'unknown'} of staged "
+            f"revision {staged.iri} by replacing the current "
+            f"{replacement_label} value instead of mechanically restaging a "
+            "multi-patch row that would add a competing value."
+        )
+        arguments: dict[str, Any] = {
+            "subject": subject,
+            "predicate": predicate,
+            "object": object_value,
+            "rationale": rationale,
+            "change_kind": "replace",
+            "graph": "map",
+            "object_kind": normalized_object_kind,
+            "restages_revision": staged.iri,
+            "validation_scope": validation_scope,
+        }
+        if staged.alternative_to is not None:
+            arguments["alternative_to"] = staged.alternative_to.iri
+        if datatype is not None:
+            arguments["object_datatype"] = datatype
+        if lang is not None:
+            arguments["object_lang"] = lang
+        action = self._effect_annotated_suggested_next_action(
+            action_label="Stage same-slot subpatch replacement",
+            tool_name="stage_map_assertion_change",
+            arguments=arguments,
+            reason=(
+                "Patch-level repair planning found a guarded single-valued "
+                f"{replacement_label} subpatch inside a larger staged row. "
+                "Stage this replacement only after deciding how to preserve, "
+                "drop, or separately restage the other patches."
+            ),
+        )
+        return (
+            action,
+            current_same_slot_triples,
+            [self._graph_triple_description(row)],
+        )
+
+    @staticmethod
+    def _staged_patch_repair_plan_has_semantic_repair(
+        patch_repair_plan: Iterable[StagedPatchRepairPlan] | None,
+    ) -> bool:
+        return any(
+            item.effect_class == "same_slot_replace"
+            for item in patch_repair_plan or []
+        )
+
+    def _staged_patch_repair_plan_action(
+        self,
+        staged_revision_iri: str,
+        *,
+        validation_scope: str | None,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {"iri": staged_revision_iri}
+        if validation_scope is not None:
+            arguments["validation_scope"] = validation_scope
+        return self._effect_annotated_suggested_next_action(
+            action_label="Draft patch repair plan",
+            tool_name="draft_staged_revision_rebase",
+            arguments=arguments,
+            reason=(
+                "Patch-level repair planning found at least one semantic "
+                "same-slot subpatch inside a larger stale revision. Inspect the "
+                "read-only patch_repair_plan before choosing which subpatches "
+                "to replace, drop, or restage."
+            ),
+        )
 
     def _staged_same_slot_replacement_action(
         self,
@@ -51384,6 +51782,21 @@ class DoxaBase:
             )
             selected_action = find_exact_action(
                 action_label="Review ambiguous same-slot conflict"
+            )
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
+        ) and find_exact_action(action_label="Draft patch repair plan") is not None:
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Draft patch repair plan"
+            reason = (
+                "Patch-level repair planning found a semantic subpatch inside "
+                "a larger stale staged revision. Inspect the read-only plan "
+                "before authoring a complete repaired successor."
+            )
+            selected_action = find_exact_action(
+                action_label="Draft patch repair plan"
             )
         elif (
             apply_decision == "restage_against_current_graph"

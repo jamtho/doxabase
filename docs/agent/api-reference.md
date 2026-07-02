@@ -1838,6 +1838,12 @@ actions point to inspection/export rather than apply. `triples_to_add` and
 `triples_to_remove` are effective deltas for the current preview, and
 `patch_checks` records effective add/remove counts plus already-present/absent
 payload triples for partial or no-op replay.
+`patch_repair_plan` records read-only patch-level repair guidance. In mixed
+multi-patch conflicts, a guarded same-slot subpatch routes the row to
+`repair_or_replace` with a `Draft patch repair plan` action, and batch restage
+skips it with `not_restageable_reason="patch_repair_plan"`. Treat nested
+subpatch actions as fragments for a complete reviewed successor, not as a full
+replacement for every patch in the original row.
 If a stale count/digest conflict has zero effective add/remove delta across all
 patches, it remains `status="conflict"` with drift blockers but compact
 `next_action` routes to `inspect_no_effective_change` in the `informational`

@@ -1053,6 +1053,13 @@ Use `effective_delta_summary` as the top-level interpretation. On conflicts,
 patches are excluded, while `blocked_patch_triples_to_add/remove` reports the
 current effective payload of those blocked patches. This prevents mistaking
 `triples_to_add=0` on a stale conflict for proof that the proposal is a no-op.
+`patch_repair_plan` is the patch-level read-only repair guide for mixed stale
+rows. It classifies patches as keepable, already-effective, already-absent, or
+needing review, and recognizes guarded same-slot subpatches such as
+`rc:rowSemantics` inside larger revisions. If any row has
+`effect_class="same_slot_replace"`, follow the top-level
+`draft_staged_revision_rebase`/`repair_or_replace` route and author a complete
+successor; do not run mechanical restage first.
 An already-effective stale source is different from a fresh `noop`: the target
 graph has count/digest drift, so the row still reports `status="conflict"` and
 drift blockers, but every patch already has zero effective add/remove delta.
@@ -1262,6 +1269,16 @@ framing, not for a repaired successor to stale work. If the stale
 source already has `restaged_by` / `current_restaged_by`, target the current
 successor; parallel repaired successors are rejected for the same reason
 parallel mechanical restages are rejected.
+For larger stale rows, read `check.patch_repair_plan` before restaging. When a
+multi-patch revision contains a guarded same-slot subpatch plus other patches,
+the compact route becomes `repair_or_replace` with a `Draft patch repair plan`
+action. Treat subpatch `stage_map_assertion_change` actions as repair fragments,
+not a complete successor: review which independent patches should be kept,
+dropped as already-effective, or separately restaged, then stage one complete
+caller-authored successor with `restages_revision`. Direct and batch restage
+skip these rows with `not_restageable_reason="patch_repair_plan"` so agents do
+not create a validation-failed mechanical successor just to discover the
+same-slot conflict after mutation.
 If a caller-authored successor supersedes a source that would otherwise still
 replay cleanly, direct apply checks on the source return
 `status="superseded_by_restage"`, `can_apply=False`, and an

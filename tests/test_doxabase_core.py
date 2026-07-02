@@ -9801,6 +9801,124 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert repair_check.status == "ready"
 
 
+def test_multipatch_same_slot_subpatch_routes_to_patch_repair_plan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Stage mixed Orders modelling update",
+        rationale=(
+            "A larger modelling update includes row grain, an already-realized "
+            "column link, and an independent table addition."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            },
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:hasColumn ex:orders__ship_date .
+                """,
+            },
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:FulfillmentEvents a rc:Table ;
+                        rdfs:label "Fulfillment events" .
+                """,
+            },
+        ],
+        revision_anchors=[orders],
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:rowSemantics rc:EventRow ;
+            rc:hasColumn ex:orders__ship_date .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.routing_decision == "repair_or_replace"
+    assert check.next_action is not None
+    assert check.next_action.tool_name == "draft_staged_revision_rebase"
+    assert check.next_action.action_label == "Draft patch repair plan"
+    assert check.recommended_resolution is not None
+    assert "patch_repair_plan" in check.recommended_resolution
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in check.suggested_next_actions
+    )
+
+    plan_by_sequence = {
+        item.patch_sequence_index: item for item in check.patch_repair_plan
+    }
+    assert sorted(plan_by_sequence) == [1, 2, 3]
+    same_slot_plan = plan_by_sequence[1]
+    assert same_slot_plan.effect_class == "same_slot_replace"
+    assert same_slot_plan.recommended_action_kind == "stage_map_assertion_change"
+    assert same_slot_plan.action is not None
+    assert same_slot_plan.action.tool_name == "stage_map_assertion_change"
+    assert same_slot_plan.action.arguments["subject"] == orders
+    assert same_slot_plan.action.arguments["predicate"] == RC + "rowSemantics"
+    assert same_slot_plan.action.arguments["object"] == RC + "SnapshotRow"
+    assert same_slot_plan.action.arguments["restages_revision"] == source.revision_iri
+    assert same_slot_plan.current_same_subject_predicate_triples[0].object == (
+        RC + "EventRow"
+    )
+    assert same_slot_plan.proposed_triples[0].object == RC + "SnapshotRow"
+    assert (
+        plan_by_sequence[2].effect_class
+        == "already_effective_drop_or_inspect"
+    )
+    assert plan_by_sequence[3].effect_class == "blocked_keep_or_repair"
+
+    draft = db.draft_staged_revision_rebase(source.revision_iri)
+    assert draft.draft_status == "not_drafted"
+    assert draft.draft_kind == "patch_repair_plan"
+    assert draft.reason_codes[0] == "patch_repair_plan"
+    assert "target_count_drift" in draft.reason_codes
+    assert draft.apply_check.patch_repair_plan[0].effect_class == (
+        "same_slot_replace"
+    )
+
+    dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
+    assert dry_run.would_restage_revision_iris == []
+    assert dry_run.skipped_revision_iris == [source.revision_iri]
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "patch_repair_plan": [source.revision_iri]
+    }
+    assert dry_run.items[0].next_action_after is not None
+    assert dry_run.items[0].next_action_after.tool_name == (
+        "draft_staged_revision_rebase"
+    )
+
+    with pytest.raises(DoxaBaseError, match="patch repair-plan conflict"):
+        db.restage_staged_revision(source.revision_iri)
+
+
 def test_staged_revision_recovery_session_replans_live_state(
     tmp_path: Path,
 ) -> None:

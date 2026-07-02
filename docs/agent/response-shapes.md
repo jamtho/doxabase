@@ -6332,6 +6332,7 @@ check.stale_resolution_state
 check.alternative_gate
 check.changed_graphs
 check.patch_checks
+check.patch_repair_plan
 check.count_drifts
 check.snapshot_drifts
 check.conflicts
@@ -6400,6 +6401,35 @@ patch_check.already_absent_triples
 patch_check.can_apply
 patch_check.conflict
 ```
+
+Each `check.patch_repair_plan[]` row is a read-only patch-level repair guide
+for stale rows, especially multi-patch conflicts:
+
+```python
+plan.patch_iri
+plan.patch_sequence_index
+plan.target_graph
+plan.operation
+plan.operation_label
+plan.patch_role
+plan.patch_role_label
+plan.triple_count
+plan.patch_triple_status
+plan.effect_class
+plan.recommended_action_kind
+plan.action
+plan.current_same_subject_predicate_triples
+plan.proposed_triples
+plan.note
+```
+
+`effect_class` values include `same_slot_replace`,
+`already_effective_drop_or_inspect`, `removal_already_absent`,
+`keep_effective`, `blocked_keep_or_repair`, and `needs_review`. When any patch
+has `same_slot_replace`, the top-level route is `repair_or_replace` with a
+`Draft patch repair plan` action. The nested `plan.action` is a subpatch helper,
+not a complete multi-patch successor; use it as input when authoring a complete
+reviewed successor with `restages_revision`.
 
 Each `check.snapshot_drifts[]` row compares a stored graph snapshot with current
 state:

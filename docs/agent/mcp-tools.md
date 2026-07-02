@@ -2302,6 +2302,12 @@ target graph. `patch_sequence_index` and `expected_before_basis` explain
 sequence-based counts in multi-patch revisions. `patch_checks` records
 effective add/remove counts and already-present/absent payload triples for
 partial or no-op replay.
+`patch_repair_plan` records read-only patch-level repair guidance. In mixed
+multi-patch conflicts, a guarded same-slot subpatch routes the row to
+`repair_or_replace` with a `Draft patch repair plan` action, and batch restage
+skips it with `not_restageable_reason="patch_repair_plan"`. Treat nested
+subpatch actions as fragments for a complete reviewed successor, not as a full
+replacement for every patch in the original row.
 Read `effective_delta_summary` before interpreting top-level
 `triples_to_add=0` on conflicts. Its replayable fields match the top-level
 delta, while `blocked_patch_triples_to_add/remove` reports the current effective
