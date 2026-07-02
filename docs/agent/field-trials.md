@@ -4503,6 +4503,11 @@ few useful gaps:
   lost. Handoff manifests now list overlapping `recovery_session_iris` and
   compact `recovery_sessions[]` entries with resume calls, and import recovery
   summaries expose `resume_recovery_session_iri` / `resume_recovery_session_call`.
+- A mixed project-brief frontier trial showed `first_unattended_action` chose
+  privacy review correctly when privacy and export-validation gates overlapped,
+  but health-task priority numbers put validation first. Privacy review now
+  sorts ahead of validation when both are present, while validation remains
+  visible for the follow-up `validate_graph` repair.
 - A deeper Enron handoff review showed that reviewed Parquet schema/profile
   manifests still required agents to manually compose `record_map_table_bundle`
   and `record_profile_bundle` for every table. `record_profiled_parquet_table`

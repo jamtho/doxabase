@@ -142,9 +142,10 @@ succeeds with `fail_on_sensitive=true`.
 `sensitive_literal_count` can include both current project graph matches and
 stored revision-snapshot matches.
 The same default handoff preflight can also surface
-`export_validation_review` when the scanner is clean but live SHACL validation
-would block the handoff; follow its `validate_graph` action before export or
-mutation work.
+`export_validation_review` when live SHACL validation would block the handoff.
+If privacy and validation gates overlap, `privacy_export_review` sorts and
+routes first as the redacted safety review, while `export_validation_review`
+remains visible in `health_tasks` for the subsequent `validate_graph` repair.
 
 `doxabase.project_brief`
 

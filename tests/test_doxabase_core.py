@@ -1889,6 +1889,55 @@ def test_project_brief_surfaces_invalid_export_health_task(
     )
 
 
+def test_project_brief_privacy_precedes_overlapping_export_validation_gate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            ex:dirty_invalid_obs a rc:Observation ;
+                rc:summary "Synthetic FAKE_SECRET_TOKEN_OVERLAP invalid observation." .
+        }
+        """
+    )
+
+    preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        graphs=["project"],
+    )
+    assert preflight.scanner_clean is False
+    assert preflight.would_block_invalid_export is True
+
+    brief = db.project_brief(limit=5)
+    health_by_type = {task.task_type: task for task in brief.health_tasks}
+    privacy_task = health_by_type["privacy_export_review"]
+    validation_task = health_by_type["export_validation_review"]
+
+    assert privacy_task.priority < validation_task.priority
+    assert [
+        task.task_type for task in brief.health_tasks
+    ] == [
+        "privacy_export_review",
+        "export_validation_review",
+    ]
+    assert validation_task.suggested_next_action is not None
+    assert validation_task.suggested_next_action.tool_name == "validate_graph"
+    assert "scanner-clean" not in validation_task.reason
+    assert brief.safety_first_action == privacy_task.suggested_next_action
+    assert brief.safety_first_source == "health_tasks:privacy_export_review"
+    assert brief.first_unattended_action == privacy_task.suggested_next_action
+    assert brief.first_unattended_source == "health_tasks:privacy_export_review"
+    assert (
+        brief.frontier_status.mutation_allowed_after
+        == "safety_review_required_before_frontier_or_mutation"
+    )
+
+
 def test_project_brief_redacts_nested_query_and_staged_payloads(
     tmp_path: Path,
 ) -> None:

@@ -6322,7 +6322,7 @@ class DoxaBase:
             call=self._suggested_call_string("export_preflight", arguments),
         )
         return ProjectBriefHealthTask(
-            priority=20,
+            priority=16,
             task_type="privacy_export_review",
             source="export_preflight",
             reason=(
@@ -6374,9 +6374,9 @@ class DoxaBase:
             task_type="export_validation_review",
             source="export_preflight",
             reason=(
-                "The default handoff-bundle export scope is scanner-clean but "
-                "fails live graph validation; inspect SHACL diagnostics before "
-                "writing recovery or share artifacts."
+                "The default handoff-bundle export scope fails live graph "
+                "validation; inspect SHACL diagnostics before writing recovery "
+                "or share artifacts."
             ),
             suggested_next_action=action,
             suggested_next_call=action.call if action is not None else None,

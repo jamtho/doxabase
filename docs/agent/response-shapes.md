@@ -432,8 +432,8 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
 `profile_candidate_limit`, `privacy_export_review` when the default
 handoff-bundle export preflight finds potential sensitive project-graph or
-revision-snapshot terms, `export_validation_review` when the same preflight is
-scanner-clean but live validation would block the handoff,
+revision-snapshot terms, `export_validation_review` when the same preflight
+would block the handoff on live validation,
 `query_fixture_staleness_review` when known AIS or
 Polymarket fixture tables are present without linked `rc:StorageAccess`
 resources, and `seed_recovery_review` when immutable seed graphs are missing
@@ -441,6 +441,9 @@ current staging vocabulary. `storage_access_count` on the fixture task is the
 global capsule count; it can be nonzero when unrelated storage exists elsewhere.
 Export-validation health tasks carry `would_block_invalid_export`,
 `validation_scope`, `validation_conforms`, and `validation_result_count`.
+If privacy and validation gates overlap, `privacy_export_review` sorts and
+routes first because it is the redacted safety review; the validation task
+remains in `health_tasks` for the subsequent graph repair.
 `next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are
