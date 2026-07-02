@@ -22,6 +22,7 @@ Use first-class map helpers for routine map writes:
 - `doxabase.record_map_physical_layout`
 - `doxabase.record_map_partition_scheme`
 - `doxabase.record_map_relationship`
+- `doxabase.record_map_asset_transform`
 
 These helpers write to `map` and update the common predicates they own for a
 resource. They avoid hand-authored TriG for ordinary table/column/caveat/storage
@@ -359,6 +360,13 @@ carry IDs from the same logical population. Use `derivation` for transformed
 columns such as cleaned text, normalized subjects, or generated features. Use
 `aggregation` for grouped summaries, rollups, and index tables that compute
 target columns from source columns.
+
+Decision cue: if the output is a real mapped column, use
+`record_map_relationship` with column fields. If the output is a dataset,
+document, model artifact, image, or other data asset that needs formulas,
+filters, endpoint roles, or tuple grain, use `record_map_asset_transform`. If
+the transform is tentative, nuanced, or not ready as current-best structure,
+record claim/pattern/caveat support or stage a systematisation first.
 
 Relationship column fields are for existing mapped `rc:Column` resources. The
 helper rejects known data assets, datasets, tables, and fresh IRIs that have not

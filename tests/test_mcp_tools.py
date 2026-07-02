@@ -251,6 +251,22 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "storage_root" in storage_access_description
     assert 'location_kind="bucket"' in storage_access_description
     assert "external:intentionally-unrecorded" in storage_access_description
+    relationship_description = (
+        tool_by_name["doxabase.record_map_relationship"].description or ""
+    )
+    assert "foreign_key" in relationship_description
+    assert "rc:ForeignKey" in relationship_description
+    assert "body -> body_top" in relationship_description
+    assert "source_columns" in relationship_description
+    assert "record_map_asset_transform" in relationship_description
+    asset_transform_description = (
+        tool_by_name["doxabase.record_map_asset_transform"].description or ""
+    )
+    assert "asset-level transform" in asset_transform_description
+    assert "rc:Aggregation" in asset_transform_description
+    assert "outputs[].target_dataset" in asset_transform_description
+    assert "body -> body_top" in asset_transform_description
+    assert "source_columns" in asset_transform_description
 
 
 @pytest.mark.anyio

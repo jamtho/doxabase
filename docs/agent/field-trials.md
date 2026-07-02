@@ -4737,9 +4737,10 @@ few useful gaps:
 - A storage/relationship ergonomics trial found the old Enron friction has
   already been fixed in behavior: `location_kind="bucket"` normalizes to
   `prefix`, and relationship types accept compact tokens, `rc:` class aliases,
-  and full IRIs. The remaining improvement is MCP-tool discoverability,
-  especially expanding `record_map_relationship`'s live docstring with accepted
-  values and the already-recorded-column requirement.
+  and full IRIs. MCP-tool discoverability now also calls out accepted
+  relationship type values, class aliases, the already-recorded-column
+  requirement, and the column-transform versus asset-transform split in the live
+  `record_map_relationship` / `record_map_asset_transform` tool descriptions.
 - An analysis-view/query-cookbook trial found `record_analysis_packet` handles
   Enron-style logical populations and cookbook recipes well after reviewed
   Markdown is translated into structured specs. `project_brief` surfaces the

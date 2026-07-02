@@ -2040,6 +2040,8 @@ Records or updates an asset-level derivation or aggregation with reviewed
 transform details. Use it when endpoint role/order is not enough and the map
 needs durable filters, selection rules, per-output formulas, output functions,
 or tuple grain. `relationship_type` must be `derivation` or `aggregation`; the
+helper also accepts matching core class CURIEs or full IRIs, such as
+`rc:Derivation` and `rc:Aggregation`. The
 helper accepts the same `source_dataset`, `target_dataset`, `source_datasets`,
 `target_datasets`, `source_endpoints`, `target_endpoints`, and
 `derivation_properties` arguments as `record_map_relationship`.

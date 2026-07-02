@@ -2061,7 +2061,24 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         derivation_function: str | None = None,
         derivation_properties: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Record or update a relationship resource in the map graph."""
+        """Record or update a relationship resource in the map graph.
+
+        relationship_type accepts helper tokens foreign_key,
+        shared_identifier, derivation, and aggregation, plus matching core class
+        aliases such as rc:ForeignKey, rc:SharedIdentifier, rc:Derivation, and
+        rc:Aggregation.
+
+        For column transforms such as body -> body_top, record the real columns
+        first with record_map_column, then pass relationship_type="derivation",
+        source_columns=[...], and derived_columns=[...]. Column slots must
+        reference existing rc:Column resources, not datasets, tables, or fresh
+        unrecorded IRIs.
+
+        For asset-level derivations or aggregations, use source_datasets /
+        target_datasets or ordered source_endpoints / target_endpoints. Use
+        record_map_asset_transform when the asset relationship needs filters,
+        selection rules, formulas, output functions, or tuple grain.
+        """
 
         return record_map_relationship_tool(
             db,
@@ -2104,7 +2121,19 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         conditions: list[dict[str, Any]] | None = None,
         outputs: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        """Record or update an asset-level transform with filters, formulas, and tuple grain."""
+        """Record or update an asset-level transform with reviewed details.
+
+        Use this for dataset or non-tabular asset derivations/aggregations that
+        need endpoint roles/order, filters, selection rules, per-output
+        formulas, output functions, or tuple grain. relationship_type accepts
+        derivation or aggregation, plus rc:Derivation / rc:Aggregation aliases.
+
+        Dataset-valued fields such as source_datasets, target_datasets,
+        endpoint dataset, outputs[].target_dataset, and tuple-grain dataset
+        components are asset endpoints, not column slots. For column transforms
+        such as body -> body_top, use record_map_relationship with
+        source_columns=[...] and derived_columns=[...] instead.
+        """
 
         return record_map_asset_transform_tool(
             db,
