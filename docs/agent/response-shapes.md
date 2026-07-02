@@ -2029,8 +2029,9 @@ from `profile_summary.profile_run_candidates[]`.
 Follow `suggested_next_actions` from the run itself when continuing from cold
 context. Capped runs with omitted observations first suggest an uncapped
 `describe_profile_run` call, then `draft_profile_map_updates`; uncapped runs
-suggest the draft directly so profile map updates, scalar conflicts,
-metric/type advisories, and query-context review lanes stay grouped.
+suggest the draft directly with the label `Inspect profile map-update status`
+so profile map updates, scalar conflicts, metric/type advisories, completed
+profile evidence, and query-context review lanes stay grouped.
 
 ### Profile Map Update Drafts
 
@@ -2042,6 +2043,7 @@ draft.dataset
 draft.evidence
 draft.evidence_iri
 draft.map_dataset_found
+draft.status
 draft.pending_staged_profile_update_iris
 draft.pending_staged_profile_update_count
 draft.profile_observation_iris

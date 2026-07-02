@@ -738,9 +738,10 @@ project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
 updates, `metric_advisories` for project-specific profile metrics,
 `type_advisories` for observed profile type findings, and a `review_note`. It
-also includes `recommendation_count`, `representative_recommendation_indexes`,
-`scalar_conflict_groups`, `scalar_conflict_group_count`, metric advisory counts
-plus `representative_metric_advisory_indexes`, type advisory counts plus
+also includes `status`, `recommendation_count`,
+`representative_recommendation_indexes`, `scalar_conflict_groups`,
+`scalar_conflict_group_count`, metric advisory counts plus
+`representative_metric_advisory_indexes`, type advisory counts plus
 `representative_type_advisory_indexes`, grouped
 `suggested_next_action_groups` / `suggested_next_call_groups`,
 `advisory_followthrough_plan`, `mixed_support_review_groups`, and flat top-level

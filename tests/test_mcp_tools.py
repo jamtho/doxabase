@@ -249,6 +249,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "rc:DatabaseStorage" in storage_access_description
     assert "database relation identifiers" in storage_access_description
     assert "storage_root" in storage_access_description
+    assert 'location_kind="bucket"' in storage_access_description
+    assert "external:intentionally-unrecorded" in storage_access_description
 
 
 @pytest.mark.anyio
@@ -11193,6 +11195,9 @@ def test_record_observation_tool_accepts_profile_type_findings(
     assert [
         action["tool_name"] for action in profile_run["suggested_next_actions"]
     ] == ["draft_profile_map_updates"]
+    assert profile_run["suggested_next_actions"][0]["action_label"] == (
+        "Inspect profile map-update status"
+    )
     assert profile_run["suggested_next_actions"][0]["arguments"] == {
         "dataset_iri": dataset,
         "evidence_iri": result["evidence_iri"],
@@ -11600,6 +11605,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["dataset"]["iri"] == table
     assert result["evidence_iri"] == shared_evidence
     assert result["map_dataset_found"] is True
+    assert result["status"] == "pending map recommendations"
     assert result["recommendation_count"] == 2
     assert result["representative_recommendation_indexes"] == [0, 1]
     assert [
@@ -11903,6 +11909,7 @@ def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
     )
 
     assert result["recommendation_count"] == 0
+    assert result["status"] == "pending profile advisory review"
     assert result["type_advisory_count"] == 1
     assert result["type_advisory_status_counts"] == {
         "type_finding_current_map_undefined_value_type": 1,
@@ -12570,6 +12577,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     )
 
     assert result["recommendation_count"] == 0
+    assert result["status"] == "pending profile advisory review"
     advisory = result["metric_advisories"][0]
     assert advisory["promotion_pattern_count"] == 1
     assert [item["iri"] for item in advisory["promotion_patterns"]] == [

@@ -1931,9 +1931,14 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     ) -> dict[str, Any]:
         """Record non-secret storage access metadata.
 
-        location_kind is one of object, directory, prefix, or connection. Use
-        storage_protocol="rc:LocalFilesystemStorage" for local paths; do not use
-        location_kind="local_path".
+        location_kind is one of object, directory, prefix, or connection. The
+        helper also accepts location_kind="bucket" as an input alias for
+        S3/object-store bucket plus key-prefix routes and stores it as prefix.
+        Use storage_protocol="rc:LocalFilesystemStorage" for local paths; do
+        not use location_kind="local_path".
+        For object-store routes, use credential_reference only for non-secret
+        markers such as profile:<name>, env:<VAR_NAME>, or
+        external:intentionally-unrecorded; do not store credential values.
         route_roles are optional reviewed route-intent IRIs/CURIEs such as
         rc:ProductionRoute, rc:CurrentRoute, rc:SampleRoute, rc:ArchiveRoute, or
         project-local rc:RouteRole terms.

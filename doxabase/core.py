@@ -4014,6 +4014,7 @@ class ProfileMapUpdateDraft:
     evidence: EvidenceDescription
     evidence_iri: str
     map_dataset_found: bool
+    status: str
     pending_staged_profile_update_iris: list[str]
     pending_staged_profile_update_count: int
     profile_observation_iris: list[str]
@@ -5610,28 +5611,40 @@ class DoxaBase:
     def _project_brief_profile_draft_status(
         draft: ProfileMapUpdateDraft,
     ) -> str:
-        context_only_metric_advisories = draft.metric_advisory_status_counts.get(
+        return draft.status
+
+    @staticmethod
+    def _profile_map_update_draft_status(
+        *,
+        pending_staged_profile_update_count: int,
+        recommendation_count: int,
+        scalar_conflict_group_count: int,
+        metric_advisory_count: int,
+        metric_advisory_status_counts: dict[str, int],
+        type_advisory_count: int,
+    ) -> str:
+        context_only_metric_advisories = metric_advisory_status_counts.get(
             "project_metric_defined",
             0,
         )
         open_metric_advisory_count = max(
             0,
-            draft.metric_advisory_count - context_only_metric_advisories,
+            metric_advisory_count - context_only_metric_advisories,
         )
         open_profile_review_count = (
-            draft.scalar_conflict_group_count
+            scalar_conflict_group_count
             + open_metric_advisory_count
-            + draft.type_advisory_count
+            + type_advisory_count
         )
-        if draft.pending_staged_profile_update_count:
-            if draft.recommendation_count or open_profile_review_count:
+        if pending_staged_profile_update_count:
+            if recommendation_count or open_profile_review_count:
                 return "pending staged profile update; open review lanes remain"
             return "pending staged profile update review"
-        if draft.recommendation_count:
+        if recommendation_count:
             return "pending map recommendations"
         if open_profile_review_count:
             return "pending profile advisory review"
-        if draft.metric_advisory_count:
+        if metric_advisory_count:
             return "profile evidence captured; metric context only"
         return "profile evidence captured; no pending map recommendations"
 
@@ -17411,15 +17424,15 @@ class DoxaBase:
             draft_arguments["graph"] = graph
         actions.append(
             SuggestedNextAction(
-                action_label="Draft profile map updates",
+                action_label="Inspect profile map-update status",
                 tool_name="draft_profile_map_updates",
                 mcp_tool_name="doxabase.draft_profile_map_updates",
                 arguments=draft_arguments,
                 reason=(
                     "Compare this shared-evidence profile run with current map "
-                    "facts, then route profile map updates, scalar conflicts, "
-                    "metric vocabulary, type findings, and query-context "
-                    "review lanes before staging changes."
+                    "facts and inspect whether map updates, scalar conflicts, "
+                    "metric vocabulary, type findings, or query-context review "
+                    "lanes remain before staging changes."
                 ),
                 call=self._suggested_call_string(
                     "draft_profile_map_updates",
@@ -17721,6 +17734,9 @@ class DoxaBase:
                 evidence_value,
             )
         )
+        pending_staged_profile_update_count = len(
+            pending_staged_profile_update_iris
+        )
         suggested_next_action_groups = (
             self._profile_map_update_draft_action_groups(
                 dataset_iri=dataset_value,
@@ -17772,16 +17788,27 @@ class DoxaBase:
         mixed_support_review_groups = self._profile_mixed_support_review_groups(
             suggested_next_action_groups
         )
+        status = self._profile_map_update_draft_status(
+            pending_staged_profile_update_count=(
+                pending_staged_profile_update_count
+            ),
+            recommendation_count=len(recommendations),
+            scalar_conflict_group_count=len(scalar_conflict_groups),
+            metric_advisory_count=len(metric_advisories),
+            metric_advisory_status_counts=metric_advisory_status_counts,
+            type_advisory_count=len(type_advisories),
+        )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
             evidence_iri=evidence_value,
             map_dataset_found=map_dataset_found,
+            status=status,
             pending_staged_profile_update_iris=(
                 pending_staged_profile_update_iris
             ),
-            pending_staged_profile_update_count=len(
-                pending_staged_profile_update_iris
+            pending_staged_profile_update_count=(
+                pending_staged_profile_update_count
             ),
             profile_observation_iris=profile_run.profile_observation_iris,
             recommendations=recommendations,

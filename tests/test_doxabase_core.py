@@ -301,6 +301,8 @@ def test_project_brief_surfaces_singleton_profile_draft(
     assert profile.draft_count == 1
     assert profile.drafts[0].status == "pending map recommendations"
     assert profile.drafts[0].recommendation_count == 1
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.status == "pending map recommendations"
     assert brief.profile_queue_counts["profile_observations"] == 1
     assert brief.profile_queue_counts["profile_drafts"] == 1
     assert brief.profile_queue_counts["profile_draft_recommendations"] == 1
@@ -358,6 +360,10 @@ def test_project_brief_marks_completed_profile_draft(
         "profile evidence captured; no pending map recommendations"
     )
     assert profile.drafts[0].recommendation_count == 0
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.status == (
+        "profile evidence captured; no pending map recommendations"
+    )
     assert "profile_review" not in brief.queue_counts
 
 
@@ -398,6 +404,11 @@ def test_project_brief_names_advisory_only_profile_review(
     )
 
     assert brief.datasets[0].profile.drafts[0].recommendation_count == 0
+    assert brief.datasets[0].profile.drafts[0].status == (
+        "pending profile advisory review"
+    )
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.status == "pending profile advisory review"
     assert brief.datasets[0].profile.drafts[0].type_advisory_status_counts == {
         "type_finding_current_map_undefined_value_type": 1,
     }
@@ -35231,6 +35242,9 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
     assert [action.tool_name for action in profile_run.suggested_next_actions] == [
         "draft_profile_map_updates"
     ]
+    assert profile_run.suggested_next_actions[0].action_label == (
+        "Inspect profile map-update status"
+    )
     assert profile_run.suggested_next_actions[0].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
@@ -35838,6 +35852,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         staged_from_suggestion.staged_revision.revision_iri
     ]
     assert rerun_draft.pending_staged_profile_update_count == 1
+    assert rerun_draft.status == (
+        "pending staged profile update; open review lanes remain"
+    )
     assert "pending staged profile map update" in rerun_draft.review_note
     rerun_profile_map_actions = rerun_draft.suggested_next_action_groups[
         "profile_map_updates"
@@ -40221,6 +40238,7 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
 
     assert draft.recommendations == []
     assert draft.recommendation_count == 0
+    assert draft.status == "profile evidence captured; metric context only"
     assert len(draft.metric_advisories) == 1
     assert draft.metric_advisory_count == 1
     assert draft.metric_advisory_status_counts == {
@@ -40295,6 +40313,9 @@ def test_project_brief_suppresses_defined_metric_context_only_profile_review(
     profile_draft = brief.datasets[0].profile.drafts[0]
 
     assert profile_draft.metric_advisory_count == 1
+    assert profile_draft.status == (
+        "profile evidence captured; metric context only"
+    )
     assert profile_draft.metric_advisory_status_counts == {
         "project_metric_defined": 1,
     }
