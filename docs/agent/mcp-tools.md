@@ -1893,12 +1893,16 @@ tokens, or other row-level samples.
 Records a reviewed profile-to-capsule manifest in one no-I/O pass. The payload
 must include `format="doxabase.profile_to_capsule_manifest.v1"`, optional
 `table_defaults`, optional `caveats`, required `tables`, and optional
-`analysis_views`. Table specs use the same fields as
+`analysis_views` and `domain_network_profiles`. Table specs use the same fields as
 `record_profiled_parquet_table`, with `table_iri` and `dataset_iri` accepted as
 aliases for `iri`; analysis views use the same structured fields as
-`record_map_analysis_view_bundle`. DoxaBase preflights the full manifest on a
-scratch capsule before writing to the live capsule. This is not a Parquet
-scanner, Markdown parser, or `export_handoff_bundle` manifest.
+`record_map_analysis_view_bundle`. Domain-network profile specs use the same
+reviewed aggregate fields as `record_domain_network_profile`, including
+sender/recipient coverage buckets and optional domain-pair counts; do not put
+raw addresses or row-level samples in them. DoxaBase preflights the full
+manifest on a scratch capsule before writing to the live capsule. This is not a
+Parquet scanner, Markdown parser, domain parser, or `export_handoff_bundle`
+manifest.
 
 `doxabase.record_map_analysis_view`
 

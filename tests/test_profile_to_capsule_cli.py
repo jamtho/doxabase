@@ -107,6 +107,10 @@ def test_profile_to_capsule_cli_applies_manifest_file(tmp_path: Path) -> None:
     assert payload["analysis_view_iris"] == [view]
     assert payload["table_count"] == 1
     assert payload["analysis_view_count"] == 1
+    assert payload["domain_network_profile_count"] == 0
+    assert payload["domain_network_profile_observation_count"] == 0
+    assert payload["domain_network_profile_evidence_iris"] == []
+    assert payload["domain_network_pattern_iris"] == []
     assert payload["profile_observation_count"] == 3
     assert payload["query_readiness_counts"] == {"ready_for_query_planning": 1}
     assert payload["validation_conforms"] is True

@@ -29069,6 +29069,11 @@ def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
     assert result.caveat_count == 1
     assert result.table_count == 2
     assert result.analysis_view_count == 2
+    assert result.domain_network_profile_count == 0
+    assert result.domain_network_profile_observation_count == 0
+    assert result.domain_network_profile_records == []
+    assert result.domain_network_profile_evidence_iris == []
+    assert result.domain_network_pattern_iris == []
     assert result.profile_observation_count == 5
     assert result.query_readiness_counts == {"ready_for_query_planning": 2}
     assert result.analysis_view_bundle is not None
@@ -29084,6 +29089,152 @@ def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
     assert db.describe_query_context(paid_orders_view).readiness == (
         "logical_analysis_view"
     )
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_profile_to_capsule_manifest_records_domain_network_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-manifest-domain#"
+    messages = f"{base}messages"
+    evidence = f"{base}domain_network_profile_evidence"
+    view = f"{base}message_like_domain_network_view"
+    caveat = f"{base}domain_network_extractability_caveat"
+
+    result = db.record_profile_to_capsule_manifest(
+        {
+            "format": "doxabase.profile_to_capsule_manifest.v1",
+            "table_defaults": {
+                "sample_method": "Reviewed aggregate manifest.",
+                "storage_protocol": "rc:LocalFilesystemStorage",
+                "access_mode": "rc:ReadOnlyAccess",
+                "location_kind": "directory",
+                "storage_root": str(tmp_path),
+                "layout_verification_status": "rc:VerifiedByQueryLayout",
+                "storage_layout_verification_status": "rc:VerifiedByListingLayout",
+                "physical_layout_verification_status": "rc:VerifiedByQueryLayout",
+            },
+            "tables": [
+                {
+                    "iri": messages,
+                    "label": "Messages",
+                    "dataset_summary": "Messages profile captured reviewed counts.",
+                    "evidence_summary": "Reviewed Messages profile manifest.",
+                    "evidence_sources": ["scratch://profiles/messages.json"],
+                    "path_templates": ["messages/current.parquet"],
+                    "row_count": 100,
+                    "row_semantics": "rc:EventRow",
+                    "columns": [
+                        {
+                            "column_name": "sender_domain",
+                            "physical_type": "rc:Varchar",
+                            "null_count": 15,
+                        },
+                        {
+                            "column_name": "recipient_domain",
+                            "physical_type": "rc:Varchar",
+                            "null_count": 20,
+                        },
+                    ],
+                }
+            ],
+            "domain_network_profiles": [
+                {
+                    "dataset_iri": messages,
+                    "summary": "Domain extraction coverage for message-like rows.",
+                    "evidence_summary": (
+                        "Reviewed aggregate domain profile from a query result."
+                    ),
+                    "evidence_sources": ["scratch://profiles/domain-network.json"],
+                    "evidence_iri": evidence,
+                    "sample_size": 100,
+                    "sample_scope": "All message-like rows in the reviewed snapshot.",
+                    "sample_method": (
+                        "DuckDB aggregate over canonicalized domain fields."
+                    ),
+                    "extraction_method": (
+                        "Regex email extraction followed by lowercase domain parse."
+                    ),
+                    "coverage_counts": [
+                        {"bucket": "sender_and_recipient_extracted", "count": 70},
+                        {"bucket": "sender_only_extracted", "count": 10},
+                        {"bucket": "recipient_only_extracted", "count": 5},
+                        {"bucket": "neither_extracted", "count": 15},
+                    ],
+                    "coverage_counts_exhaustive": True,
+                    "domain_pair_counts": [
+                        {
+                            "sender_domain": "example.test",
+                            "recipient_domain": "vendor.test",
+                            "count": 25,
+                        },
+                        {
+                            "sender_domain": "vendor.test",
+                            "recipient_domain": "example.test",
+                            "count": 12,
+                        },
+                    ],
+                    "sender_domain_counts": [
+                        {"domain": "example.test", "count": 62},
+                        {"domain": "vendor.test", "count": 18},
+                    ],
+                    "recipient_domain_counts": [
+                        {"domain": "example.test", "count": 41},
+                        {"domain": "vendor.test", "count": 37},
+                    ],
+                    "analysis_view_iri": view,
+                    "analysis_view_label": "Message-like domain-network rows",
+                    "analysis_view_row_count_snapshot": 100,
+                    "analysis_view_query_text": (
+                        "select * from messages where folder_family not in "
+                        "('calendar', 'contacts')"
+                    ),
+                    "analysis_view_query_language": "DuckDB SQL",
+                    "analysis_view_query_engine": "duckdb",
+                    "caveat_iri": caveat,
+                    "caveat_description": (
+                        "Domain-network metrics are bounded by sender and "
+                        "recipient extractability."
+                    ),
+                    "pattern_summary": (
+                        "Network coverage must be reported with domain graphs."
+                    ),
+                    "pattern_text": (
+                        "The reviewed aggregate profile records extraction "
+                        "coverage before domain-pair counts."
+                    ),
+                    "pattern_rationale": (
+                        "Missing sender or recipient domains are parser coverage "
+                        "gaps, not proof of absent communication."
+                    ),
+                }
+            ],
+        }
+    )
+
+    assert result.table_iris == [messages]
+    assert result.analysis_view_iris == [view]
+    assert result.caveat_iris == [caveat]
+    assert [record.iri for record in result.caveat_records] == [caveat]
+    assert result.domain_network_profile_count == 1
+    assert result.domain_network_profile_observation_count == 4
+    assert result.domain_network_profile_evidence_iris == [evidence]
+    assert len(result.domain_network_pattern_iris) == 1
+    assert result.profile_observation_count == 7
+    assert result.analysis_view_count == 1
+    assert result.caveat_count == 1
+    assert result.domain_network_profile_records[0].profile_observation_iris
+    assert {action.tool_name for action in result.suggested_next_actions} >= {
+        "describe_profile_run",
+        "describe_analysis_view",
+        "describe_pattern",
+    }
+
+    profile_run = db.describe_profile_run(messages, evidence, limit=None)
+    assert profile_run.total_profile_count == 4
+    assert db.describe_query_context(view).readiness == "logical_analysis_view"
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
 
@@ -29127,6 +29278,51 @@ def test_record_profile_to_capsule_manifest_preflights_all_tables_before_mutatio
                             }
                         ],
                     },
+                ],
+            }
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
+def test_record_profile_to_capsule_manifest_preflights_domain_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+    base = "https://example.test/profile-manifest-domain-preflight#"
+
+    with pytest.raises(DoxaBaseError, match="individual address"):
+        db.record_profile_to_capsule_manifest(
+            {
+                "format": "doxabase.profile_to_capsule_manifest.v1",
+                "tables": [
+                    {
+                        "iri": f"{base}messages",
+                        "dataset_summary": (
+                            "Messages profile captured reviewed counts."
+                        ),
+                        "evidence_summary": "Reviewed Messages profile manifest.",
+                        "evidence_sources": ["scratch://profiles/messages.json"],
+                        "row_count": 10,
+                        "columns": [{"column_name": "sender_domain"}],
+                    }
+                ],
+                "domain_network_profiles": [
+                    {
+                        "dataset_iri": f"{base}messages",
+                        "summary": "Unsafe domain profile.",
+                        "evidence_summary": (
+                            "Unsafe aggregate should fail before writes."
+                        ),
+                        "sample_size": 10,
+                        "sample_scope": "All message-like rows.",
+                        "sample_method": "Aggregate query.",
+                        "extraction_method": "Regex extraction.",
+                        "coverage_counts": [
+                            {"bucket": "alice@example.test", "count": 10},
+                        ],
+                    }
                 ],
             }
         )

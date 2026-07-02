@@ -7708,6 +7708,10 @@ def test_record_profile_to_capsule_manifest_tool_returns_json_like_payload(
     assert result["analysis_view_iris"] == [view]
     assert result["table_count"] == 1
     assert result["analysis_view_count"] == 1
+    assert result["domain_network_profile_count"] == 0
+    assert result["domain_network_profile_observation_count"] == 0
+    assert result["domain_network_profile_evidence_iris"] == []
+    assert result["domain_network_pattern_iris"] == []
     assert result["profile_observation_count"] == 3
     assert result["query_readiness_counts"] == {"ready_for_query_planning": 1}
     assert result["analysis_view_bundle"]["query_snippet_count"] == 1

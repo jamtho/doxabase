@@ -1648,13 +1648,18 @@ record.manifest_format
 record.caveat_records
 record.table_records
 record.analysis_view_bundle
+record.domain_network_profile_records
 record.caveat_iris
 record.table_iris
 record.shared_evidence_iris
 record.analysis_view_iris
+record.domain_network_profile_evidence_iris
+record.domain_network_pattern_iris
 record.caveat_count
 record.table_count
 record.analysis_view_count
+record.domain_network_profile_count
+record.domain_network_profile_observation_count
 record.profile_observation_count
 record.query_readiness_counts
 record.query_issue_code_counts
@@ -1664,13 +1669,17 @@ record.suggested_next_calls
 
 The manifest must declare
 `format="doxabase.profile_to_capsule_manifest.v1"`. It may include
-`table_defaults`, `caveats`, `tables`, and `analysis_views`. Table specs pass
-through `record_profiled_parquet_table`; `table_iri` and `dataset_iri` are
-aliases for `iri`. Analysis-view specs pass through
-`record_map_analysis_view_bundle`. The helper preflights the whole structured
-manifest on a scratch capsule before writing, so a later invalid table or view
-does not leave earlier manifest rows in the live capsule. It is not a handoff
-export manifest and does not read files or parse Markdown.
+`table_defaults`, `caveats`, `tables`, `analysis_views`, and
+`domain_network_profiles`. Table specs pass through
+`record_profiled_parquet_table`; `table_iri` and `dataset_iri` are aliases for
+`iri`. Analysis-view specs pass through `record_map_analysis_view_bundle`.
+Domain-network profile specs pass through `record_domain_network_profile`, so
+they must contain reviewed aggregate sender/recipient coverage counts rather
+than raw addresses, message IDs, subjects, or row samples. The helper preflights
+the whole structured manifest on a scratch capsule before writing, so a later
+invalid table, view, or domain profile does not leave earlier manifest rows in
+the live capsule. It is not a handoff export manifest and does not read files or
+parse Markdown.
 
 `db.record_analysis_packet(...)` returns an `AnalysisPacketRecord`:
 

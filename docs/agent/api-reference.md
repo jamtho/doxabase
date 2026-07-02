@@ -1120,10 +1120,14 @@ or a place to preserve raw row samples.
 Use it when a case-study script or sidecar has already produced several
 reviewed table/profile specs plus optional caveats and logical analysis views.
 It composes `record_profiled_parquet_table()` and
-`record_map_analysis_view_bundle()`, preflights the full manifest on a scratch
-capsule before writing, and returns aggregate table, evidence, view, readiness,
-and suggested-action handles. It is not the same as an `export_handoff_bundle`
-manifest and does not read Parquet files or parse Markdown.
+`record_map_analysis_view_bundle()`. It can also pass reviewed aggregate
+`domain_network_profiles` through `record_domain_network_profile()` for
+communication-like datasets when sender/recipient coverage buckets and optional
+domain-pair counts are already reviewed. It preflights the full manifest on a
+scratch capsule before writing, and returns aggregate table, evidence, view,
+domain-profile, readiness, and suggested-action handles. It is not the same as
+an `export_handoff_bundle` manifest and does not read Parquet files, parse
+Markdown, or extract email addresses.
 For a reviewed manifest stored as JSON, run
 `python -m doxabase.profile_to_capsule --capsule capsule.sqlite --manifest profile-to-capsule.json`
 to load the file, apply the manifest, run validation, and print a compact JSON

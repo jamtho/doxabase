@@ -109,7 +109,8 @@ Implemented:
   reading the Parquet files.
 - `record_profile_to_capsule_manifest()` for applying a reviewed
   `doxabase.profile_to_capsule_manifest.v1` ingestion manifest with optional
-  caveats, multiple profiled Parquet tables, and optional analysis views.
+  caveats, multiple profiled Parquet tables, optional analysis views, and
+  reviewed aggregate domain-network profiles.
 - `python -m doxabase.parquet_manifest` for generating a reviewable
   profile-to-capsule manifest scaffold from local Parquet footer/schema
   metadata when optional `pyarrow` is installed.
@@ -350,8 +351,9 @@ Useful first tool calls for an agent:
 22. `doxabase.record_profiled_parquet_table` when reviewed Parquet schema,
     storage/layout metadata, and aggregate profiles should be recorded together
 23. `doxabase.record_profile_to_capsule_manifest` when a reviewed structured
-    ingestion manifest should record caveats, profiled tables, and analysis
-    views together without reading files
+    ingestion manifest should record caveats, profiled tables, analysis views,
+    and reviewed aggregate domain-network profiles together without reading
+    files
 24. `python -m doxabase.parquet_manifest` when local Parquet footer/schema
     metadata should become a reviewable profile-to-capsule manifest scaffold,
     including S3/MinIO route options when local footer copies represent an

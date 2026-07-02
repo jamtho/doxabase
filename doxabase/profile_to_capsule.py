@@ -43,9 +43,17 @@ def apply_manifest_file(
             "table_iris": record.table_iris,
             "shared_evidence_iris": record.shared_evidence_iris,
             "analysis_view_iris": record.analysis_view_iris,
+            "domain_network_profile_evidence_iris": (
+                record.domain_network_profile_evidence_iris
+            ),
+            "domain_network_pattern_iris": record.domain_network_pattern_iris,
             "caveat_iris": record.caveat_iris,
             "table_count": record.table_count,
             "analysis_view_count": record.analysis_view_count,
+            "domain_network_profile_count": record.domain_network_profile_count,
+            "domain_network_profile_observation_count": (
+                record.domain_network_profile_observation_count
+            ),
             "caveat_count": record.caveat_count,
             "profile_observation_count": record.profile_observation_count,
             "query_readiness_counts": record.query_readiness_counts,
@@ -73,7 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help=(
             "Path to a doxabase.profile_to_capsule_manifest.v1 JSON manifest. "
-            "The command records reviewed metadata only and performs no Parquet I/O."
+            "The command records reviewed metadata/aggregate profiles only and "
+            "performs no Parquet I/O or address parsing."
         ),
     )
     parser.add_argument(

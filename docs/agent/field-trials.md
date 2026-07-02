@@ -4823,6 +4823,13 @@ few useful gaps:
   `build_parquet_profile_manifest` now accept object-store route fields, keep
   table templates relative to `key_prefix`, and avoid recording absolute local
   footer-copy paths as evidence sources for those remote routes.
+- A refreshed domain-network scout found the aggregate helper itself was no
+  longer missing; the adoption gap was putting reviewed communication-network
+  aggregates into the same profile-to-capsule sidecar as tables and logical
+  views. `doxabase.profile_to_capsule_manifest.v1` can now include
+  `domain_network_profiles` that pass through `record_domain_network_profile`,
+  preserving extraction coverage and optional domain-pair counts while keeping
+  address parsing and raw row inspection outside DoxaBase.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

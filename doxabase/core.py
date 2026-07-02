@@ -4502,13 +4502,18 @@ class ProfileToCapsuleManifestRecord:
     caveat_records: list[MapResourceRecord]
     table_records: list[ProfiledParquetTableRecord]
     analysis_view_bundle: AnalysisViewBundleRecord | None
+    domain_network_profile_records: list[DomainNetworkProfileRecord]
     caveat_iris: list[str]
     table_iris: list[str]
     shared_evidence_iris: list[str]
     analysis_view_iris: list[str]
+    domain_network_profile_evidence_iris: list[str]
+    domain_network_pattern_iris: list[str]
     caveat_count: int
     table_count: int
     analysis_view_count: int
+    domain_network_profile_count: int
+    domain_network_profile_observation_count: int
     profile_observation_count: int
     query_readiness_counts: dict[str, int]
     query_issue_code_counts: dict[str, int]
@@ -39699,6 +39704,10 @@ class DoxaBase:
             if manifest_spec["analysis_views"]
             else None
         )
+        domain_network_profile_records = [
+            self.record_domain_network_profile(**profile_spec)
+            for profile_spec in manifest_spec["domain_network_profiles"]
+        ]
         query_readiness_counts: dict[str, int] = {}
         query_issue_code_counts: dict[str, int] = {}
         for table_record in table_records:
@@ -39721,32 +39730,78 @@ class DoxaBase:
                     if analysis_view_bundle is not None
                     else []
                 ),
+                *(
+                    action
+                    for profile_record in domain_network_profile_records
+                    for action in profile_record.suggested_next_actions
+                ),
             ]
         )
+        domain_network_caveat_records = [
+            record.caveat
+            for record in domain_network_profile_records
+            if record.caveat is not None
+        ]
+        domain_network_analysis_view_iris = [
+            record.analysis_view.iri
+            for record in domain_network_profile_records
+            if record.analysis_view is not None
+        ]
+        domain_network_profile_evidence_iris = [
+            record.evidence_iri
+            for record in domain_network_profile_records
+            if record.evidence_iri is not None
+        ]
+        domain_network_pattern_iris = [
+            record.pattern.pattern_iri
+            for record in domain_network_profile_records
+            if record.pattern is not None
+        ]
+        table_profile_observation_count = sum(
+            record.profile_observation_count for record in table_records
+        )
+        domain_network_profile_observation_count = sum(
+            len(record.profile_observation_iris)
+            for record in domain_network_profile_records
+        )
+        analysis_view_iris = list(
+            dict.fromkeys(
+                [
+                    *(
+                        analysis_view_bundle.view_iris
+                        if analysis_view_bundle is not None
+                        else []
+                    ),
+                    *domain_network_analysis_view_iris,
+                ]
+            )
+        )
+        all_caveat_records = [*caveat_records, *domain_network_caveat_records]
+        caveat_iris = list(dict.fromkeys(record.iri for record in all_caveat_records))
         return ProfileToCapsuleManifestRecord(
             manifest_format=manifest_spec["format"],
-            caveat_records=caveat_records,
+            caveat_records=all_caveat_records,
             table_records=table_records,
             analysis_view_bundle=analysis_view_bundle,
-            caveat_iris=[record.iri for record in caveat_records],
+            domain_network_profile_records=domain_network_profile_records,
+            caveat_iris=caveat_iris,
             table_iris=[record.dataset_iri for record in table_records],
             shared_evidence_iris=[
                 record.shared_evidence_iri for record in table_records
             ],
-            analysis_view_iris=(
-                analysis_view_bundle.view_iris
-                if analysis_view_bundle is not None
-                else []
-            ),
-            caveat_count=len(caveat_records),
+            analysis_view_iris=analysis_view_iris,
+            domain_network_profile_evidence_iris=domain_network_profile_evidence_iris,
+            domain_network_pattern_iris=domain_network_pattern_iris,
+            caveat_count=len(caveat_iris),
             table_count=len(table_records),
-            analysis_view_count=(
-                analysis_view_bundle.view_count
-                if analysis_view_bundle is not None
-                else 0
+            analysis_view_count=len(analysis_view_iris),
+            domain_network_profile_count=len(domain_network_profile_records),
+            domain_network_profile_observation_count=(
+                domain_network_profile_observation_count
             ),
-            profile_observation_count=sum(
-                record.profile_observation_count for record in table_records
+            profile_observation_count=(
+                table_profile_observation_count
+                + domain_network_profile_observation_count
             ),
             query_readiness_counts=query_readiness_counts,
             query_issue_code_counts=query_issue_code_counts,
@@ -72657,6 +72712,7 @@ class DoxaBase:
             "caveats",
             "tables",
             "analysis_views",
+            "domain_network_profiles",
         }
         unknown_fields = sorted(set(manifest) - allowed_fields)
         if unknown_fields:
@@ -72692,7 +72748,20 @@ class DoxaBase:
             if analysis_view_values
             else []
         )
+        domain_network_profile_specs = (
+            self._normalise_profile_manifest_domain_network_profiles(
+                manifest.get("domain_network_profiles"),
+            )
+        )
         used_iris = {spec["iri"] for spec in table_specs}
+        for index, caveat_spec in enumerate(caveat_specs, start=1):
+            caveat_iri = caveat_spec["iri"]
+            if caveat_iri in used_iris:
+                raise DoxaBaseError(
+                    f"caveats[{index}].iri duplicates another manifest resource: "
+                    f"{caveat_iri}"
+                )
+            used_iris.add(caveat_iri)
         for view_spec in analysis_view_specs:
             view_iri = view_spec["iri"]
             if view_iri in used_iris:
@@ -72700,12 +72769,149 @@ class DoxaBase:
                     f"analysis view IRI duplicates another manifest resource: {view_iri}"
                 )
             used_iris.add(view_iri)
+        for index, profile_spec in enumerate(domain_network_profile_specs, start=1):
+            for field, iri_value in self._profile_manifest_domain_network_created_iris(
+                profile_spec,
+            ):
+                if iri_value in used_iris:
+                    raise DoxaBaseError(
+                        f"domain_network_profiles[{index}].{field} duplicates "
+                        f"another manifest resource: {iri_value}"
+                    )
+                used_iris.add(iri_value)
         return {
             "format": manifest_format,
             "caveats": caveat_specs,
             "tables": table_specs,
             "analysis_views": analysis_view_specs,
+            "domain_network_profiles": domain_network_profile_specs,
         }
+
+    def _normalise_profile_manifest_domain_network_profiles(
+        self,
+        profiles: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        profile_values = self._normalise_manifest_object_list(
+            "domain_network_profiles",
+            profiles,
+        )
+        allowed_fields = {
+            "dataset_iri",
+            "summary",
+            "evidence_summary",
+            "sample_size",
+            "sample_scope",
+            "sample_method",
+            "extraction_method",
+            "coverage_counts",
+            "observed_at",
+            "observed_by",
+            "evidence_sources",
+            "evidence_iri",
+            "coverage_counts_exhaustive",
+            "domain_pair_counts",
+            "sender_domain_counts",
+            "recipient_domain_counts",
+            "domain_pair_min_count",
+            "allow_low_frequency_domain_pairs",
+            "analysis_view_iri",
+            "analysis_view_label",
+            "analysis_view_description",
+            "analysis_view_row_count_snapshot",
+            "analysis_view_query_text",
+            "analysis_view_query_language",
+            "analysis_view_query_engine",
+            "caveat_iri",
+            "caveat_label",
+            "caveat_description",
+            "caveat_severity",
+            "pattern_summary",
+            "pattern_text",
+            "pattern_rationale",
+            "pattern_confidence",
+            "pattern_status",
+            "pattern_stability",
+        }
+        specs: list[dict[str, Any]] = []
+        for index, item in enumerate(profile_values, start=1):
+            unknown_fields = sorted(set(item) - allowed_fields)
+            if unknown_fields:
+                raise DoxaBaseError(
+                    f"domain_network_profiles[{index}] has unsupported field(s): "
+                    + ", ".join(unknown_fields)
+                )
+            spec = copy.deepcopy(dict(item))
+            dataset_value = spec.get("dataset_iri")
+            if not isinstance(dataset_value, str) or not dataset_value.strip():
+                raise DoxaBaseError(
+                    "domain_network_profiles"
+                    f"[{index}].dataset_iri must be a non-empty IRI or CURIE string"
+                )
+            spec["dataset_iri"] = str(
+                self._resource_ref(
+                    f"domain_network_profiles[{index}].dataset_iri",
+                    dataset_value,
+                )
+            )
+            for field in ("evidence_iri", "analysis_view_iri", "caveat_iri"):
+                value = spec.get(field)
+                if value is not None:
+                    if not isinstance(value, str) or not value.strip():
+                        raise DoxaBaseError(
+                            f"domain_network_profiles[{index}].{field} must be a "
+                            "non-empty IRI or CURIE string"
+                        )
+                    spec[field] = str(
+                        self._resource_ref(
+                            f"domain_network_profiles[{index}].{field}",
+                            value,
+                        )
+                    )
+            specs.append(spec)
+        return specs
+
+    @staticmethod
+    def _profile_manifest_domain_network_created_iris(
+        spec: Mapping[str, Any],
+    ) -> list[tuple[str, str]]:
+        created: list[tuple[str, str]] = []
+        caveat_requested = (
+            spec.get("caveat_description") is not None
+            or spec.get("caveat_iri") is not None
+        )
+        if caveat_requested:
+            created.append(
+                (
+                    "caveat_iri",
+                    str(
+                        spec.get("caveat_iri")
+                        or f"{spec['dataset_iri']}/domain-network-caveat"
+                    ),
+                )
+            )
+        analysis_view_requested = any(
+            spec.get(field) is not None
+            for field in (
+                "analysis_view_iri",
+                "analysis_view_label",
+                "analysis_view_description",
+                "analysis_view_row_count_snapshot",
+                "analysis_view_query_text",
+                "analysis_view_query_language",
+                "analysis_view_query_engine",
+            )
+        )
+        if analysis_view_requested:
+            created.append(
+                (
+                    "analysis_view_iri",
+                    str(
+                        spec.get("analysis_view_iri")
+                        or f"{spec['dataset_iri']}/domain-network-analysis-view"
+                    ),
+                )
+            )
+        return created
 
     def _normalise_profile_manifest_caveats(
         self,
