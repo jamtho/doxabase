@@ -4900,6 +4900,17 @@ few useful gaps:
   privacy-gated, and explain that the dry-run itself is the non-mutating
   manifest privacy gate; the real local import still exposes the redacted
   `export_preflight` gate before recovery or mutation actions.
+- A staged-drift/version-lineage trial confirmed real staged recovery can cross
+  process and handoff boundaries without hidden state: source capsules staged
+  competing revisions, applied one branch, restaged or repaired stale work,
+  exported/imported revision snapshots, and receiver capsules still found the
+  next safe review action plus resource lineage, applied diff, and exact graph
+  version evidence. A cold-agent replay reached the same shape after real
+  restage and apply transitions, with one remaining sibling correctly routed to
+  dry-run restage before any further apply. No runtime gap was found; a compact
+  cold recovery card may become worthwhile only if future trials repeatedly
+  need to join recovery plans, queue rows, apply checks, lineage, and version
+  diffs by hand.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
