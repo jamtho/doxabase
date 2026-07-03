@@ -1791,6 +1791,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stale_seed_blocker(
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
+        "validation_scope": "map",
     }
     assert result_payload["suggested_next_calls"] == [
         result_payload["suggested_next_actions"][0]["call"]

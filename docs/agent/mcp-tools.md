@@ -1449,8 +1449,9 @@ vocabulary, the helper returns
 `result_kind="query_evidence_storage_overlay_blocker"` with
 `mode="blocked_stale_seed_recovery_required"` rather than raising from patch
 preview. Follow its `export_preflight(export_kind="handoff_bundle")` suggested
-action and recover into a fresh seeded capsule before staging the reviewed
-overlay.
+action, which carries `validation_scope="map"` so the stale immutable seed graph
+does not block the recovery artifact, and recover into a fresh seeded capsule
+before staging the reviewed overlay.
 Call that staged-revision helper, check/apply the staged row, then rerun
 `describe_query_context` before drafting a query plan. When the dataset already
 has a different
@@ -3063,13 +3064,15 @@ If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. `project_brief` reports `current_staged_revision_count`
 on the `seed_recovery_review` health task and points first to
-`export_preflight(export_kind="handoff_bundle")`. Preserve the project/history
-TriG plus companion revision snapshot JSON, create a fresh seeded capsule, and
-import the manifest there with `import_handoff_bundle`. When the stale capsule
-has no stored revision snapshots, the snapshot JSON is empty and the import
-returns an empty recovery plan plus a structured `project_brief()` follow-up for
-the fresh capsule. When staged rows exist, follow the staged recovery plan
-returned by the import.
+`export_preflight(export_kind="handoff_bundle", validation_scope="map")`. The
+map-scoped validation keeps mutable graph checks active without letting the
+known-stale immutable seed graph block the recovery artifact. Preserve the
+project/history TriG plus companion revision snapshot JSON, create a fresh
+seeded capsule, and import the manifest there with `import_handoff_bundle`.
+When the stale capsule has no stored revision snapshots, the snapshot JSON is
+empty and the import returns an empty recovery plan plus a structured
+`project_brief()` follow-up for the fresh capsule. When staged rows exist,
+follow the staged recovery plan returned by the import.
 For strictly non-mutating active-capsule recovery trials, use Python with
 `DoxaBase.open_readonly(path)` for `project_brief`, `export_preflight`, and the
 handoff export itself. The normal MCP server opens its configured capsule with

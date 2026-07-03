@@ -1518,9 +1518,12 @@ If the capsule's immutable seed ontology is stale and missing current staging
 terms, the helper returns `result_kind="query_evidence_storage_overlay_blocker"`
 instead of `stage_arguments`. The blocker preserves `dataset`, `evidence`,
 `source_query_context_*`, `source_query_evidence`, `missing_seed_terms`, and a
-stale-seed `export_preflight(export_kind="handoff_bundle")` suggested action;
-follow that recovery handoff before staging the overlay in a fresh seeded
-capsule.
+stale-seed
+`export_preflight(export_kind="handoff_bundle", validation_scope="map")`
+suggested action; follow that recovery handoff before staging the overlay in a
+fresh seeded capsule. The map validation scope is intentional: it validates the
+mutable project map while avoiding an all-scope validation block from the stale
+immutable seed graph that recovery is meant to replace.
 When the overlay replaces existing dataset, storage-access, or physical-layout
 verification status/note values, `reviewed_overlay` lists the replaced values
 and `stage_arguments.removals` carries the removal graph needed to avoid

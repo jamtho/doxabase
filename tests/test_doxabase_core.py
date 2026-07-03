@@ -2336,6 +2336,7 @@ def test_project_brief_surfaces_stale_seed_health_task(
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
+        "validation_scope": "map",
     }
     assert seed_task.current_staged_revision_count == 0
     assert brief.safety_first_action == seed_task.suggested_next_action
@@ -2395,6 +2396,7 @@ def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
+        "validation_scope": "map",
     }
     assert brief.safety_first_action == seed_task.suggested_next_action
     assert brief.safety_first_call == seed_task.suggested_next_call
@@ -24596,6 +24598,7 @@ def test_query_evidence_storage_overlay_returns_stale_seed_blocker(
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
+        "validation_scope": "map",
     }
     assert blocker.suggested_next_calls == [
         blocker.suggested_next_actions[0].call

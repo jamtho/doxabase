@@ -4956,6 +4956,16 @@ few useful gaps:
   query context, evidence, and `query_plan_handoff` queue. No runtime gap was
   found; endpoint/credential resolution and context-slice shareability remain
   external review steps.
+- A stale-seed staged recovery trial exposed and fixed a safety-route gap. A
+  source capsule with missing immutable seed terms and one current staged row
+  correctly put `seed_recovery_review` first, but the old handoff preflight
+  action used default all-scope validation and blocked on the stale seed graph
+  itself. Stale-seed recovery actions now include `validation_scope="map"`:
+  the map-scoped preflight/export stayed scanner-clean, wrote a
+  recovery-complete handoff with snapshot rows, and a fresh receiver imported
+  the manifest, recovered exact staged evidence, applied the row, validated,
+  inspected lineage/applied diff, and cleared the staged frontier. Shareability
+  review of the handoff artifact remains an external gate.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

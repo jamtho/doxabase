@@ -6739,6 +6739,12 @@ class DoxaBase:
             "limit": 20,
         }
 
+    @staticmethod
+    def _stale_seed_handoff_preflight_arguments() -> dict[str, Any]:
+        arguments = DoxaBase._project_brief_default_handoff_preflight_arguments()
+        arguments["validation_scope"] = "map"
+        return arguments
+
     def _project_brief_default_handoff_preflight(
         self,
     ) -> tuple[dict[str, Any], ExportPreflightRecord]:
@@ -6845,11 +6851,7 @@ class DoxaBase:
         missing_seed_terms = self._missing_base_ontology_terms(required_terms)
         if not missing_seed_terms:
             return None
-        arguments = {
-            "export_kind": "handoff_bundle",
-            "graphs": ["project"],
-            "limit": 20,
-        }
+        arguments = self._stale_seed_handoff_preflight_arguments()
         if current_staged_revision_count > 0:
             action = SuggestedNextAction(
                 action_label="Preflight stale seed handoff export",
@@ -6858,8 +6860,8 @@ class DoxaBase:
                 arguments=arguments,
                 reason=(
                     "Current staged graph revision rows exist; preflight a "
-                    "project/history plus revision snapshots handoff before "
-                    "recovering into a fresh seeded capsule."
+                    "project/history plus revision snapshots handoff with map "
+                    "validation before recovering into a fresh seeded capsule."
                 ),
                 call=self._suggested_call_string("export_preflight", arguments),
             )
@@ -6873,9 +6875,9 @@ class DoxaBase:
                 arguments=arguments,
                 reason=(
                     "The immutable base_ontology is missing current staging seed "
-                    "terms; preflight a project/history handoff before recovering "
-                    "into a fresh seeded capsule. The companion revision snapshot "
-                    "bundle may be empty."
+                    "terms; preflight a project/history handoff with map "
+                    "validation before recovering into a fresh seeded capsule. "
+                    "The companion revision snapshot bundle may be empty."
                 ),
                 call=self._suggested_call_string("export_preflight", arguments),
             )
@@ -25559,11 +25561,7 @@ class DoxaBase:
         )
         if not missing_seed_terms:
             return None
-        arguments = {
-            "export_kind": "handoff_bundle",
-            "graphs": ["project"],
-            "limit": 20,
-        }
+        arguments = self._stale_seed_handoff_preflight_arguments()
         action = SuggestedNextAction(
             action_label="Preflight stale seed project handoff export",
             tool_name="export_preflight",
@@ -25573,7 +25571,8 @@ class DoxaBase:
                 "The immutable base_ontology is missing current staging seed "
                 "terms, so this overlay cannot safely produce stage arguments "
                 "in the current capsule. Preflight a project/history handoff "
-                "before recovering into a fresh seeded capsule."
+                "with map validation before recovering into a fresh seeded "
+                "capsule."
             ),
             call=self._suggested_call_string("export_preflight", arguments),
         )
