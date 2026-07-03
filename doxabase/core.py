@@ -22078,6 +22078,11 @@ class DoxaBase:
             for index in direct_clean_candidate_indexes
             if index != query_target_decision.candidate_index
         ]
+        pending_repair_groups_present = (
+            self._query_repair_groups_have_pending_options(
+                suggested_repair_action_groups
+            )
+        )
         suggested_next_actions = self._query_context_next_actions(
             dataset=dataset,
             graph=graph,
@@ -22085,11 +22090,7 @@ class DoxaBase:
             issues=issues,
             decision=query_target_decision,
             candidates=query_target_candidates,
-            pending_repair_groups_present=(
-                self._query_repair_groups_have_pending_options(
-                    suggested_repair_action_groups
-                )
-            ),
+            pending_repair_groups_present=pending_repair_groups_present,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
             unselected_direct_clean_candidate_indexes=(
                 unselected_direct_clean_candidate_indexes
@@ -22161,9 +22162,10 @@ class DoxaBase:
                 if unattended_recommended_action_indexes
                 else None
             ),
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
+            suggested_next_calls=self._query_context_suggested_next_calls(
+                suggested_next_actions,
+                pending_repair_groups_present=pending_repair_groups_present,
+            ),
         )
 
     def _non_tabular_query_context(
@@ -22384,6 +22386,22 @@ class DoxaBase:
             index
             for index, action in enumerate(actions)
             if action.tool_name in safe_inspection_tools
+        ]
+
+    @staticmethod
+    def _query_context_suggested_next_calls(
+        actions: Iterable[SuggestedNextAction],
+        *,
+        pending_repair_groups_present: bool,
+    ) -> list[str]:
+        return [
+            action.call
+            for action in actions
+            if action.call
+            and not (
+                pending_repair_groups_present
+                and action.tool_name == "draft_query_plan"
+            )
         ]
 
     @staticmethod

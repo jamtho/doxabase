@@ -1102,6 +1102,10 @@ template source, storage label, route role summaries, path or relation handle,
 direct issue codes, required bindings, and partition binding examples. Prefer
 `action.route_card` over parsing `reason` text when choosing between peer,
 layout-selection, production/current, sample, archive, or backfill routes.
+When `suggested_repair_action_groups` has pending non-skippable options, those
+review-gated `draft_query_plan` actions stay in structured
+`suggested_next_actions` for diagnosis, but compatibility `suggested_next_calls`
+omits their call strings until the repair lane is resolved.
 Candidate cards and route cards both include non-secret storage orientation such
 as `access_mode`, `region`, `endpoint_profile`, `credential_reference`,
 `path_style_access`, and `requires_endpoint_profile`, so scripts do not need a

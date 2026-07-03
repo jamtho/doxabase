@@ -8256,7 +8256,10 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         "candidate_selector": selected_selector,
         "allow_context_blocked_candidate": True,
     }
-    assert context["suggested_next_calls"] == [query_action["call"]]
+    assert "query_repair_groups_present" in (
+        query_action["unattended_review_reason_codes"]
+    )
+    assert context["suggested_next_calls"] == []
 
     result = draft_query_plan_tool(
         db,

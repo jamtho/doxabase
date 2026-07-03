@@ -721,6 +721,10 @@ useful diagnostics or review handoffs, but their
 `unattended_recommended=false` and `unattended_review_reason_codes` includes
 `query_repair_groups_present`; `first_unattended_action_index` stays null until
 the repair group is resolved or another action is independently safe to follow.
+The compatibility `suggested_next_calls` list intentionally omits those
+review-gated `draft_query_plan` strings while pending repair groups remain; read
+the structured `suggested_next_actions` if you need their route cards for
+diagnosis.
 
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call

@@ -523,7 +523,11 @@ Every suggested `draft_query_plan` action also carries `route_card` with the
 candidate selector, storage label, route roles, path or relation handle, direct
 issue codes, required bindings, and any partition binding examples. Use that
 structured card instead of parsing action prose when choosing peer,
-production/current, sample/archive, or layout-selection routes. Candidate cards
+production/current, sample/archive, or layout-selection routes. When pending
+non-skippable `suggested_repair_action_groups` exist, structured
+`draft_query_plan` actions remain available for diagnosis, but compatibility
+`suggested_next_calls` omits their call strings until the repair lane is
+resolved. Candidate cards
 and route cards include non-secret storage orientation such as `access_mode`,
 `region`, `endpoint_profile`, `credential_reference`, `path_style_access`, and
 `requires_endpoint_profile`; use `credential_reference` markers such as

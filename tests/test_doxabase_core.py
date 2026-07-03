@@ -20363,6 +20363,7 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
     assert "suggested_repair_action_groups" in draft_action.unattended_caution
     assert context.unattended_recommended_action_indexes == []
     assert context.first_unattended_action_index is None
+    assert context.suggested_next_calls == []
 
     arguments = dict(listing_action["arguments"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -20380,6 +20381,9 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
     assert repaired_context.layout_verification_status.iri == (
         RC + "VerifiedByListingLayout"
     )
+    assert repaired_context.suggested_next_calls == [
+        action.call for action in repaired_context.suggested_next_actions
+    ]
 
 
 def test_draft_query_plan_hints_unmatched_partition_placeholders(
@@ -21195,6 +21199,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert "suggested_repair_action_groups" in draft_action.unattended_caution
     assert context.unattended_recommended_action_indexes == []
     assert context.first_unattended_action_index is None
+    assert context.suggested_next_calls == []
     action = repair_group.actions[0]
     assert action["tool_name"] == "stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset
@@ -21229,6 +21234,9 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert "missing_physical_layout" not in {
         issue.code for issue in repaired_context.issues
     }
+    assert repaired_context.suggested_next_calls == [
+        action.call for action in repaired_context.suggested_next_actions
+    ]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "database_relation_handoff"
     assert plan.scan.physical_layout is not None
@@ -22818,9 +22826,7 @@ def test_query_target_candidates_surface_global_blockers(
     ]
     assert context.unattended_recommended_action_indexes == []
     assert context.first_unattended_action_index is None
-    assert context.suggested_next_calls == [
-        action.call for action in context.suggested_next_actions
-    ]
+    assert context.suggested_next_calls == []
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
     assert plan.source_context.selection_mode == "automatic"

@@ -4878,6 +4878,17 @@ few useful gaps:
   Domain-network `analysis_view_iri` fields create helper-owned denominator
   views; if a manifest also has top-level `analysis_views`, give those views
   distinct IRIs unless the API grows an explicit existing-view link.
+- A storage-metadata query-repair trial confirmed a cold agent can repair an
+  incomplete local-file query route through real staged state transitions:
+  storage root/path-template review, physical layout repair, validation, and an
+  execution-ready non-executed `draft_query_plan` handoff. The proof artifact was
+  a scratch query-root capsule report with an exact-object storage repair plus a
+  physical-layout repair. The remaining adoption friction was the legacy
+  `suggested_next_calls` list still showing review-gated `draft_query_plan`
+  strings while `suggested_repair_action_groups` had pending non-skippable
+  options. Those structured actions now remain available for route-card
+  diagnosis, but the compatibility call list omits the `draft_query_plan`
+  strings until the repair lane is resolved.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
