@@ -4944,6 +4944,18 @@ few useful gaps:
   Markdown-only lookup. No runtime gap was found; the remaining caution is
   operational shareability because the packet records locator-only artifacts
   with absolute local paths.
+- A database-relation query handoff trial confirmed the repair/result/export
+  route survives a fresh receiver. The source capsule started with misplaced
+  dataset-owned `rc:pathTemplate "mart.orders"`, staged and applied the reviewed
+  removal, then drafted `handoff_kind="database_relation_handoff"` with
+  `scan.relation_identifier="mart.orders"`,
+  `scan.connection_reference="warehouse-prod"`, and no file URI or scan
+  function. `record_query_result` preserved
+  `warehouse-prod:mart.orders` as a scanned source handle, the scoped context
+  slice imported into a fresh receiver, and the receiver recovered the same
+  query context, evidence, and `query_plan_handoff` queue. No runtime gap was
+  found; endpoint/credential resolution and context-slice shareability remain
+  external review steps.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
