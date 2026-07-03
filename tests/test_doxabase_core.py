@@ -3291,6 +3291,37 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert exported.sensitive_literal_count > 0
 
     receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    dry_run = receiver.import_handoff_bundle(manifest_path, dry_run=True)
+
+    assert dry_run.dry_run is True
+    assert dry_run.trig_imported == {}
+    assert dry_run.trig_total_imported == 0
+    assert dry_run.revision_snapshots is None
+    assert dry_run.recovery_plan is None
+    assert dry_run.recovery_summary.recommended_next_step == (
+        "review_handoff_privacy_before_recovery"
+    )
+    assert dry_run.recovery_summary.first_mutation_action is None
+    assert dry_run.recovery_summary.first_safe_review_or_mutation_action is None
+    assert dry_run.recovery_summary.first_safe_review_or_mutation_source is None
+    assert dry_run.recovery_summary.first_suggested_next_action is not None
+    assert dry_run.recovery_summary.first_suggested_next_action.tool_name == (
+        "import_handoff_bundle"
+    )
+    assert dry_run.recovery_summary.first_suggested_next_action.action_label == (
+        "Import privacy-gated handoff bundle"
+    )
+    assert "non-mutating manifest privacy gate" in (
+        dry_run.recovery_summary.note
+    )
+    assert "export_preflight" in (
+        dry_run.recovery_summary.first_suggested_next_action.reason
+    )
+    assert [action.tool_name for action in dry_run.suggested_next_actions] == [
+        "import_handoff_bundle"
+    ]
+    assert fake_secret not in json.dumps(to_dict(dry_run))
+
     imported = receiver.import_handoff_bundle(manifest_path)
 
     assert imported.recovery_plan is not None

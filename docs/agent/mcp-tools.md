@@ -2935,6 +2935,13 @@ rerun `project_brief` in the fresh capsule. Pass `dry_run=true` to inspect the
 manifest paths and expected receiver action without mutating the capsule. Pass
 `replace=true` only when overwriting existing graph roles and stored snapshot
 pairs is intentional.
+When a dry-run manifest records nonzero `sensitive_literal_count`, treat that
+dry-run response as the read-only manifest privacy gate: it reports
+`recommended_next_step="review_handoff_privacy_before_recovery"` and its real
+import suggestion is labelled privacy-gated. Do not expect a receiver-side
+`export_preflight` to rescan the artifact before import; after local import, the
+import result promotes that redacted `export_preflight` gate and suppresses
+recovery/mutation actions until review is explicit.
 Read `recovery_summary` first for a compact receiver smoke check. It reports
 snapshot evidence completeness/status counts, matching recovery-session counts,
 recovery lane and next-action queue counts, mutation-frontier IRIs, preserved

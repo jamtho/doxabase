@@ -4889,6 +4889,17 @@ few useful gaps:
   options. Those structured actions now remain available for route-card
   diagnosis, but the compatibility call list omits the `draft_query_plan`
   strings until the repair lane is resolved.
+- A privacy/export handoff trial confirmed broad dirty handoffs are blocked by
+  `project_brief` and `export_preflight`, guarded writes fail with
+  `fail_on_sensitive=true`, receiver imports suppress recovery behind
+  `export_preflight`, and scanner-clean context-slice exports stay marked as
+  resource-scoped, not recovery-complete. The independent dry-run trial found a
+  receiver-side adoption gap: `import_handoff_bundle(dry_run=true)` saw dirty
+  manifest metadata but still routed to a plain real import. Dirty dry-runs now
+  report `review_handoff_privacy_before_recovery`, label the import as
+  privacy-gated, and explain that the dry-run itself is the non-mutating
+  manifest privacy gate; the real local import still exposes the redacted
+  `export_preflight` gate before recovery or mutation actions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

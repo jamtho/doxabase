@@ -64803,6 +64803,13 @@ class DoxaBase:
                     include_drafts=include_drafts,
                     validation_scope=validation_scope,
                     drift_detail=drift_detail,
+                    privacy_review_required_before_recovery=(
+                        privacy_review_required_before_recovery
+                    ),
+                    validation_review_required_before_recovery=(
+                        invalid_handoff_validation_action is not None
+                        and not privacy_review_required_before_recovery
+                    ),
                 )
             ]
         else:
@@ -64975,12 +64982,11 @@ class DoxaBase:
             recovery_plan=recovery_plan,
             suggested_next_actions=suggested_next_actions,
             privacy_review_required_before_recovery=(
-                privacy_review_required_before_recovery and not dry_run
+                privacy_review_required_before_recovery
             ),
             validation_review_required_before_recovery=(
                 invalid_handoff_validation_action is not None
                 and not privacy_review_required_before_recovery
-                and not dry_run
             ),
         )
 
@@ -65132,23 +65138,19 @@ class DoxaBase:
         first_safe_action: SuggestedNextAction | RevisionNextAction | None = None
         first_safe_action_source: str | None = None
         if privacy_review_required_before_recovery:
-            first_safe_action = (
-                suggested_next_actions[0] if suggested_next_actions else None
-            )
-            first_safe_action_source = (
-                "handoff_import_privacy_review"
-                if first_safe_action is not None
-                else None
-            )
+            if (
+                first_action is not None
+                and first_action.tool_name == "export_preflight"
+            ):
+                first_safe_action = first_action
+                first_safe_action_source = "handoff_import_privacy_review"
         elif validation_review_required_before_recovery:
-            first_safe_action = (
-                suggested_next_actions[0] if suggested_next_actions else None
-            )
-            first_safe_action_source = (
-                "handoff_import_validation_review"
-                if first_safe_action is not None
-                else None
-            )
+            if (
+                first_action is not None
+                and first_action.tool_name == "validate_graph"
+            ):
+                first_safe_action = first_action
+                first_safe_action_source = "handoff_import_validation_review"
         elif imported_session_continuation_required:
             first_safe_action = (
                 suggested_next_actions[0] if suggested_next_actions else None
@@ -65225,17 +65227,35 @@ class DoxaBase:
             f"{snapshot_note} recommended_next_step={recommended_next_step}."
         )
         if privacy_review_required_before_recovery:
-            note = (
-                "The imported handoff manifest records sensitive-looking "
-                "artifact terms; run the suggested export_preflight before "
-                f"following recovery or mutation actions. {note}"
-            )
+            if dry_run:
+                note = (
+                    "The handoff manifest dry-run records sensitive-looking "
+                    "artifact terms. The dry-run is the non-mutating manifest "
+                    "privacy gate; run the real import only for local recovery, "
+                    "then follow its export_preflight gate before any recovery "
+                    f"or mutation actions. {note}"
+                )
+            else:
+                note = (
+                    "The imported handoff manifest records sensitive-looking "
+                    "artifact terms; run the suggested export_preflight before "
+                    f"following recovery or mutation actions. {note}"
+                )
         elif validation_review_required_before_recovery:
-            note = (
-                "The imported handoff manifest records failed export "
-                "validation; run the suggested validate_graph review before "
-                f"following recovery or mutation actions. {note}"
-            )
+            if dry_run:
+                note = (
+                    "The handoff manifest dry-run records failed export "
+                    "validation. The dry-run is the non-mutating validation "
+                    "gate; run the real import only for local recovery, then "
+                    "follow its validate_graph gate before any recovery or "
+                    f"mutation actions. {note}"
+                )
+            else:
+                note = (
+                    "The imported handoff manifest records failed export "
+                    "validation; run the suggested validate_graph review before "
+                    f"following recovery or mutation actions. {note}"
+                )
         elif imported_session_continuation_required:
             note = (
                 "Continue the imported source recovery session before following "
@@ -66221,6 +66241,8 @@ class DoxaBase:
         include_drafts: bool,
         validation_scope: str | None,
         drift_detail: str,
+        privacy_review_required_before_recovery: bool = False,
+        validation_review_required_before_recovery: bool = False,
     ) -> SuggestedNextAction:
         arguments: dict[str, Any] = {
             "manifest_path": manifest_path,
@@ -66231,16 +66253,37 @@ class DoxaBase:
         }
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return SuggestedNextAction(
-            action_label="Import handoff bundle",
-            tool_name="import_handoff_bundle",
-            mcp_tool_name="doxabase.import_handoff_bundle",
-            arguments=arguments,
-            reason=(
+        if privacy_review_required_before_recovery:
+            action_label = "Import privacy-gated handoff bundle"
+            reason = (
+                "Dry-run parsed a recovery-complete handoff manifest that "
+                "records sensitive-looking artifact terms. The dry-run is the "
+                "non-mutating manifest privacy gate; run the real import only "
+                "for local recovery, then follow its redacted export_preflight "
+                "gate before any recovery or mutation actions."
+            )
+        elif validation_review_required_before_recovery:
+            action_label = "Import validation-gated handoff bundle"
+            reason = (
+                "Dry-run parsed a recovery-complete handoff manifest that "
+                "records failed export validation. The dry-run is the "
+                "non-mutating validation gate; run the real import only for "
+                "local diagnostics, then follow its validate_graph gate before "
+                "any recovery or mutation actions."
+            )
+        else:
+            action_label = "Import handoff bundle"
+            reason = (
                 "Dry-run parsed a recovery-complete handoff manifest. Run the "
                 "real import to load project/history RDF first, then companion "
                 "revision snapshot rows, and return a staged recovery plan."
-            ),
+            )
+        return SuggestedNextAction(
+            action_label=action_label,
+            tool_name="import_handoff_bundle",
+            mcp_tool_name="doxabase.import_handoff_bundle",
+            arguments=arguments,
+            reason=reason,
             call=self._suggested_call_string("import_handoff_bundle", arguments),
         )
 
