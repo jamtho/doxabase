@@ -4922,6 +4922,17 @@ few useful gaps:
   keep watching whether repeated receivers need a flatter query-evidence card
   or inline aggregate-result payload support rather than only result-source
   references.
+- A profile metric/type promotion trial confirmed one profile evidence set can
+  drive a real map transition while keeping semantic choices review-gated. The
+  source capsule applied one reviewed profile-map update for `rc:nullable`,
+  staged metric vocabulary, value-type vocabulary, and value-type assertion
+  candidates with stored profile route sources, and exported a profile insight
+  review bundle that blocked bulk apply and left the row-count scalar conflict
+  lane open. A cold reviewer reconstructed the applied row, the three remaining
+  semantic candidates, the open conflict lane, and the next safe action from the
+  proof, bundle, and capsule without source script state. No runtime gap was
+  found; keep treating these bundles as the review surface before applying
+  profile-linked ontology or map assertions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
