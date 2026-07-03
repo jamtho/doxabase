@@ -4977,6 +4977,19 @@ few useful gaps:
   and rerun. No runtime gap was found; keep watching whether the two Markdown
   `Profile Route Bridge` sections need clearer labels if future receivers
   confuse row-local direct-lane closure with bundle-level remaining lanes.
+- A mixed-frontier `project_brief` trial confirmed cold frontier selection can
+  avoid polishing visible queues when hidden work exists. A scratch capsule
+  combined a pending query repair, a pending profile-map update, and a ready
+  query-plan handoff. With `limit=1`, `project_brief` returned only
+  `staged_frontier_review` but set `first_unattended_action` to the full
+  frontier expansion and blocked mutation until the rerun. The expanded brief
+  exposed staged, query repair, profile review, and ready-plan tasks, then
+  routed first to `plan_staged_revision_recovery`. Recovery classified both
+  staged rows as stale from map-count drift; dry-run batch restage selected both
+  and the real batch created ready successors while validation stayed clean. No
+  runtime gap was found; this is the intended route when a project brief is
+  crowded or when fresh profile/query work is tempting but current staged
+  frontier state still needs review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
