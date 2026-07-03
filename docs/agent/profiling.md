@@ -123,11 +123,12 @@ For the common next step, run
 `python examples/rich-profile-manifest-smoke.py`. It uses the scaffold shape,
 merges reviewed external aggregate profile facts such as null counts, distinct
 counts, value frequencies, scalar metrics, reviewed profile patterns, and
-reviewed layout status into the manifest, applies it with `profile_to_capsule`,
-and inspects
+reviewed layout status into the manifest, adds a reviewed domain-network
+aggregate profile, applies it with `profile_to_capsule`, and inspects
 `describe_profile_run`, `draft_profile_map_updates`, `describe_query_context`,
-and a logical analysis view. The example deliberately keeps profiling outside
-DoxaBase; DoxaBase records the reviewed aggregates.
+domain-network profile evidence, and logical analysis views. The example
+deliberately keeps profiling outside DoxaBase; DoxaBase records the reviewed
+aggregates.
 
 Use `record_domain_network_profile` when a communication-like dataset has
 reviewed aggregate sender/recipient-domain coverage counts, optional domain-pair

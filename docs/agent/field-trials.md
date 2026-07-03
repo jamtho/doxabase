@@ -4869,6 +4869,15 @@ few useful gaps:
   carried `TODO:` descriptions and denominators; the CLI now rejects those
   placeholders by default and requires `--allow-review-placeholders` for
   scratch-only mechanical applies.
+- A profile joint-write trial confirmed one reviewed
+  `doxabase.profile_to_capsule_manifest.v1` can create a query-ready profiled
+  table, logical analysis views, a caveat, table/column profile observations,
+  and a reviewed domain-network aggregate profile in one validated scratch
+  capsule. The maintained `rich-profile-manifest-smoke.py` now covers that
+  route with one domain-network profile and four aggregate network observations.
+  Domain-network `analysis_view_iri` fields create helper-owned denominator
+  views; if a manifest also has top-level `analysis_views`, give those views
+  distinct IRIs unless the API grows an explicit existing-view link.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

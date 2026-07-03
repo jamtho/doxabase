@@ -198,8 +198,8 @@ Not implemented yet:
   table map bundles, profile bundles, logical analysis views, and
   recovery-complete handoff verification from reviewed aggregate facts.
 - `examples/rich-profile-manifest-smoke.py` - scaffold-plus-external-profile
-  manifest route that records reviewed aggregate profile facts without local
-  row scanning.
+  manifest route that records reviewed aggregate profile facts, a logical view,
+  and a domain-network aggregate profile without local row scanning.
 - `examples/analysis-packet-manifest-smoke.py` - reviewed analysis-packet JSON
   manifest route for graph-native handoffs over logical views, artifacts,
   query recipes, and follow-up tasks.
@@ -259,7 +259,7 @@ fixture's path from reviewed metadata overlay through stale partition-link
 repair to a non-executed DuckDB handoff. Use
 `examples/rich-profile-manifest-smoke.py` when you want to check the route from
 a Parquet footer/schema scaffold plus reviewed external aggregate profile facts
-to a capsule. Use
+and domain-network coverage into a capsule. Use
 `examples/analysis-packet-manifest-smoke.py` when you want to check the reviewed
 analysis-packet JSON manifest route for sidecar-to-graph handoffs. Use
 `examples/staged-semantic-repair-smoke.py` when you want a compact semantic
