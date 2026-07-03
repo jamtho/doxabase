@@ -37157,7 +37157,11 @@ class DoxaBase:
                     )
             evidence_triples = self._insert_graph("evidence", evidence_graph)
 
-        pattern_triples = self._insert_graph("patterns", pattern_graph)
+        pattern_triples = self._write_pattern_graph(
+            pattern_subject,
+            pattern_graph,
+            replace_existing=pattern_iri is not None,
+        )
         return PatternRecord(
             pattern_iri=str(pattern_subject),
             evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
@@ -37166,6 +37170,37 @@ class DoxaBase:
             ),
             pattern_triples=pattern_triples,
             evidence_triples=evidence_triples,
+        )
+
+    def _write_pattern_graph(
+        self,
+        pattern_subject: URIRef,
+        pattern_graph: Graph,
+        *,
+        replace_existing: bool,
+    ) -> int:
+        if not replace_existing:
+            return self._insert_graph("patterns", pattern_graph)
+        return self._replace_subject_triples(
+            "patterns",
+            str(pattern_subject),
+            [
+                str(RDF.type),
+                self.expand_iri("rc:summary"),
+                self.expand_iri("rc:patternText"),
+                self.expand_iri("rc:rationale"),
+                self.expand_iri("rc:synthesizedAt"),
+                self.expand_iri("rc:synthesizedBy"),
+                self.expand_iri("rc:patternTarget"),
+                self.expand_iri("rc:supportingObservation"),
+                self.expand_iri("rc:supportingClaim"),
+                self.expand_iri("rc:evidence"),
+                self.expand_iri("rc:confidence"),
+                self.expand_iri("rc:observationStatus"),
+                self.expand_iri("rc:patternStability"),
+                self.expand_iri("rc:mapImplication"),
+            ],
+            pattern_graph,
         )
 
     def record_dataset_profile(
@@ -39786,6 +39821,13 @@ class DoxaBase:
         manifest_spec = self._normalise_profile_to_capsule_manifest(manifest)
         with self._preflight_clone() as clone:
             clone._apply_profile_to_capsule_manifest(manifest_spec)
+            validation = clone.validate_graph(scope="all")
+            if not validation.conforms:
+                raise DoxaBaseError(
+                    "record_profile_to_capsule_manifest would make the capsule "
+                    "invalid: "
+                    + self._validation_failure_summary(validation)
+                )
         return self._apply_profile_to_capsule_manifest(manifest_spec)
 
     def _apply_profile_to_capsule_manifest(
@@ -73582,12 +73624,42 @@ class DoxaBase:
         seen: set[str] = set()
         for group in action_groups:
             for action in group:
-                key = action.call or f"{action.tool_name}:{action.arguments!r}"
+                key = json.dumps(
+                    [action.tool_name, action.arguments],
+                    sort_keys=True,
+                    default=str,
+                )
                 if key in seen:
                     continue
                 seen.add(key)
                 actions.append(action)
         return actions
+
+    @staticmethod
+    def _validation_failure_summary(validation: ValidationResult) -> str:
+        messages = [
+            message
+            for result in validation.results
+            for message in result.messages
+            if message
+        ]
+        if messages:
+            first_message = messages[0]
+        elif validation.results:
+            first_result = validation.results[0]
+            first_message = (
+                first_result.result_path_label
+                or first_result.result_path
+                or first_result.focus_node_label
+                or first_result.focus_node
+                or "validation result"
+            )
+        else:
+            first_message = "validation failed"
+        remaining = max(validation.result_count - 1, 0)
+        if remaining:
+            return f"{first_message} (+{remaining} more)"
+        return first_message
 
     def _normalise_table_bundle_column_specs(
         self,

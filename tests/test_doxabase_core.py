@@ -29277,6 +29277,88 @@ def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
     assert validation.conforms, validation.report_text
 
 
+def test_record_profile_to_capsule_manifest_replays_stable_pattern_iris(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-manifest-replay#"
+    messages = f"{base}messages"
+    message_id_pattern = f"{base}pattern_message_id_identifier"
+    manifest = {
+        "format": "doxabase.profile_to_capsule_manifest.v1",
+        "table_defaults": {
+            "sample_method": "Reviewed no-I/O aggregate manifest.",
+            "storage_protocol": "rc:LocalFilesystemStorage",
+            "access_mode": "rc:ReadOnlyAccess",
+            "location_kind": "directory",
+            "storage_root": str(tmp_path),
+            "layout_verification_status": "rc:VerifiedByListingLayout",
+            "storage_layout_verification_status": "rc:VerifiedByListingLayout",
+            "physical_layout_verification_status": "rc:VerifiedByListingLayout",
+        },
+        "tables": [
+            {
+                "iri": messages,
+                "label": "Messages",
+                "dataset_summary": "Messages profile captured reviewed counts.",
+                "evidence_summary": "Reviewed Messages profile manifest.",
+                "evidence_sources": ["scratch://profiles/messages.json"],
+                "path_templates": ["messages/current.parquet"],
+                "row_count": 12,
+                "columns": [
+                    {
+                        "column_name": "message_id",
+                        "physical_type": "rc:Varchar",
+                        "null_count": 0,
+                        "distinct_count": 12,
+                        "pattern_iri": message_id_pattern,
+                        "pattern_summary": "message_id behaves like an identifier.",
+                        "pattern_text": (
+                            "The reviewed profile sidecar reported no nulls "
+                            "and full distinctness for message_id."
+                        ),
+                        "pattern_rationale": (
+                            "Identifier-like columns should stay connected "
+                            "to their supporting aggregate profile facts."
+                        ),
+                    }
+                ],
+            }
+        ],
+    }
+
+    first = db.record_profile_to_capsule_manifest(manifest)
+    second = db.record_profile_to_capsule_manifest(manifest)
+
+    assert first.table_iris == [messages]
+    assert second.table_iris == [messages]
+    next_action_keys = [
+        (action.tool_name, json.dumps(action.arguments, sort_keys=True))
+        for action in second.suggested_next_actions
+    ]
+    assert len(next_action_keys) == len(set(next_action_keys))
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+    patterns = db.to_graph(["patterns"])
+    assert (
+        len(
+            list(
+                patterns.objects(
+                    URIRef(message_id_pattern),
+                    URIRef(RC + "synthesizedAt"),
+                )
+            )
+        )
+        == 1
+    )
+    pattern = db.describe_pattern(message_id_pattern)
+    assert pattern.summary == "message_id behaves like an identifier."
+    assert [target.iri for target in pattern.pattern_targets] == [
+        f"{messages}__message_id"
+    ]
+    assert len(pattern.supporting_observations) == 1
+
+
 def test_record_profile_to_capsule_manifest_records_domain_network_profiles(
     tmp_path: Path,
 ) -> None:
