@@ -99,6 +99,12 @@ Common physical registration views built directly from readers such as
 `read_parquet(...)` are skipped so cookbook setup does not masquerade as a
 logical analysis population.
 
+The CLI apply path rejects manifest fields that still start with `TODO:` by
+default. Replace scaffold placeholders with reviewed descriptions,
+denominators, source datasets, recipes, and follow-up tasks before graph-native
+recording. Use `--allow-review-placeholders` only for scratch tests where the
+point is to exercise mechanics, not to preserve a reviewed handoff.
+
 Markdown sidecars remain locator evidence until someone translates the reviewed
 denominators, SQL snippets, artifact locators, caveats, and follow-up tasks into
 structured packet fields. If a handoff directory contains only

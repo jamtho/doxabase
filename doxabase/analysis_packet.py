@@ -31,6 +31,7 @@ def apply_manifest_file(
     manifest_path: str | Path,
     overwrite: bool = False,
     validation_scope: str = "all",
+    allow_review_placeholders: bool = False,
 ) -> dict[str, Any]:
     """Apply one reviewed analysis-packet manifest file."""
 
@@ -48,6 +49,9 @@ def apply_manifest_file(
 
     if capsule.parent != Path("."):
         capsule.parent.mkdir(parents=True, exist_ok=True)
+
+    if not allow_review_placeholders:
+        _raise_if_review_placeholders(manifest)
 
     packet = _normalise_analysis_packet_manifest(manifest)
     with DoxaBase.create(capsule, overwrite=overwrite) as db:
@@ -572,6 +576,41 @@ def _normalise_analysis_packet_manifest(manifest: Any) -> dict[str, Any]:
     return packet
 
 
+def _raise_if_review_placeholders(manifest: Any) -> None:
+    placeholder_paths = _review_placeholder_paths(manifest)
+    if not placeholder_paths:
+        return
+    shown = ", ".join(placeholder_paths[:8])
+    remaining = len(placeholder_paths) - 8
+    if remaining > 0:
+        shown = f"{shown}, and {remaining} more"
+    raise DoxaBaseError(
+        "analysis-packet manifest still contains review placeholder field(s): "
+        f"{shown}. Replace scaffold TODO values before applying, or pass "
+        "--allow-review-placeholders for a scratch-only apply."
+    )
+
+
+def _review_placeholder_paths(value: Any, path: str = "") -> list[str]:
+    if isinstance(value, str):
+        if value.strip().upper().startswith("TODO:"):
+            return [path or "<manifest>"]
+        return []
+    if isinstance(value, Mapping):
+        paths: list[str] = []
+        for key, child in value.items():
+            child_path = str(key) if not path else f"{path}.{key}"
+            paths.extend(_review_placeholder_paths(child, child_path))
+        return paths
+    if isinstance(value, list):
+        paths = []
+        for index, child in enumerate(value):
+            child_path = f"{path}[{index}]" if path else f"[{index}]"
+            paths.extend(_review_placeholder_paths(child, child_path))
+        return paths
+    return []
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -658,6 +697,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Replace an existing capsule before applying the manifest.",
     )
     parser.add_argument(
+        "--allow-review-placeholders",
+        action="store_true",
+        help=(
+            "Allow scaffold TODO placeholder strings when applying a manifest. "
+            "Intended for scratch tests only; reviewed handoffs should replace "
+            "placeholders before graph-native recording."
+        ),
+    )
+    parser.add_argument(
         "--validation-scope",
         default="all",
         choices=["map", "ontology", "patterns", "shapes", "all"],
@@ -712,6 +760,7 @@ def main(argv: list[str] | None = None) -> int:
             manifest_path=args.manifest,
             overwrite=args.overwrite,
             validation_scope=args.validation_scope,
+            allow_review_placeholders=args.allow_review_placeholders,
         )
     except DoxaBaseError as exc:
         print(f"error: {exc}", file=sys.stderr)

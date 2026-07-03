@@ -4861,6 +4861,14 @@ few useful gaps:
   Query context now carries non-blocking
   `s3_credential_reference_not_recorded` info so agents preserve the difference
   between intentionally omitted secrets and an unstated runtime handle.
+- A cold Enron sidecar-to-analysis-packet trial found the graph-native route can
+  work end to end after review: a scratch capsule validated with one packet,
+  seventeen logical analysis views, forty-two artifact locators, four query
+  recipes, three follow-up tasks, and project-brief review queues. The unsafe
+  adoption gap was applying raw `--extract-markdown-views` scaffolds that still
+  carried `TODO:` descriptions and denominators; the CLI now rejects those
+  placeholders by default and requires `--allow-review-placeholders` for
+  scratch-only mechanical applies.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

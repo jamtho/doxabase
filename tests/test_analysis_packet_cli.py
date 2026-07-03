@@ -403,6 +403,25 @@ print("not a view")
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    blocked_apply = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "doxabase.analysis_packet",
+            "--capsule",
+            str(capsule_path),
+            "--manifest",
+            str(manifest_path),
+            "--overwrite",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert blocked_apply.returncode == 1
+    assert "review placeholder field" in blocked_apply.stderr
+    assert "analysis_views[0].description" in blocked_apply.stderr
+
     apply_result = subprocess.run(
         [
             sys.executable,
@@ -413,6 +432,7 @@ print("not a view")
             "--manifest",
             str(manifest_path),
             "--overwrite",
+            "--allow-review-placeholders",
         ],
         cwd=ROOT,
         check=True,

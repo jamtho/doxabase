@@ -122,6 +122,8 @@ Implemented:
 - `python -m doxabase.analysis_packet` for applying a reviewed
   `doxabase.analysis_packet_manifest.v1` JSON handoff, or scaffolding one from
   sidecar locators with optional review-only Markdown `CREATE VIEW` extraction.
+  The apply path rejects scaffold `TODO:` placeholders unless explicitly told to
+  allow them for scratch testing.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
