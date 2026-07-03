@@ -4911,6 +4911,17 @@ few useful gaps:
   cold recovery card may become worthwhile only if future trials repeatedly
   need to join recovery plans, queue rows, apply checks, lineage, and version
   diffs by hand.
+- A storage query-evidence handoff trial confirmed the ordinary evidence overlay
+  route works through a fresh receiver: a source capsule recorded an external
+  Python CSV aggregate with query hash, result source, and scanned source path;
+  used that evidence to draft, stage, apply, and validate storage/layout
+  metadata; exported a local-only context slice; and a receiver capsule imported
+  the slice, validated, inspected the singleton evidence, and reached an
+  `execution_attempt_ready` `draft_query_plan` without source process state.
+  The local-path shareability hint remained visible. No runtime gap was found;
+  keep watching whether repeated receivers need a flatter query-evidence card
+  or inline aggregate-result payload support rather than only result-source
+  references.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
