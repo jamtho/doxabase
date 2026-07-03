@@ -4966,6 +4966,17 @@ few useful gaps:
   the manifest, recovered exact staged evidence, applied the row, validated,
   inspected lineage/applied diff, and cleared the staged frontier. Shareability
   review of the handoff artifact remains an external gate.
+- A profile semantic review-bundle trial confirmed a post-apply handoff can
+  recover a profile-derived ontology move without hidden source-process state.
+  The scratch capsule staged profile map updates, staged and applied a
+  pattern-supported value-type definition, exported a profile insight review
+  bundle with the applied source recovered, and validated all graphs. The
+  bundle and cold reviewer both reconstructed `define_value_type` as closed,
+  `assert_map_type` and `caveat_fallback` as remaining, bulk apply as blocked,
+  and exactly one safe-single map-update candidate to apply only after review
+  and rerun. No runtime gap was found; keep watching whether the two Markdown
+  `Profile Route Bridge` sections need clearer labels if future receivers
+  confuse row-local direct-lane closure with bundle-level remaining lanes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
