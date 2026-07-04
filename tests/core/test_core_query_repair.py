@@ -696,7 +696,8 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
     assert listing_action["args"]["spec"]["change_kind"] == "replace"
     assert context.suggested_next_actions
     draft_action = context.suggested_next_actions[0]
-    assert draft_action.tool == "doxabase.draft_query_plan"
+    assert draft_action.tool == "doxabase.describe_query_context"
+    assert "plan_candidate" in draft_action.args
 
     arguments = dict(listing_action["args"]["spec"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -921,7 +922,8 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     )
     assert context.suggested_next_actions
     draft_action = context.suggested_next_actions[0]
-    assert draft_action.tool == "doxabase.draft_query_plan"
+    assert draft_action.tool == "doxabase.describe_query_context"
+    assert "plan_candidate" in draft_action.args
     action = repair_group.actions[0]
     assert (
         action["tool"],
@@ -1421,7 +1423,8 @@ def test_missing_storage_access_repair_omits_duplicate_path_template(
     draft_actions = [
         action
         for action in after.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
     ]
     assert len(draft_actions) == 1
 
@@ -2130,13 +2133,14 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
         and "physical_layout_iri" in action.args
     ]
     assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_selector": target.candidate_selector,
+            "plan_candidate": target.candidate_selector,
             "physical_layout_iri": parquet_layout.iri,
         },
     ]

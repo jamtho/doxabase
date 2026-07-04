@@ -2374,8 +2374,9 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
     ] == [
         "describe_resource",
         "describe_resource",
-        "draft_query_plan",
+        "describe_query_context",
     ]
+    assert "plan_candidate" in context.suggested_next_actions[2].args
     assert context.safe_inspection_action_indexes == [0, 1]
     assert context.first_safe_inspection_action_index == 0
     assert context.suggested_next_actions[1].args == {

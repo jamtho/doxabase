@@ -1371,23 +1371,24 @@ class BriefMixin:
         dataset: ProjectBriefDatasetSummary,
     ) -> SuggestedNextAction:
         for action in dataset.query.suggested_next_actions:
-            if action.tool == "doxabase.draft_query_plan":
+            if _is_plan_action(action):
                 return action
 
         query_context = self.describe_query_context(dataset.dataset.iri)
         for action in query_context.suggested_next_actions:
-            if action.tool == "doxabase.draft_query_plan":
+            if _is_plan_action(action):
                 return action
 
-        arguments = {"iri": dataset.dataset.iri}
+        arguments: dict[str, Any] = {"iri": dataset.dataset.iri}
         candidate_indexes = (
             dataset.query.ready_candidate_indexes
             or dataset.query.direct_clean_candidate_indexes
         )
-        if candidate_indexes:
-            arguments["candidate_index"] = candidate_indexes[0]
+        arguments["plan_candidate"] = (
+            candidate_indexes[0] if candidate_indexes else "auto"
+        )
         return SuggestedNextAction(
-                   tool="doxabase.draft_query_plan",
+                   tool="doxabase.describe_query_context",
                    args=arguments,
                    reason="Draft a non-executed query-plan handoff for a dataset whose "
                 "query context is ready for planning.",
@@ -1396,10 +1397,24 @@ class BriefMixin:
         self,
         action: SuggestedNextAction,
     ) -> DraftQueryPlanHandoffSummary | None:
-        if action.tool != "doxabase.draft_query_plan":
+        if not _is_plan_action(action):
             return None
+        plan_candidate = action.args.get("plan_candidate")
         try:
-            return self.draft_query_plan(**action.args).handoff_summary
+            return self.draft_query_plan(
+                iri=action.args["iri"],
+                candidate_index=(
+                    plan_candidate
+                    if isinstance(plan_candidate, int)
+                    else None
+                ),
+                candidate_selector=(
+                    plan_candidate
+                    if isinstance(plan_candidate, str)
+                    and plan_candidate != "auto"
+                    else None
+                ),
+            ).handoff_summary
         except DoxaBaseError:
             return None
     @staticmethod

@@ -291,3 +291,19 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   import-sequence steps carry kind. Suite 732 passed (6 tests added
   across R4/R5), gate + wheel smoke green. Next: Phase 4 sweep (row 8
   fold, replace_graph_triples removal, docstring/schema budget pass).
+
+## Wave 14 — 2026-07-05 — Phase 4 sweep: 25 tools
+
+- draft_query_plan folded into describe_query_context(plan_candidate=
+  "auto"|selector|index) with planning params valid only alongside it;
+  replace_graph_triples left MCP (Python method survives; orphaned tool
+  function deleted). Plan-drafting suggestions are describe_query_context
+  actions with plan_candidate in args (_is_plan_action in _shared).
+- 44 test reconciliations by sub-agent (plan filters strengthened to
+  require plan_candidate so context vs plan assertions can't cross-match).
+- **Phase 4 tool-count target reached: 89 → 25.** Suite 732 passed; gate
+  green. Ceilings: 25 tools / 36,500 chars.
+- Open item (escalated to James in doc 08): schema chars 35,136 vs 25,000
+  end-state — the remainder is anyOf inflation on four flat recording
+  tools; closing it needs the tail-params→spec structural decision.
+- Next: Phase 3.6 response diets, then the Gate-3/4 battery rerun.

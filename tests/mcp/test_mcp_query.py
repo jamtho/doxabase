@@ -109,8 +109,9 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
         action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"][:2]
     ] == [
         "describe_resource",
-        "draft_query_plan",
+        "describe_query_context",
     ]
+    assert "plan_candidate" in context["suggested_next_actions"][1]["args"]
     assert context["safe_inspection_action_indexes"] == [0]
     assert context["first_safe_inspection_action_index"] == 0
     profile_action = context["suggested_next_actions"][0]
@@ -208,7 +209,8 @@ def test_describe_query_context_tool_returns_planning_projection(
     draft_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
     )
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert result["storage_accesses"][0]["access_mode"]["iri"] == (
@@ -257,7 +259,7 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
         "doxabase.get_context_graph"
     )
 
-    plan = draft_query_plan_tool(db, iri=asset)
+    plan = describe_query_context_tool(db, iri=asset, plan_candidate="auto")
 
     assert plan["handoff_kind"] == "not_applicable_non_tabular_asset"
     assert plan["handoff_summary"]["handoff_kind"] == (
@@ -482,8 +484,9 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
     peer_actions = [
         action
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
-        and action["args"].get("candidate_selector")
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
+        and action["args"].get("plan_candidate")
         == object_candidate["candidate_selector"]
     ]
     assert peer_actions
@@ -554,8 +557,9 @@ def test_describe_query_context_tool_flags_unselected_route_intent(
     selected_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
-        and action["args"].get("candidate_selector")
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
+        and action["args"].get("plan_candidate")
         == result["query_target_candidates"][selected_index][
             "candidate_selector"
         ]
@@ -563,8 +567,9 @@ def test_describe_query_context_tool_flags_unselected_route_intent(
     production_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
-        and action["args"].get("candidate_selector")
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
+        and action["args"].get("plan_candidate")
         == result["query_target_candidates"][production_index][
             "candidate_selector"
         ]
@@ -778,7 +783,7 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     )
 
     context = describe_query_context_tool(db, iri=dataset)
-    plan = draft_query_plan_tool(db, iri=dataset)
+    plan = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
 
     assert context["readiness"] == "needs_review"
     assert context["issues"][0]["code"] == "database_relation_template_missing"

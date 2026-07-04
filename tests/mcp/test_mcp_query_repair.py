@@ -224,7 +224,8 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
     assert action["args"]["spec"]["validation_scope"] == "all"
     assert result["suggested_next_actions"]
     draft_action = result["suggested_next_actions"][0]
-    assert draft_action["tool"] == "doxabase.draft_query_plan"
+    assert draft_action["tool"] == "doxabase.describe_query_context"
+    assert "plan_candidate" in draft_action["args"]
 
     arguments = dict(action["args"]["spec"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -329,7 +330,8 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     )
     assert result["suggested_next_actions"]
     draft_action = result["suggested_next_actions"][0]
-    assert draft_action["tool"] == "doxabase.draft_query_plan"
+    assert draft_action["tool"] == "doxabase.describe_query_context"
+    assert "plan_candidate" in draft_action["args"]
     action = repair_group["actions"][0]
     assert (
         action["tool"],
@@ -408,10 +410,11 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     )
 
     context = describe_query_context_tool(db, iri=dataset)
-    automatic = draft_query_plan_tool(db, iri=dataset)
-    selected = draft_query_plan_tool(
+    automatic = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
+    selected = describe_query_context_tool(
         db,
         iri=dataset,
+        plan_candidate="auto",
         physical_layout_iri=parquet_layout["iri"],
     )
 
@@ -422,14 +425,15 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     selection_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
         and "physical_layout_iri" in action["args"]
     ]
     candidate_selector = context["query_target_candidates"][0]["candidate_selector"]
     assert [action["args"] for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_selector": candidate_selector,
+            "plan_candidate": candidate_selector,
             "physical_layout_iri": parquet_layout["iri"],
         },
     ]
@@ -520,13 +524,14 @@ def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
     selection_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
         and "physical_layout_iri" in action["args"]
     ]
 
     assert {
         (
-            action["args"]["candidate_selector"],
+            action["args"]["plan_candidate"],
             action["args"]["physical_layout_iri"],
         )
         for action in selection_actions
@@ -535,10 +540,10 @@ def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
         (database_selector, table_layout["iri"]),
     }
 
-    database_csv_plan = draft_query_plan_tool(
+    database_csv_plan = describe_query_context_tool(
         db,
         iri=dataset,
-        candidate_index=database_index,
+        plan_candidate=database_index,
         physical_layout_iri=csv_layout["iri"],
     )
 

@@ -1157,21 +1157,37 @@ def describe_query_context_tool(
     db: DoxaBase,
     iri: str,
     graph: str | None = "map",
-) -> dict[str, Any]:
-    return to_dict(db.describe_query_context(iri=iri, graph=graph))
-
-
-def draft_query_plan_tool(
-    db: DoxaBase,
-    iri: str,
-    graph: str | None = "map",
+    plan_candidate: str | int | None = None,
     engine: str = "duckdb",
-    candidate_index: int | None = None,
-    candidate_selector: str | None = None,
     storage_access_iri: str | None = None,
     physical_layout_iri: str | None = None,
     allow_context_blocked_candidate: bool = False,
 ) -> dict[str, Any]:
+    """Describe the query context; plan_candidate drafts a non-executed plan."""
+    if plan_candidate is None:
+        for name, value in (
+            ("storage_access_iri", storage_access_iri),
+            ("physical_layout_iri", physical_layout_iri),
+        ):
+            if value is not None:
+                raise DoxaBaseError(
+                    f"describe_query_context {name} is only valid together "
+                    "with plan_candidate (the query-plan drafting mode); pass "
+                    "plan_candidate='auto', a candidate selector string, or a "
+                    "candidate index"
+                )
+        if allow_context_blocked_candidate:
+            raise DoxaBaseError(
+                "describe_query_context allow_context_blocked_candidate is "
+                "only valid together with plan_candidate"
+            )
+        return to_dict(db.describe_query_context(iri=iri, graph=graph))
+    candidate_index: int | None = None
+    candidate_selector: str | None = None
+    if isinstance(plan_candidate, int):
+        candidate_index = plan_candidate
+    elif plan_candidate != "auto":
+        candidate_selector = plan_candidate
     return to_dict(
         db.draft_query_plan(
             iri=iri,
@@ -2803,26 +2819,6 @@ def export_graph_tool(
         fail_on_sensitive=fail_on_sensitive,
         fail_on_invalid=fail_on_invalid,
         validation_scope=validation_scope,  # type: ignore[arg-type]
-    )
-    return to_dict(result)
-
-
-def replace_graph_triples_tool(
-    db: DoxaBase,
-    graph: str,
-    removals: str | None = None,
-    additions: str | None = None,
-    format: str = "turtle",
-    expected_count: int | None = None,
-    allow_count_change: bool = False,
-) -> dict[str, Any]:
-    result = db.replace_graph_triples(
-        graph,
-        removals=removals,
-        additions=additions,
-        format=format,
-        expected_count=expected_count,
-        allow_count_change=allow_count_change,
     )
     return to_dict(result)
 

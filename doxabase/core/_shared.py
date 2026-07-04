@@ -435,6 +435,15 @@ def action_arguments(action: Any) -> MappingABC[str, Any]:
     return {}
 
 
+def _is_plan_action(action: Any) -> bool:
+    """True when a suggestion drafts a query plan (describe_query_context
+    with plan_candidate set)."""
+    return (
+        getattr(action, "tool", None) == "doxabase.describe_query_context"
+        and "plan_candidate" in getattr(action, "args", {})
+    )
+
+
 def suggested_action_key(action: Any) -> tuple[str, str]:
     """Stable identity key for a suggested next action (tool + canonical args)."""
 
@@ -727,6 +736,7 @@ def _existing_path(source: str | Path) -> Path | None:
 
 
 __all__ = [
+    "_is_plan_action",
     "copy",
     "hashlib",
     "json",

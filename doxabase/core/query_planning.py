@@ -354,7 +354,7 @@ class QueryPlanningMixin:
         candidate = candidates[decision.candidate_index]
         arguments: dict[str, Any] = {
             "iri": dataset_iri,
-            "candidate_selector": candidate.candidate_selector,
+            "plan_candidate": candidate.candidate_selector,
         }
         if graph is not None and graph != "map":
             arguments["graph"] = graph
@@ -428,7 +428,7 @@ class QueryPlanningMixin:
 
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.draft_query_plan",
+                tool="doxabase.describe_query_context",
                 args=arguments,
                 reason=reason,
             )
@@ -453,7 +453,7 @@ class QueryPlanningMixin:
             peer_candidate = candidates[peer_index]
             peer_arguments: dict[str, Any] = {
                 "iri": dataset_iri,
-                "candidate_selector": peer_candidate.candidate_selector,
+                "plan_candidate": peer_candidate.candidate_selector,
             }
             if graph is not None and graph != "map":
                 peer_arguments["graph"] = graph
@@ -484,7 +484,7 @@ class QueryPlanningMixin:
                 peer_reason = f"{peer_reason} {peer_caution}"
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.draft_query_plan",
+                    tool="doxabase.describe_query_context",
                     args=peer_arguments,
                     reason=peer_reason,
                 )

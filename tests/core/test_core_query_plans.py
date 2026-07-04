@@ -271,7 +271,8 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
     query_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
     )
 
     assert plan.selected_candidate is not None
@@ -670,10 +671,11 @@ def test_query_target_candidates_surface_global_blockers(
     query_action = context.suggested_next_actions[0]
     local_selector = local_target.candidate_selector
     archive_selector = archive_target.candidate_selector
-    assert query_action.tool == "doxabase.draft_query_plan"
+    assert query_action.tool == "doxabase.describe_query_context"
+    assert "plan_candidate" in query_action.args
     assert query_action.args == {
         "iri": dataset,
-        "candidate_selector": local_selector,
+        "plan_candidate": local_selector,
         "allow_context_blocked_candidate": True,
     }
     assert (
@@ -681,10 +683,11 @@ def test_query_target_candidates_surface_global_blockers(
         in query_action.reason
     )
     peer_action = context.suggested_next_actions[1]
-    assert peer_action.tool == "doxabase.draft_query_plan"
+    assert peer_action.tool == "doxabase.describe_query_context"
+    assert "plan_candidate" in peer_action.args
     assert peer_action.args == {
         "iri": dataset,
-        "candidate_selector": archive_selector,
+        "plan_candidate": archive_selector,
         "allow_context_blocked_candidate": True,
     }
     assert "peer candidate has no direct warning or error" in peer_action.reason
@@ -910,7 +913,7 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert all(selector.startswith("query-target:") for selector in selectors)
     assert context.suggested_next_actions[1].args == {
         "iri": dataset,
-        "candidate_selector": selectors[1],
+        "plan_candidate": selectors[1],
     }
 
     automatic_plan = db.draft_query_plan(dataset)
@@ -1147,7 +1150,7 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     ]
     assert context.suggested_next_actions[0].args == {
         "iri": dataset,
-        "candidate_selector": root_target.candidate_selector,
+        "plan_candidate": root_target.candidate_selector,
         "allow_context_blocked_candidate": True,
     }
 
@@ -1156,7 +1159,9 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     assert automatic_plan.handoff_kind == "context_review_required"
     assert automatic_plan.review_gate.context_blocked_candidate_used is False
 
-    plan = db.draft_query_plan(**context.suggested_next_actions[0].args)
+    suggested_kwargs = dict(context.suggested_next_actions[0].args)
+    suggested_kwargs["candidate_selector"] = suggested_kwargs.pop("plan_candidate")
+    plan = db.draft_query_plan(**suggested_kwargs)
 
     assert plan.selected_candidate is not None
     assert plan.selected_candidate.template_source == "storage_access_location"
@@ -1214,7 +1219,8 @@ def test_draft_query_plan_blocks_selected_layout_path_extension_mismatch(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
         and "physical_layout_iri" in action.args
     ]
 
@@ -1222,7 +1228,7 @@ def test_draft_query_plan_blocks_selected_layout_path_extension_mismatch(
     assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_selector": target.candidate_selector,
+            "plan_candidate": target.candidate_selector,
             "physical_layout_iri": csv_layout.iri,
         }
     ]
@@ -1313,13 +1319,14 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
         and "physical_layout_iri" in action.args
     ]
     assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
-            "candidate_selector": clean_selector,
+            "plan_candidate": clean_selector,
             "physical_layout_iri": parquet_layout.iri,
             "allow_context_blocked_candidate": True,
         },
@@ -1373,7 +1380,11 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
 
-    selected_from_action = db.draft_query_plan(**selection_actions[0].args)
+    selected_from_action_kwargs = dict(selection_actions[0].args)
+    selected_from_action_kwargs["candidate_selector"] = (
+        selected_from_action_kwargs.pop("plan_candidate")
+    )
+    selected_from_action = db.draft_query_plan(**selected_from_action_kwargs)
 
     assert selected_from_action.source_context.allow_context_blocked_candidate is True
     assert selected_from_action.review_gate.context_blocked_candidate_allowed is True
@@ -1654,25 +1665,29 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert context.unselected_direct_clean_candidate_indexes == (
         context.unselected_ready_candidate_indexes
     )
-    assert context.suggested_next_actions[0].tool == "doxabase.draft_query_plan"
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_query_context"
+    assert "plan_candidate" in context.suggested_next_actions[0].args
     assert context.suggested_next_actions[0].args == {
         "iri": dataset,
-        "candidate_selector": context.query_target_candidates[
+        "plan_candidate": context.query_target_candidates[
             context.query_target_decision.candidate_index
         ].candidate_selector,
     }
     assert {
         action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions
-    } == {"draft_query_plan"}
+    } == {"describe_query_context"}
+    assert all(
+        "plan_candidate" in action.args for action in context.suggested_next_actions
+    )
     peer_actions = context.suggested_next_actions[1:]
     assert [action.args for action in peer_actions] == [
         {
             "iri": dataset,
-            "candidate_selector": local_partition.candidate_selector,
+            "plan_candidate": local_partition.candidate_selector,
         },
         {
             "iri": dataset,
-            "candidate_selector": context.query_target_candidates[
+            "plan_candidate": context.query_target_candidates[
                 database_relation_index
             ].candidate_selector,
         },
@@ -1694,7 +1709,9 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert partition_plan.review_gate.executable_without_review is True
     assert partition_plan.review_gate.binding_values_required is True
 
-    peer_action_plan = db.draft_query_plan(**peer_actions[0].args)
+    peer_action_kwargs = dict(peer_actions[0].args)
+    peer_action_kwargs["candidate_selector"] = peer_action_kwargs.pop("plan_candidate")
+    peer_action_plan = db.draft_query_plan(**peer_action_kwargs)
 
     assert peer_action_plan.review_gate.context_blocked_candidate_used is False
     assert peer_action_plan.review_gate.blocking_reason_codes == []
@@ -1847,8 +1864,9 @@ def test_query_target_candidates_expose_storage_route_roles(
         context.query_target_decision.selection_reason_codes
     )
     assert any(
-        action.tool == "doxabase.draft_query_plan"
-        and action.args.get("candidate_selector")
+        action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
+        and action.args.get("plan_candidate")
         == production_candidate.candidate_selector
         for action in context.suggested_next_actions
     )

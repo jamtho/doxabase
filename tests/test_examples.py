@@ -45,7 +45,8 @@ def test_first_workflow_example_runs(tmp_path: Path) -> None:
     assert "Key counts:" in output
     assert "Tables:" in output
     assert "Query decision:" in output
-    assert "Next action: doxabase.draft_query_plan" in output
+    assert "Next action: doxabase.describe_query_context" in output
+    assert "'plan_candidate'" in output
     assert "docs/agent/query-planning.md#ais-dailyindex-question-to-handoff-gap" in (
         output
     )

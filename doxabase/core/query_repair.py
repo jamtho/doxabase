@@ -921,7 +921,7 @@ class QueryRepairMixin:
                 seen_layout_iris.add(layout_iri)
                 arguments: dict[str, Any] = {
                     "iri": dataset_iri,
-                    "candidate_selector": candidate.candidate_selector,
+                    "plan_candidate": candidate.candidate_selector,
                     "physical_layout_iri": layout_iri,
                 }
                 if graph is not None and graph != "map":
@@ -950,7 +950,7 @@ class QueryRepairMixin:
                     reason = f"{reason} {unattended_caution}"
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.draft_query_plan",
+                        tool="doxabase.describe_query_context",
                         args=arguments,
                         reason=reason,
                     )

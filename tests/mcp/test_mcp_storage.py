@@ -18,7 +18,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_query_context" in tool_names
-    assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.get_context_graph" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_revision" in tool_names
@@ -48,7 +47,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.search" in tool_names
     assert "doxabase.export_bundle" in tool_names
     assert "doxabase.import_bundle" in tool_names
-    assert "doxabase.replace_graph_triples" in tool_names
     assert not any(
         name in tool_names
         for name in (
@@ -68,7 +66,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
             "doxabase.load_example_fixtures",
         )
     )
-    assert len(tool_names) == 27
+    assert len(tool_names) == 25
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_revision" in tool_names
     assert "doxabase.restage_staged_revision" in tool_names
@@ -302,22 +300,23 @@ def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) ->
         graph="map",
     )
 
-    result = replace_graph_triples_tool(
-        db,
-        graph="map",
-        removals="""
-            @prefix ex: <https://example.test/project#> .
-            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+    result = to_dict(
+        db.replace_graph_triples(
+            "map",
+            removals="""
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-            ex:Customers rdfs:label "Customers scratch table" .
-        """,
-        additions="""
-            @prefix ex: <https://example.test/project#> .
-            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                ex:Customers rdfs:label "Customers scratch table" .
+            """,
+            additions="""
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-            ex:Customers rdfs:label "Customers scratch table, drifted" .
-        """,
-        expected_count=2,
+                ex:Customers rdfs:label "Customers scratch table, drifted" .
+            """,
+            expected_count=2,
+        )
     )
 
     assert result["graph"] == "map"

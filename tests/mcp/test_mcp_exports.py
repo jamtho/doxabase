@@ -903,7 +903,7 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    result = draft_query_plan_tool(db, iri=dataset)
+    result = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
 
     assert result["selected_candidate"]["candidate_path"] == "mart.orders"
     assert result["selected_candidate"]["relation_identifier"] == "mart.orders"

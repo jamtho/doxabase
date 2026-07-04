@@ -200,7 +200,7 @@ def test_draft_query_evidence_storage_overlay_tool_replaces_status(
     assert staged["validation_conforms"] is True
     applied = apply_staged_revision_tool(db, staged["revision_iri"])
     assert applied["patches_applied"] == 2
-    plan = draft_query_plan_tool(db, iri=dataset)
+    plan = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
     assert plan["handoff_kind"] == "execution_attempt_ready"
     assert plan["scan"]["uri_template"] == str(csv_path)
 
@@ -209,9 +209,10 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
 
-    result = draft_query_plan_tool(
+    result = describe_query_context_tool(
         db,
         iri="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+        plan_candidate="auto",
     )
 
     assert result["helper"] == "draft_query_plan"
@@ -385,16 +386,18 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     selected_selector = context["query_target_candidates"][
         context["query_target_decision"]["candidate_index"]
     ]["candidate_selector"]
-    assert query_action["tool"] == "doxabase.draft_query_plan"
+    assert query_action["tool"] == "doxabase.describe_query_context"
+    assert "plan_candidate" in query_action["args"]
     assert query_action["args"] == {
         "iri": dataset,
-        "candidate_selector": selected_selector,
+        "plan_candidate": selected_selector,
         "allow_context_blocked_candidate": True,
     }
 
-    result = draft_query_plan_tool(
+    result = describe_query_context_tool(
         db,
         iri=dataset,
+        plan_candidate="auto",
         storage_access_iri=local_storage.iri,
         allow_context_blocked_candidate=True,
     )
@@ -530,24 +533,25 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert [
         action["args"]
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_plan"
+        if action["tool"] == "doxabase.describe_query_context"
+        and "plan_candidate" in action["args"]
     ] == [
         {
             "iri": dataset,
-            "candidate_selector": relation_candidate_selector,
+            "plan_candidate": relation_candidate_selector,
             "allow_context_blocked_candidate": True,
         },
         {
             "iri": dataset,
-            "candidate_selector": archive_candidate_selector,
+            "plan_candidate": archive_candidate_selector,
             "allow_context_blocked_candidate": True,
         },
     ]
 
-    result = draft_query_plan_tool(
+    result = describe_query_context_tool(
         db,
         iri=dataset,
-        candidate_selector=relation_candidate_selector,
+        plan_candidate=relation_candidate_selector,
         allow_context_blocked_candidate=True,
     )
 
@@ -596,9 +600,10 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     )
 
     with pytest.raises(DoxaBaseError) as exc_info:
-        draft_query_plan_tool(
+        describe_query_context_tool(
             db,
             iri=dataset,
+            plan_candidate="auto",
             storage_access_iri=relation_storage.iri,
         )
 
@@ -644,7 +649,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     )
 
     context = describe_query_context_tool(db, iri=dataset)
-    plan = draft_query_plan_tool(db, iri=dataset)
+    plan = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
 
     issue = next(
         issue
@@ -660,8 +665,9 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "database_relation_template_source_mismatch"
     )
     assert [action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]] == [
-        "draft_query_plan",
+        "describe_query_context",
     ]
+    assert "plan_candidate" in context["suggested_next_actions"][0]["args"]
     assert plan["selected_candidate"]["template_source"] == "dataset"
     assert plan["scan"].get("uri_template") is None
     assert plan["scan"].get("relation_identifier") is None

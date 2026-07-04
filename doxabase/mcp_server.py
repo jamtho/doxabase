@@ -14,7 +14,6 @@ from doxabase.mcp_tools import (
     describe_query_context_tool,
     describe_resource_tool,
     describe_revision_tool,
-    draft_query_plan_tool,
     export_bundle_tool,
     export_preflight_tool,
     get_doc_tool,
@@ -50,7 +49,6 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     record_query_result_tool,
     record_profile_bundle_tool,
-    replace_graph_triples_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_revision_tool,
@@ -178,31 +176,24 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def describe_query_context(
         iri: str,
         graph: str | None = "map",
-    ) -> dict[str, Any]:
-        """Return compact non-secret query-planning context for one dataset."""
-
-        return describe_query_context_tool(db, iri=iri, graph=graph)
-
-    @server.tool(name="doxabase.draft_query_plan")
-    def draft_query_plan(
-        iri: str,
-        graph: str | None = "map",
+        plan_candidate: str | int | None = None,
         engine: str = "duckdb",
-        candidate_index: int | None = None,
-        candidate_selector: str | None = None,
         storage_access_iri: str | None = None,
         physical_layout_iri: str | None = None,
         allow_context_blocked_candidate: bool = False,
     ) -> dict[str, Any]:
-        """Draft a non-executed, review-gated physical query plan."""
+        """Return compact non-secret query-planning context for one dataset.
+        Pass plan_candidate ('auto', a candidate selector string, or a
+        candidate index) to instead draft a non-executed, review-gated
+        physical query plan for that candidate; the other planning params
+        are only valid alongside plan_candidate."""
 
-        return draft_query_plan_tool(
+        return describe_query_context_tool(
             db,
             iri=iri,
             graph=graph,
+            plan_candidate=plan_candidate,
             engine=engine,
-            candidate_index=candidate_index,
-            candidate_selector=candidate_selector,
             storage_access_iri=storage_access_iri,
             physical_layout_iri=physical_layout_iri,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
@@ -633,27 +624,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         valid/missing spec fields."""
 
         return export_bundle_tool(db, kind=kind, spec=spec)
-
-    @server.tool(name="doxabase.replace_graph_triples")
-    def replace_graph_triples(
-        graph: str,
-        removals: str | None = None,
-        additions: str | None = None,
-        format: str = "turtle",
-        expected_count: int | None = None,
-        allow_count_change: bool = False,
-    ) -> dict[str, Any]:
-        """Replace caller-authored triples in one graph with count/digest metadata."""
-
-        return replace_graph_triples_tool(
-            db,
-            graph=graph,
-            removals=removals,
-            additions=additions,
-            format=format,
-            expected_count=expected_count,
-            allow_count_change=allow_count_change,
-        )
 
     @server.tool(name="doxabase.record_graph_revision")
     def record_graph_revision(

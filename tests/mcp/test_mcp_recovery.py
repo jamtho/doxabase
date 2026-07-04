@@ -437,8 +437,7 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         "alternative",
     ]
 
-    replace_graph_triples_tool(
-        db,
+    db.replace_graph_triples(
         graph="ontology",
         additions="""
             @prefix ex: <https://example.test/shared-recovery#> .

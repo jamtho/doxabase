@@ -147,7 +147,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
 
     repaired_context = describe_query_context_tool(db, iri=dataset)
     assert repaired_context["readiness"] == "ready_for_query_planning"
-    plan = draft_query_plan_tool(db, iri=dataset)
+    plan = describe_query_context_tool(db, iri=dataset, plan_candidate="auto")
     assert plan["handoff_kind"] == "execution_attempt_ready"
     assert plan["scan"]["uri_template"] == str(csv_path)
 

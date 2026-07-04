@@ -382,8 +382,9 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
         action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]
     ] == [
         "describe_resource",
-        "draft_query_plan",
+        "describe_query_context",
     ]
+    assert "plan_candidate" in context["suggested_next_actions"][1]["args"]
 
     profile_action = context["suggested_next_actions"][0]
     assert profile_action["args"] == {
@@ -404,9 +405,9 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     draft_action = context["suggested_next_actions"][1]
     assert draft_action["args"] == {
         "iri": dataset,
-        "candidate_selector": candidate_selector,
+        "plan_candidate": candidate_selector,
     }
-    draft = draft_query_plan_tool(db, **draft_action["args"])
+    draft = describe_query_context_tool(db, **draft_action["args"])
     assert draft["handoff_kind"] == "metadata_review_required"
     assert draft["source_context"]["selection_mode"] == "candidate_selector"
     assert draft["source_context"]["selected_candidate_index"] == 0
@@ -484,8 +485,7 @@ def test_record_observation_tool_accepts_profile_type_findings(
     column = "https://example.test/project#OrdersStatus"
     value_type = "https://example.test/project#OrderStatusCode"
     record_map_dataset_tool(db, dataset, label="Orders", is_table=True)
-    replace_graph_triples_tool(
-        db,
+    db.replace_graph_triples(
         graph="ontology",
         additions=f"""
             @prefix rc: <https://richcanopy.org/ns/rc#> .

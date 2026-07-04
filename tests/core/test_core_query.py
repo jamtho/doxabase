@@ -231,7 +231,8 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     query_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
     )
     assert any(
         issue.code == "layout_needs_verification"
@@ -691,7 +692,8 @@ def test_describe_query_context_advises_s3_credential_marker_when_omitted(
     draft_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
     )
 
     plan = db.draft_query_plan(dataset)
@@ -2115,7 +2117,8 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_plan"
+        if action.tool == "doxabase.describe_query_context"
+        and "plan_candidate" in action.args
         and "physical_layout_iri" in action.args
     ]
     profile_actions = [
@@ -2134,7 +2137,7 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
 
     assert {
         (
-            action.args["candidate_selector"],
+            action.args["plan_candidate"],
             action.args["physical_layout_iri"],
         )
         for action in selection_actions
@@ -2144,14 +2147,14 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     }
     assert all(
         not (
-            action.args["candidate_selector"] == local_candidate.candidate_selector
+            action.args["plan_candidate"] == local_candidate.candidate_selector
             and action.args["physical_layout_iri"] == table_layout.iri
         )
         for action in selection_actions
     )
     assert all(
         not (
-            action.args["candidate_selector"]
+            action.args["plan_candidate"]
             == database_candidate.candidate_selector
             and action.args["physical_layout_iri"] == csv_layout.iri
         )
@@ -2161,10 +2164,14 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     database_action = next(
         action
         for action in selection_actions
-        if action.args["candidate_selector"] == database_candidate.candidate_selector
+        if action.args["plan_candidate"] == database_candidate.candidate_selector
         and action.args["physical_layout_iri"] == table_layout.iri
     )
-    database_plan = db.draft_query_plan(**database_action.args)
+    database_action_kwargs = dict(database_action.args)
+    database_action_kwargs["candidate_selector"] = database_action_kwargs.pop(
+        "plan_candidate"
+    )
+    database_plan = db.draft_query_plan(**database_action_kwargs)
 
     assert database_plan.selected_candidate is not None
     assert database_plan.selected_candidate.storage_access is not None
@@ -2330,7 +2337,10 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     flat_tools = {action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions}
     assert "record_map_fact" not in flat_tools
     assert "stage_map_assertion_change" not in flat_tools
-    assert flat_tools == {"draft_query_plan"}
+    assert flat_tools == {"describe_query_context"}
+    assert all(
+        "plan_candidate" in action.args for action in context.suggested_next_actions
+    )
 
     plan = db.draft_query_plan(dataset)
 
@@ -2571,8 +2581,9 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "database_relation_template_source_mismatch"
     ]
     assert [action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions] == [
-        "draft_query_plan",
+        "describe_query_context",
     ]
+    assert "plan_candidate" in context.suggested_next_actions[0].args
 
     plan = db.draft_query_plan(dataset)
 
@@ -2684,7 +2695,10 @@ def test_database_root_only_storage_requires_relation_template(
     ]
     assert {
         action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions
-    } == {"draft_query_plan"}
+    } == {"describe_query_context"}
+    assert all(
+        "plan_candidate" in action.args for action in context.suggested_next_actions
+    )
     assert repair_hint["source"] == {
         "storage_access_iri": storage.iri,
         "storage_root": "warehouse-prod",
@@ -3037,10 +3051,10 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
     ]
     assert plan.review_gate.reason_codes == ["query_context_has_other_blockers"]
     assert plan.handoff_kind == "context_review_required"
-    assert context.suggested_next_actions[0].tool == "doxabase.draft_query_plan"
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_query_context"
     assert context.suggested_next_actions[0].args == {
         "iri": dataset,
-        "candidate_selector": context.query_target_candidates[
+        "plan_candidate": context.query_target_candidates[
             context.query_target_decision.candidate_index
         ].candidate_selector,
         "allow_context_blocked_candidate": True,
