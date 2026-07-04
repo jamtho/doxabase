@@ -30,14 +30,19 @@ Permanent Loop Rules are in `AGENTS.md`; progress log is
   package (32 mixins + `_shared` + `_types`, largest 4,903 lines); test
   monoliths → `tests/core/` + `tests/mcp/`. Zero behavior change; 764 tests
   green; module ceilings ratcheted to 5,000. Gate 2 passed.
-- **Phase 3 — IN PROGRESS**:
-  - 3.1 envelope diet: `to_jsonable` now omits None/[]/{} (see its docstring
-    for the convention). Hand-built envelopes in `mcp_tools.py` routed through
-    `to_jsonable`. A sub-agent is updating the ~90 affected tests under
-    `tests/mcp/` (rules: `x["k"] is None` → `x.get("k") is None`; delete
-    None/empty entries from expected dict literals; never weaken semantic
-    assertions).
-  - 3.2–3.6 NOT started (see "Exact next steps").
+- **Phase 3 — PARTIALLY DONE**:
+  - 3.1 envelope diet — DONE (`e8a6361`): `to_jsonable` omits None/[]/{}
+    (convention in its docstring); tests updated. project_brief 100k→77k.
+  - 3.2 RDF-first — DONE (`2963c13`): `get_context_graph` (renamed), TriG
+    default, triple-JSON and dataset/pattern context inlines are now
+    `doxabase_internal` fields (Python-only; a field-metadata convention in
+    `to_jsonable`). Slice: 168,598 → 44,366 chars.
+  - 3.3/3.4/3.5/3.6 NOT started. 3.4 was dispatched to a sub-agent that hit
+    the account **spend limit** before writing anything (tree stayed clean);
+    the full spec is in "Exact next steps" below and in the agent prompt
+    pattern there. `docs/agent/response-conventions.md` (registered) states
+    the target suggestion shape; update its "Suggestions" section to the
+    exact `tool`/`args`/`reason` keys when 3.4 lands.
 - **Phase 4 — mapping DONE, implementation NOT started**:
   `doxabase_design_docs/08-mcp-surface-v2.md` is the complete, authoritative
   89 → 25 tool mapping, including kind-dispatch conventions, the two
@@ -47,19 +52,26 @@ Permanent Loop Rules are in `AGENTS.md`; progress log is
 
 ## Exact next steps (in order)
 
-1. **Finish 3.1**: land the tests/mcp fixes (sub-agent report), run
-   `bash tools/gate.sh`, commit, journal entry.
-2. **3.2 RDF-first context slices**: rename `describe_context_slice` →
-   `get_context_graph` everywhere (core `slices.py`, `mcp_tools.py`,
-   `mcp_server.py`, tests, docs). Default `include_trig=True`; the
-   `ResourceTriple` JSON arrays must not be in the default response (delete
-   them or gate behind `include_triple_json=False` default — prefer delete,
-   Loop Rule 5). Envelope keeps: seeds, reading order, route legend + counts,
-   truncation info, privacy summary, warnings. Update scoreboard measurement
-   if the tool name changes (`tools/scoreboard.py` measures
-   `describe_context_slice_tool` — rename there too, keep the metric key
-   `context_slice_chars`). Expect the metric to drop ~10x; ratchet the
-   ceiling toward 32,000.
+1. ~~Finish 3.1~~ DONE (`e8a6361`).
+2. ~~3.2 RDF-first context slices~~ DONE (`2963c13`).
+2b. **3.4 SuggestedNextAction collapse** (moved before the brief rebuild is
+   also fine — either order works; doing 3.4 first shrinks every response
+   and the slice `resources` routes): replace the hierarchy in `_types.py`
+   (base + 10 subclasses) with one frozen dataclass
+   `SuggestedNextAction(tool: str, args: dict, reason: str)` where `tool`
+   is the MCP tool name (old `mcp_tool_name`). Every construction site:
+   keep old `mcp_tool_name`→`tool`, `arguments`→`args`, `reason`→`reason`;
+   drop `action_label`, `tool_name`, `call`, and all subclass extras
+   (fold genuinely load-bearing extra text — e.g. `unattended_caution` —
+   into `reason`). Delete `suggested_next_calls` fields everywhere plus the
+   call-string helpers (`brief._suggested_call_string`,
+   `profile_review._suggested_call_string_for_arguments`) once unused.
+   Update consumers reading `.mcp_tool_name`/`.arguments`/`.action_label`.
+   Tests: rename asserted keys, delete assertions on removed fields, never
+   weaken tool/args/reason value assertions. Out of scope:
+   RevisionNextAction machinery, docs/, BUDGETS. Then cap suggestions ≤ 5
+   per response and ratchet response ceilings. Update
+   `response-conventions.md` "Suggestions" to the exact new keys.
 3. **3.3 project_brief diet + 5.1 state-not-script**: these touch the same
    code (`doxabase/core/brief.py`, `_types.py` ProjectBrief*) and tests —
    do them as ONE rebuild (recorded deviation, journal it). Target dataclass

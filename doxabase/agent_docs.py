@@ -46,6 +46,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "working-the-capsule.md",
     ),
     AgentDoc(
+        id="response_conventions",
+        title="Response Conventions",
+        description="Envelope rules every response follows: absent==null==empty, TriG payloads, truncation fields, suggestions, errors.",
+        path=DOCS_DIR / "response-conventions.md",
+    ),
+    AgentDoc(
         id="agent_workflow",
         title="Agent Workflow",
         description="Recommended first calls and graph placement rules for agents.",

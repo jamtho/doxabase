@@ -120,3 +120,16 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   Ceiling ratcheted to 46,500. Gate green (764 passed + smoke).
 - Next: 3.3+5.1 project_brief rebuild per spec in
   handoff/distillation-session-2026-07-04.md, then 3.4 collapse.
+
+## Wave 7 — 2026-07-04 — response conventions doc; 3.4 attempt blocked
+
+- docs/agent/response-conventions.md written and registered (the eventual
+  replacement for response-shapes.md, which is retired in Phase 6): envelope
+  rules, truncation family, suggestion semantics, error style, privacy
+  posture. Deliberately key-name-loose on suggestions until 3.4 lands.
+- Phase 3.4 (SuggestedNextAction collapse) was dispatched to a sub-agent
+  which hit the account monthly spend limit before writing anything; the
+  working tree stayed clean. Full implementation spec preserved in
+  handoff/distillation-session-2026-07-04.md step 2b.
+- Session likely ends here on budget. Next agent: read the handoff; the
+  order is 3.4 → 3.3+5.1 brief rebuild → 3.5/3.6 → Phase 4 per doc 08.
