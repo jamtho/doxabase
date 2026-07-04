@@ -1,555 +1,134 @@
 # Map Authoring
 
-Use the `map` graph for current-best project structure: datasets, tables,
-columns, caveats, storage access, and relationships that future agents should
-start from.
+The `map` graph holds current-best project structure: datasets, tables,
+columns, caveats, storage access, physical layout, and relationships that
+future agents should start from. Map facts are revisable — the point is that
+the project currently treats them as operating context, ideally with
+observations, patterns, or evidence explaining why.
 
-Map facts are not necessarily eternal. A row-count snapshot, inferred join, or
-known caveat can be revised. The point is that the project currently treats the
-fact as useful operating context, ideally with observations, patterns, or
-evidence explaining why.
+## Direct Writes Versus Staged Changes
 
-## Helpers
+The rule, plainly:
 
-Use first-class map helpers for routine map writes:
+- **`record_map_fact` writes directly.** Use it for authoring NEW facts —
+  a table you just modelled, a caveat that should be visible immediately, a
+  storage route you reviewed. The write happens now, with no review step.
+- **`stage_revision` proposes reviewed CHANGES.** Use it whenever you are
+  changing or removing facts the map already asserts — replacing a value,
+  removing a stale link, promoting a contested interpretation. Stage, check
+  with `apply_staged_revision(dry_run=true)`, then apply. The rationale trail
+  lands in `history`.
 
-- `doxabase.record_map_dataset`
-- `doxabase.record_map_analysis_view`
-- `doxabase.record_map_table_bundle`
-- `doxabase.record_map_column`
-- `doxabase.record_map_caveat`
-- `doxabase.record_map_storage_access`
-- `doxabase.record_map_physical_layout`
-- `doxabase.record_map_partition_scheme`
-- `doxabase.record_map_relationship`
-- `doxabase.record_map_asset_transform`
+Mechanically, `record_map_fact` can also overwrite: when you supply
+helper-owned fields for an existing resource, those same-subject predicates
+are replaced for that resource. That power is why the rule matters — an
+unreviewed replace of an existing fact erases context another agent relied
+on. When in doubt, stage.
 
-These helpers write to `map` and update the common predicates they own for a
-resource. They avoid hand-authored TriG for ordinary table/column/caveat/storage
-facts, while still leaving the graph open for project-specific RDF.
+Two edge behaviors of the replacement semantics: omitting a scalar parameter
+preserves the current value, while passing an explicit empty string clears
+that predicate. Incoming convenience links (`caveat` `targets`,
+`storage_access` `datasets`, `column` `table_iri`) only add links from other
+resources and never prune older ones; narrowing those requires the owning
+resource's helper or a staged change.
 
-When you supply helper-owned fields on the resource being recorded, those
-same-subject predicates are replaced for that resource. Incoming convenience
-links are different: arguments such as `record_map_caveat(targets=[...])`,
-`record_map_storage_access(datasets=[...])`, and
-`record_map_column(table_iri=...)` add links from other resources and do not
-prune older incoming links. To narrow those links, update the owning dataset or
-table helper where applicable, stage a reviewed assertion change, or use
-`replace_graph_triples()` for exact graph maintenance.
-For scalar helper-owned literal fields, omitting a parameter preserves existing
-values, while passing an explicit empty string includes that predicate in the
-replacement set and clears it.
+## The Fact Kinds
 
-For `record_map_dataset`, omit `is_table` on partial updates when you want to
-preserve the current dataset/table typing. Pass `is_table=True` or
-`is_table=False` when you intentionally want to set that typing.
-You can link columns either with `record_map_dataset(columns=[...])` or with
-`record_map_column(table_iri=...)`. Supplying the same link through both helpers
-is harmless; DoxaBase treats repeated identical RDF edges as one graph fact in
-descriptions.
-Link partition schemes to datasets with
-`record_map_partition_scheme(datasets=[...])`; `record_map_dataset` does not
-take a `partition_schemes` argument.
-Resource-valued fields across these helpers expect IRIs or CURIEs, not
-descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
-`rc:Parquet`, `rc:PNG`, `rc:GeoTIFF`, or a project IRI for columns, datasets,
-caveats, storage access, and relationship endpoints. Common base file-format
-terms include `rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`,
-`rc:TIFF`, `rc:GeoTIFF`, and `rc:PDF`; define a project-local
-`rc:FileFormat` only when the base vocabulary lacks the reviewed format. Put
-ordinary explanation in `description`, `layout_verification_note`, caveat text,
-observations, or patterns.
-`schema_stability` accepts `rc:FixedSchema`, `rc:InferredSchema`, or
-`rc:VariableSchema`. `layout_verification_status` accepts
-`rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
-`rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
-`rc:ContradictedLayout`. Caveat `severity` accepts `rc:Minor`,
-`rc:Moderate`, or `rc:Severe`; do not use confidence terms such as
-`rc:HighConfidence` or ad hoc values such as `rc:High`.
-`row_semantics` accepts `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
-`rc:DimensionRow`. For partition schemes, `granularity` accepts `rc:Daily`,
-`rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; the helper rejects other values
-before graph validation. `redundant_partition_key` is also a resource-valued
-field, usually the partition column IRI or CURIE. Do not pass the literal
-template placeholder such as `"event_date"` or `"date"`; keep that token in
-`path_template`.
+`record_map_fact(kind=..., spec={...})` dispatches on kind; the `mcp_tools`
+doc lists every kind's spec fields with the required/optional split, and a
+wrong field fails with a targeted error. The kinds:
 
-Map helpers are not only for tables. For an API endpoint, document collection,
-message stream, model artifact, or other non-tabular asset, call
-`record_map_dataset(..., is_table=False, extra_types=[...])` with project
-types when useful, then attach caveats, storage or access metadata, evidence,
-claims, observations, and patterns as usual. Use `record_map_column` only for
-real table-like fields. For non-tabular handoffs, prefer
-`describe_resource()` or `get_context_graph(profile="deep_lore")`; direct
-query-planning helpers return `not_applicable_non_tabular_asset` unless a
-separate queryable table route has been modeled.
+- `dataset` — datasets and tables. Omit `is_table` on partial updates to
+  preserve current typing. Not only for tables: an API endpoint, document
+  collection, or model artifact is `is_table=false` plus `extra_types`.
+- `column` — a real table-like field, linked with `table_iri`.
+- `caveat` — a fact future analysts must not miss. `severity` accepts
+  `rc:Minor`, `rc:Moderate`, `rc:Severe` (not confidence terms).
+- `relationship` — joins and column-level transforms (below).
+- `storage_access`, `physical_layout`, `partition_scheme` — non-secret
+  physical facts; field rules live in the `executable_catalog` doc.
+- `asset_transform` — dataset-level derivations/aggregations with endpoints,
+  conditions, per-output formulas, and tuple grain.
+- `analysis_view`, `analysis_view_bundle` — named logical populations with
+  denominators and reviewed query snippets; see `analysis_packets`.
+- `table_bundle` — one no-I/O write for a reviewed table + columns +
+  optional storage/layout. DoxaBase does not read files or infer types;
+  supply reviewed values.
+- `analysis_packet`, `profile_manifest`, `profiled_parquet_table` — bulk
+  reviewed-sidecar ingestion; see `analysis_packets` and `profiling`.
 
-For named logical populations, denominator definitions, or reusable reviewed
-query recipes, use `record_map_analysis_view` instead of inventing physical
-storage metadata. It records an `rc:AnalysisView` as a table-like map resource,
-can link source datasets and caveats, and can attach one denominator resource
-plus one or more reviewed query snippets. Use `query_snippets=[...]` for several
-recipes on the same logical population, such as a view definition and a count
-check. `describe_query_context` returns
-`readiness="logical_analysis_view"` for these resources and deliberately does
-not produce missing-storage repair actions unless you separately model a
-materialized physical route.
-`describe_analysis_view` keeps directly attached caveats in `caveats` and
-immediate source-dataset or parent-view caveats in `source_caveats`; repeat a
-caveat on the child view only when the child itself changes or owns that caveat.
-Use `record_map_analysis_view_bundle(views=[...])` when a reviewed sidecar or
-manifest defines several logical populations at once. It is a structured
-orchestrator over the same single-view helper; supply one object per reviewed
-view rather than asking DoxaBase to parse arbitrary Markdown.
-When those logical populations belong to a wider analysis result with artifact
-locators, visual metadata, or follow-up tasks, use `record_analysis_packet` so
-the view links and evidence-side handoff material share one packet seed.
+## Value Rules
 
-For reviewed table schemas from Parquet, CSV, database catalogs, or profiler
-output, use `record_map_table_bundle` when you want one no-I/O map mutation for
-the table, columns, optional storage access, and optional physical layout. The
-helper does not read files and does not infer Arrow/DuckDB types; supply
-reviewed `columns`, `file_format`, `compression_codec`, storage facts, and
-layout verification metadata yourself. It orchestrates the ordinary map helpers
-and returns the records plus `describe_dataset` / `describe_query_context`
-follow-up actions.
-For a full route from reviewed table/profile facts to a verified handoff, run
-`examples/profile-to-capsule-cookbook.py`.
-When the reviewed inputs are already in a structured JSON-like sidecar, use
-`record_profile_to_capsule_manifest` to compose optional caveats, multiple
-`record_profiled_parquet_table` specs, and optional
-`record_map_analysis_view_bundle` specs in one no-I/O pass. This helper records
-ingestion context into the capsule; it is separate from
-`export_handoff_bundle` manifests.
-When the sidecar does not exist yet and the source files are local Parquet, use
-`python -m doxabase.parquet_manifest --base-iri ... --output profile-to-capsule.json ...`
-to generate a reviewable manifest scaffold from Parquet footer/schema metadata.
-It requires optional `pyarrow`, records conservative candidate layout statuses,
-can record S3/MinIO route fields with `--storage-protocol` set to
-`rc:S3CompatibleStorage`, `--bucket-name`, `--key-prefix`, and
-`--credential-reference`, and should be reviewed before applying with
-`python -m doxabase.profile_to_capsule`.
-When reviewed external aggregate profile facts are available separately, use
-the merge adapter to compose the reviewed manifest:
+Resource-valued fields take IRIs or CURIEs, not prose: `rc:EventRow`,
+`rc:Parquet`, a project column IRI. Explanation goes in `description`,
+caveat text, observations, or patterns. Controlled vocabularies (helpers
+reject other values before graph validation):
 
-```bash
-python -m doxabase.profile_manifest_merge \
-  --scaffold scaffold.json \
-  --profile-facts external-profile-facts.json \
-  --output reviewed-profile-to-capsule.json
-```
+- `row_semantics`: `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`,
+  `rc:DimensionRow`.
+- `schema_stability`: `rc:FixedSchema`, `rc:InferredSchema`,
+  `rc:VariableSchema`.
+- `layout_verification_status`: `rc:UnverifiedLayout`,
+  `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
+  `rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`,
+  `rc:ContradictedLayout`.
+- file formats: `rc:Parquet`, `rc:CSV`, `rc:JSON`, `rc:JPEG`, `rc:PNG`,
+  `rc:TIFF`, `rc:GeoTIFF`, `rc:PDF`; define a project `rc:FileFormat` only
+  when these lack the reviewed format.
+- partition `granularity`: `rc:Daily`, `rc:Hourly`, `rc:Monthly`,
+  `rc:ByValue`. `redundant_partition_key` names the partition column
+  resource; the placeholder token (`{date}`) stays in `path_template`.
 
-This adapter accepts table/sample metadata and
-per-column aggregate facts, reviewed layout status fields, and reviewed profile
-pattern fields; it rejects unknown scaffold anchors and keeps the no-row-I/O
-boundary intact.
-
-## When To Use Map Helpers
-
-Use map helpers when you are comfortable saying:
-
-- this table or dataset exists in the current project model;
-- this column is part of a table and has this physical or semantic type;
-- this caveat should be visible whenever a future agent inspects the dataset;
-- this storage access metadata is non-secret and useful for planning;
-- this relationship is part of the current operating model, even if inferred.
-
-Use `record_observation` for a single noticing. Use `record_pattern` when
-several noticings or claims explain why a map fact seems right. Then use map
-helpers to systematize the current-best facts.
-
-For storage access, keep credentials and root shape boring. Use only
-non-secret `credential_reference` markers such as `profile:<name>`,
-`env:<VAR_NAME>`, or `external:intentionally-unrecorded`. Stored
-`location_kind` values are `object`, `directory`, `prefix`, or `connection`;
-`record_map_storage_access(location_kind="bucket")` is an input convenience for
-S3-shaped bucket/key-prefix routes and is stored as `prefix`.
-
-## Profile-Derived Updates
-
-When a shared-evidence profile run suggests map changes, call
-`describe_profile_run()` and `draft_profile_map_updates()` before mutating the
-map. The draft rows carry sample scope, confidence, helper arguments,
-`default_stageable`, `default_skip_reason`, and metric advisories so the agent
-can decide which recommendations to accept.
-Duplicate groups are explicit: when repeated profile observations produce the
-same review row, accept one representative index unless the siblings need
-different modelling judgement. For `unmapped_profiled_column` shell rows, the
-duplicate group is keyed to the helper mutation rather than profile-specific
-sample or null details, so one representative stages one map shell with all
-supporting profile observations. Prefer the draft's
-`suggested_next_action_groups`: `profile_map_updates` starts from representative
-indexes whose rows are `default_stageable`, `profile_scalar_conflict_review`
-surfaces mutually exclusive choose-one scalar options, and
-`metric_vocabulary_review` / `profile_type_review` keep advisories out of the
-map-staging batch. Use `advisory_followthrough_plan` for the compact metric/type
-next-step menu before staging vocabulary, type assertions, or fallback
-systematisations. Sampled row-count representatives stay visible for review but
-require an explicit override call. Same-evidence scalar conflicts stay visible
-too, but the default map-staging action omits them; choose at most one observed
-row-count or nullable value from the `profile_scalar_conflict_review` lane or
-`scalar_conflict_groups[].options[]` after reading the supporting profile
-observations. After one scalar-conflict value has been applied, sibling values
-from the same evidence should still route through scalar-conflict review; do not
-stage them as ordinary map updates just because the mechanical apply check would
-be ready.
-Profile type findings are not accepted `stage_profile_map_updates`
-recommendation indexes. `physical_type` and `value_type` are still persisted on
-profile observations when `update_map_column=False`; `draft_profile_map_updates`
-surfaces them as `type_advisories` with context, pattern, and focused staged
-assertion suggestions. Review those advisories before turning type evidence into
-current map facts. The suggested context-slice action only seeds observed type
-resources that already exist, so undefined project value types may be absent
-from that context call while still appearing in the pattern and staged assertion
-arguments. If you follow the suggested `record_pattern` action first,
-copy the returned `pattern_iri` into the following
-`stage_map_assertion_change(..., supporting_patterns=[...])` call.
-Treat the grouped `profile_type_review` lane as a representative action queue:
-its labels may repeat across advisory groups. For automation, iterate
-`representative_type_advisory_indexes` first and use each representative
-advisory's `suggested_next_actions`; read its `duplicate_group_key` /
-`type_advisory_index` / `duplicate_advisory_indexes` when you need the grouped
-sibling rows. Metric vocabulary review has the same shape through
-`representative_metric_advisory_indexes` and `metric_advisory_index`. This keeps
-the column, observed types, metric vocabulary, and duplicate observation support
-clear without making scripts reconstruct groups manually.
-That staged assertion also merges related assertion-support lore, so the final
-revision may include both the pattern you just recorded and patterns that
-directly target, imply, or claim-support the column or assertion. Same-profile
-observation or metric-vocabulary patterns that do not directly support the
-assertion stay reachable through context slices instead of becoming direct
-`supporting_patterns`.
-
-Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
-accepted profile-derived changes should be reviewed before apply. It stages one
-grouped helper-equivalent map revision, including multi-triple dataset and
-column shells, so applying one accepted profile batch does not create sibling
-staged revisions that immediately drift after the first apply.
-If the draft has no recommendations and metric or type advisories are present,
-handle it as advisory-only: follow the grouped advisory calls for vocabulary,
-context, or type review and do not call `stage_profile_map_updates`. Advisory
-rows are not map-update recommendations, and no-op advisory staging is deferred.
-After applying unmapped column shells, rerun
-`draft_profile_map_updates(dataset_iri, evidence_iri)` before treating the
-profile pass as advisory-only. The newly map-present column may surface ordinary
-map recommendations, such as nullability, that should go through
-`profile_map_updates` first. When `stage_profile_map_updates` staged the shell,
-its `suggested_next_actions` includes this rerun after the staged revision
-apply-check action.
-An accepted index is still routed through guardrails: it may be `staged` or
-`skipped`, while `not_selected` means the draft row was not accepted for that
-call. Accepted sampled row counts can be skipped by default, and accepted
-same-evidence scalar conflicts are skipped when the same call chooses multiple
-values for one row-count or nullable assertion. Check `status_counts` first,
-then item reasons. Those counts describe the full draft, not only the accepted
-indexes in the call; a one-option scalar conflict stage can legitimately report
-many `not_selected` rows.
-When a profile-derived change is backed by synthesized lore, pass
-`supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
-links are recorded on the staged revision for later review.
-The default `profile_map_updates` suggested action pre-fills
-`supporting_patterns` when same-evidence profile patterns clearly overlap the
-profile run's dataset or recommended map resources, while skipping patterns that
-mention observed physical/value type resources from the profile type-review
-lane. Keep the auto-filled patterns unless review shows one is unrelated to the
-accepted map changes. Profiled-column-only type rationale belongs in the
-`profile_type_review` lane unless you explicitly pass it as support to a focused
-type assertion change.
-When reviewing the staged revision, treat `supporting_patterns` as direct
-rationale for the map patch. `impacts[].related_patterns` is broader nearby
-context and may include metric/type advisory lore that was intentionally kept
-out of direct staged-revision support.
-Representative duplicate staging preserves every grouped profile observation as
-staged-revision support, so accepting one duplicate row does not discard sibling
-evidence.
-Mixed followthroughs are expected: a duplicate full run may stage representative
-map updates, route metric vocabulary through `stage_pattern_promotion`, and
-route type findings through `record_pattern` plus
-`stage_map_assertion_change(..., supporting_patterns=[...])`; a sampled run in
-the same capsule still skips row-count updates by default while allowing other
-stageable recommendations.
-
-Use direct map helpers only when immediate mutation is intended. Treat sampled
-row-count recommendations conservatively: the staging helper skips them by
-default unless `allow_sampled_row_count_updates=True` is supplied because the
-sample scope is the durable population. Draft rows preview that default with
-`default_stageable=False` and a skip reason. Metric and type advisories are
-review prompts, not automatic map facts; in draft results, use their grouped
-lanes separately from `profile_map_updates`. In staging results, follow
-`metric_advisory_suggested_next_actions` separately from the map revision's
-`suggested_next_actions`, and follow `type_advisory_suggested_next_actions`
-for type-finding review or focused type assertions.
-
-Typical mixed staging after a sampled profile run:
-
-```python
-staged = db.stage_profile_map_updates(
-    dataset,
-    evidence,
-    accepted_recommendation_indexes=[0, 1, 2],
-)
-assert 0 in staged.skipped_recommendation_indexes
-assert staged.status_counts["staged"] == 2
-```
-
-Here recommendation `0` is a sampled row-count update, while `1` and `2` are
-accepted column updates that still become one reviewable staged revision.
-
-## Example
-
-```python
-table = "https://example.test/enron#eml_messages"
-caveat = "https://example.test/enron#caveat_body_processing_lossy"
-
-db.record_map_caveat(
-    iri=caveat,
-    label="body processing lossy",
-    description="body_top is cleaned sender-new text, not raw email text.",
-    severity="rc:Moderate",
-    targets=[table],
-)
-
-db.record_map_table_bundle(
-    iri=table,
-    label="EML messages",
-    description="One row per parsed raw .eml message.",
-    columns=[
-        {
-            "column_name": "doc_id",
-            "physical_type": "rc:Varchar",
-            "value_type": "https://example.test/enron#DocId",
-            "nullable": False,
-        }
-    ],
-    path_templates=["data/parquet/eml_messages.parquet"],
-    row_semantics="rc:EventRow",
-    entity_key="https://example.test/enron#eml_messages__doc_id",
-    schema_stability="rc:FixedSchema",
-    caveats=[caveat],
-    storage_access_iri="https://example.test/enron#local_parquet_access",
-    storage_label="local parquet access",
-    route_roles=["rc:SampleRoute"],
-    storage_protocol="rc:LocalFilesystemStorage",
-    access_mode="rc:ReadOnlyAccess",
-    location_kind="directory",
-    storage_root="/home/james/github.com/jamtho/enron-emails",
-    storage_path_templates=["data/parquet/*.parquet"],
-    physical_layout_iri="https://example.test/enron#eml_messages_parquet_layout",
-    file_format="rc:Parquet",
-    compression_codec="rc:ZstdCompression",
-)
-```
-
-Use `route_roles` on storage access records when a dataset has multiple viable
-routes. Built-in reviewed roles include `rc:ProductionRoute`, `rc:CurrentRoute`,
-`rc:CanonicalRoute`, `rc:SampleRoute`, `rc:ArchiveRoute`, and
-`rc:BackfillRoute`; define project-local `rc:RouteRole` terms when those are too
-coarse. Query target candidates inherit these roles so agents can choose reviewed
-production/current routes without parsing labels or path names.
+Link partition schemes to datasets from the scheme side
+(`partition_scheme` spec `datasets=[...]`); the dataset kind takes no
+partition argument. Repeating a column link from both the dataset and the
+column side is harmless — identical RDF edges are one fact.
 
 ## Relationships
 
-`record_map_relationship` currently supports:
+`kind="relationship"` supports `relationship_type` values `foreign_key`,
+`shared_identifier`, `derivation`, and `aggregation` (CURIE/IRI aliases such
+as `rc:ForeignKey` are accepted and normalized).
 
-- `relationship_type="foreign_key"`
-- `relationship_type="shared_identifier"`
-- `relationship_type="derivation"`
-- `relationship_type="aggregation"`
+Column fields (`from_column`, `to_column`, `identifying_columns`,
+`source_columns`, `derived_columns`, `group_by_columns`, aggregate mappings)
+accept only existing mapped `rc:Column` resources with concrete
+`rc:columnName` evidence — datasets, assets, and fresh IRIs are rejected so
+asset relationships cannot be squeezed through column slots. For
+column-to-column transforms (`body` → `body_top`): record both columns
+first, then a `derivation` with `source_columns`/`derived_columns`.
+`derivation_properties` is restricted to `rc:Deterministic`,
+`rc:Invertible`, `rc:Lossy`.
 
-The matching core class CURIEs and full IRIs are accepted too, for example
-`relationship_type="rc:ForeignKey"` or the full `rc:Aggregation` IRI. DoxaBase
-normalizes those aliases back to the helper tokens in descriptions.
+For asset-level relationships without columns, use `source_datasets` /
+`target_datasets`, or `source_endpoints` / `target_endpoints` when role and
+order matter. When the transform needs reviewed filters, per-output formulas,
+or tuple output grain, use `kind="asset_transform"`: conditions carry
+`condition_kind` (`rc:FilterCondition` / `rc:SelectionCondition`) and
+reviewed `expression` text; tuple-grain components take exactly one of
+`column`, `dataset`, or `expression`, and `column` must name a real column
+resource.
 
-Use `foreign_key` for parent/child column relationships, whether declared
-upstream or inferred by checks. Use `shared_identifier` when several columns
-carry IDs from the same logical population. Use `derivation` for transformed
-columns such as cleaned text, normalized subjects, or generated features. Use
-`aggregation` for grouped summaries, rollups, and index tables that compute
-target columns from source columns.
+## Grain
 
-Decision cue: if the output is a real mapped column, use
-`record_map_relationship` with column fields. If the output is a dataset,
-document, model artifact, image, or other data asset that needs formulas,
-filters, endpoint roles, or tuple grain, use `record_map_asset_transform`. If
-the transform is tentative, nuanced, or not ready as current-best structure,
-record claim/pattern/caveat support or stage a systematisation first.
+For ordinary tabular grain: `row_semantics` for the broad row kind;
+`entity_key` / `snapshot_timestamp` for recurring entity snapshots; an
+`aggregation` relationship whose `group_by_columns` names every grouping
+column for grouped tables. Do not squeeze a composite grain into
+`entity_key` — use `rc:AggregateRow` plus the aggregation relationship, and
+put tuple-grain wording in the description or a pattern. Non-tabular tuple
+grain belongs on `asset_transform` outputs.
 
-Relationship column fields are for existing mapped `rc:Column` resources. The
-helper rejects known data assets, datasets, tables, and fresh IRIs that have not
-first been recorded as columns in `from_column`, `to_column`,
-`identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
-and aggregate mapping column fields.
-Hand-authored Turtle and staged patches follow the same rule: relationship
-column predicate objects must carry concrete `rc:columnName` evidence, not only
-an `rc:Column` type inferred by RDFS range.
+## When Not To Write The Map
 
-For column-to-column transforms such as cleaned text, normalized subjects, or
-`body -> body_top`, first record the real columns with `record_map_column`,
-then use `record_map_relationship(..., relationship_type="derivation",
-source_columns=[source_column_iri], derived_columns=[derived_column_iri])`.
-Do not pass raw column names or the owning dataset IRI in those column slots.
-If the transform is only a tentative interpretation, keep it in observations,
-claims, patterns, or caveats until it is current-best map structure.
+- A single noticing → `record_observation`.
+- Related findings that explain why a fact seems right → `record_pattern`
+  first; promotion can follow.
+- A tentative or contested interpretation → keep it in observations, claims,
+  patterns, or caveats until it is current-best structure.
+- Profile output → the profile draft/stage flow in the `profiling` doc, so
+  sampled values and vocabulary questions get reviewed instead of silently
+  becoming map truth.
 
-```python
-body = "https://example.test/enron#eml_messages__body"
-body_top = "https://example.test/enron#eml_messages__body_top"
-messages = "https://example.test/enron#eml_messages"
-
-db.record_map_column(body, table_iri=messages, column_name="body")
-db.record_map_column(body_top, table_iri=messages, column_name="body_top")
-db.record_map_relationship(
-    "https://example.test/enron#body_top_derivation",
-    relationship_type="derivation",
-    label="body_top derivation",
-    source_columns=[body],
-    derived_columns=[body_top],
-    derivation_properties=["rc:Deterministic", "rc:Lossy"],
-)
-```
-
-For no-column asset-level derivation or aggregation, use `source_datasets` and
-`target_datasets` without column fields. The singular `source_dataset` and
-`target_dataset` arguments are still accepted as compatibility shortcuts for
-one endpoint each. Use `source_endpoints` and `target_endpoints` when endpoint
-role or precedence matters:
-
-```python
-record_map_relationship_tool(
-    db,
-    iri="ex:masks_from_images_labels_and_sidecars",
-    relationship_type="derivation",
-    source_endpoints=[
-        {"dataset": "ex:RawImages", "role": "primary image input", "order": 1},
-        {"dataset": "ex:LabelSchema", "role": "class-id lookup", "order": 2},
-        {"dataset": "ex:Sidecars", "role": "geometry sidecar input", "order": 3},
-    ],
-    target_endpoints=[
-        {"dataset": "ex:SegmentationMasks", "role": "indexed mask output"},
-    ],
-)
-```
-
-Endpoint specs still write ordinary `sourceDataset` / `targetDataset` edges for
-compatibility, while `describe_dataset` exposes the ordered `source_endpoints`
-and `target_endpoints` lists. When the relationship needs reviewed filters,
-selection rules, per-output formulas, or tuple output grain, use
-`record_map_asset_transform` rather than packing those details into prose.
-
-Column-shaped aggregation relationships can carry `source_dataset`,
-`target_dataset`, `group_by_columns`, and `aggregated_columns`. Each
-`aggregated_columns` entry uses `target_column`, `source_columns`, optional
-`aggregation_function`, and optional `within_group_ordering`:
-
-```python
-record_map_relationship_tool(
-    db,
-    iri="ex:attachment_counts_by_message",
-    relationship_type="aggregation",
-    source_dataset="ex:Attachments",
-    target_dataset="ex:AttachmentCounts",
-    group_by_columns=["ex:attachment_parent_doc_id"],
-    aggregated_columns=[
-        {
-            "target_column": "ex:attachment_count",
-            "source_columns": ["ex:attachment_parent_doc_id"],
-            "aggregation_function": "rc:Count",
-        },
-    ],
-)
-```
-
-For conditional asset-level aggregates or derivations, use
-`record_map_asset_transform` with `conditions` and `outputs`. Conditions carry a
-controlled `condition_kind` of `rc:FilterCondition` or `rc:SelectionCondition`
-and reviewed `expression` text; outputs carry `target_dataset`, optional
-`formula`, optional `function`, optional linked `conditions`, and optional
-`tuple_grain`:
-
-```python
-record_map_asset_transform_tool(
-    db,
-    iri="ex:mosaic_from_bags_and_navigation",
-    relationship_type="derivation",
-    source_endpoints=[
-        {"dataset": "ex:RawSonarBags", "role": "primary sonar input", "order": 1},
-        {"dataset": "ex:NavigationCorrections", "role": "navigation input", "order": 2},
-    ],
-    target_datasets=["ex:SurveyMosaic"],
-    conditions=[
-        {
-            "iri": "ex:valid_navigation_filter",
-            "condition_kind": "rc:FilterCondition",
-            "expression": "only pings with reviewed navigation fixes",
-        },
-    ],
-    outputs=[
-        {
-            "target_dataset": "ex:SurveyMosaic",
-            "formula": "grid corrected ping intensities into a GeoTIFF mosaic",
-            "conditions": ["ex:valid_navigation_filter"],
-            "tuple_grain": {
-                "components": [
-                    {"dataset": "ex:RawSonarBags", "role": "source survey"},
-                    {"expression": "mosaic tile coordinate", "role": "tile"},
-                ],
-            },
-        },
-    ],
-)
-```
-
-`outputs[].target_dataset`, condition `applies_to_datasets`, endpoint
-`dataset`, and tuple-grain `dataset` values are asset endpoints, not column
-outputs. For column transforms such as `body -> body_top`, record both columns
-and use `record_map_relationship(..., source_columns=[...],
-derived_columns=[...])` instead.
-
-Derivation relationships can name `source_columns`, `derived_columns`,
-`derivation_function`, and `derivation_properties`. Treat those as relationship
-level context, not per-output formulas. `derivation_properties` is restricted to
-the current shared RC values `rc:Deterministic`, `rc:Invertible`, and `rc:Lossy`;
-stage project-specific transform properties through ontology/systematisation
-instead of passing them to the map helper. When a derived column's exact
-expression or source-to-target mapping matters, record a claim/pattern or stage
-a richer project RDF framing instead of implying the helper captured the
-formula.
-
-## Grain And Row Units
-
-Use the existing map signals for ordinary tabular grain:
-
-- `rowSemantics` for the broad row kind: event, snapshot, aggregate, or
-  dimension.
-- `entityKey` and `snapshotTimestamp` for recurring entity snapshots.
-- `record_map_relationship(..., relationship_type="aggregation")` with
-  `group_by_columns` when a target dataset has one row per source group.
-- `aggregated_columns` when target columns are computed from source columns.
-- Caveats when the row unit is only approximate, inferred, or source-dependent.
-
-For aggregate datasets with tuple grain, such as one row per
-`(customer_id, order_date)`, prefer `row_semantics="rc:AggregateRow"` plus an
-aggregation relationship whose `group_by_columns` names every grouping column.
-Do not squeeze a composite grain into `entity_key`; use `entity_key` only when
-one map column really behaves as the row identity. Put the tuple-grain wording
-in the dataset description or a pattern when future agents must not miss it.
-
-For non-tabular output assets or tuple grain that is not honestly a column list,
-use `record_map_asset_transform(..., outputs=[{"tuple_grain": ...}])`.
-Tuple-grain components accept exactly one of `column`, `dataset`, or
-`expression`. `column` must name a real column resource; known datasets/tables
-are rejected in that slot so agents do not mint fake columns for assets.
-`describe_dataset` exposes direct `tuple_grains` on the output asset and nested
-`transform_outputs[].tuple_grain` on the relationship.
-
-## Limits
-
-These helpers do not promote patterns automatically. If a pattern supports a
-straightforward current-best map fact, record the map fact with the helper and
-keep the pattern linked via `rc:mapImplication`. If the promotion should remain
-reviewable or needs caller-authored RDF beyond the map helper surface, use
-`doxabase.stage_pattern_promotion` so the selected pattern and its support links
-travel with the staged graph change.
-
-Map helpers also do not mint project IRIs. Prefer stable project namespaces over
-generated IDs for durable map resources.
+Map helpers do not mint project IRIs; prefer stable project namespaces over
+generated IDs for durable resources.

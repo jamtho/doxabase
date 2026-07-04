@@ -22,7 +22,9 @@ For example:
 - `https://richcanopy.org/graph/patterns`
 - `https://richcanopy.org/graph/evidence`
 
-`DoxaBase.import_trig()` and the MCP import tools map those IRIs to local graph role names.
+`import_bundle(kind="trig")` (Python: `DoxaBase.import_trig()`) maps those
+IRIs to local graph role names; `import_bundle(kind="example_fixtures")`
+loads both bundled fixtures into a scratch capsule in one call.
 
 These fixtures are representative tests, not full mechanical conversions. They are useful for checking whether agents can discover tables, columns, value types, joins, caveats, physical layout, storage access, and validation state.
 

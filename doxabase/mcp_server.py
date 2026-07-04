@@ -23,42 +23,21 @@ from doxabase.mcp_tools import (
     list_revisions_tool,
     plan_staged_revision_recovery_tool,
     project_brief_tool,
-    record_analysis_packet_tool,
-    record_claim_observation_tool,
     record_claim_reconsideration_tool,
-    record_column_profile_tool,
-    record_dataset_profile_tool,
-    record_domain_network_profile_tool,
-    record_map_caveat_tool,
-    record_map_analysis_view_bundle_tool,
-    record_map_analysis_view_tool,
-    record_map_asset_transform_tool,
-    record_map_column_tool,
-    record_map_dataset_tool,
-    record_map_table_bundle_tool,
-    record_map_partition_scheme_tool,
-    record_map_physical_layout_tool,
-    record_map_relationship_tool,
-    record_map_storage_access_tool,
-    record_profiled_parquet_table_tool,
-    record_profile_to_capsule_manifest_tool,
     record_graph_revision_tool,
     record_observation_tool,
     record_profile_tool,
     record_map_fact_tool,
     record_pattern_tool,
-    record_query_result_tool,
-    record_profile_bundle_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_revision_tool,
     validate_graph_tool,
 )
 
-SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
-Start with doxabase.get_doc (no arguments lists the docs), then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_resource, doxabase.describe_dataset, doxabase.describe_query_context, and doxabase.get_context_graph before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting/staging and profile advisory follow-through planning, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, no-I/O profiled Parquet table recording, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects: named graphs of current-best facts (map), dated findings (observations), syntheses (patterns), evidence, vocabulary, shapes, and change rationale (history). You supply semantic judgement; DoxaBase supplies storage, validation, staged change, and privacy scanning.
+Start with doxabase.get_doc (no arguments lists the docs), then read start_here. doxabase.project_brief reports capsule state including gates that block mutation or export; respect gates, read-only inspection is always safe.
+Orientation reads: doxabase.project_brief, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_resource, doxabase.describe_dataset, doxabase.describe_query_context, doxabase.get_context_graph. Kind-dispatched tools (record_*, stage_revision, export/import_bundle) validate spec fields per kind with targeted errors; the mcp_tools doc lists every kind's fields. Run doxabase.export_preflight before shareable artifacts."""
 
 
 class _LazyDoxaBase:

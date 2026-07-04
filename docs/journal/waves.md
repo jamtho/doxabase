@@ -343,3 +343,38 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   anchors (31,000 → 9,439 chars).
 - Next: Phase 6 docs distillation (now the top-value work), with the
   trial reports as its inventory.
+
+## Wave 17 — 2026-07-04 — Phase 6: generated tool doc + mega-doc deletions
+
+- `tools/gen_docs.py` regenerates `docs/agent/mcp-tools.md` from the live
+  registry (FastMCP schemas) plus the kind/aspect dispatch tables in
+  `mcp_tools.py`; per-kind spec fields introspected from the same handler
+  signatures `_dispatch_kind` validates against, so probe calls are now
+  optional (Gate-3 seed). `tests/test_gen_docs.py` fails the gate on drift.
+- Hoisted record_profile/record_map_fact/record_observation kind dicts and a
+  describe_resource aspect table to module level for the generator; no
+  behavior change.
+- Deleted response-shapes.md (358KB), api-reference.md (148KB),
+  workflow.md, observation-rdf.md (folded into observation-recording);
+  registry, SERVER_INSTRUCTIONS, AGENTS.md, and tests updated.
+- Bug found & fixed in `agent_docs._doc_sections`: a parent heading with
+  subsections was never end-closed (the close loop only touched the list
+  tail), so `get_doc(section=<parent>)` read to EOF. One-loop fix; new
+  storage test asserts the correct sibling boundary.
+
+## Wave 18 — 2026-07-04 — Phase 6: topic-doc rewrites + ratchet
+
+- Rewrote every topic doc from scratch against the 25-tool surface
+  (observation-recording, patterns, map-authoring, profiling,
+  systematisation, revisions, staged-revisions, context-slicing,
+  lexical-search, executable-catalog, query-planning incl. the AIS
+  DailyIndex gap, analysis-packets, field-trials playbook, overview,
+  graph-roles, project-strategy trimmed under its suspension banner).
+- Map-authoring now states the T2 rule plainly: record_map_fact = NEW
+  facts; stage_revision = reviewed CHANGES to existing facts.
+- Python-vs-MCP surface differences are labelled "Python API note" blocks;
+  no dead tool name appears as MCP guidance anywhere in docs/agent/.
+- ARCHITECTURE.md refreshed (core/ layout, 25-tool surface, budgets/gate,
+  concurrency stance kept; stale build-order/debt sections replaced).
+- docs/agent/ 1,135,611 → 142,249 bytes (−87%); largest doc is the
+  generated mcp-tools.md at 41.5KB; agent_docs_bytes budget 1.2M → 148,000.

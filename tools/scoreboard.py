@@ -51,7 +51,7 @@ BUDGETS: dict[str, int] = {
     "graph_overview_chars": 6_000,
     "search_chars": 6_500,
     "list_entities_chars": 4_500,
-    "agent_docs_bytes": 1_200_000,
+    "agent_docs_bytes": 148_000,
     "start_here_lines": 120,
 }
 

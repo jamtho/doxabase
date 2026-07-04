@@ -1,62 +1,54 @@
 # Graph Roles
 
-DoxaBase uses named graph roles to separate stable vocabulary, project facts,
-observations, patterns, evidence, and validation shapes.
+DoxaBase separates knowledge by named graph role. Choose the role by how the
+fact will be updated and trusted, not by where it was discovered.
 
 ## Immutable Seed Graphs
 
-`base_ontology`
-
-The shipped Rich Canopy `rc:` vocabulary loaded from `ontology/rc_core.ttl`. Do not write project-specific terms here.
-
-`base_shapes`
-
-The shipped open SHACL shapes loaded from `ontology/rc_shapes.ttl`. Do not write project-specific shapes here.
+- `base_ontology` — the shipped Rich Canopy `rc:` vocabulary
+  (`ontology/rc_core.ttl`). Never write project terms here.
+- `base_shapes` — the shipped open SHACL shapes (`ontology/rc_shapes.ttl`).
+  Never write project shapes here.
 
 ## Mutable Project Graphs
 
-`ontology`
-
-Project-owned vocabulary and model layer: client classes, properties, value types, SKOS concepts, labels, comments, definitions, and term deprecations.
-
-`map`
-
-The current best structured map of the project/data world: datasets, tables, columns, accepted joins, caveats, computability claims, current summaries, and links from project entities to ontology terms.
-Use map authoring helpers for routine dataset, column, caveat, storage, and
-relationship writes.
-
-`observations`
-
-Point-in-time or tentative findings: profiling results, observed counts, candidate joins, raw notes, failed assumptions, exploratory discoveries, and agent-run observations.
-Use `record_observation()` for routine structured observation writes.
-
-`patterns`
-
-Syntheses over observations, claims, or evidence. Patterns explain why related
-findings belong together and how they may support the current map, without
-requiring an immediate map edit.
-Use `record_pattern()` for routine pattern writes.
-
-`evidence`
-
-Support for observations, patterns, or map assertions: source files, query text, URLs, hashes, evidence summaries, validation reports, and samples.
-`record_observation()` can create a linked evidence resource when evidence fields are supplied.
-
-`shapes`
-
-Project-owned SHACL shapes. These extend `base_shapes` and remain open unless a project deliberately chooses stricter validation.
-
-`history`
-
-Revision rationale, review-bundle metadata, graph-count snapshots, superseded
-terms, deprecated mappings, and consolidation notes.
-Use `record_graph_revision()` for routine revision metadata and
-`stage_graph_revision()` for reviewable patch proposals.
-`apply_staged_revision()` can apply one staged proposal after conservative
-graph-state conflict checks and preview validation. `restage_staged_revision()`
-can refresh a stale staged proposal against current graph state. Fuller graph
-replacement, semantic merge/rebase, and version storage are not implemented yet.
+- `ontology` — project-owned vocabulary and model terms: classes, properties,
+  value types, metric kinds, labels, definitions, deprecations.
+- `map` — the current best structured map of the project's data world:
+  datasets, tables, columns, accepted joins, caveats, storage access, physical
+  layout, and links to ontology terms. Routine writes go through
+  `record_map_fact` (kind-dispatched); reviewed changes to existing map facts
+  go through `stage_revision` then `apply_staged_revision`.
+- `observations` — point-in-time or tentative findings: profile results,
+  observed counts, candidate joins, failed assumptions, query outcomes.
+  Routine writes: `record_observation` (kinds `observation`, `profile`,
+  `claim`, `query_result`) and `record_profile`.
+- `patterns` — syntheses over related observations, claims, or evidence,
+  written with `record_pattern`. Patterns explain why findings belong together
+  without requiring an immediate map edit.
+- `evidence` — support for everything else: source files, query text, URLs,
+  hashes, samples, source spans. Recording helpers create linked evidence
+  when evidence fields are supplied.
+- `shapes` — project-owned SHACL extensions of `base_shapes`.
+- `history` — revision rationale, staged patch payloads, applied-revision
+  events, graph snapshots, review-bundle metadata. Written by
+  `record_graph_revision`, `stage_revision`, and `apply_staged_revision`.
 
 ## Logical Includes
 
-For retrieval and validation, `ontology` means `base_ontology + ontology`, and `shapes` means `base_shapes + shapes`.
+For retrieval and validation, `ontology` means `base_ontology + ontology`,
+and `shapes` means `base_shapes + shapes`.
+
+## Placement Cues
+
+- A fact future agents should start from → `map`.
+- A fact true on a date, from a sample, or not yet trusted → `observations`.
+- The reasoning that connects findings → `patterns`.
+- How you know → `evidence`.
+- What a term means → `ontology`; what must hold → `shapes`.
+- Why the graph changed → `history` (never a staged patch target: patches
+  target the other mutable roles, and their metadata lands in `history`
+  automatically).
+
+Fixture graph IRIs under `https://richcanopy.org/graph/{role}` map onto these
+roles on import.

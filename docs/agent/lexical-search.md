@@ -1,132 +1,60 @@
 # Lexical Search
 
-Search makes captured lore cheap to rediscover.
+`doxabase.search` makes captured lore cheap to rediscover. Agents rarely
+arrive knowing the right IRI, graph role, or predicate; search is the
+low-friction way to ask "have we already noticed something about this?"
 
-DoxaBase stores claims as RDF, but agents do not usually arrive knowing the
-right resource IRI, graph role, or predicate. Lexical search is the low-friction
-way to ask, "Have we already noticed something about this?"
+## What It Does
 
-## What It Indexes
+V1 search is FTS over literal RDF objects in the quad store — labels,
+comments, summaries, caveat and source descriptions, column names, path
+templates, storage roots, evidence source strings. The index is derivative
+and rebuilt from the quads after writes; the RDF stays the source of truth.
+It is not embedding search, SPARQL, or graph expansion, and it is not
+type-aware — to browse by RDF class, use `list_entities(type="rc:Pattern")`
+(or `rc:Claim`, `rc:Evidence`, ...) and then `describe_resource`.
 
-V1 search indexes literal RDF objects from the quad store. That includes common
-human-facing text such as:
+Matches are resources, not detached snippets: graph role, IRI or blank node,
+label, RDF types, matched predicate, matched text, highlighted snippet.
+A match is candidate context — it says a claim exists, not that it is
+current, complete, or applicable.
 
-- `rdfs:label`
-- `rdfs:comment`
-- `rc:summary`
-- `rc:caveatDescription`
-- `rc:sourceDescription`
-- `rc:columnName`
-- `rc:pathTemplate`
-- storage roots, bucket names, endpoint profiles, and credential references
-- evidence source strings
+## Scopes And Graph Scoping
 
-The index is derivative. The RDF quads remain the source of truth, and the
-search index is rebuilt from them after graph writes and clears.
+- `scope="graphs"` (default) searches literal claims across named graphs.
+  `graph=` narrows to one role: `map` for consolidated knowledge,
+  `observations`, `patterns`, `evidence`, `ontology` (which includes
+  `base_ontology`), or `None` for everything.
+- `scope="staged_patches"` searches staged revision patch payloads (`graph`
+  defaults to history there; `current_staged_work_only` defaults true).
+  Use it when you remember staged-only prose, a proposed ontology label, or
+  an IRI local name that describers cannot see because the proposal was
+  never applied.
 
-Search is lexical, not type-aware. To browse resources by RDF class, use
-`doxabase.list_entities` with `type="rc:Pattern"`, `type="rc:Claim"`,
-`type="rc:Evidence"`, or another class, then call
-`doxabase.describe_resource` for the resource you want to inspect.
+Unscoped search is seed-heavy for generic data words ("storage", "row
+count") because base ontology and shape text are indexed too; the response
+flags seed-heavy pages and suggests scoped retries — follow them (usually
+`graph="map"`) before deciding project facts are absent.
 
-## What A Match Means
+## Query Technique
 
-`doxabase.search` returns matched resources, not detached text snippets. Each
-match includes:
+Multi-token queries first require all tokens in one literal, then fall back
+to local co-mentions (resources in the same immediate context whose literals
+collectively cover the query — useful for same-table column discovery).
+When expected lore does not appear, retry before concluding absence: shorter
+phrases, exact labels or column names, distinctive stored words. A natural
+sentence ("permit_number joins inspection events") can miss a pattern whose
+stored wording differs; "inspection events permit_number" can find it.
 
-- graph role
-- resource IRI or blank-node identifier
-- display label when available
-- RDF types from the matched graph
-- matched predicate
-- matched text
-- highlighted snippet
+Zero-match responses include recovery suggestions (scoped retries, entity
+browsing, staged-payload search). They are routes, not evidence the fact
+exists.
 
-Treat matches as candidate context. A match can tell you that a caveat,
-observation, path template, or source note exists; it does not decide whether
-that claim is current, complete, or applicable to the task.
+## After A Match
 
-For multi-token queries, search first tries to find literals containing all
-tokens. If that finds nothing, it falls back to local co-mentions: resources in
-the same immediate context may be returned when their literals collectively
-cover the query. The main current use is same-table column discovery, such as
-finding both `outcomes` and `clobTokenIds` when those names live on separate
-column resources owned by one dataset.
-
-When an expected piece of lore does not appear, retry before concluding it is
-absent. Use shorter phrases, exact labels or column names, distinctive stored
-words from the likely source, and graph scoping. For example, a natural query
-like "permit_number joins inspection events" may miss a recorded pattern whose
-stored wording says "inspection events" and "permit_number" in a different
-shape, while a shorter query such as "inspection events permit_number" can find
-it. If you know the resource type, pair search with `list_entities` and then
-inspect candidates through `describe_resource`, `describe_pattern`, or
-`get_context_graph`.
-When a search returns no matches, read `suggested_next_actions` before
-inventing a fallback. The actions propose bounded shorter-term project searches,
-map entity browsing, and current staged-payload search so you can find a seed or
-check proposed-only vocabulary without dumping whole graphs.
-
-## Observation And Systematisation
-
-Search is especially important for the observation/systematisation loop.
-
-Observations and evidence let agents capture point-in-time findings without
-pretending they are permanent model facts. Patterns let agents synthesize
-related findings before they become map facts. Search lets later agents find
-that chain again, compare it with the current map, and decide whether to
-systematize useful knowledge into `map`, `ontology`, `shapes`, or future
-revision metadata.
-
-In other words, search is a memory retrieval affordance, not a semantic judge.
-The agent still supplies the judgement.
-
-## Graph Scoping
-
-Use `graph` to narrow the search:
-
-- `graph="map"` for current consolidated project knowledge.
-- `graph="observations"` for point-in-time findings.
-- `graph="patterns"` for syntheses over related findings.
-- `graph="evidence"` for supporting source notes.
-- `graph="ontology"` for shared and project vocabulary.
-- `graph=None` to search every graph.
-
-Logical graph expansion applies where it already exists: `ontology` includes
-`base_ontology + ontology`.
-
-Unscoped search can be seed-heavy for generic project words such as "storage",
-"row count", or "query", because immutable base ontology and shape text are also
-indexed. When `doxabase.search(query=..., graph=None)` returns a page dominated
-by seed graphs, the result carries `scope_hint.status =
-"seed_heavy_unscoped_results"` plus scoped retry actions. Follow those actions,
-usually starting with `graph="map"`, before deciding project facts are absent.
-Scoped searches such as `graph="map"` omit the hint.
-Zero-match searches can still include top-level `suggested_next_actions`.
-These actions are recovery routes, not evidence that the requested fact exists.
-
-## Examples
-
-Python:
-
-```python
-matches = db.search("MMSI vessel", graph="map", limit=10)
-```
-
-MCP:
-
-```text
-doxabase.search(query="Parquet schemas", graph="map", limit=5)
-```
-
-After finding a candidate, inspect the surrounding resource with the most
-specific available tool. For tables, use `describe_dataset`. For broader graph
-context, use the returned graph, IRI, predicate, and snippet to guide the next
-lookup or future graph-slice request.
-
-## Current Limits
-
-V1 search is lexical FTS over RDF literals. It is not embedding search, semantic
-retrieval, SPARQL, or graph-neighborhood expansion. It is intentionally simple:
-fast enough to find remembered claims, conservative enough to keep provenance
-visible.
+Inspect with the most specific tool: `describe_dataset` for tables,
+`describe_resource` for anything (patterns and analysis views are
+auto-detected), `get_context_graph(profile="pattern_brief")` when a found
+pattern should hand off its whole support chain. Search is a memory
+retrieval affordance, not a semantic judge — the agent still supplies the
+judgement.

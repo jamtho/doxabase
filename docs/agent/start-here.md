@@ -45,13 +45,14 @@ SHACL validation will flag them.
 ## Recording
 
 - `record_observation` for findings (attach evidence sources);
-  `record_claim_observation` for structured claims;
+  `record_observation(kind="claim")` for structured claims;
   `record_claim_reconsideration` to weaken, contradict, supersede, or
   refine — never delete.
 - `record_pattern` to synthesize related observations. Note: an
   `evidence_summary` requires `evidence_sources` or `source_path`.
-- Map changes go through staged revisions: stage → check
-  (`check_staged_revision_apply`) → `apply_staged_revision` →
+- New current-best facts: `record_map_fact`. Changes to existing map facts
+  go through staged revisions: `stage_revision` → check
+  (`apply_staged_revision(dry_run=true)`) → `apply_staged_revision` →
   `validate_graph(scope="all")`. Rationale fields are for the next agent.
 
 ## Topic Docs
@@ -59,10 +60,12 @@ SHACL validation will flag them.
 Fetch with `doxabase.get_doc` (`section=` for a slice, cheap): graph roles
 (`graph_roles`), observations (`observation_recording`), patterns
 (`patterns`), map authoring (`map_authoring`), staged revisions
-(`staged_revisions`), profiling (`profiling`), systematisation
-(`systematisation`), query planning (`query_planning`), context slices
+(`staged_revisions`), revision history (`revisions`), profiling
+(`profiling`), systematisation (`systematisation`), query planning
+(`query_planning`), storage metadata (`executable_catalog`), context slices
 (`context_slicing`), search (`lexical_search`), analysis packets
-(`analysis_packets`), field trials (`field_trials`).
+(`analysis_packets`), field trials (`field_trials`). Every tool's
+parameters and per-kind spec fields: `mcp_tools` (generated).
 
 Repo direction and loop rules live in `AGENTS.md` and
 `doxabase_design_docs/07-distillation-program.md`, not in capsule docs.

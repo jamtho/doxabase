@@ -1,9 +1,7 @@
 # Response Conventions
 
 The rules every DoxaBase MCP response follows. Learn these once; then trust
-the per-tool schemas for field lists. (The older `response_shapes` document
-predates these conventions and is being retired; where they disagree, this
-document wins.)
+the per-tool schemas and the generated `mcp_tools` doc for field lists.
 
 ## The envelope
 

@@ -89,13 +89,13 @@ Read these first when arriving cold:
 
 1. `docs/agent/start-here.md` for the cold-start and post-compaction route.
 2. `README.md` for project purpose, status, commands, and direction.
-3. `ARCHITECTURE.md` for boundaries and near-term build order.
-4. `docs/agent/graph-roles.md` and `docs/agent/workflow.md` when you need
-   fuller operational graph conventions.
+3. `ARCHITECTURE.md` for boundaries and current limits.
+4. `docs/agent/graph-roles.md` and `docs/agent/working-the-capsule.md` when
+   you need fuller operational graph conventions.
 
 Use the DoxaBase MCP docs tools when available:
 
-1. `doxabase.list_docs`
+1. `doxabase.get_doc` (no arguments lists the docs)
 2. `doxabase.get_doc` with `doc_id="start_here"`
 3. `doxabase.get_doc` with `doc_id="graph_roles"` when placement rules matter
 4. `doxabase.get_doc` with `doc_id="context_slicing"` when retrieval scope matters
@@ -118,7 +118,8 @@ obscure local output.
 
 ## Working In The Codebase
 
-- `doxabase/core.py` owns storage and graph behavior.
+- `doxabase/core/` owns storage and graph behavior (one module per
+  subsystem, composed into the `DoxaBase` facade).
 - `doxabase/mcp_tools.py` owns testable MCP-callable business logic.
 - `doxabase/mcp_server.py` should stay thin.
 - `docs/agent/` contains short agent-facing docs; register new docs in

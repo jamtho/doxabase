@@ -144,62 +144,63 @@ async def test_mcp_tool_schemas_match_tool_layer_signatures(
 def test_doc_tools_return_json_like_payloads() -> None:
     result = get_doc_tool()
     doc_ids = {doc["id"] for doc in result["docs"]}
-    response_shapes_doc = next(
-        doc for doc in result["docs"] if doc["id"] == "response_shapes"
+    mcp_tools_doc = next(
+        doc for doc in result["docs"] if doc["id"] == "mcp_tools"
     )
 
     assert result["docs"][0]["id"] == "start_here"
     assert "start_here" in doc_ids
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
-    assert "response_shapes" in doc_ids
+    assert "mcp_tools" in doc_ids
     assert "profiling" in doc_ids
     assert "systematisation" in doc_ids
-    assert response_shapes_doc["size_chars"] > 0
+    assert "response_shapes" not in doc_ids
+    assert "api_reference" not in doc_ids
+    assert mcp_tools_doc["size_chars"] > 0
+    # every registered tool is a section anchor in the generated doc
     assert {
         section
-        for section in response_shapes_doc["sections"]
+        for section in mcp_tools_doc["sections"]
     } >= {
-        "profile-helper-records",
-        "dataset-storage-and-layout",
-        "linked-pattern-reasons",
-        "query-context",
-        "draft-query-plan",
-        "staged-detail-and-current-apply-summary",
-        "apply-check-patch-checks-and-snapshot-drift",
-        "validation-diagnostics",
-        "staged-revisions",
+        "doxabase-project-brief",
+        "doxabase-describe-dataset",
+        "doxabase-record-map-fact",
+        "doxabase-stage-revision",
+        "doxabase-apply-staged-revision",
+        "doxabase-export-bundle",
+        "doxabase-validate-graph",
     }
 
     section = get_doc_tool(
-        "response_shapes",
-        section="Profile Helper Records",
+        "mcp_tools",
+        section="doxabase.record_map_fact",
         max_chars=300,
     )
-    assert section["selected_section"]["anchor"] == "profile-helper-records"
+    assert section["selected_section"]["anchor"] == "doxabase-record-map-fact"
     assert section["start_char"] == section["selected_section"]["start_char"]
-    assert section["content"].startswith("## Profile Helper Records")
+    assert section["content"].startswith("## doxabase.record_map_fact")
     assert section["truncated"] is True
 
     offset = get_doc_tool(
-        "response_shapes",
+        "mcp_tools",
         start_char=section["end_char"],
         max_chars=120,
     )
     assert offset["start_char"] == section["end_char"]
     assert len(offset["content"]) <= 120
-    assert offset["selected_section"]["anchor"] == "profile-helper-records"
+    assert offset["selected_section"]["anchor"] == "doxabase-record-map-fact"
 
     nested_section = get_doc_tool(
-        "response_shapes",
-        section="Apply Check, Patch Checks, And Snapshot Drift",
+        "mcp_tools",
+        section='record_map_fact kind="caveat"',
         max_chars=300,
     )
     assert nested_section["selected_section"]["anchor"] == (
-        "apply-check-patch-checks-and-snapshot-drift"
+        "record-map-fact-kind-caveat"
     )
     assert nested_section["content"].startswith(
-        "### Apply Check, Patch Checks, And Snapshot Drift"
+        '### record_map_fact kind="caveat"'
     )
 
 

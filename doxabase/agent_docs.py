@@ -52,12 +52,6 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "response-conventions.md",
     ),
     AgentDoc(
-        id="agent_workflow",
-        title="Agent Workflow",
-        description="Recommended first calls and graph placement rules for agents.",
-        path=DOCS_DIR / "workflow.md",
-    ),
-    AgentDoc(
         id="project_strategy",
         title="Project Strategy",
         description="Strategic build-priority frontier for autonomous repo-improvement loops.",
@@ -72,26 +66,14 @@ DOCS: tuple[AgentDoc, ...] = (
     AgentDoc(
         id="mcp_tools",
         title="MCP Tools",
-        description="Available MCP tools and expected use.",
+        description="Generated per-tool reference: parameters, kinds/aspects, and spec fields.",
         path=DOCS_DIR / "mcp-tools.md",
-    ),
-    AgentDoc(
-        id="response_shapes",
-        title="Response Shape Examples",
-        description="Common Python and MCP response fields agents need when scripting.",
-        path=DOCS_DIR / "response-shapes.md",
     ),
     AgentDoc(
         id="observation_recording",
         title="Observation Recording",
-        description="How to record point-in-time findings and linked evidence.",
+        description="How to record point-in-time findings, claims, query results, and linked evidence.",
         path=DOCS_DIR / "observation-recording.md",
-    ),
-    AgentDoc(
-        id="observation_rdf",
-        title="Agent-Authored Observation RDF",
-        description="How to express nuanced observations, claims, and source spans as RDF.",
-        path=DOCS_DIR / "observation-rdf.md",
     ),
     AgentDoc(
         id="patterns",
@@ -156,7 +138,7 @@ DOCS: tuple[AgentDoc, ...] = (
     AgentDoc(
         id="query_planning",
         title="Query Planning",
-        description="How to read query-context and draft-plan routing fields.",
+        description="How to move from map metadata to a reviewed, non-executed query handoff.",
         path=DOCS_DIR / "query-planning.md",
     ),
     AgentDoc(
@@ -164,12 +146,6 @@ DOCS: tuple[AgentDoc, ...] = (
         title="Agent Field Trials",
         description="How to run bounded sub-agent trials and turn friction into product signal.",
         path=DOCS_DIR / "field-trials.md",
-    ),
-    AgentDoc(
-        id="api_reference",
-        title="API Reference",
-        description="Small Python API reference for the current implementation.",
-        path=DOCS_DIR / "api-reference.md",
     ),
     AgentDoc(
         id="fixture_notes",
@@ -266,12 +242,15 @@ def _doc_sections(text: str) -> list[dict[str, Any]]:
                     "start_char": offset,
                     "end_char": len(text),
                 }
-                while (
-                    sections
-                    and sections[-1]["end_char"] == len(text)
-                    and sections[-1]["level"] >= section["level"]
-                ):
-                    sections[-1]["end_char"] = offset
+                # Close every still-open section at this level or deeper —
+                # including a parent left open behind its closed children —
+                # stopping at the first open ancestor above this level.
+                for open_section in reversed(sections):
+                    if open_section["end_char"] != len(text):
+                        continue
+                    if open_section["level"] < section["level"]:
+                        break
+                    open_section["end_char"] = offset
                 sections.append(section)
         offset += len(line)
     return sections

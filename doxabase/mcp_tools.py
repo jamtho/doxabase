@@ -211,6 +211,55 @@ def _detect_describe_aspect(db: DoxaBase, iri: str) -> str:
     return "resource"
 
 
+# Aspect dispatch reference for describe_resource_tool. `iri`, `graph`, and
+# `aspect` always apply. Consumed by the aspect error below and by
+# tools/gen_docs.py; keep in sync with the dispatch branches in
+# describe_resource_tool.
+_DESCRIBE_RESOURCE_ASPECTS: dict[str, dict[str, Any]] = {
+    "auto": {
+        "required": (),
+        "optional": (),
+        "note": (
+            "detects 'pattern' and 'analysis_view' by rdf:type, switches to "
+            "'assertion_support' when predicate is supplied, else 'resource'"
+        ),
+    },
+    "resource": {
+        "required": (),
+        "optional": (
+            "include_incoming",
+            "limit",
+            "outgoing_offset",
+            "incoming_offset",
+            "include_blank_node_closure",
+            "blank_node_depth",
+            "blank_node_limit",
+        ),
+        "note": "paged direct triples with optional blank-node closure",
+    },
+    "pattern": {
+        "required": (),
+        "optional": (),
+        "note": "pattern handoff card; graph defaults to 'patterns'",
+    },
+    "analysis_view": {
+        "required": (),
+        "optional": (),
+        "note": "logical view card; graph defaults to 'map'",
+    },
+    "profile_run": {
+        "required": ("evidence_iri",),
+        "optional": ("limit",),
+        "note": "iri = profiled dataset, evidence_iri = shared run evidence",
+    },
+    "assertion_support": {
+        "required": ("predicate",),
+        "optional": ("object", "object_kind", "object_datatype", "object_lang", "limit"),
+        "note": "iri = assertion subject",
+    },
+}
+
+
 def describe_resource_tool(
     db: DoxaBase,
     iri: str,
@@ -286,9 +335,8 @@ def describe_resource_tool(
         )
     if aspect != "resource":
         raise DoxaBaseError(
-            "describe_resource aspect must be one of 'auto', 'resource', "
-            "'pattern', 'analysis_view', 'profile_run', or "
-            f"'assertion_support'; got {aspect!r}"
+            "describe_resource aspect must be one of "
+            f"{sorted(_DESCRIBE_RESOURCE_ASPECTS)}; got {aspect!r}"
         )
     result = db.describe_resource(
         iri=iri,
@@ -1467,18 +1515,7 @@ def record_profile_tool(
     spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Record profile evidence; kind picks the profile shape."""
-    return _dispatch_kind(
-        db,
-        "record_profile",
-        {
-            "dataset": record_dataset_profile_tool,
-            "column": record_column_profile_tool,
-            "bundle": record_profile_bundle_tool,
-            "domain_network": record_domain_network_profile_tool,
-        },
-        kind,
-        spec,
-    )
+    return _dispatch_kind(db, "record_profile", _RECORD_PROFILE_KINDS, kind, spec)
 
 
 def record_map_fact_tool(
@@ -1487,28 +1524,7 @@ def record_map_fact_tool(
     spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Record current-best map facts; kind picks the fact family."""
-    return _dispatch_kind(
-        db,
-        "record_map_fact",
-        {
-            "dataset": record_map_dataset_tool,
-            "column": record_map_column_tool,
-            "caveat": record_map_caveat_tool,
-            "relationship": record_map_relationship_tool,
-            "storage_access": record_map_storage_access_tool,
-            "physical_layout": record_map_physical_layout_tool,
-            "partition_scheme": record_map_partition_scheme_tool,
-            "asset_transform": record_map_asset_transform_tool,
-            "analysis_view": record_map_analysis_view_tool,
-            "analysis_view_bundle": record_map_analysis_view_bundle_tool,
-            "table_bundle": record_map_table_bundle_tool,
-            "analysis_packet": record_analysis_packet_tool,
-            "profile_manifest": record_profile_to_capsule_manifest_tool,
-            "profiled_parquet_table": record_profiled_parquet_table_tool,
-        },
-        kind,
-        spec,
-    )
+    return _dispatch_kind(db, "record_map_fact", _RECORD_MAP_FACT_KINDS, kind, spec)
 
 
 def record_observation_tool(
@@ -1535,19 +1551,14 @@ def record_observation_tool(
     observed_physical_type: str | None = None,
     observed_value_type: str | None = None,
 ) -> dict[str, Any]:
-    if kind in {"claim", "query_result"}:
-        handler = (
-            record_claim_observation_tool
-            if kind == "claim"
-            else record_query_result_tool
-        )
+    if kind in _RECORD_OBSERVATION_SPEC_KINDS:
         merged = dict(spec or {})
         if summary is not None:
             merged.setdefault("summary", summary)
         return _dispatch_kind(
             db,
             "record_observation",
-            {kind: handler},
+            {kind: _RECORD_OBSERVATION_SPEC_KINDS[kind]},
             kind,
             merged,
         )
@@ -3351,6 +3362,38 @@ def _stage_revision_profile_map_updates_dry_run(
         restage_stale_revisions=False,
     )
 
+
+# Kind dispatch tables. Handlers are the *_tool functions above; spec fields
+# are their keyword parameters (required = no default). tools/gen_docs.py
+# introspects these tables to regenerate docs/agent/mcp-tools.md.
+_RECORD_OBSERVATION_SPEC_KINDS: dict[str, Any] = {
+    "claim": record_claim_observation_tool,
+    "query_result": record_query_result_tool,
+}
+
+_RECORD_PROFILE_KINDS: dict[str, Any] = {
+    "dataset": record_dataset_profile_tool,
+    "column": record_column_profile_tool,
+    "bundle": record_profile_bundle_tool,
+    "domain_network": record_domain_network_profile_tool,
+}
+
+_RECORD_MAP_FACT_KINDS: dict[str, Any] = {
+    "dataset": record_map_dataset_tool,
+    "column": record_map_column_tool,
+    "caveat": record_map_caveat_tool,
+    "relationship": record_map_relationship_tool,
+    "storage_access": record_map_storage_access_tool,
+    "physical_layout": record_map_physical_layout_tool,
+    "partition_scheme": record_map_partition_scheme_tool,
+    "asset_transform": record_map_asset_transform_tool,
+    "analysis_view": record_map_analysis_view_tool,
+    "analysis_view_bundle": record_map_analysis_view_bundle_tool,
+    "table_bundle": record_map_table_bundle_tool,
+    "analysis_packet": record_analysis_packet_tool,
+    "profile_manifest": record_profile_to_capsule_manifest_tool,
+    "profiled_parquet_table": record_profiled_parquet_table_tool,
+}
 
 _STAGE_REVISION_KINDS: dict[str, Any] = {
     "graph": stage_graph_revision_tool,
