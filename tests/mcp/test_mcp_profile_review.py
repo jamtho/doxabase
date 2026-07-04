@@ -42,16 +42,16 @@ def test_stage_profile_map_updates_tool_handles_all_skipped_recommendations(
     )
 
     assert result["result_kind"] == "profile_map_update_staging"
-    assert result["staged_revision"] is None
-    assert result["revision_iri"] is None
-    assert result["staged_recommendation_indexes"] == []
+    assert result.get("staged_revision") is None
+    assert result.get("revision_iri") is None
+    assert result.get("staged_recommendation_indexes", []) == []
     assert result["skipped_recommendation_indexes"] == [0]
     assert result["status_counts"] == {
         "staged": 0,
         "skipped": 1,
         "not_selected": 0,
     }
-    assert result["suggested_next_actions"] == []
+    assert result.get("suggested_next_actions", []) == []
     assert "Sampled or unknown-scope row-count recommendations" in (
         result["items"][0]["reason"]
     )
@@ -355,7 +355,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     )
     assert result["recommendations"][0]["profile_row_count"] == 10
     assert result["recommendations"][0]["default_stageable"] is True
-    assert result["recommendations"][0]["default_skip_reason"] is None
+    assert result["recommendations"][0].get("default_skip_reason") is None
     assert result["recommendations"][0]["duplicate_group_key"].startswith(
         "profile-map-update:"
     )
@@ -366,7 +366,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ]
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
     assert result["recommendations"][1]["default_stageable"] is True
-    assert result["recommendations"][1]["default_skip_reason"] is None
+    assert result["recommendations"][1].get("default_skip_reason") is None
     assert result["metric_advisory_count"] == 1
     assert result["representative_metric_advisory_indexes"] == [0]
     assert result["metric_advisory_status_counts"] == {
@@ -399,9 +399,9 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["type_advisories"][0]["observed_physical_type"]["iri"] == (
         RC + "Varchar"
     )
-    assert result["type_advisories"][0]["current_physical_type"] is None
-    assert result["type_advisories"][0]["related_recommendation_indexes"] == []
-    assert result["type_advisories"][0]["related_recommendation_kinds"] == []
+    assert result["type_advisories"][0].get("current_physical_type") is None
+    assert result["type_advisories"][0].get("related_recommendation_indexes", []) == []
+    assert result["type_advisories"][0].get("related_recommendation_kinds", []) == []
     assert result["type_advisories"][0]["routing_note"].startswith(
         "Inspect current map context"
     )
@@ -498,7 +498,7 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
 
     assert result["result_kind"] == "profile_followthrough_plan"
     assert result["result_binding_keys"] == [binding_key]
-    assert result["missing_binding_keys"] == []
+    assert result.get("missing_binding_keys", []) == []
     assert result["draft"]["type_advisory_count"] == 1
     assert result["draft"]["type_advisories"][0]["promotion_pattern_count"] == 1
     assert result["produced_binding_count"] >= 1
@@ -547,7 +547,7 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
         and resolution["action"]["arguments"]["predicate"] == "rc:valueType"
     ][0]
     assert value_type_resolution["binding_status"] == "not_applicable"
-    assert value_type_resolution["applied_binding_keys"] == []
+    assert value_type_resolution.get("applied_binding_keys", []) == []
     assert value_type_resolution["action"]["arguments"]["supporting_patterns"] == [
         pattern["pattern_iri"]
     ]
@@ -629,7 +629,7 @@ def test_plan_profile_followthrough_tool_serializes_eligible_type_batch(
     batch_plan = result["profile_type_assertion_batch_plan"]
     assert batch_plan["eligible_action_count"] == 2
     assert batch_plan["batch_count"] == 2
-    assert batch_plan["skipped_reason_counts"] == {}
+    assert batch_plan.get("skipped_reason_counts", {}) == {}
     items = [
         item for batch in batch_plan["batches"] for item in batch["items"]
     ]
@@ -681,7 +681,7 @@ def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
         evidence_iri=shared_evidence,
     )
 
-    assert result["suggested_next_actions"] == []
+    assert result.get("suggested_next_actions", []) == []
     assert list(result["suggested_next_action_groups"]) == [
         "profile_scalar_conflict_review"
     ]
@@ -989,7 +989,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         pattern["pattern_iri"]
     ]
     assert advisory["context_pattern_count"] == 0
-    assert advisory["context_patterns"] == []
+    assert advisory.get("context_patterns", []) == []
     assert [action["tool_name"] for action in advisory["suggested_next_actions"]] == [
         "describe_context_slice",
         "list_entities",
@@ -1190,7 +1190,7 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
         dataset_iri=table,
         evidence_iri=shared_evidence,
     )
-    assert followthrough["missing_binding_keys"] == []
+    assert followthrough.get("missing_binding_keys", []) == []
     assert "missing_binding_prerequisites" not in (
         followthrough["suggested_next_action_groups"]
     )
@@ -1276,7 +1276,7 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["result_kind"] == "profile_map_update_staging"
     assert result["accepted_recommendation_indexes"] == [0, 1]
     assert result["staged_recommendation_indexes"] == [0, 1]
-    assert result["skipped_recommendation_indexes"] == []
+    assert result.get("skipped_recommendation_indexes", []) == []
     assert result["status_counts"] == {
         "staged": 2,
         "skipped": 0,
@@ -1291,11 +1291,11 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
     assert result["metric_advisory_count"] == 0
-    assert result["metric_advisory_status_counts"] == {}
-    assert result["metric_advisories"] == []
+    assert result.get("metric_advisory_status_counts", {}) == {}
+    assert result.get("metric_advisories", []) == []
     assert result["metric_vocabulary_review_required"] is False
-    assert result["metric_advisory_suggested_next_actions"] == []
-    assert result["metric_advisory_suggested_next_calls"] == []
+    assert result.get("metric_advisory_suggested_next_actions", []) == []
+    assert result.get("metric_advisory_suggested_next_calls", []) == []
     assert result["type_advisory_count"] == 1
     assert result["type_advisory_status_counts"] == {
         "type_finding_missing_map_type": 1,

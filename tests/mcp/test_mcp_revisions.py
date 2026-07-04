@@ -88,10 +88,10 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["include_apply_checks"] is True
     assert result["drift_detail"] == "summary"
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
-    assert result["record_kind"] is None
-    assert result["application_status"] is None
-    assert result["staged_validation_status"] is None
-    assert result["stale_resolution_state"] is None
+    assert result.get("record_kind") is None
+    assert result.get("application_status") is None
+    assert result.get("staged_validation_status") is None
+    assert result.get("stale_resolution_state") is None
     assert result["current_staged_work_only"] is False
     assert result["returned_application_status_counts"] == {"ready": 1}
     assert result["returned_current_staged_work_application_status_counts"] == {
@@ -103,7 +103,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
         "apply_after_review": [staged["revision_iri"]]
     }
     assert result["next_action_queue_item_counts"] == {"apply_after_review": 1}
-    assert result["semantic_review_required_queue_counts"] == {}
+    assert result.get("semantic_review_required_queue_counts", {}) == {}
     queue_item = result["next_action_queue_items"][0]
     assert queue_item["row_iri"] == staged["revision_iri"]
     assert queue_item["queue"] == "apply_after_review"
@@ -119,7 +119,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
     assert result["revisions"][0]["is_current_staged_work"] is True
-    assert result["revisions"][0]["not_current_staged_work_reason"] is None
+    assert result["revisions"][0].get("not_current_staged_work_reason") is None
     assert result["revisions"][0]["has_patch_payload"] is True
     assert result["revisions"][0]["patch_count"] == 1
     assert result["revisions"][0]["snapshot_evidence"]["status"] == (
@@ -181,7 +181,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert stored_conforms_result["total_count"] == 1
     assert stored_conforms_result["revisions"][0]["iri"] == staged["revision_iri"]
     assert (
-        staged_patch_result["revisions"][0]["not_current_staged_work_reason"]
+        staged_patch_result["revisions"][0].get("not_current_staged_work_reason")
         is None
     )
 
@@ -243,7 +243,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert second_page["returned_application_status_counts"] == {
         "applied_event": 1
     }
-    assert second_page["returned_current_staged_work_application_status_counts"] == {}
+    assert second_page.get("returned_current_staged_work_application_status_counts", {}) == {}
     assert second_page["next_action_queue"] == {
         "inspect_already_applied": [applied["applied_revision_iri"]]
     }
@@ -328,7 +328,7 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert staged_row["included_graphs"] == ["map"]
     assert staged_row["is_current_staged_work"] is False
     assert staged_row["not_current_staged_work_reason"] == "already_applied_source"
-    assert staged_row["review_resolution"] is None
+    assert staged_row.get("review_resolution") is None
     assert staged_row["triple_count"] == 0
     assert staged_row["count_basis"] == "stored_snapshot_rows"
     assert staged_row["exact_snapshot_available"] is True
@@ -358,7 +358,7 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert applied_row["applies_staged_revision"] == staged["revision_iri"]
     assert applied_row["is_current_staged_work"] is False
     assert applied_row["not_current_staged_work_reason"] == "applied_event_record"
-    assert applied_row["review_resolution"] is None
+    assert applied_row.get("review_resolution") is None
     assert applied_row["triple_count"] == db.triple_count("map")
     assert applied_row["exact_snapshot_available"] is True
     assert [
@@ -382,7 +382,7 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert exact_staged["exact_only"] is True
     assert exact_staged["include_current"] is False
     assert exact_staged["record_kind"] == "staged_patch"
-    assert exact_staged["current_graph"] is None
+    assert exact_staged.get("current_graph") is None
     assert [row["revision_iri"] for row in exact_staged["versions"]] == [
         staged["revision_iri"]
     ]
@@ -452,7 +452,7 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
     assert stored_diff["exact_changed_triples_available"] is True
     assert stored_diff["exact_changed_triples_included"] is False
     assert stored_diff["triples_added_count"] == 1
-    assert stored_diff["triples_added"] == []
+    assert stored_diff.get("triples_added", []) == []
     assert stored_diff["after_snapshot"]["revision_iri"] == (
         first_applied["applied_revision_iri"]
     )
@@ -477,11 +477,11 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
         include_triples=True,
     )
 
-    assert current_diff["after_revision_iri"] is None
+    assert current_diff.get("after_revision_iri") is None
     assert current_diff["compare_to_current"] is True
     assert current_diff["after_target_kind"] == "current_graph"
     assert current_diff["current_graph"]["triple_count"] == db.triple_count("map")
-    assert current_diff["after_snapshot"] is None
+    assert current_diff.get("after_snapshot") is None
     assert current_diff["count_delta"] == 1
     assert current_diff["exact_changed_triples_included"] is True
     assert current_diff["triples_added_count"] == 1
@@ -594,12 +594,12 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert lineage["selected_revision_iri"] == applied["applied_revision_iri"]
     assert lineage["paired_revision"]["revision"]["iri"] == staged["revision_iri"]
     assert lineage["paired_revision_iri"] == staged["revision_iri"]
-    assert lineage["current_staged_revision_iri"] is None
-    assert lineage["current_revision_iri"] is None
+    assert lineage.get("current_staged_revision_iri") is None
+    assert lineage.get("current_revision_iri") is None
     assert lineage["latest_revision_iri"] == applied["applied_revision_iri"]
     assert lineage["latest_role"] == "applied_event"
     assert lineage["restage_chain_iris"] == [staged["revision_iri"]]
-    assert lineage["alternative_revision_iris"] == []
+    assert lineage.get("alternative_revision_iris", []) == []
     assert lineage["applied_source_revision_iri"] == staged["revision_iri"]
     assert lineage["next_action_queue_item"]["row_iri"] == (
         applied["applied_revision_iri"]
@@ -652,5 +652,5 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         ),
         f"describe_staged_revision(iri='{staged['revision_iri']}')",
     ]
-    assert generic_lineage["warnings"] == []
+    assert generic_lineage.get("warnings", []) == []
 

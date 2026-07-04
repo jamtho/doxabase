@@ -14,6 +14,7 @@ from doxabase.core import (
     ROOT,
     SuggestedNextAction,
     to_dict,
+    to_jsonable,
 )
 
 EXAMPLE_FIXTURES = (
@@ -24,7 +25,7 @@ POST_IMPORT_SNAPSHOT_EVIDENCE_LIMIT = 20
 
 
 def list_docs_tool() -> dict[str, Any]:
-    return {"docs": list_agent_docs()}
+    return to_jsonable({"docs": list_agent_docs()})
 
 
 def get_doc_tool(
@@ -43,13 +44,13 @@ def get_doc_tool(
 
 def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
     overview = db.graph_overview(limit=limit)
-    return {
+    return to_jsonable({
         "named_graphs": [to_dict(graph) for graph in overview.named_graphs],
         "class_counts": _pairs_to_dicts(overview.class_counts, "class"),
         "predicate_counts": _pairs_to_dicts(overview.predicate_counts, "predicate"),
         "key_counts": overview.key_counts,
         "namespaces": overview.namespaces,
-    }
+    })
 
 
 def scan_sensitive_literals_tool(
@@ -105,7 +106,7 @@ def list_entities_tool(
     offset: int = 0,
 ) -> dict[str, Any]:
     result = db.list_entities(type=type, graph=graph, text=text, limit=limit, offset=offset)
-    return {
+    return to_jsonable({
         "entities": [to_dict(entity) for entity in result.entities],
         "limit": result.limit,
         "offset": result.offset,
@@ -119,7 +120,7 @@ def list_entities_tool(
             to_dict(action) for action in result.suggested_next_actions
         ],
         "suggested_next_calls": list(result.suggested_next_calls),
-    }
+    })
 
 
 def describe_resource_tool(
@@ -1998,7 +1999,7 @@ def search_tool(
     offset: int = 0,
 ) -> dict[str, Any]:
     result = db.search(query=query, graph=graph, limit=limit, offset=offset)
-    return {
+    return to_jsonable({
         "query": result.query,
         "graph": result.graph,
         "matches": [to_dict(match) for match in result.matches],
@@ -2017,7 +2018,7 @@ def search_tool(
             to_dict(action) for action in result.suggested_next_actions
         ],
         "suggested_next_calls": list(result.suggested_next_calls),
-    }
+    })
 
 
 def import_trig_tool(
@@ -2053,7 +2054,7 @@ def import_trig_tool(
         total_history_revision_count > len(post_import_snapshot_evidence)
     )
 
-    return {
+    return to_jsonable({
         "path": str(resolved_path),
         "replace": replace,
         "imported": imported,
@@ -2073,7 +2074,7 @@ def import_trig_tool(
             to_dict(action) for action in suggested_next_actions
         ],
         "suggested_next_calls": [action.call for action in suggested_next_actions],
-    }
+    })
 
 
 def export_revision_snapshots_tool(
@@ -2735,12 +2736,12 @@ def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str,
                 "imported": imported,
             }
         )
-    return {
+    return to_jsonable({
         "replace": replace,
         "fixtures": results,
         "totals": totals,
         "total_imported": sum(totals.values()),
-    }
+    })
 
 
 def validate_graph_tool(

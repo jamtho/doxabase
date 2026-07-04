@@ -99,7 +99,7 @@ def test_assertion_literal_metadata_tools_return_json_like_payloads(
     )
 
     assert result["object_datatype"] == str(XSD.boolean)
-    assert result["object_lang"] is None
+    assert result.get("object_lang") is None
     assert result["judgement_panel"]["proposed_value"]["datatype"] == str(
         XSD.boolean
     )
@@ -204,7 +204,7 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     assert condition_id_reason["relationship"] == "target_of"
     assert condition_id_reason["relationship_label"] == "Trades to Markets via conditionId"
     assert condition_id_reason["relationship_kind_label"] == "ForeignKey"
-    assert condition_id_reason["declared"] is None
+    assert condition_id_reason.get("declared") is None
     assert condition_id_reason["referential_integrity"]["iri"] == (
         "https://richcanopy.org/ns/rc#PartialIntegrity"
     )
@@ -254,7 +254,7 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
         == "https://richcanopy.org/example/manifest/ais#DailyIndex"
         for warning in result["operational_warnings"]
     )
-    assert result["caveats"] == []
+    assert result.get("caveats", []) == []
     assert any(
         caveat["description"]
         and "MMSI does not reliably identify a single vessel" in caveat["description"]
@@ -382,7 +382,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         action["call"] for action in result["suggested_next_actions"]
     ]
     assert result["triples"][0]["subject"] == seed_iri
-    assert result["trig"] is None
+    assert result.get("trig") is None
     preflight = preflight_context_slice_export_tool(
         db,
         seed_iris=[seed_iri],
@@ -423,8 +423,6 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         "depth",
         "route",
         "route_label",
-        "source_iri",
-        "source_label",
     }
     assert any(
         resource["iri"]
@@ -458,7 +456,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         profile="dataset_brief",
     )
     assert warning_result["truncated"] is False
-    assert warning_result["warnings"] == []
+    assert warning_result.get("warnings", []) == []
     assert warning_result["dataset_contexts"][0]["operational_warnings"][0][
         "code"
     ] == "missing_storage_access"
@@ -505,7 +503,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         profile="dataset_brief",
     )
     assert repair_result["truncated"] is False
-    assert repair_result["dataset_contexts"][0]["operational_warnings"] == []
+    assert repair_result["dataset_contexts"][0].get("operational_warnings", []) == []
     assert [
         action["tool_name"] for action in repair_result["suggested_next_actions"]
     ] == ["describe_query_context"]
@@ -526,7 +524,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         profile="dataset_brief",
         max_triples=120,
     )
-    assert mismatch["pattern_contexts"] == []
+    assert mismatch.get("pattern_contexts", []) == []
     assert any(
         "Seed is an rc:Pattern; rerun with profile='pattern_brief' or 'deep_lore'."
         in warning
@@ -588,12 +586,12 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["same_subject_predicate_triples"][0]["object"] == (
         "https://example.test/project#message_id"
     )
-    assert result["owner_dataset"] is None
-    assert result["absence_note"] is None
-    assert result["nearby_context_triples"] == []
-    assert result["nearby_caveat_links"] == []
-    assert result["related_routes"] == []
-    assert result["related_route_summaries"] == []
+    assert result.get("owner_dataset") is None
+    assert result.get("absence_note") is None
+    assert result.get("nearby_context_triples", []) == []
+    assert result.get("nearby_caveat_links", []) == []
+    assert result.get("related_routes", []) == []
+    assert result.get("related_route_summaries", []) == []
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "describe_context_slice"
     )
@@ -622,7 +620,7 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert result["returned_count"] == result["count"]
     assert result["total_count"] >= result["returned_count"]
     assert result["omitted_count"] >= 0
-    assert result["has_more"] == (result["next_offset"] is not None)
+    assert result["has_more"] == (result.get("next_offset") is not None)
     assert any(
         "Parquet schemas are inferred" in match["text"]
         for match in result["matches"]
@@ -720,7 +718,7 @@ def test_search_tool_serializes_zero_match_retrieval_fallbacks(
     )
 
     assert result["count"] == 0
-    assert result["scope_hint"] is None
+    assert result.get("scope_hint") is None
     assert result["suggested_next_calls"] == [
         action["call"] for action in result["suggested_next_actions"]
     ]
@@ -764,7 +762,7 @@ def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(
 
     result = search_tool(db, query="storage", limit=5)
 
-    assert result["graph"] is None
+    assert result.get("graph") is None
     assert result["scope_hint"]["status"] == "seed_heavy_unscoped_results"
     assert result["scope_hint"]["seed_match_count"] > result["scope_hint"][
         "project_match_count"
@@ -792,7 +790,7 @@ def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(
     ]
 
     scoped = search_tool(db, query="storage", graph="map", limit=5)
-    assert scoped["scope_hint"] is None
-    assert scoped["suggested_next_actions"] == []
+    assert scoped.get("scope_hint") is None
+    assert scoped.get("suggested_next_actions", []) == []
     assert {match["graph"] for match in scoped["matches"]} == {"map"}
 

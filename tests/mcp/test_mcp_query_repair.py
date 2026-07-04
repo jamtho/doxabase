@@ -224,8 +224,8 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
         draft_action["unattended_review_reason_codes"]
     )
     assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
-    assert result["unattended_recommended_action_indexes"] == []
-    assert result["first_unattended_action_index"] is None
+    assert result.get("unattended_recommended_action_indexes", []) == []
+    assert result.get("first_unattended_action_index") is None
 
     arguments = dict(action["arguments"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
@@ -235,7 +235,7 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
     assert applied["patches_applied"] == 2
     repaired = describe_query_context_tool(db, iri=dataset)
     assert repaired["readiness"] == "ready_for_query_planning"
-    assert repaired["suggested_repair_action_groups"] == []
+    assert repaired.get("suggested_repair_action_groups", []) == []
 
 
 def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
@@ -340,8 +340,8 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         draft_action["unattended_review_reason_codes"]
     )
     assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
-    assert result["unattended_recommended_action_indexes"] == []
-    assert result["first_unattended_action_index"] is None
+    assert result.get("unattended_recommended_action_indexes", []) == []
+    assert result.get("first_unattended_action_index") is None
     action = repair_group["actions"][0]
     assert action["tool_name"] == "stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset
@@ -436,7 +436,7 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     assert route_card["physical_layout_iri"] == parquet_layout["iri"]
     assert "ambiguous_physical_layout" in route_card["direct_issue_codes"]
     assert selection_actions[0]["call"].startswith("draft_query_plan(")
-    assert automatic["scan"]["function"] is None
+    assert automatic["scan"].get("function") is None
     assert automatic["review_gate"]["blocking_reason_codes"] == [
         "ambiguous_physical_layout"
     ]
@@ -449,9 +449,9 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     assert selected["scan"]["physical_layout_selection_note"] == (
         "Caller selected this physical layout for the draft query plan."
     )
-    assert "ambiguous_physical_layout" not in selected["review_gate"][
-        "blocking_reason_codes"
-    ]
+    assert "ambiguous_physical_layout" not in selected["review_gate"].get(
+        "blocking_reason_codes", []
+    )
     assert selected["review_gate"]["ready_for_execution_attempt"] is True
     assert selected["handoff_kind"] == "execution_attempt_ready"
 

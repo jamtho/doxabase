@@ -39,7 +39,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
 
     before_context = describe_query_context_tool(db, iri=dataset)
     assert before_context["readiness"] == "insufficient_metadata"
-    assert before_context["query_target_candidates"] == []
+    assert before_context.get("query_target_candidates", []) == []
     assert [
         action["tool_name"] for action in before_context["suggested_next_actions"]
     ] == [
@@ -48,8 +48,8 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     ]
     assert before_context["safe_inspection_action_indexes"] == [0]
     assert before_context["first_safe_inspection_action_index"] == 0
-    assert before_context["unattended_recommended_action_indexes"] == []
-    assert before_context["first_unattended_action_index"] is None
+    assert before_context.get("unattended_recommended_action_indexes", []) == []
+    assert before_context.get("first_unattended_action_index") is None
     overlay_action = before_context["suggested_next_actions"][1]
     assert overlay_action["arguments"]["dataset_iri"] == dataset
     assert overlay_action["arguments"]["evidence_iri"] == result["evidence_iri"]
@@ -134,7 +134,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
 
     still_before_apply = describe_query_context_tool(db, iri=dataset)
     assert still_before_apply["readiness"] == "insufficient_metadata"
-    assert still_before_apply["query_target_candidates"] == []
+    assert still_before_apply.get("query_target_candidates", []) == []
 
     staged = stage_graph_revision_tool(db, **draft["stage_arguments"])
     assert staged["validation_conforms"] is True
@@ -181,8 +181,8 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert result["revision_stance"] == "https://richcanopy.org/ns/rc#ExploratoryHunch"
     assert result["summary"] == "Try messages table framing"
     assert result["rationale"].startswith("Exploratory hunch")
-    assert result["review_note"] is None
-    assert result["review_recommendation"] is None
+    assert result.get("review_note") is None
+    assert result.get("review_recommendation") is None
     assert result["changed_graphs"] == ["map"]
     assert result["validation_conforms"] is True
     assert result["validation_result_count"] == 0
@@ -302,8 +302,8 @@ def test_staged_markdown_export_tools_return_privacy_warnings(
     assert grouped["artifact_kind"] == "staged_revisions_review_markdown"
     assert single["importable"] is False
     assert grouped["importable"] is False
-    assert single["recommended_import_tool"] is None
-    assert grouped["recommended_import_tool"] is None
+    assert single.get("recommended_import_tool") is None
+    assert grouped.get("recommended_import_tool") is None
     assert single["recovery_complete"] is False
     assert grouped["recovery_complete"] is False
     assert single["privacy_warnings"]
@@ -383,16 +383,16 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
         "changed graphs: map: 1; snapshot evidence complete for 1 row(s)."
     )
     assert export["bundle_summary"]["changed_graph_counts"] == {"map": 1}
-    assert export["bundle_summary"]["choose_one_groups"] == []
+    assert export["bundle_summary"].get("choose_one_groups", []) == []
     assert export["bundle_summary"]["stale_resolution_state_counts"] == {"ready": 1}
-    assert export["bundle_summary"]["post_apply_recheck_revision_iris"] == []
+    assert export["bundle_summary"].get("post_apply_recheck_revision_iris", []) == []
     snapshot_evidence = export["bundle_summary"]["snapshot_evidence"]
     assert snapshot_evidence["complete"] is True
     assert snapshot_evidence["total_revision_count"] == 1
     assert snapshot_evidence["status_counts"] == {"history_plus_snapshot_rows": 1}
     assert snapshot_evidence["rows"][0]["revision_iri"] == staged["revision_iri"]
     assert snapshot_evidence["rows"][0]["completeness"] == "complete"
-    assert snapshot_evidence["rows"][0]["suggested_next_actions"] == []
+    assert snapshot_evidence["rows"][0].get("suggested_next_actions", []) == []
     exported = expected_path.read_text(encoding="utf-8")
     assert "## At A Glance" in exported
     assert "- Rows: 1" in exported
@@ -412,17 +412,17 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
-    assert export["bundle_summary"]["external_recommended_review_iris"] == []
+    assert export["bundle_summary"].get("external_recommended_review_iris", []) == []
     assert export["bundle_summary"]["recommended_mutation_review_iris"] == [
         staged["revision_iri"]
     ]
     assert export["bundle_summary"]["recommended_apply_or_restage_review_iris"] == [
         staged["revision_iri"]
     ]
-    assert export["bundle_summary"]["recommended_repair_review_iris"] == []
-    assert export["bundle_summary"]["warnings"] == []
-    assert export["bundle_summary"]["validation_failed_revision_iris"] == []
-    assert export["bundle_summary"]["recommended_applied_inspection_iris"] == []
+    assert export["bundle_summary"].get("recommended_repair_review_iris", []) == []
+    assert export["bundle_summary"].get("warnings", []) == []
+    assert export["bundle_summary"].get("validation_failed_revision_iris", []) == []
+    assert export["bundle_summary"].get("recommended_applied_inspection_iris", []) == []
     assert export["bundle_summary"]["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
@@ -433,7 +433,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
         staged["revision_iri"]
     ]
     assert export["bundle_summary"]["requires_recheck_after_each_apply"] is False
-    assert export["bundle_summary"]["semantic_review_required_queue_counts"] == {}
+    assert export["bundle_summary"].get("semantic_review_required_queue_counts", {}) == {}
     export_queue_item = export["bundle_summary"]["next_action_queue_items"][0]
     assert export_queue_item["row_iri"] == staged["revision_iri"]
     assert export_queue_item["queue"] == "apply_after_review"
@@ -457,8 +457,8 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     )
     assert "Review semantic context" in review_sequence_item["reason"]
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
-    assert export["revision_summaries"][0]["alternative_to"] is None
-    assert export["revision_summaries"][0]["current_alternative_to"] is None
+    assert export["revision_summaries"][0].get("alternative_to") is None
+    assert export["revision_summaries"][0].get("current_alternative_to") is None
     assert export["revision_summaries"][0]["stale_resolution_state"] == "ready"
     assert export["revision_summaries"][0]["apply_status"] == "ready"
     assert export["revision_summaries"][0]["apply_decision"] == "review_then_apply"

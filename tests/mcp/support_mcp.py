@@ -148,9 +148,9 @@ def _assert_repair_action_option(
     assert option["mcp_tool_name"] == mcp_tool_name
     assert option["action_label"] == action_label
     assert option["action_status"] == action_status
-    assert option["required_extra_arguments"] == required_extra_arguments
-    assert option["placeholder_fields"] == placeholder_fields
-    assert option["reviewed_value_fields"] == reviewed_value_fields
+    assert option.get("required_extra_arguments", []) == required_extra_arguments
+    assert option.get("placeholder_fields", []) == placeholder_fields
+    assert option.get("reviewed_value_fields", []) == reviewed_value_fields
 
 
 __all__ = [

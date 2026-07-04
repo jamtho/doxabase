@@ -30,9 +30,9 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_iri"].startswith(
         "https://richcanopy.org/doxabase/generated/source-span/"
     )
-    assert result["scanned_source_paths"] == []
+    assert result.get("scanned_source_paths", []) == []
     assert result["scanned_source_handles"] == ["warehouse/orders.csv"]
-    assert result["scanned_source_span_iris"] == []
+    assert result.get("scanned_source_span_iris", []) == []
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "describe_profile_run",
@@ -115,7 +115,7 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     context = describe_query_context_tool(db, iri=dataset)
 
     assert context["profile_summary"]["evidence_iris"] == [result["evidence_iri"]]
-    assert context["profile_summary"]["profile_run_candidates"] == []
+    assert context["profile_summary"].get("profile_run_candidates", []) == []
     assert [
         action["tool_name"] for action in context["suggested_next_actions"][:2]
     ] == [
@@ -181,8 +181,8 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert result["readiness"] == "needs_review"
     assert "readiness_note" in result
     assert "analysis_warnings" in result
-    assert "layout_verification_status" in result
-    assert "layout_verification_note" in result
+    assert result.get("layout_verification_status") is None
+    assert result.get("layout_verification_note") is None
     assert "broadcasts/{year}/ais-{date}.parquet" in result["path_templates"]
     assert result["query_target_candidates"][0]["candidate_path"] == (
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
@@ -297,7 +297,7 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
     context = describe_query_context_tool(db, iri=asset)
 
     assert context["readiness"] == "not_applicable_non_tabular_asset"
-    assert context["query_target_candidates"] == []
+    assert context.get("query_target_candidates", []) == []
     assert context["issues"][0]["code"] == "non_tabular_asset_query_not_applicable"
     assert context["suggested_next_actions"][0]["tool_name"] == (
         "describe_context_slice"
@@ -309,10 +309,10 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
     assert plan["handoff_summary"]["handoff_kind"] == (
         "not_applicable_non_tabular_asset"
     )
-    assert plan["handoff_summary"]["selected_candidate_index"] is None
+    assert plan["handoff_summary"].get("selected_candidate_index") is None
     assert plan["handoff_summary"]["ready_for_execution_attempt"] is False
-    assert plan["selected_candidate"] is None
-    assert plan["scan"]["function"] is None
+    assert plan.get("selected_candidate") is None
+    assert plan["scan"].get("function") is None
     assert plan["review_gate"]["status"] == "not_applicable_non_tabular_asset"
 
 
@@ -473,11 +473,11 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
     result = describe_query_context_tool(db, iri=dataset)
 
     assert "database_relation_template_source_mismatch" not in {
-        issue["code"] for issue in result["issues"]
+        issue["code"] for issue in result.get("issues", [])
     }
     assert all(
         group["issue_code"] != "database_relation_template_source_mismatch"
-        for group in result["suggested_repair_action_groups"]
+        for group in result.get("suggested_repair_action_groups", [])
     )
     object_candidate = next(
         candidate
@@ -521,9 +521,9 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
     database_candidate_index = result["query_target_candidates"].index(
         database_candidates[0]
     )
-    assert result["query_target_decision"][
-        "route_intent_review_candidate_indexes"
-    ] == []
+    assert result["query_target_decision"].get(
+        "route_intent_review_candidate_indexes", []
+    ) == []
     assert result["query_target_decision"]["candidate_index"] == database_candidate_index
     peer_actions = [
         action
@@ -773,7 +773,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     s3_result = describe_query_context_tool(db, iri=s3_dataset)
 
     assert local_result["readiness"] == "ready_for_query_planning"
-    assert local_result["path_templates"] == []
+    assert local_result.get("path_templates", []) == []
     local_target = local_result["query_target_candidates"][0]
     assert local_target["template_source"] == "storage_access_location"
     assert local_target["composition"] == "storage_root_as_candidate"
@@ -783,17 +783,17 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert local_result["query_target_decision"]["status"] == "ready"
     assert local_result["query_target_decision"]["candidate_index"] == 0
     assert local_result["query_target_decision"]["candidate_path"] == local_root
-    assert local_result["query_target_decision"]["reason_codes"] == []
+    assert local_result["query_target_decision"].get("reason_codes", []) == []
 
     assert s3_result["readiness"] == "ready_for_query_planning"
-    assert s3_result["path_templates"] == []
+    assert s3_result.get("path_templates", []) == []
     s3_target = s3_result["query_target_candidates"][0]
     assert s3_target["template_source"] == "storage_access_location"
     assert s3_target["composition"] == "storage_root_as_candidate"
     assert s3_target["location_kind"] == "object"
     assert s3_target["candidate_path"] == s3_root
-    assert s3_target["bucket_name"] is None
-    assert s3_target["key_prefix"] is None
+    assert s3_target.get("bucket_name") is None
+    assert s3_target.get("key_prefix") is None
     assert s3_target["requires_endpoint_profile"] is True
     assert s3_target["review_required"] is False
     assert s3_target["direct_review_required"] is False
@@ -812,7 +812,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert s3_result["query_target_decision"]["status"] == "ready"
     assert s3_result["query_target_decision"]["candidate_index"] == 0
     assert s3_result["query_target_decision"]["candidate_path"] == s3_root
-    assert s3_result["query_target_decision"]["reason_codes"] == []
+    assert s3_result["query_target_decision"].get("reason_codes", []) == []
 
 
 def test_describe_query_context_tool_demotes_root_only_database_target(
@@ -908,7 +908,7 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     assert target["composition"] == "database_connection_as_candidate"
     assert target["location_kind"] == "object"
     assert target["candidate_path"] == "warehouse-prod"
-    assert target["relation_identifier"] is None
+    assert target.get("relation_identifier") is None
     assert target["connection_reference"] == "warehouse-prod"
     assert target["candidate_path_status"] == "orientation_only"
     assert target["direct_review_reasons"][0]["code"] == (
@@ -918,8 +918,8 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     assert context["query_target_decision"]["reason_codes"] == [
         "database_relation_template_missing"
     ]
-    assert plan["scan"]["uri_template"] is None
-    assert plan["scan"]["relation_identifier"] is None
+    assert plan["scan"].get("uri_template") is None
+    assert plan["scan"].get("relation_identifier") is None
     assert plan["scan"]["connection_reference"] == "warehouse-prod"
     assert plan["review_gate"]["blocking_reason_codes"] == [
         "database_relation_template_missing"
@@ -1068,15 +1068,15 @@ def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
     assert target["composition"] == "storage_root_joined"
     assert target["candidate_path"] == f"{storage_root}/orders/*.parquet"
     assert target["candidate_path_status"] == "ready"
-    assert target["review_reasons"] == []
+    assert target.get("review_reasons", []) == []
     assert target["direct_review_required"] is False
-    assert target["direct_review_reasons"] == []
+    assert target.get("direct_review_reasons", []) == []
     assert result["query_target_decision"]["status"] == "ready"
     assert result["query_target_decision"]["candidate_index"] == 0
     assert result["query_target_decision"]["candidate_path"] == (
         f"{storage_root}/orders/*.parquet"
     )
-    assert result["query_target_decision"]["reason_codes"] == []
+    assert result["query_target_decision"].get("reason_codes", []) == []
 
 
 def test_describe_query_context_tool_blocks_dataset_absolute_template_outside_local_root(
@@ -1238,7 +1238,7 @@ def test_describe_query_context_tool_keeps_absolute_template_inside_local_root_r
     assert target["composition"] == "template_as_returned"
     assert target["candidate_path"] == inside_template
     assert target["candidate_path_status"] == "ready"
-    assert target["review_reasons"] == []
+    assert target.get("review_reasons", []) == []
     assert result["query_target_decision"]["status"] == "ready"
-    assert result["query_target_decision"]["reason_codes"] == []
+    assert result["query_target_decision"].get("reason_codes", []) == []
 

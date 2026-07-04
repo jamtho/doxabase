@@ -229,8 +229,8 @@ def test_record_profile_to_capsule_manifest_tool_returns_json_like_payload(
     assert result["analysis_view_count"] == 1
     assert result["domain_network_profile_count"] == 0
     assert result["domain_network_profile_observation_count"] == 0
-    assert result["domain_network_profile_evidence_iris"] == []
-    assert result["domain_network_pattern_iris"] == []
+    assert result.get("domain_network_profile_evidence_iris", []) == []
+    assert result.get("domain_network_pattern_iris", []) == []
     assert result["profile_observation_count"] == 3
     assert result["query_readiness_counts"] == {"ready_for_query_planning": 1}
     assert result["analysis_view_bundle"]["query_snippet_count"] == 1
@@ -470,7 +470,7 @@ def test_describe_context_slice_tool_preserves_profile_routes(
     assert seed_profile["profile_metrics"][0]["value_datatype"].startswith(
         "http://www.w3.org/2001/XMLSchema#"
     )
-    assert seed_profile["profile_metrics"][0]["value_lang"] is None
+    assert seed_profile["profile_metrics"][0].get("value_lang") is None
     assert result["route_counts"]["seed_profile_metric_kind"] == 1
     assert result["route_counts"]["profile_metric_observation"] == 1
     legend = {row["route"]: row for row in result["route_legend"]}
@@ -592,7 +592,7 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
     assert {
         (
             item["metric"]["iri"],
-            item["target"]["iri"] if item["target"] is not None else None,
+            item.get("target", {}).get("iri"),
             item["value"],
             item["value_datatype"],
         )
@@ -732,7 +732,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert len(result["column_profiles"]) == 1
     assert result["column_profiles"][0]["column_iri"] == status_column
-    assert result["column_profiles"][0]["map_column"] is None
+    assert result["column_profiles"][0].get("map_column") is None
     assert result["dataset_profile"]["observation"]["evidence_iri"] == shared_evidence
     assert result["column_profiles"][0]["observation"]["evidence_iri"] == shared_evidence
     assert result["handoff_entrypoints"]["dataset_iri"] == table
@@ -786,8 +786,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
 
     dataset = describe_dataset_tool(db, table)
 
-    assert dataset["row_count_snapshot"] is None
-    assert dataset["columns"] == []
+    assert dataset.get("row_count_snapshot") is None
+    assert dataset.get("columns", []) == []
     assert dataset["profile_summary"]["returned_dataset_profile_count"] == 1
     assert dataset["profile_summary"]["returned_mapped_column_profile_count"] == 0
     assert dataset["profile_summary"]["returned_unmapped_column_profile_count"] == 1
@@ -811,12 +811,11 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
             "dataset_profile_row_counts": [1000],
             "dataset_profile_row_count_bases": {"1000": ["sample"]},
             "row_count_snapshot_matches": False,
-            "row_count_snapshot_basis": None,
             "shared_by_all_returned_profiles": True,
         }
     ]
     query_context = describe_query_context_tool(db, table)
-    assert query_context["row_count_snapshot"] is None
+    assert query_context.get("row_count_snapshot") is None
     assert query_context["profile_summary"]["evidence_iris"] == [shared_evidence]
     assert query_context["profile_summary"]["profile_run_candidates"] == (
         dataset["profile_summary"]["profile_run_candidates"]
@@ -1058,8 +1057,8 @@ def test_describe_dataset_tool_returns_unmapped_column_profiles(
 
     dataset = describe_dataset_tool(db, table)
 
-    assert dataset["columns"] == []
-    assert dataset["profile_observations"] == []
+    assert dataset.get("columns", []) == []
+    assert dataset.get("profile_observations", []) == []
     assert dataset["profile_summary"]["returned_unmapped_column_profile_count"] == 1
     assert dataset["profile_summary"]["returned_profile_count"] == 1
     profiles = dataset["unmapped_column_profile_observations"]

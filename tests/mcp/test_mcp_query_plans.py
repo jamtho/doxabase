@@ -130,7 +130,7 @@ def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidenc
     )
 
     assert draft["validation_conforms"] is True
-    assert draft["profile_observation_iris"] == []
+    assert draft.get("profile_observation_iris", []) == []
     assert draft["source_query_evidence"]["execution_status"] == "blocked"
     assert draft["source_query_evidence"]["query_hash"] == (
         "sha256:mcp-orders-blocked"
@@ -140,7 +140,7 @@ def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidenc
     assert draft["reviewed_overlay"]["layout_verification_status"] == (
         RC + "CandidateLayout"
     )
-    assert draft["stage_arguments"]["supporting_observations"] == []
+    assert draft["stage_arguments"].get("supporting_observations", []) == []
     assert draft["stage_arguments"]["evidence"] == [result["evidence_iri"]]
 
 
@@ -232,8 +232,8 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["source_context"]["readiness"] == "needs_review"
     assert result["source_context"]["selected_candidate_index"] == 0
     assert result["source_context"]["candidate_count"] == 1
-    assert result["source_context"]["ready_candidate_indexes"] == []
-    assert result["source_context"]["unselected_ready_candidate_indexes"] == []
+    assert result["source_context"].get("ready_candidate_indexes", []) == []
+    assert result["source_context"].get("unselected_ready_candidate_indexes", []) == []
     assert result["selected_candidate"]["template_source"] == "partition_scheme"
     assert result["scan"]["function"] == "read_parquet"
     assert result["scan"]["uri_template"] == (
@@ -245,8 +245,8 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     )
     assert result["handoff_summary"]["selected_candidate_index"] == 0
     assert result["scan"]["candidate_path_status"] == "orientation_only"
-    assert result["scan"]["dataset_verification_status"] is None
-    assert result["scan"]["dataset_verification_note"] is None
+    assert result["scan"].get("dataset_verification_status") is None
+    assert result["scan"].get("dataset_verification_note") is None
     assert result["scan"]["template_source"] == "partition_scheme"
     assert result["scan"]["template_source_resource"]["iri"] == (
         "https://richcanopy.org/example/manifest/ais#daily_date_partition"
@@ -276,11 +276,11 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["binding_requirements"][0]["partition_scheme"]["iri"] == (
         "https://richcanopy.org/example/manifest/ais#daily_date_partition"
     )
-    assert result["binding_requirements"][0]["partition_column"] is None
+    assert result["binding_requirements"][0].get("partition_column") is None
     assert result["binding_requirements"][0]["partition_granularity"]["iri"] == (
         "https://richcanopy.org/ns/rc#Daily"
     )
-    assert result["binding_requirements"][0]["candidate_column_matches"] == []
+    assert result["binding_requirements"][0].get("candidate_column_matches", []) == []
     assert result["binding_requirements"][0]["candidate_column_match_status"] == "none"
     assert result["binding_requirements"][1]["binding_kind"] == (
         "partition_template_placeholder"
@@ -294,7 +294,7 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["binding_requirements"][1]["partition_granularity"]["iri"] == (
         "https://richcanopy.org/ns/rc#Daily"
     )
-    assert result["binding_requirements"][1]["candidate_column_matches"] == []
+    assert result["binding_requirements"][1].get("candidate_column_matches", []) == []
     assert (
         result["binding_requirements"][1]["candidate_column_match_status"]
         == "not_applicable"
@@ -382,12 +382,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         context["query_target_decision"]["selected_candidate_direct_clean"]
         is True
     )
-    assert context["ready_candidate_indexes"] == []
-    assert context["unselected_ready_candidate_indexes"] == []
+    assert context.get("ready_candidate_indexes", []) == []
+    assert context.get("unselected_ready_candidate_indexes", []) == []
     assert context["direct_clean_candidate_indexes"] == [
         context["query_target_decision"]["candidate_index"]
     ]
-    assert context["unselected_direct_clean_candidate_indexes"] == []
+    assert context.get("unselected_direct_clean_candidate_indexes", []) == []
     query_action = context["suggested_next_actions"][0]
     selected_selector = context["query_target_candidates"][
         context["query_target_decision"]["candidate_index"]
@@ -404,7 +404,7 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert "query_repair_groups_present" in (
         query_action["unattended_review_reason_codes"]
     )
-    assert context["suggested_next_calls"] == []
+    assert context.get("suggested_next_calls", []) == []
 
     result = draft_query_plan_tool(
         db,
@@ -429,12 +429,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert "contradicted_layout" in (
         result["source_context"]["selected_candidate_note"]
     )
-    assert result["source_context"]["ready_candidate_indexes"] == []
-    assert result["source_context"]["unselected_ready_candidate_indexes"] == []
+    assert result["source_context"].get("ready_candidate_indexes", []) == []
+    assert result["source_context"].get("unselected_ready_candidate_indexes", []) == []
     assert result["source_context"]["direct_clean_candidate_indexes"] == [
         result["source_context"]["selected_candidate_index"]
     ]
-    assert result["source_context"]["unselected_direct_clean_candidate_indexes"] == []
+    assert result["source_context"].get("unselected_direct_clean_candidate_indexes", []) == []
     assert result["selected_candidate"]["storage_access"]["iri"] == local_storage.iri
     assert result["selected_candidate"]["candidate_path_status"] == "ready"
     assert result["scan"]["candidate_path_status"] == "ready"
@@ -450,7 +450,7 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert result["review_gate"]["context_blocking_reason_codes"] == [
         "query_context_has_other_blockers"
     ]
-    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"].get("blocking_reason_codes", []) == []
     assert result["review_gate"]["primary_execution_attempt_blocking_reason_code"] == (
         "binding_values_required"
     )
@@ -459,7 +459,7 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     ]
     assert result["handoff_summary"]["context_blocked_candidate_allowed"] is True
     assert result["handoff_summary"]["context_blocked_candidate_used"] is True
-    assert result["handoff_summary"]["direct_blocking_reason_codes"] == []
+    assert result["handoff_summary"].get("direct_blocking_reason_codes", []) == []
     assert result["handoff_summary"]["context_blocking_reason_codes"] == [
         "query_context_has_other_blockers"
     ]
@@ -523,12 +523,12 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     relation_candidate_index = next(
         index
         for index, candidate in enumerate(context["query_target_candidates"])
-        if candidate["relation_identifier"] == "mart.orders"
+        if candidate.get("relation_identifier") == "mart.orders"
     )
     archive_candidate_index = next(
         index
         for index, candidate in enumerate(context["query_target_candidates"])
-        if candidate["relation_identifier"] == "mart.orders_archive"
+        if candidate.get("relation_identifier") == "mart.orders_archive"
     )
     relation_candidate_selector = context["query_target_candidates"][
         relation_candidate_index
@@ -538,7 +538,7 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     ]["candidate_selector"]
 
     assert context["query_target_decision"]["status"] == "context_blocked"
-    assert context["ready_candidate_indexes"] == []
+    assert context.get("ready_candidate_indexes", []) == []
     assert relation_candidate_index in context["direct_clean_candidate_indexes"]
     assert archive_candidate_index in context["unselected_direct_clean_candidate_indexes"]
     assert [
@@ -583,8 +583,8 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert result["source_context"]["requested_candidate_selector"] == (
         relation_candidate_selector
     )
-    assert result["source_context"]["requested_candidate_index"] is None
-    assert result["source_context"]["requested_storage_access_iri"] is None
+    assert result["source_context"].get("requested_candidate_index") is None
+    assert result["source_context"].get("requested_storage_access_iri") is None
     assert result["source_context"]["allow_context_blocked_candidate"] is True
     assert result["selected_candidate"]["storage_access"]["iri"] == (
         relation_storage.iri
@@ -593,7 +593,7 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert result["selected_candidate"]["candidate_path_status"] == "ready"
     assert result["selected_candidate"]["review_required"] is False
     assert result["selected_candidate"]["direct_review_required"] is False
-    assert result["scan"]["uri_template"] is None
+    assert result["scan"].get("uri_template") is None
     assert result["scan"]["relation_identifier"] == "mart.orders"
     assert result["scan"]["connection_reference"] == "warehouse-prod"
     assert result["scan"]["composition"] == "database_connection_and_relation"
@@ -602,7 +602,7 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert result["review_gate"]["context_blocking_reason_codes"] == [
         "query_context_has_other_blockers"
     ]
-    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"].get("blocking_reason_codes", []) == []
     assert result["review_gate"]["execution_attempt_blocking_reason_codes"] == [
         "runtime_resolution_required"
     ]
@@ -770,8 +770,8 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         },
     }
     target = context["query_target_candidates"][0]
-    assert target["candidate_path"] is None
-    assert target["relation_identifier"] is None
+    assert target.get("candidate_path") is None
+    assert target.get("relation_identifier") is None
     assert target["connection_reference"] == "warehouse-prod"
     assert target["candidate_path_status"] == "unresolved"
     assert target["direct_review_reasons"][0]["code"] == (
@@ -781,8 +781,8 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "draft_query_plan",
     ]
     assert plan["selected_candidate"]["template_source"] == "dataset"
-    assert plan["scan"]["uri_template"] is None
-    assert plan["scan"]["relation_identifier"] is None
+    assert plan["scan"].get("uri_template") is None
+    assert plan["scan"].get("relation_identifier") is None
     assert plan["scan"]["connection_reference"] == "warehouse-prod"
     assert plan["review_gate"]["blocking_reason_codes"] == [
         "database_relation_template_source_mismatch"
@@ -832,12 +832,12 @@ def test_describe_query_context_tool_matches_python_target_candidates(
         assert tool_payload["query_target_decision"] == python_payload[
             "query_target_decision"
         ]
-        assert tool_payload["ready_candidate_indexes"] == python_payload[
-            "ready_candidate_indexes"
-        ]
-        assert tool_payload["unselected_ready_candidate_indexes"] == python_payload[
-            "unselected_ready_candidate_indexes"
-        ]
+        assert tool_payload.get("ready_candidate_indexes", []) == python_payload.get(
+            "ready_candidate_indexes", []
+        )
+        assert tool_payload.get(
+            "unselected_ready_candidate_indexes", []
+        ) == python_payload.get("unselected_ready_candidate_indexes", [])
 
 
 def test_describe_query_context_tool_lists_missing_storage_candidates(
@@ -984,10 +984,10 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "dataset_token_overlap",
     ]
     assert candidate["dataset_token_matches"] == ["messages"]
-    assert candidate["generic_dataset_token_matches"] == []
-    assert candidate["dataset_partial_token_matches"] == []
-    assert candidate["generic_dataset_partial_token_matches"] == []
-    assert candidate["linked_dataset_iris"] == []
+    assert candidate.get("generic_dataset_token_matches", []) == []
+    assert candidate.get("dataset_partial_token_matches", []) == []
+    assert candidate.get("generic_dataset_partial_token_matches", []) == []
+    assert candidate.get("linked_dataset_iris", []) == []
     assert repair_group["repair_context"][
         "candidate_existing_storage_access_count"
     ] == 1

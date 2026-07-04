@@ -131,7 +131,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         result["staged_revision"]["revision_iri"],
     )
     assert description["judgement_panel"]["proposed_value"]["label"] == "DOUBLE"
-    assert description["stored_review_context"] is None
+    assert description.get("stored_review_context") is None
     assert description["judgement_panel"]["semantic_risk_level"] == "high"
     assert description["supporting_patterns"]
     assert "https://richcanopy.org/ns/rc#Varchar" not in {
@@ -186,7 +186,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         for note in ais_panel["why_current_value_may_be_intentional"]
     )
     assert result["staged_revision"]["revision_iri"] not in {
-        route["resource_iri"] for route in ais_panel["strongest_routes"]
+        route["resource_iri"] for route in ais_panel.get("strongest_routes", [])
     }
     ais_description = describe_staged_revision_tool(
         db,
@@ -195,7 +195,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert ais_description["judgement_panel"]["value_type_context"][0][
         "value_type"
     ]["label"] == "Raw AIS Timestamp String"
-    assert ais_description["judgement_panel"]["strongest_routes"] == []
+    assert ais_description["judgement_panel"].get("strongest_routes", []) == []
     ais_export_path = tmp_path / "ais-judgement-review.md"
     export_staged_revision_tool(
         db,
@@ -222,7 +222,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         result["staged_revision"]["revision_iri"],
         include_current_apply_check=True,
     )
-    assert stale_description["judgement_panel"] is None
+    assert stale_description.get("judgement_panel") is None
     assert stale_description["stored_review_context"]["semantic_risk_level"] == "high"
     assert stale_description["stored_review_context"]["review_note_signals"][
         "has_value_type_context"
@@ -284,7 +284,7 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert context["readiness"] == "logical_analysis_view"
     assert context["issues"][0]["code"] == "logical_analysis_view_not_physical_route"
     assert context["suggested_repair_action_group_count"] == 0
-    assert context["query_target_candidates"] == []
+    assert context.get("query_target_candidates", []) == []
     assert context["query_target_decision"]["status"] == "logical_analysis_view"
     assert context["suggested_next_actions"][0]["tool_name"] == "describe_analysis_view"
 

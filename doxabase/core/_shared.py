@@ -483,14 +483,30 @@ def staged_action_effect_metadata(
     }
 
 def to_jsonable(value: Any) -> Any:
-    """Return a JSON-like plain-Python representation of DoxaBase API values."""
+    """Return a JSON-like plain-Python representation of DoxaBase API values.
+
+    Envelope convention (distillation Phase 3.1): ``None`` values and empty
+    lists/dicts are omitted from serialized dataclasses and mappings. Absent,
+    null, and empty are equivalent; consumers must not distinguish them. Any
+    field where presence itself carries meaning must carry an explicit value
+    instead.
+    """
     if is_dataclass(value) and not isinstance(value, type):
-        return {
-            field.name: to_jsonable(getattr(value, field.name))
-            for field in fields(value)
-        }
+        result = {}
+        for f in fields(value):
+            item = to_jsonable(getattr(value, f.name))
+            if item is None or item == [] or item == {}:
+                continue
+            result[f.name] = item
+        return result
     if isinstance(value, MappingABC):
-        return {str(key): to_jsonable(item) for key, item in value.items()}
+        result = {}
+        for key, item in value.items():
+            item = to_jsonable(item)
+            if item is None or item == [] or item == {}:
+                continue
+            result[str(key)] = item
+        return result
     if isinstance(value, (list, tuple)):
         return [to_jsonable(item) for item in value]
     return value

@@ -96,13 +96,13 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["decision"] == "review_then_apply"
     assert check["routing_decision"] == "apply_after_review"
     assert check["review_recommended"] is True
-    assert check["blocking_reasons"] == []
-    assert check["validation_skipped_reason"] is None
+    assert check.get("blocking_reasons", []) == []
+    assert check.get("validation_skipped_reason") is None
     assert "proposal is still desired" in check["recommended_resolution"]
     assert check["summary"] == (
         "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
     )
-    assert check["conflicts"] == []
+    assert check.get("conflicts", []) == []
     assert check["patch_checks"][0]["count_basis"] == "target_graph_only"
     assert check["patch_checks"][0]["preview_triple_count"] == 3
     assert check["patch_checks"][0]["effective_triples_to_add"] == 3
@@ -207,7 +207,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert diff["graph_diffs"][0]["triples_added_count"] == 3
     assert diff["graph_diffs"][0]["triples_removed_count"] == 0
     assert diff["graph_diffs"][0]["triples_added_truncated"] is True
-    assert diff["graph_diffs"][0]["triples_added"] == []
+    assert diff["graph_diffs"][0].get("triples_added", []) == []
     exact_diff = describe_applied_revision_diff_tool(
         db,
         result["applied_revision_iri"],
@@ -359,7 +359,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert rdf_only_snapshot["count_basis"] == "rdf_history_graph_snapshot"
     assert rdf_only_snapshot["exact_snapshot_available"] is False
     assert rdf_only_snapshot["triples_included"] is False
-    assert rdf_only_snapshot["triples"] == []
+    assert rdf_only_snapshot.get("triples", []) == []
     assert rdf_only_snapshot["suggested_next_actions"][0]["tool_name"] == (
         "import_revision_snapshots"
     )
@@ -435,7 +435,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert imported_after_snapshot["triples_truncated"] is True
     assert len(imported_after_snapshot["triples"]) == 1
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
-    assert staged_description["current_apply_check"] is None
+    assert staged_description.get("current_apply_check") is None
     assert staged_description["application_status"] == "already_applied"
     assert staged_description["applied_by"]["iri"] == result["applied_revision_iri"]
     staged_description_with_check = describe_staged_revision_tool(
@@ -549,8 +549,8 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
         "direct_route_step_keys"
     ]
     assert result["closed_route_step_keys"] == direct_route_step_keys
-    assert result["remaining_route_step_keys"] == []
-    assert result["open_profile_review_lanes"] == []
+    assert result.get("remaining_route_step_keys", []) == []
+    assert result.get("open_profile_review_lanes", []) == []
     assert result["open_profile_review_lane_count"] == 0
     assert result["executor_decision_summary"]["decision"] == (
         "bulk_apply_after_review"
@@ -558,20 +558,20 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["executor_decision_summary"][
         "safe_single_apply_candidate_revision_iris"
     ] == result["candidate_revision_iris"]
-    assert result["executor_decision_summary"]["open_review_lanes"] == []
+    assert result["executor_decision_summary"].get("open_review_lanes", []) == []
     assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
         "revision_iri"
     ] == staged["staged_revision"]["revision_iri"]
     assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
         "apply_guidance"
     ] == "safe_single_after_review"
-    assert result["executor_decision_summary"]["candidate_apply_guidance"][0][
-        "blocking_open_review_lanes"
-    ] == []
+    assert result["executor_decision_summary"]["candidate_apply_guidance"][0].get(
+        "blocking_open_review_lanes", []
+    ) == []
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["export"]["sensitive_literal_count"] == 0
-    assert result["export"]["privacy_warnings"] == []
+    assert result["export"].get("privacy_warnings", []) == []
     assert result["export"]["shareability_review_required"] is True
     assert result["export"]["shareability_review_status"] == (
         "required_not_completed"
@@ -588,13 +588,17 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["sensitive_literal_count"] == (
         result["export"]["sensitive_literal_count"]
     )
-    assert result["privacy_warnings"] == result["export"]["privacy_warnings"]
-    assert result["shareability_hints"] == result["export"]["shareability_hints"]
+    assert result.get("privacy_warnings", []) == result["export"].get(
+        "privacy_warnings", []
+    )
+    assert result.get("shareability_hints", []) == result["export"].get(
+        "shareability_hints", []
+    )
     assert result["shareability_hint_count"] == (
         result["export"]["shareability_hint_count"]
     )
-    assert result["shareability_hint_matches"] == (
-        result["export"]["shareability_hint_matches"]
+    assert result.get("shareability_hint_matches", []) == (
+        result["export"].get("shareability_hint_matches", [])
     )
     assert result["artifact_disposition"] == result["export"]["artifact_disposition"]
     assert result["git_safe"] is False
@@ -644,8 +648,8 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
         path=str(tmp_path / "orders-profile-current-only-review.md"),
         include_applied_staged_sources=False,
     )
-    assert current_only["candidate_revision_iris"] == []
-    assert current_only["export"] is None
+    assert current_only.get("candidate_revision_iris", []) == []
+    assert current_only.get("export") is None
 
 
 def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
@@ -764,9 +768,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         "route_group_count"
     ] == 1
     assert open_lanes["profile_scalar_conflict_review"]["action_count"] == 2
-    assert open_lanes["profile_scalar_conflict_review"][
-        "matched_candidate_revision_iris"
-    ] == []
+    assert open_lanes["profile_scalar_conflict_review"].get(
+        "matched_candidate_revision_iris", []
+    ) == []
     assert open_lanes["metric_vocabulary_review"][
         "matched_candidate_revision_iris"
     ] == [staged_iri]

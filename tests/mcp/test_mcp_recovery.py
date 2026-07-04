@@ -70,8 +70,8 @@ def test_import_handoff_bundle_tool_gates_invalid_manifest_recovery(
     assert imported["recovery_summary"]["recommended_next_step"] == (
         "review_handoff_validation_before_recovery"
     )
-    assert imported["recovery_summary"]["first_mutation_action"] is None
-    assert imported["recovery_summary"]["first_mutation_frontier_item"] is None
+    assert imported["recovery_summary"].get("first_mutation_action") is None
+    assert imported["recovery_summary"].get("first_mutation_frontier_item") is None
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
     ] == validation_action
@@ -81,8 +81,8 @@ def test_import_handoff_bundle_tool_gates_invalid_manifest_recovery(
     assert imported["recovery_plan"]["mutation_allowed_after"] == (
         "handoff_import_validation_review_required_before_recovery"
     )
-    assert imported["recovery_plan"]["next_action_queue_items"] == []
-    assert imported["recovery_plan"]["mutation_frontier_items"] == []
+    assert imported["recovery_plan"].get("next_action_queue_items", []) == []
+    assert imported["recovery_plan"].get("mutation_frontier_items", []) == []
     assert [
         step["step_kind"]
         for step in imported["recovery_plan"]["recommended_unattended_steps"]
@@ -109,19 +109,19 @@ def test_plan_staged_revision_recovery_tool_accepts_empty_revision_list(
     )
 
     assert result["selection_mode"] == "explicit_revision_iris"
-    assert result["requested_revision_iris"] == []
-    assert result["processed_revision_iris"] == []
+    assert result.get("requested_revision_iris", []) == []
+    assert result.get("processed_revision_iris", []) == []
     assert result["current_staged_work_only"] is False
     assert result["drift_detail"] == "exact"
     assert result["count"] == 0
     assert result["returned_count"] == 0
     assert result["total_count"] == 0
-    assert result["lane_counts"] == {}
-    assert result["next_action_queue"] == {}
-    assert result["next_action_queue_items"] == []
-    assert result["mutation_frontier_iris"] == []
+    assert result.get("lane_counts", {}) == {}
+    assert result.get("next_action_queue", {}) == {}
+    assert result.get("next_action_queue_items", []) == []
+    assert result.get("mutation_frontier_iris", []) == []
     assert result["mutation_allowed_after"] == "no_mutation_frontier"
-    assert result["suggested_next_actions"] == []
+    assert result.get("suggested_next_actions", []) == []
 
 
 def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
@@ -246,7 +246,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["selection_mode"] == "current_staged_work"
     assert result["processed_revision_iris"] == [staged["revision_iri"]]
     assert result["lane_counts"] == {"apply_after_review": 1}
-    assert result["repair_or_replace_source_revision_iris"] == []
+    assert result.get("repair_or_replace_source_revision_iris", []) == []
     assert result["next_action_queue_item_counts"] == {
         "apply_after_review": 1
     }
@@ -255,8 +255,8 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
         result["mutation_allowed_after"]
         == "semantic_review_required_before_mutation"
     )
-    assert result["blocking_preflight_actions"] == []
-    assert result["blocking_preflight_calls"] == []
+    assert result.get("blocking_preflight_actions", []) == []
+    assert result.get("blocking_preflight_calls", []) == []
     assert result["requires_recheck_after_each_apply"] is False
     lane = result["lanes"][0]
     assert lane["source_revision_iri"] == staged["revision_iri"]
@@ -265,7 +265,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["effective_recovery_action"] == "apply_after_review"
     assert lane["batch_action"] == "skipped_not_restageable"
     assert lane["not_restageable_reason"] == "ready"
-    assert lane["exact_drift_summary"] == []
+    assert lane.get("exact_drift_summary", []) == []
     assert lane["next_action"]["tool_name"] == "apply_staged_revision"
     assert lane["next_action"]["mutation_scope"] == "project_graph_and_history"
     assert lane["next_action"]["mutates_project_graph"] is True
@@ -310,13 +310,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
             "action": lane["next_action"],
             "call": lane["next_action"]["call"],
             "semantic_risk_level": "none",
-            "semantic_risk_reasons": [],
-            "alternative_set_iris": [],
-            "alternative_set_source_iri": None,
-            "alternative_set_roles": [],
             "alternative_gate_statuses": ["not_applicable"],
-            "alternative_applied_source_iris": [],
-            "alternative_applied_revision_iris": [],
             "requires_semantic_review_before_mutation": False,
             "reason": (
                 "Resolved staged-revision mutation target. Review the row and "
@@ -539,7 +533,7 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
 
     assert rerun["next_action_queue_item_counts"] == {"apply_after_review": 2}
     assert [
-        warning["warning_code"] for warning in rerun["structured_warnings"]
+        warning["warning_code"] for warning in rerun.get("structured_warnings", [])
     ] == []
     rerun_revision_iris = [
         revision["revision_iri"] for revision in rerun["staged_revisions"]
@@ -720,8 +714,8 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
     assert result["blocking_preflight_calls"] == [
         result["suggested_next_actions"][0]["call"]
     ]
-    assert result["first_mutation_action"] is None
-    assert result["first_mutation_call"] is None
+    assert result.get("first_mutation_action") is None
+    assert result.get("first_mutation_call") is None
     assert (
         result["first_safe_review_or_mutation_action"]
         == result["blocking_preflight_actions"][0]
@@ -917,7 +911,7 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert result["repair_drafts_deferred_count"] == 0
     lane = result["lanes"][0]
     assert lane["repair_draft"]["draft_kind"] == "validation_repair_needed"
-    assert lane["repair_draft_deferred_reason"] is None
+    assert lane.get("repair_draft_deferred_reason") is None
     assert lane["next_action"]["tool_name"] != "draft_staged_revision_rebase"
     assert all(
         action["tool_name"] != "draft_staged_revision_rebase"
@@ -938,7 +932,7 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert zero_draft_result["repair_drafts_included_count"] == 0
     assert zero_draft_result["repair_drafts_deferred_count"] == 1
     zero_lane = zero_draft_result["lanes"][0]
-    assert zero_lane["repair_draft"] is None
+    assert zero_lane.get("repair_draft") is None
     assert zero_lane["repair_draft_deferred_reason"] == (
         "repair_draft_limit_reached"
     )
@@ -1034,7 +1028,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     ]
     assert result["next_action_queue"] == {"apply_after_review": revision_iris}
     assert result["next_action_queue_item_counts"] == {"apply_after_review": 2}
-    assert result["semantic_review_required_queue_counts"] == {}
+    assert result.get("semantic_review_required_queue_counts", {}) == {}
     assert len(result["structured_warnings"]) == 1
     shared_warning = result["structured_warnings"][0]
     assert shared_warning["warning_code"] == (
@@ -1360,8 +1354,6 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
         "affected_revision_iris": revision_iris,
         "suggested_action": "rerun_with_explicit_alternative_routing",
         "suggested_rerun_arguments": {"link_alternatives": False},
-        "shared_patch_summaries": [],
-        "fallback_revision_iris_with_shared_semantic_context": [],
     }
     rerun_action = result["suggested_next_actions"][0]
     assert rerun_action["tool_name"] == "stage_systematisation"
@@ -1538,7 +1530,7 @@ def test_stage_systematisation_tool_suppresses_anchor_warning_for_explicit_sibli
         or "linked as alternatives to the first" in warning
         for warning in result["warnings"]
     )
-    assert result["staged_revisions"][0]["alternative_to"] is None
+    assert result["staged_revisions"][0].get("alternative_to") is None
     assert result["staged_revisions"][1]["alternative_to"] == explicit_target
     assert result["staged_revisions"][2]["alternative_to"] == explicit_target
 

@@ -53,7 +53,7 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     )
     assert snapshot_drift["triples_removed_since_snapshot_count"] == 0
     assert snapshot_drift["triples_added_since_snapshot"]
-    assert snapshot_drift["triples_removed_since_snapshot"] == []
+    assert snapshot_drift.get("triples_removed_since_snapshot", []) == []
     added_drift_triple = snapshot_drift["triples_added_since_snapshot"][0]
     assert "subject_display" in added_drift_triple
     assert "predicate_display" in added_drift_triple
@@ -74,16 +74,16 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
 
     assert restaged["revision_iri"] != staged["revision_iri"]
     assert restaged["patches"][0]["before_triple_count"] == db.triple_count("map")
-    assert restaged["alternative_to"] is None
+    assert restaged.get("alternative_to") is None
     assert restaged["restaged_from"] == staged["revision_iri"]
     assert "prior status conflict" in restaged["restage_reason"]
     assert "blockers target_count_drift" in restaged["restage_reason"]
-    assert restaged["current_restaged_by"] is None
+    assert restaged.get("current_restaged_by") is None
     assert restaged["status_after"] == "ready"
     assert restaged["decision_after"] == "review_then_apply"
     assert restaged["routing_decision_after"] == "apply_after_review"
     assert restaged["stale_resolution_state_after"] == "restaged_successor_ready"
-    assert restaged["blocking_reasons_after"] == []
+    assert restaged.get("blocking_reasons_after", []) == []
     assert restaged["current_staged_validation_status"] == "conforms"
     assert restaged["next_action_after"]["action_type"] == "apply_after_review"
     assert restaged["next_action_after"]["tool_name"] == "apply_staged_revision"
@@ -338,7 +338,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         second["revision_iri"],
         restaged_second,
     ]
-    assert result["bundle_summary"]["unresolved_stale_revision_iris"] == []
+    assert result["bundle_summary"].get("unresolved_stale_revision_iris", []) == []
     assert result["bundle_summary"]["ready_restage_successor_revision_iris"] == [
         already_restaged["revision_iri"],
         restaged_second,
@@ -364,7 +364,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         first["revision_iri"],
         second["revision_iri"],
     ]
-    assert result["bundle_summary"]["recommended_repair_review_iris"] == []
+    assert result["bundle_summary"].get("recommended_repair_review_iris", []) == []
     stale_summary = result["revision_summaries"][0]
     assert stale_summary["next_action"]["action_type"] == "inspect_current_successor"
     assert stale_summary["next_action"]["queue"] == "informational"
@@ -471,8 +471,8 @@ def test_restage_staged_revisions_tool_can_dry_run(
         first["revision_iri"],
         second["revision_iri"],
     ]
-    assert result["repair_or_replace_source_revision_iris"] == []
-    assert result["restaged_revision_iris"] == []
+    assert result.get("repair_or_replace_source_revision_iris", []) == []
+    assert result.get("restaged_revision_iris", []) == []
     assert result["not_restageable_revision_iris"] == [ready["revision_iri"]]
     assert result["not_restageable_revision_iris_by_reason"] == {
         "ready": [ready["revision_iri"]],
@@ -482,7 +482,7 @@ def test_restage_staged_revisions_tool_can_dry_run(
         "would_restage",
         "skipped_not_restageable",
     ]
-    assert [item["not_restageable_reason"] for item in result["items"]] == [
+    assert [item.get("not_restageable_reason") for item in result["items"]] == [
         None,
         None,
         "ready",
@@ -575,7 +575,7 @@ def test_restage_staged_revisions_tool_serializes_repair_first_warning(
 
     item = result["items"][0]
     assert item["action"] == "would_restage"
-    assert result["would_restage_revision_iris"] == []
+    assert result.get("would_restage_revision_iris", []) == []
     assert result["repair_first_revision_iris"] == [source.revision_iri]
     assert item["source_staged_validation_status"] == "failed"
     assert item["routing_decision_after"] == "repair_or_replace"

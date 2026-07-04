@@ -21,7 +21,7 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert graph_result["graph_counts"] == {"map": db.triple_count("map")}
     assert graph_result["triples"] == db.triple_count("map")
     assert graph_result["sensitive_literal_count"] == 0
-    assert graph_result["privacy_warnings"] == []
+    assert graph_result.get("privacy_warnings", []) == []
     assert graph_result["artifact_kind"] == "graph_rdf_export"
     assert graph_result["importable"] is True
     assert graph_result["recommended_import_tool"] == "DoxaBase.import_turtle"
@@ -41,7 +41,7 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     ]
     assert "base_ontology" not in trig_result["graphs"]
     assert trig_result["sensitive_literal_count"] == 0
-    assert trig_result["privacy_warnings"] == []
+    assert trig_result.get("privacy_warnings", []) == []
     assert trig_result["artifact_kind"] == "project_trig"
     assert trig_result["importable"] is True
     assert trig_result["recommended_import_tool"] == "doxabase.import_trig"
@@ -168,7 +168,7 @@ def test_export_preflight_tool_reports_shareability_hints_for_home_paths(
     assert result["scanner_clean"] is True
     assert result["would_block_sensitive_export"] is False
     assert result["sensitive_literal_count"] == 0
-    assert result["privacy_warnings"] == []
+    assert result.get("privacy_warnings", []) == []
     assert result["shareability_hints"] == ["absolute_local_home_path"]
     assert result["shareability_hint_count"] == 1
     assert result["returned_shareability_hint_count"] == 1
@@ -496,7 +496,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert result["sensitive_literal_count"] == 0
     assert result["graph_sensitive_literal_count"] == 0
     assert result["snapshot_sensitive_literal_count"] == 0
-    assert result["privacy_warnings"] == []
+    assert result.get("privacy_warnings", []) == []
     assert any("Scanner-clean means" in warning for warning in result["warnings"])
     assert result["artifact_kind"] == "handoff_bundle"
     assert result["importable"] is True
@@ -516,7 +516,10 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert snapshot_path.exists()
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert manifest == result["manifest"]
+    # The on-disk manifest is written before the envelope omission convention
+    # is applied, so normalize it the same way as the in-memory envelope
+    # before comparing (absent, null, and empty are equivalent).
+    assert to_dict(manifest) == result["manifest"]
     assert manifest["format"] == "doxabase.handoff_bundle.v1"
     assert manifest["artifact_kind"] == "handoff_bundle"
     assert manifest["importable"] is True
@@ -556,12 +559,12 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "revision_snapshots": str(snapshot_path),
         "manifest": str(manifest_path),
     }
-    assert dry_run["trig_imported"] == {}
+    assert dry_run.get("trig_imported", {}) == {}
     assert dry_run["trig_total_imported"] == 0
-    assert dry_run["revision_snapshots"] is None
-    assert dry_run["recovery_plan"] is None
-    assert dry_run["imported_recovery_session_iris"] == []
-    assert dry_run["matching_recovery_session_iris"] == []
+    assert dry_run.get("revision_snapshots") is None
+    assert dry_run.get("recovery_plan") is None
+    assert dry_run.get("imported_recovery_session_iris", []) == []
+    assert dry_run.get("matching_recovery_session_iris", []) == []
     assert dry_run["recovery_summary"]["result_kind"] == (
         "handoff_bundle_recovery_summary"
     )
@@ -571,13 +574,13 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "history_missing": 1,
     }
     assert dry_run["recovery_summary"]["recovery_plan_available"] is False
-    assert dry_run["recovery_summary"]["first_mutation_action"] is None
+    assert dry_run["recovery_summary"].get("first_mutation_action") is None
     assert (
-        dry_run["recovery_summary"]["first_safe_review_or_mutation_action"]
+        dry_run["recovery_summary"].get("first_safe_review_or_mutation_action")
         is None
     )
-    assert dry_run["recovery_summary"]["first_safe_review_or_mutation_call"] is None
-    assert dry_run["recovery_summary"]["first_safe_review_or_mutation_source"] is None
+    assert dry_run["recovery_summary"].get("first_safe_review_or_mutation_call") is None
+    assert dry_run["recovery_summary"].get("first_safe_review_or_mutation_source") is None
     assert dry_run["recovery_summary"]["recommended_next_step"] == (
         "run_import_handoff_bundle"
     )
@@ -641,7 +644,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
-    assert manifest_import["recovery_summary"]["first_mutation_action"] is None
+    assert manifest_import["recovery_summary"].get("first_mutation_action") is None
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
     ]["tool_name"] == "describe_staged_revision_recovery_session"
@@ -689,7 +692,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "first_safe_review_or_mutation_source"
     ] == "imported_recovery_session"
     assert (
-        manifest_import["recovery_summary"]["first_mutation_frontier_item"]
+        manifest_import["recovery_summary"].get("first_mutation_frontier_item")
         is None
     )
     assert manifest_import["recovery_summary"]["profile_route_revision_count"] == 1
@@ -828,16 +831,16 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
         manifest_path=str(manifest_path),
     )
 
-    assert imported["imported_recovery_session_iris"] == []
-    assert imported["matching_recovery_session_iris"] == []
+    assert imported.get("imported_recovery_session_iris", []) == []
+    assert imported.get("matching_recovery_session_iris", []) == []
     assert imported["recovery_summary"]["recommended_next_step"] == (
         "start_receiver_local_recovery_session"
     )
     assert imported["recovery_summary"]["mutation_frontier_iris"] == [
         staged["revision_iri"]
     ]
-    assert imported["recovery_summary"]["first_mutation_action"] is None
-    assert imported["recovery_summary"]["first_mutation_frontier_item"] is None
+    assert imported["recovery_summary"].get("first_mutation_action") is None
+    assert imported["recovery_summary"].get("first_mutation_frontier_item") is None
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
     ]["tool_name"] == "start_staged_revision_recovery_session"
@@ -919,7 +922,7 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
         manifest_path=str(manifest_path),
     )
 
-    assert export["revision_iris"] == []
+    assert export.get("revision_iris", []) == []
     assert export["revision_snapshots"]["snapshot_count"] == 0
 
     imported = import_handoff_bundle_tool(
@@ -927,22 +930,22 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
         manifest_path=str(manifest_path),
     )
 
-    assert imported["revision_iris"] == []
+    assert imported.get("revision_iris", []) == []
     assert imported["revision_snapshots"]["imported_snapshot_count"] == 0
     assert imported["recovery_plan"]["selection_mode"] == "explicit_revision_iris"
-    assert imported["recovery_plan"]["requested_revision_iris"] == []
-    assert imported["recovery_plan"]["lane_counts"] == {}
+    assert imported["recovery_plan"].get("requested_revision_iris", []) == []
+    assert imported["recovery_plan"].get("lane_counts", {}) == {}
     assert imported["recovery_plan"]["mutation_allowed_after"] == (
         "no_mutation_frontier"
     )
     assert imported["recovery_summary"]["revision_count"] == 0
     assert imported["recovery_summary"]["snapshot_evidence_complete"] is True
-    assert imported["recovery_summary"]["first_mutation_action"] is None
+    assert imported["recovery_summary"].get("first_mutation_action") is None
     assert imported["recovery_summary"]["recommended_next_step"] == (
         "resume_project_frontier"
     )
     assert imported["suggested_next_actions"][0]["tool_name"] == "project_brief"
-    assert imported["suggested_next_actions"][0]["arguments"] == {}
+    assert imported["suggested_next_actions"][0].get("arguments", {}) == {}
     assert imported["suggested_next_calls"] == ["project_brief()"]
     assert receiver.describe_dataset(
         "https://example.test/project#Customers",
@@ -987,8 +990,8 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["selected_candidate"]["composition"] == (
         "database_connection_and_relation"
     )
-    assert result["scan"]["function"] is None
-    assert result["scan"]["uri_template"] is None
+    assert result["scan"].get("function") is None
+    assert result["scan"].get("uri_template") is None
     assert result["scan"]["relation_identifier"] == "mart.orders"
     assert result["scan"]["connection_reference"] == "warehouse-prod"
     assert result["handoff_summary"]["relation_identifier"] == "mart.orders"
@@ -998,7 +1001,7 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
         "runtime_resolution_required",
     ]
-    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"].get("blocking_reason_codes", []) == []
     assert result["review_gate"]["primary_execution_attempt_blocking_reason_code"] == (
         "runtime_resolution_required"
     )
@@ -1106,7 +1109,7 @@ def test_context_slice_export_tools_return_json_like_payload(
         max_triples=100,
     )
 
-    assert preflight["path"] is None
+    assert preflight.get("path") is None
     assert preflight["format"] == "trig"
     assert preflight["decision"] == "clean_by_scanner_only"
     assert preflight["scanner_clean"] is True
@@ -1117,7 +1120,7 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight["validation_scope"] == "map"
     assert preflight["validation_conforms"] is True
     assert preflight["validation_result_count"] == 0
-    assert preflight["validation_results"] == []
+    assert preflight.get("validation_results", []) == []
     assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert preflight["profile"] == "dataset_brief"
     assert preflight["seeds"][0]["iri"] == dataset
@@ -1126,8 +1129,8 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight["include_seed_graphs"] is False
     assert preflight["bytes_written"] == 0
     assert preflight["sensitive_literal_count"] == 0
-    assert preflight["matches"] == []
-    assert preflight["privacy_warnings"] == []
+    assert preflight.get("matches", []) == []
+    assert preflight.get("privacy_warnings", []) == []
     assert preflight["artifact_kind"] == "context_slice_trig"
     assert preflight["importable"] is True
     assert preflight["recommended_import_tool"] == "doxabase.import_trig"
@@ -1164,7 +1167,7 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["validation_scope"] == "map"
     assert export["validation_conforms"] is True
     assert export["validation_result_count"] == 0
-    assert export["validation_results"] == []
+    assert export.get("validation_results", []) == []
     assert export["handoff_fit"] == "resource_scoped_review_context"
     assert export["bytes_written"] > 0
     assert export["sensitive_literal_count"] == 0
@@ -1172,7 +1175,7 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["importable"] is True
     assert export["recommended_import_tool"] == "doxabase.import_trig"
     assert export["recovery_complete"] is False
-    assert export["suggested_next_actions"] == []
+    assert export.get("suggested_next_actions", []) == []
     assert export_path.exists()
 
 
@@ -1273,7 +1276,7 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
     )
     assert scoped_preflight["would_block_sensitive_export"] is False
     assert scoped_preflight["sensitive_literal_count"] == 0
-    assert scoped_preflight["matches"] == []
+    assert scoped_preflight.get("matches", []) == []
     assert scoped_preflight["handoff_fit"] == "resource_scoped_review_context"
     assert set(scoped_preflight["graphs"]) >= {
         "map",

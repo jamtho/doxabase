@@ -310,7 +310,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert "Current same-subject/predicate value(s): VARCHAR" in (
         token_support["absence_note"]
     )
-    assert token_support["related_route_summaries"] == []
+    assert token_support.get("related_route_summaries", []) == []
     mixed_price_links = [
         link
         for link in token_support["nearby_caveat_links"]
