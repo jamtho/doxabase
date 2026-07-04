@@ -29,3 +29,18 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - External signal: `/tmp/enron-doxabase-handoff` still exists (review believed
   it deleted); copied to `/home/codex/enron-doxabase-handoff` for durability.
 - Next: Phase 0.5 baseline trial battery, then Phase 1 packaging.
+
+## Wave 2 — 2026-07-04 — Phase 0.5: baseline battery + Phase 1.6 stance
+
+- Ran the Standard Trial Battery cold on the 89-tool surface with Sonnet
+  sub-agents via a FastMCP-dispatch bridge (details + LATITUDE notes in
+  `trials/2026-07-baseline.md`). All three tasks succeeded.
+- Tokens-to-outcome: T1 ≈ 60k, T2 ≈ 154k, T3 ≈ 85k. Agents self-reported
+  40–60% of received bytes as noise; two API traps found (record_pattern
+  joint constraint invisible in schema; describe_query_context arg naming).
+- ARCHITECTURE.md now records the single-writer/WAL-off concurrency stance
+  (Phase 1.6): WAL sidecars would break one-file capsule handoff.
+- RDFLib deprecations traced to rdflib 7.6.0 internals (Dataset.parse →
+  default_context), not our call sites → Phase 1 pins rdflib <8 + filters.
+- Scoreboard unchanged. Next: Phase 1 packaging (build-system, dev deps,
+  entry point, gate.sh with wheel install smoke).

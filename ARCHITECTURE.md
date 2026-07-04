@@ -51,6 +51,28 @@ The current storage is intentionally direct:
 
 This is not a custom RDF engine. It is a small local graph memory with enough structure to build V1 behavior.
 
+### Concurrency stance
+
+A capsule is a **single-writer** store, by decision rather than accident
+(recorded 2026-07-04, program Phase 1.6):
+
+- Exactly one process should hold a writable `DoxaBase` on a given capsule
+  file at a time. The intended deployment is one MCP server (or one script)
+  per capsule.
+- Concurrent readers are supported through `DoxaBase.open_readonly(path)`,
+  which opens SQLite in `mode=ro`.
+- A second concurrent writer is not corrupted-by-design (SQLite serializes at
+  the file level) but can hit `database is locked` errors under contention;
+  DoxaBase makes no attempt to retry, queue, or merge concurrent writes.
+  Staged revisions are the supported mechanism for reconciling work done
+  elsewhere, via export/import handoff bundles.
+- WAL mode is deliberately **off**: WAL creates `-wal`/`-shm` sidecar files,
+  which breaks the "a capsule is one file you can copy or hand off" property
+  that the handoff workflow relies on. The default rollback journal is
+  transient. If a future deployment needs higher read concurrency under an
+  active writer, revisit WAL then — with the sidecar caveat documented in the
+  handoff docs.
+
 ## Named Graph Roles
 
 DoxaBase distinguishes immutable shipped seed graphs from mutable project graphs.
