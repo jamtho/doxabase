@@ -225,7 +225,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     metric_fallback_action = draft.suggested_next_action_groups[
@@ -385,7 +385,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     metric_fallback_action = metric_advisory.suggested_next_actions[2]
@@ -1169,8 +1169,8 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         "get_context_graph",
         "record_pattern",
         "stage_systematisation",
-        "describe_pattern",
-        "describe_pattern",
+        "describe_resource",
+        "describe_resource",
         "stage_pattern_promotion",
         "stage_map_assertion_change",
         "stage_map_assertion_change",
@@ -1232,8 +1232,8 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         "get_context_graph",
         "record_pattern",
         "stage_systematisation",
-        "describe_pattern",
-        "describe_pattern",
+        "describe_resource",
+        "describe_resource",
         "describe_staged_revision",
         "export_staged_revisions",
         "stage_map_assertion_change",
@@ -2504,7 +2504,8 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
         "profile_scalar_conflict_review"
     ]
     assert all(
-        action.tool == "doxabase.describe_profile_run"
+        action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "profile_run"
         for action in post_apply_conflict_actions
     )
 
@@ -3047,7 +3048,7 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     fallback_action = advisory.suggested_next_actions[2]
@@ -3063,7 +3064,8 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert staged_fallback.profile_route_source_count == 1
     fallback_staged_iri = staged_fallback.staged_revisions[0].revision_iri
     assert advisory.suggested_next_actions[3].args == {
-        "iri": pattern.pattern_iri
+        "iri": pattern.pattern_iri,
+        "aspect": "pattern",
     }
     promotion_action = advisory.suggested_next_actions[4]
     promotion_args = promotion_action.args
@@ -3080,7 +3082,7 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     metric_route_source = promotion_args["profile_route_sources"][0]
@@ -3120,7 +3122,7 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "list_entities",
         "describe_staged_revision",
         "export_staged_revisions",
-        "describe_pattern",
+        "describe_resource",
         "describe_staged_revision",
         "export_staged_revisions",
     ]
@@ -3356,10 +3358,11 @@ def test_draft_profile_map_updates_surfaces_prose_metric_context_pattern(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
     ]
     assert advisory.suggested_next_actions[-1].args == {
         "iri": pattern.pattern_iri,
+        "aspect": "pattern",
     }
     assert "stage_pattern_promotion" not in {
         action.tool.removeprefix("doxabase.") for action in draft.suggested_next_actions
@@ -3437,7 +3440,7 @@ def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
         "describe_resource",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     assert advisory.suggested_next_actions[1].args == {
@@ -3457,7 +3460,7 @@ def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
         "describe_resource",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
 

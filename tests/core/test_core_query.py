@@ -2089,12 +2089,14 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     profile_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.describe_profile_run"
+        if action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "profile_run"
     ]
 
     assert profile_actions
     assert profile_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": evidence,
     }
 
@@ -3195,12 +3197,13 @@ def test_record_query_result_writes_query_source_evidence(
     assert len(result.scanned_source_span_iris) == 1
     assert result.evidence_triples > result.source_span_triples > 0
     assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
-        "describe_profile_run",
+        "describe_resource",
         "get_context_graph",
         "describe_query_context",
     ]
     assert result.suggested_next_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": result.evidence_iri,
     }
     assert result.suggested_next_actions[1].args == {

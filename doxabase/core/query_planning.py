@@ -233,7 +233,7 @@ class QueryPlanningMixin:
     ) -> list[int]:
         safe_inspection_tools = {
             "doxabase.get_context_graph",
-            "doxabase.describe_profile_run",
+            "doxabase.describe_resource",
         }
         return [
             index
@@ -295,7 +295,8 @@ class QueryPlanningMixin:
                 ):
                     continue
                 profile_arguments = {
-                    "dataset_iri": dataset_iri,
+                    "iri": dataset_iri,
+                    "aspect": "profile_run",
                     "evidence_iri": candidate_run.evidence_iri,
                 }
                 if candidate_index == 0:
@@ -314,7 +315,7 @@ class QueryPlanningMixin:
                     )
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.describe_profile_run",
+                        tool="doxabase.describe_resource",
                         args=profile_arguments,
                         reason=reason,
                     )

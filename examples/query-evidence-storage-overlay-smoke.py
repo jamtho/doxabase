@@ -56,7 +56,7 @@ def main() -> None:
     )
 
     evidence_context = db.describe_query_context(dataset_iri)
-    profile_action = _single_action(evidence_context, "describe_profile_run")
+    profile_action = _single_action(evidence_context, "describe_resource")
     overlay_action = _single_action(
         evidence_context,
         "draft_query_evidence_storage_overlay",

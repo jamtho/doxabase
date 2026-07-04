@@ -489,7 +489,7 @@ class MapStagingMixin:
             limit=limit,
         )
         review_action = SuggestedNextAction(
-                            tool="doxabase.describe_assertion_support",
+                            tool="doxabase.describe_resource",
                             args=review_arguments,
                             reason="This draft is high-risk or marked do-not-stage; inspect support "
                 "routes, caveat scopes, and current-value rationale before any "

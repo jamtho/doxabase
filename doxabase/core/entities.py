@@ -463,7 +463,8 @@ class EntitiesMixin:
         limit: int,
     ) -> dict[str, Any]:
         arguments: dict[str, Any] = {
-            "subject": prepared.subject,
+            "iri": prepared.subject,
+            "aspect": "assertion_support",
             "predicate": prepared.predicate,
             "graph": prepared.graph,
         }
@@ -1166,9 +1167,10 @@ class EntitiesMixin:
         )
         if requested_object is not None:
             add_action(
-                "describe_assertion_support",
+                "describe_resource",
                 {
-                    "subject": subject_iri,
+                    "iri": subject_iri,
+                    "aspect": "assertion_support",
                     "predicate": predicate_iri,
                     "object": None,
                     "graph": graph,

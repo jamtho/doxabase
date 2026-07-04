@@ -2460,7 +2460,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert [
         action.tool.removeprefix("doxabase.") for action in before_context.suggested_next_actions
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_query_evidence_storage_overlay",
     ]
     assert before_context.safe_inspection_action_indexes == [0]
@@ -2819,7 +2819,7 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
     assert "staged patch payloads" in missing_seed_message
     assert "list_resource_revisions" in missing_seed_message
     assert "include_patch_mentions=True" in missing_seed_message
-    assert "search_staged_patch_payloads" in missing_seed_message
+    assert "search(scope='staged_patches')" in missing_seed_message
 
     db.apply_staged_revision(staged.revision_iri)
 

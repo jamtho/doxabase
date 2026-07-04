@@ -814,7 +814,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "stage_pattern_promotion",
     ]
     fallback_action = advisory["suggested_next_actions"][2]
@@ -847,7 +847,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         "get_context_graph",
         "list_entities",
         "stage_systematisation",
-        "describe_pattern",
+        "describe_resource",
         "describe_staged_revision",
         "export_staged_revisions",
     ]
@@ -915,7 +915,7 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
         ],
     )
     pattern_iri = bundle["dataset_profile"]["pattern"]["pattern_iri"]
-    pattern = describe_pattern_tool(db, pattern_iri)
+    pattern = describe_resource_tool(db, aspect="pattern", iri=pattern_iri)
     assert {item["iri"] for item in pattern["map_implications"]} == {
         table,
         project_metric,

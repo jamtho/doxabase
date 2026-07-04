@@ -1103,11 +1103,17 @@ class RevisionsMixin:
             *,
             tool_name: str | None = None,
             reason_contains: str | None = None,
+            args_aspect: str | None = None,
         ) -> SuggestedNextAction | None:
             for action in suggested_next_actions:
                 if (
                     tool_name is not None
                     and action.tool != f"doxabase.{tool_name}"
+                ):
+                    continue
+                if (
+                    args_aspect is not None
+                    and action.args.get("aspect") != args_aspect
                 ):
                     continue
                 if (
@@ -1347,7 +1353,8 @@ class RevisionsMixin:
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
         ) and find_exact_action(
-            tool_name="describe_assertion_support",
+            tool_name="describe_resource",
+            args_aspect="assertion_support",
         ) is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
@@ -1358,7 +1365,8 @@ class RevisionsMixin:
                 "assertion support before staging an explicit repair."
             )
             selected_action = find_exact_action(
-                tool_name="describe_assertion_support",
+                tool_name="describe_resource",
+                args_aspect="assertion_support",
             )
         elif (
             apply_decision == "restage_against_current_graph"

@@ -192,3 +192,22 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   first calls present, no dated journal material). start_here_lines
   ceiling ratcheted 350 → 120.
 - Next: Phase 4 tool consolidation per doc 08 (wave R1: reads).
+
+## Wave 11 — 2026-07-05 — Phase 4 wave R1: read-family merges (89 → 83 tools)
+
+- Per doc 08 rows 1/5/6: list_docs → get_doc (no-arg lists); staged-patch
+  search → search(scope="staged_patches"); describe_pattern /
+  describe_analysis_view / describe_profile_run / describe_assertion_support
+  → describe_resource with aspect (auto type-detects patterns and analysis
+  views; profile_run takes evidence_iri; assertion_support takes predicate
+  with iri as subject). Old tools deleted same-wave, no aliases.
+- Every core suggestion emitter migrated to the merged names; the tricky
+  finds (by the reconciliation sub-agent): find_exact_action matching in
+  revisions (now matches args aspect), string-based add_action helpers,
+  and three arg-dict shapes my first sweep missed. Lesson recorded: batch
+  regex over tests lost to per-site edits — the sub-agent's precise pass
+  fixed what my regex over-matched.
+- Suite 726 passed; gate + wheel smoke green; ceilings ratcheted to
+  83 tools / 142,000 schema chars.
+- Next: wave R2, recording family (rows 10/13/14, −22 tools) via the
+  kind-dispatch pattern with targeted per-kind validation errors.

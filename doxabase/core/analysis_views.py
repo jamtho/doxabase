@@ -138,8 +138,8 @@ class AnalysisViewsMixin:
             },
         )
         describe_view_action = SuggestedNextAction(
-                                   tool="doxabase.describe_analysis_view",
-                                   args={"iri": dataset.iri},
+                                   tool="doxabase.describe_resource",
+                                   args={"iri": dataset.iri, "aspect": "analysis_view"},
                                    reason="Read the logical view denominator, source datasets, caveats, "
                 "and query snippet metadata before deciding whether to query "
                 "the source datasets or materialize a new physical route.",

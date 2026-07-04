@@ -1285,11 +1285,11 @@ class BriefMixin:
         query_summary: ProjectBriefDatasetQuerySummary,
     ) -> SuggestedNextAction:
         for action in query_summary.suggested_next_actions:
-            if action.tool == "doxabase.describe_analysis_view":
+            if action.args.get("aspect") == "analysis_view":
                 return action
-        arguments = {"iri": dataset_iri}
+        arguments = {"iri": dataset_iri, "aspect": "analysis_view"}
         return SuggestedNextAction(
-                   tool="doxabase.describe_analysis_view",
+                   tool="doxabase.describe_resource",
                    args=arguments,
                    reason="Read the logical view denominator, source datasets, caveats, "
                 "and query snippet metadata before deciding whether to query "

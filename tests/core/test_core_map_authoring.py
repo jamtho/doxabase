@@ -511,8 +511,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     ) in absent_routes
     assert "owning dataset" in absent_support.support_scope_note
     assert any(
-        action.tool == "doxabase.describe_assertion_support"
-        and action.args["object"] is None
+        action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "assertion_support"
+        and action.args.get("object", "missing") is None
         for action in absent_support.suggested_next_actions
     )
 
@@ -676,9 +677,10 @@ def test_stage_map_assertion_change_packages_support_context(
     )
     assert draft_change.judgement_panel.semantic_risk_level == "high"
     assert [action.tool.removeprefix("doxabase.") for action in draft_change.suggested_next_actions] == [
-        "describe_assertion_support",
+        "describe_resource",
         "stage_map_assertion_change",
     ]
+    assert draft_change.suggested_next_actions[0].args["aspect"] == "assertion_support"
     assert "high-risk" in draft_change.suggested_next_actions[0].reason
     assert draft_change.stage_arguments["rationale"].startswith(
         "Testing a tempting but risky coercion"
@@ -2046,7 +2048,8 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert context.suggested_repair_action_group_count == 0
     assert context.query_target_candidates == []
     assert context.query_target_decision.status == "logical_analysis_view"
-    assert context.suggested_next_actions[0].tool == "doxabase.describe_analysis_view"
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_resource"
+    assert context.suggested_next_actions[0].args["aspect"] == "analysis_view"
     assert context.safe_inspection_action_indexes == [0, 1]
 
     brief = db.project_brief(limit=5)
@@ -2058,7 +2061,8 @@ def test_record_map_analysis_view_captures_logical_query_context(
     view_action = next(
         action
         for action in brief.suggested_next_actions
-        if action.tool == "doxabase.describe_analysis_view"
+        if action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "analysis_view"
     )
     assert view_action.args["iri"] == view
     assert all(
@@ -2392,7 +2396,8 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     analysis_view_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.describe_analysis_view"
+        if action["tool"] == "doxabase.describe_resource"
+        and action["args"].get("aspect") == "analysis_view"
     ]
     assert {action["args"]["iri"] for action in analysis_view_actions} == {
         parent_view,

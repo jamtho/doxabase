@@ -99,11 +99,12 @@ class SlicesMixin:
             if key in resource_brief_profile_run_actions:
                 return
             arguments = {
-                "dataset_iri": dataset_iri,
+                "iri": dataset_iri,
+                "aspect": "profile_run",
                 "evidence_iri": evidence_iri,
             }
             resource_brief_profile_run_actions[key] = SuggestedNextAction(
-                                                          tool="doxabase.describe_profile_run",
+                                                          tool="doxabase.describe_resource",
                                                           args=arguments,
                                                           reason="The evidence seed is linked from profile observation "
                     f"'{profile_observation_iri}' for this dataset. "
@@ -1468,7 +1469,7 @@ class SlicesMixin:
                     f"Seed resource '{seed}' was not found in visible RDF "
                     "triples. If this IRI may exist only inside staged patch "
                     "payloads, call list_resource_revisions(resource_iri=..., "
-                    "include_patch_mentions=True) or search_staged_patch_payloads "
+                    "include_patch_mentions=True) or search(scope='staged_patches') "
                     "before concluding it is absent."
                 )
             add_resource(seed, "seed", "seed resource", depth=0)
@@ -1951,10 +1952,10 @@ class SlicesMixin:
                 ):
                     continue
                 seen_analysis_view_iris.add(resource_iri)
-                arguments = {"iri": resource_iri}
+                arguments = {"iri": resource_iri, "aspect": "analysis_view"}
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.describe_analysis_view",
+                        tool="doxabase.describe_resource",
                         args=arguments,
                         reason="resource_brief reached this rc:AnalysisView from "
                             "the seed. describe_analysis_view exposes its "

@@ -1040,12 +1040,13 @@ class QueryEvidenceMixin:
         actions: list[SuggestedNextAction] = []
         if observation_type == "profile" and observed_asset_iri is not None:
             profile_arguments = {
-                "dataset_iri": observed_asset_iri,
+                "iri": observed_asset_iri,
+                "aspect": "profile_run",
                 "evidence_iri": evidence_iri,
             }
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_profile_run",
+                    tool="doxabase.describe_resource",
                     args=profile_arguments,
                     reason="This query result wrote profile-shaped evidence. "
                         "Inspect the profile run before promoting map facts or "

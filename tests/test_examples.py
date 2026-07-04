@@ -205,7 +205,7 @@ def test_query_evidence_storage_overlay_smoke_example_runs(tmp_path: Path) -> No
     assert "Baseline readiness: insufficient_metadata" in output
     assert "Baseline candidates: 0" in output
     assert "Recorded evidence status: succeeded" in output
-    assert "Profile inspection action: doxabase.describe_profile_run" in output
+    assert "Profile inspection action: doxabase.describe_resource" in output
     assert (
         "Overlay action tool: doxabase.draft_query_evidence_storage_overlay"
         in output

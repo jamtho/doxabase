@@ -11,7 +11,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
 
     assert "doxabase.project_brief" in server.instructions
     assert "doxabase.export_preflight" in server.instructions
-    assert "doxabase.list_docs" in tool_names
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.scan_sensitive_literals" in tool_names
@@ -19,8 +18,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
-    assert "doxabase.describe_analysis_view" in tool_names
-    assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.draft_profile_map_updates" in tool_names
     assert "doxabase.plan_profile_followthrough" in tool_names
     assert "doxabase.stage_profile_map_updates" in tool_names
@@ -49,7 +46,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.plan_staged_revision_recovery" in tool_names
     assert "doxabase.start_staged_revision_recovery_session" in tool_names
     assert "doxabase.describe_staged_revision_recovery_session" in tool_names
-    assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_query_result" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
@@ -74,7 +70,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.record_map_asset_transform" in tool_names
     assert "doxabase.search" in tool_names
-    assert "doxabase.search_staged_patch_payloads" in tool_names
     assert "doxabase.export_graph" in tool_names
     assert "doxabase.export_handoff_bundle" in tool_names
     assert "doxabase.export_profile_insight_review_bundle" in tool_names
@@ -186,7 +181,7 @@ async def test_mcp_tool_schemas_match_tool_layer_signatures(
 
 
 def test_doc_tools_return_json_like_payloads() -> None:
-    result = list_docs_tool()
+    result = get_doc_tool()
     doc_ids = {doc["id"] for doc in result["docs"]}
     response_shapes_doc = next(
         doc for doc in result["docs"] if doc["id"] == "response_shapes"
@@ -262,9 +257,10 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert tables["count"] >= 7
     assert validation["conforms"] is True
 
-    support = describe_assertion_support_tool(
+    support = describe_resource_tool(
         db,
-        subject="https://richcanopy.org/example/manifest/polymarket#px_price",
+        aspect="assertion_support",
+        iri="https://richcanopy.org/example/manifest/polymarket#px_price",
         predicate="rc:physicalType",
         object="rc:Varchar",
     )
@@ -299,9 +295,10 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert "claim target" in summary_by_kind["claim"]["route_labels"]
     assert summary_by_kind["pattern"]["route_count"] >= 2
 
-    token_support = describe_assertion_support_tool(
+    token_support = describe_resource_tool(
         db,
-        subject="https://richcanopy.org/example/manifest/polymarket#px_token_id",
+        aspect="assertion_support",
+        iri="https://richcanopy.org/example/manifest/polymarket#px_token_id",
         predicate="rc:physicalType",
         object="rc:Double",
     )

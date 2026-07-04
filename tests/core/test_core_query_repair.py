@@ -160,8 +160,9 @@ def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     assert check.next_action is not None
     assert check.next_action.queue == "repair_or_replace"
     assert check.next_action.action_label == "Review ambiguous same-slot conflict"
-    assert check.next_action.tool_name == "describe_assertion_support"
-    assert check.next_action.arguments["subject"] == orders
+    assert check.next_action.tool_name == "describe_resource"
+    assert check.next_action.arguments["aspect"] == "assertion_support"
+    assert check.next_action.arguments["iri"] == orders
     assert check.next_action.arguments["predicate"] == RC + "rowSemantics"
     assert check.next_action.arguments["object"] == RC + "SnapshotRow"
     assert check.next_action.arguments["object_kind"] == "iri"
@@ -194,7 +195,8 @@ def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     assert dry_item.action == "skipped_not_restageable"
     assert dry_item.not_restageable_reason == "ambiguous_same_slot"
     assert dry_item.next_action_after is not None
-    assert dry_item.next_action_after.tool_name == "describe_assertion_support"
+    assert dry_item.next_action_after.tool_name == "describe_resource"
+    assert dry_item.next_action_after.arguments["aspect"] == "assertion_support"
 
     plan = db.plan_staged_revision_recovery([source.revision_iri])
     assert plan.lane_counts == {"repair_or_replace": 1}
@@ -206,7 +208,8 @@ def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     lane = plan.lanes[0]
     assert lane.not_restageable_reason == "ambiguous_same_slot"
     assert lane.next_action is not None
-    assert lane.next_action.tool_name == "describe_assertion_support"
+    assert lane.next_action.tool_name == "describe_resource"
+    assert lane.next_action.arguments["aspect"] == "assertion_support"
     assert lane.repair_draft is not None
     assert lane.repair_draft.draft_kind == "ambiguous_same_slot"
 
@@ -2005,7 +2008,7 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     assert result.source_span_iri is not None
     assert len(result.scanned_source_span_iris) == 1
     assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
-        "describe_profile_run",
+        "describe_resource",
         "get_context_graph",
         "describe_query_context",
     ]

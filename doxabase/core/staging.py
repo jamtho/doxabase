@@ -689,13 +689,14 @@ class StagingMixin:
     ) -> SuggestedNextAction:
         arguments = {
             "query": query,
+            "scope": "staged_patches",
             "graph": "history",
             "current_staged_work_only": True,
             "limit": limit,
             "offset": 0,
         }
         return SuggestedNextAction(
-                   tool="doxabase.search_staged_patch_payloads",
+                   tool="doxabase.search",
                    args=arguments,
                    reason="The term may exist only inside a current staged proposal. "
                 "Search patch payloads before treating proposed ontology, shape, "
@@ -2776,7 +2777,8 @@ class StagingMixin:
             return None
 
         arguments: dict[str, Any] = {
-            "subject": subject,
+            "iri": subject,
+            "aspect": "assertion_support",
             "predicate": predicate,
             "object": object_value,
             "graph": "map",
@@ -2795,7 +2797,7 @@ class StagingMixin:
             "restaging the stale patch."
         )
         return SuggestedNextAction(
-                   tool="doxabase.describe_assertion_support",
+                   tool="doxabase.describe_resource",
                    args=arguments,
                    reason=reason,
                )

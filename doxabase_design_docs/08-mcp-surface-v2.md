@@ -84,7 +84,13 @@ Doc 07 sketched 29 rows and asked for folds to reach ≤ 25. Chosen folds:
 Merge family by family, deleting old tools in the same wave, keeping the full
 gate green each wave:
 
-1. Reads: `get_doc`, `search`, `describe_resource` (rows 1, 5, 6).
+1. **DONE (2026-07-05)** Reads: `get_doc`, `search`, `describe_resource`
+   (rows 1, 5, 6). 89 → 83 tools. Implementation notes: `describe_resource`
+   gained `aspect` ("auto" type-detects patterns/analysis views;
+   "profile_run" takes `evidence_iri`; "assertion_support" takes
+   `predicate`/`object*`, iri = subject); suggestion emitters across core
+   now produce the merged names, and `revisions.find_exact_action` matches
+   on `args_aspect` rather than the old tool name.
 2. Recording: rows 10, 13, 14 (biggest count win: −22 tools).
 3. Staging: rows 16–19 (−13 tools).
 4. Revisions reads: rows 20–21 (−9 tools).

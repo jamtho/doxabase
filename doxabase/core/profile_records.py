@@ -841,9 +841,10 @@ class ProfileRecordsMixin:
                     "profile observations and map caveats.",
             ),
             SuggestedNextAction(
-                tool="doxabase.describe_profile_run",
+                tool="doxabase.describe_resource",
                 args={
-                    "dataset_iri": dataset_value,
+                    "iri": dataset_value,
+                    "aspect": "profile_run",
                     "evidence_iri": evidence_value,
                 },
                 reason="Review the shared evidence run containing coverage, "
@@ -853,8 +854,8 @@ class ProfileRecordsMixin:
         if analysis_view_value is not None:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_analysis_view",
-                    args={"iri": analysis_view_value},
+                    tool="doxabase.describe_resource",
+                    args={"iri": analysis_view_value, "aspect": "analysis_view"},
                     reason="Inspect the named population and denominator for the "
                         "domain-network aggregate profile.",
                 )
@@ -862,8 +863,8 @@ class ProfileRecordsMixin:
         if pattern is not None:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_pattern",
-                    args={"iri": pattern.pattern_iri},
+                    tool="doxabase.describe_resource",
+                    args={"iri": pattern.pattern_iri, "aspect": "pattern"},
                     reason="Review the synthesis that explains how extraction "
                         "coverage affects network interpretation.",
                 )
@@ -1075,9 +1076,10 @@ class ProfileRecordsMixin:
             )
         if profile_run_available:
             add_action(
-                "describe_profile_run",
+                "describe_resource",
                 {
-                    "dataset_iri": dataset_iri,
+                    "iri": dataset_iri,
+                    "aspect": "profile_run",
                     "evidence_iri": profile_run_evidence_iri,
                 },
                 (

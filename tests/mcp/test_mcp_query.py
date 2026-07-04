@@ -35,12 +35,13 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result.get("scanned_source_span_iris", []) == []
     assert result["source_span_triples"] > 0
     assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
-        "describe_profile_run",
+        "describe_resource",
         "get_context_graph",
         "describe_query_context",
     ]
     assert result["suggested_next_actions"][0]["args"] == {
-        "dataset_iri": "https://example.test/project#Orders",
+        "iri": "https://example.test/project#Orders",
+        "aspect": "profile_run",
         "evidence_iri": result["evidence_iri"],
     }
     assert result["suggested_next_actions"][1]["args"] == {
@@ -107,17 +108,18 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     assert [
         action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"][:2]
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_query_plan",
     ]
     assert context["safe_inspection_action_indexes"] == [0]
     assert context["first_safe_inspection_action_index"] == 0
     profile_action = context["suggested_next_actions"][0]
     assert profile_action["args"] == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": result["evidence_iri"],
     }
-    profile_run = describe_profile_run_tool(db, **profile_action["args"])
+    profile_run = describe_resource_tool(db, **profile_action["args"])
     assert profile_run["returned_profile_count"] == 1
     assert profile_run["evidence"]["summary"] == (
         "Reviewed Python CSV aggregate over scratch Orders."

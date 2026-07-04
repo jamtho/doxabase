@@ -247,7 +247,8 @@ def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifa
     assert result.artifact_iris[-1] not in outgoing_iris
     assert {view, recipe, task}.issubset(outgoing_iris)
     assert any(
-        action["tool"] == "doxabase.describe_analysis_view"
+        action["tool"] == "doxabase.describe_resource"
+        and action["args"].get("aspect") == "analysis_view"
         and action["args"]["iri"] == view
         for action in context["suggested_next_actions"]
     )
@@ -1157,11 +1158,13 @@ def test_resource_brief_profile_evidence_seed_suggests_profile_run(
     profile_run_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool == "doxabase.describe_profile_run"
+        if action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "profile_run"
     ]
     assert len(profile_run_actions) == 1
     assert profile_run_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": profile.observation.evidence_iri,
     }
 

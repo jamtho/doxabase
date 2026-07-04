@@ -77,7 +77,7 @@ def test_query_context_keeps_query_overlay_with_profile_run_candidates(
         action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]
     ]
     assert action_tools[:2] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_query_evidence_storage_overlay",
     ]
     overlay_actions = [
@@ -148,13 +148,16 @@ def test_record_profiled_parquet_table_tool_returns_json_like_payload(
     ] is True
     assert isinstance(result["profile_draft_recommendation_count"], int)
     assert isinstance(result["query_readiness"], str)
-    assert "describe_profile_run" in {
-        action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
-    }
+    assert any(
+        action["tool"] == "doxabase.describe_resource"
+        and action["args"].get("aspect") == "profile_run"
+        for action in result["suggested_next_actions"]
+    )
 
-    profile_run = describe_profile_run_tool(
+    profile_run = describe_resource_tool(
         db,
-        dataset_iri=table,
+        aspect="profile_run",
+        iri=table,
         evidence_iri=result["shared_evidence_iri"],
         limit=None,
     )
@@ -301,14 +304,18 @@ def test_record_domain_network_profile_tool_returns_handoff_payload(
     assert len(result["profile_observation_iris"]) == 2
     assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "describe_dataset",
-        "describe_profile_run",
-        "describe_analysis_view",
-        "describe_pattern",
+        "describe_resource",
+        "describe_resource",
+        "describe_resource",
     ]
+    assert result["suggested_next_actions"][1]["args"]["aspect"] == "profile_run"
+    assert result["suggested_next_actions"][2]["args"]["aspect"] == "analysis_view"
+    assert result["suggested_next_actions"][3]["args"]["aspect"] == "pattern"
 
-    profile_run = describe_profile_run_tool(
+    profile_run = describe_resource_tool(
         db,
-        dataset_iri=dataset,
+        aspect="profile_run",
+        iri=dataset,
         evidence_iri=evidence,
         limit=None,
     )
@@ -377,16 +384,17 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     assert [
         action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_query_plan",
     ]
 
     profile_action = context["suggested_next_actions"][0]
     assert profile_action["args"] == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
-    profile_run = describe_profile_run_tool(db, **profile_action["args"])
+    profile_run = describe_resource_tool(db, **profile_action["args"])
     assert profile_run["returned_profile_count"] == 2
     assert profile_run["returned_dataset_profile_count"] == 1
     assert profile_run["returned_mapped_column_profile_count"] == 1
@@ -505,9 +513,10 @@ def test_record_observation_tool_accepts_profile_type_findings(
         evidence_sources=["tests/test_mcp_tools.py"],
     )
 
-    profile_run = describe_profile_run_tool(
+    profile_run = describe_resource_tool(
         db,
-        dataset_iri=dataset,
+        aspect="profile_run",
+        iri=dataset,
         evidence_iri=result["evidence_iri"],
     )
     profile = profile_run["unmapped_column_profile_observations"][0]
@@ -734,7 +743,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         for action in result["handoff_entrypoints"]["suggested_next_actions"]
     ] == [
         "describe_dataset",
-        "describe_profile_run",
+        "describe_resource",
         "draft_profile_map_updates",
         "get_context_graph",
         "get_context_graph",
@@ -742,7 +751,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["handoff_entrypoints"]["suggested_next_actions"][1][
         "args"
     ] == {
-        "dataset_iri": table,
+        "iri": table,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
     assert result["handoff_entrypoints"]["suggested_next_actions"][2][
@@ -800,15 +810,17 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert [
         action["tool"].removeprefix("doxabase.") for action in query_context["suggested_next_actions"]
     ] == [
-        "describe_profile_run",
+        "describe_resource",
     ]
     assert query_context["suggested_next_actions"][0]["args"] == {
-        "dataset_iri": table,
+        "iri": table,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
-    profile_run = describe_profile_run_tool(
+    profile_run = describe_resource_tool(
         db,
-        dataset_iri=table,
+        aspect="profile_run",
+        iri=table,
         evidence_iri=shared_evidence,
     )
     assert profile_run["returned_profile_count"] == 2
@@ -818,9 +830,10 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         result["dataset_profile"]["observation"]["observation_iri"],
         result["column_profiles"][0]["observation"]["observation_iri"],
     }
-    bundle_pattern = describe_pattern_tool(
+    bundle_pattern = describe_resource_tool(
         db,
-        result["dataset_profile"]["pattern"]["pattern_iri"],
+        aspect="pattern",
+        iri=result["dataset_profile"]["pattern"]["pattern_iri"],
     )
     assert {item["iri"] for item in bundle_pattern["supporting_observations"]} == set(
         profile_run["profile_observation_iris"]
@@ -839,7 +852,9 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         evidence_iri=shared_evidence,
     )
     assert pattern["evidence_iri"] == shared_evidence
-    assert describe_pattern_tool(db, pattern["pattern_iri"])["evidence"][0]["iri"] == (
+    assert describe_resource_tool(
+        db, aspect="pattern", iri=pattern["pattern_iri"]
+    )["evidence"][0]["iri"] == (
         shared_evidence
     )
     profile = dataset["unmapped_column_profile_observations"][0]

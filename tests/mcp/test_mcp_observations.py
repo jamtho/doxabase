@@ -173,8 +173,11 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
         db,
         iri=result["pattern_iri"],
         graph="patterns",
+        aspect="resource",
     )
-    pattern_description = describe_pattern_tool(db, result["pattern_iri"])
+    pattern_description = describe_resource_tool(
+        db, aspect="pattern", iri=result["pattern_iri"]
+    )
 
     assert result["pattern_iri"] in {pattern["iri"] for pattern in patterns["entities"]}
     assert patterns["entities"][0]["label"] == (

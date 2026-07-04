@@ -476,7 +476,8 @@ class StagingApplyMixin:
         ):
             return True
         return any(
-            action.tool == "doxabase.describe_assertion_support"
+            (action.tool == "doxabase.describe_resource"
+               and action.args.get("aspect") == "assertion_support")
             for action in check.suggested_next_actions
         )
     def check_staged_revision_apply(
@@ -1180,7 +1181,8 @@ class StagingApplyMixin:
                 "instead of mechanically restaging the stale source patch."
             )
         if status == "conflict" and any(
-            action.tool == "doxabase.describe_assertion_support"
+            (action.tool == "doxabase.describe_resource"
+               and action.args.get("aspect") == "assertion_support")
             for action in suggested_next_actions or []
         ):
             return (

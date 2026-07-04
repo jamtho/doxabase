@@ -31,7 +31,7 @@ class ProfileAdvisoriesMixin:
         )
         if action.tool == "doxabase.stage_pattern_promotion":
             return "define_value_type"
-        if action.tool == "doxabase.describe_pattern":
+        if action.args.get("aspect") == "pattern":
             return "define_value_type"
         if action.tool == "doxabase.stage_map_assertion_change":
             return "assert_map_type"
@@ -358,11 +358,12 @@ class ProfileAdvisoriesMixin:
                 ]
                 if has_current_equal_value:
                     arguments = {
-                        "dataset_iri": dataset_iri,
+                        "iri": dataset_iri,
+                        "aspect": "profile_run",
                         "evidence_iri": evidence_iri,
                     }
                     action = SuggestedNextAction(
-                                 tool="doxabase.describe_profile_run",
+                                 tool="doxabase.describe_resource",
                                  args=arguments,
                                  reason="A same-evidence scalar conflict has an option "
                             "that already matches the current map. Review the "
@@ -1032,8 +1033,8 @@ class ProfileAdvisoriesMixin:
         if value_type_promotion_pattern_iris:
             for pattern_iri in value_type_promotion_pattern_iris[:3]:
                 add_action(
-                    "describe_pattern",
-                    {"iri": pattern_iri},
+                    "describe_resource",
+                    {"iri": pattern_iri, "aspect": "pattern"},
                     (
                         "Inspect the same-evidence pattern before promoting "
                         "this project value type into ontology vocabulary."
@@ -1469,7 +1470,7 @@ class ProfileAdvisoriesMixin:
             reason = action.reason
             should_note = False
             if (
-                action.tool == "doxabase.describe_pattern"
+                (action.tool == "doxabase.describe_resource" and action.args.get("aspect") == "pattern")
                 and arguments.get("iri") in mixed_pattern_iris
             ):
                 should_note = True
@@ -2161,8 +2162,8 @@ class ProfileAdvisoriesMixin:
         def add_context_pattern_actions() -> None:
             for pattern_iri in context_pattern_values[:3]:
                 add_action(
-                    "describe_pattern",
-                    {"iri": pattern_iri},
+                    "describe_resource",
+                    {"iri": pattern_iri, "aspect": "pattern"},
                     (
                         "Inspect this same-evidence metric pattern as context. "
                         "It is not structurally tied to the metric as a target "
@@ -2181,8 +2182,8 @@ class ProfileAdvisoriesMixin:
         ):
             for pattern_iri in promotion_pattern_values[:3]:
                 add_action(
-                    "describe_pattern",
-                    {"iri": pattern_iri},
+                    "describe_resource",
+                    {"iri": pattern_iri, "aspect": "pattern"},
                     (
                         "Inspect the same-evidence pattern before promoting this "
                         "project metric into ontology vocabulary."

@@ -11,14 +11,10 @@ from doxabase.mcp_tools import (
     apply_staged_revision_tool,
     check_staged_revision_apply_tool,
     describe_applied_revision_diff_tool,
-    describe_assertion_support_tool,
-    describe_analysis_view_tool,
     describe_dataset_tool,
     get_context_graph_tool,
     describe_graph_revision_tool,
     describe_graph_version_diff_tool,
-    describe_pattern_tool,
-    describe_profile_run_tool,
     describe_query_context_tool,
     describe_revision_graph_snapshot_tool,
     describe_revision_lineage_tool,
@@ -47,7 +43,6 @@ from doxabase.mcp_tools import (
     import_handoff_bundle_tool,
     import_revision_snapshots_tool,
     import_trig_tool,
-    list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
     list_graph_versions_tool,
@@ -86,7 +81,6 @@ from doxabase.mcp_tools import (
     restage_staged_revision_tool,
     restage_staged_revisions_tool,
     scan_sensitive_literals_tool,
-    search_staged_patch_payloads_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_query_physical_layout_repair_tool,
@@ -100,8 +94,8 @@ from doxabase.mcp_tools import (
 )
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
-Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_analysis_view, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.get_context_graph, and doxabase.describe_pattern before asking for broader graph context.
+Start with doxabase.get_doc (no arguments lists the docs), then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
+Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_resource, doxabase.describe_dataset, doxabase.describe_query_context, and doxabase.get_context_graph before asking for broader graph context.
 Current V1 tools support inspection, profile-to-map update drafting/staging and profile advisory follow-through planning, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, no-I/O profiled Parquet table recording, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
@@ -123,20 +117,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     db = _LazyDoxaBase(capsule_path)
     server = FastMCP("doxabase", instructions=SERVER_INSTRUCTIONS)
 
-    @server.tool(name="doxabase.list_docs")
-    def list_docs() -> dict[str, Any]:
-        """List short agent-facing DoxaBase docs available through MCP."""
-
-        return list_docs_tool()
-
     @server.tool(name="doxabase.get_doc")
     def get_doc(
-        doc_id: str,
+        doc_id: str | None = None,
         max_chars: int = 12000,
         start_char: int = 0,
         section: str | None = None,
     ) -> dict[str, Any]:
-        """Return one agent-facing markdown doc by ID, offset, or section."""
+        """Return one agent doc by ID (with optional section/offset slicing),
+        or the list of available docs when doc_id is omitted."""
 
         return get_doc_tool(
             doc_id,
@@ -215,29 +204,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
-
-    @server.tool(name="doxabase.describe_analysis_view")
-    def describe_analysis_view(iri: str, graph: str | None = "map") -> dict[str, Any]:
-        """Return denominator, query snippet, and source context for a logical view."""
-
-        return describe_analysis_view_tool(db, iri=iri, graph=graph)
-
-    @server.tool(name="doxabase.describe_profile_run")
-    def describe_profile_run(
-        dataset_iri: str,
-        evidence_iri: str,
-        graph: str | None = "map",
-        limit: int | None = None,
-    ) -> dict[str, Any]:
-        """Return profile observations for one dataset linked to one evidence resource."""
-
-        return describe_profile_run_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            graph=graph,
-            limit=limit,
-        )
 
     @server.tool(name="doxabase.draft_profile_map_updates")
     def draft_profile_map_updates(
@@ -588,6 +554,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def describe_resource(
         iri: str,
         graph: str | None = None,
+        aspect: str = "auto",
         include_incoming: bool = True,
         limit: int = 100,
         outgoing_offset: int = 0,
@@ -595,13 +562,24 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         include_blank_node_closure: bool = False,
         blank_node_depth: int = 2,
         blank_node_limit: int = 100,
+        evidence_iri: str | None = None,
+        predicate: str | None = None,
+        object: str | None = None,
+        object_kind: str = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
     ) -> dict[str, Any]:
-        """Return outgoing and incoming RDF triples for one resource."""
+        """Describe one resource. aspect='auto' detects patterns and analysis
+        views by rdf:type and otherwise returns the resource's triples;
+        aspect='profile_run' needs evidence_iri (iri = profiled dataset);
+        aspect='assertion_support' needs predicate (iri = subject; optional
+        object/object_kind/object_datatype/object_lang)."""
 
         return describe_resource_tool(
             db,
             iri=iri,
             graph=graph,
+            aspect=aspect,
             include_incoming=include_incoming,
             limit=limit,
             outgoing_offset=outgoing_offset,
@@ -609,31 +587,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             include_blank_node_closure=include_blank_node_closure,
             blank_node_depth=blank_node_depth,
             blank_node_limit=blank_node_limit,
-        )
-
-    @server.tool(name="doxabase.describe_assertion_support")
-    def describe_assertion_support(
-        subject: str,
-        predicate: str,
-        object: str | None = None,
-        graph: str | None = "map",
-        object_kind: str = "auto",
-        object_datatype: str | None = None,
-        object_lang: str | None = None,
-        limit: int = 20,
-    ) -> dict[str, Any]:
-        """Return support context for one subject/predicate/object assertion."""
-
-        return describe_assertion_support_tool(
-            db,
-            subject=subject,
+            evidence_iri=evidence_iri,
             predicate=predicate,
             object=object,
-            graph=graph,
             object_kind=object_kind,
             object_datatype=object_datatype,
             object_lang=object_lang,
-            limit=limit,
         )
 
     @server.tool(name="doxabase.describe_graph_revision")
@@ -819,25 +778,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             offset=offset,
         )
 
-    @server.tool(name="doxabase.search_staged_patch_payloads")
-    def search_staged_patch_payloads(
-        query: str,
-        graph: str | None = "history",
-        current_staged_work_only: bool = True,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> dict[str, Any]:
-        """Search current staged patch Turtle payloads and route to owners."""
-
-        return search_staged_patch_payloads_tool(
-            db,
-            query=query,
-            graph=graph,
-            current_staged_work_only=current_staged_work_only,
-            limit=limit,
-            offset=offset,
-        )
-
     @server.tool(name="doxabase.describe_resource_revision_lineage")
     def describe_resource_revision_lineage(
         resource_iri: str,
@@ -1009,15 +949,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_scope=validation_scope,
             drift_detail=drift_detail,
         )
-
-    @server.tool(name="doxabase.describe_pattern")
-    def describe_pattern(
-        iri: str,
-        graph: str | None = "patterns",
-    ) -> dict[str, Any]:
-        """Return compact pattern context, support links, and evidence spans."""
-
-        return describe_pattern_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.record_observation")
     def record_observation(
@@ -2163,15 +2094,21 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def search(
         query: str,
         graph: str | None = None,
+        scope: str = "graphs",
+        current_staged_work_only: bool = True,
         limit: int = 20,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """Lexically search literal RDF claims and return matched resources."""
+        """Lexical search. scope='graphs' searches literal RDF claims across
+        named graphs; scope='staged_patches' searches staged revision patch
+        payloads (graph defaults to history there)."""
 
         return search_tool(
             db,
             query=query,
             graph=graph,
+            scope=scope,
+            current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
         )

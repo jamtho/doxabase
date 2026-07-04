@@ -43,7 +43,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert [
         action["tool"].removeprefix("doxabase.") for action in before_context["suggested_next_actions"]
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_query_evidence_storage_overlay",
     ]
     assert before_context["safe_inspection_action_indexes"] == [0]
@@ -770,8 +770,9 @@ def test_search_staged_patch_payloads_tool_returns_json_like_payload(
         validation_scope="all",
     )
 
-    result = search_staged_patch_payloads_tool(
+    result = search_tool(
         db,
+        scope="staged_patches",
         query="cohort completeness",
     )
 

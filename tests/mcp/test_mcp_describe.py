@@ -37,9 +37,10 @@ def test_describe_assertion_support_marks_generic_value_only_routes(
         validation_scope="all",
     )
 
-    result = describe_assertion_support_tool(
+    result = describe_resource_tool(
         db,
-        subject=dataset,
+        aspect="assertion_support",
+        iri=dataset,
         predicate="rc:rowSemantics",
         object="rc:SnapshotRow",
         object_kind="iri",
@@ -76,9 +77,10 @@ def test_assertion_literal_metadata_tools_return_json_like_payloads(
         graph="map",
     )
 
-    support = describe_assertion_support_tool(
+    support = describe_resource_tool(
         db,
-        subject="https://example.test/project#Orders",
+        aspect="assertion_support",
+        iri="https://example.test/project#Orders",
         predicate="rdfs:label",
         object="Orders",
         object_kind="literal",
@@ -270,9 +272,10 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
         "https://richcanopy.org/ns/rc#Count"
     )
 
-    wrong_predicate = describe_assertion_support_tool(
+    wrong_predicate = describe_resource_tool(
         db,
-        subject="https://richcanopy.org/example/manifest/ais#DailyIndex",
+        aspect="assertion_support",
+        iri="https://richcanopy.org/example/manifest/ais#DailyIndex",
         predicate="rc:hasPartitionScheme",
         object="https://richcanopy.org/example/manifest/ais#daily_date_partition",
         object_kind="iri",
@@ -555,9 +558,10 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
         graph="map",
     )
 
-    result = describe_assertion_support_tool(
+    result = describe_resource_tool(
         db,
-        subject="https://example.test/project#Messages",
+        aspect="assertion_support",
+        iri="https://example.test/project#Messages",
         predicate="rc:hasColumn",
         object="https://example.test/project#message_id",
     )
@@ -701,7 +705,7 @@ def test_search_tool_serializes_zero_match_retrieval_fallbacks(
         "search",
         "search",
         "list_entities",
-        "search_staged_patch_payloads",
+        "search",
     ]
     assert result["suggested_next_actions"][1]["args"] == {
         "query": "harbor",
@@ -715,9 +719,8 @@ def test_search_tool_serializes_zero_match_retrieval_fallbacks(
         "limit": 5,
         "offset": 0,
     }
-    assert result["suggested_next_actions"][4]["tool"] == (
-        "doxabase.search_staged_patch_payloads"
-    )
+    assert result["suggested_next_actions"][4]["tool"] == "doxabase.search"
+    assert result["suggested_next_actions"][4]["args"]["scope"] == "staged_patches"
 
 
 def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(

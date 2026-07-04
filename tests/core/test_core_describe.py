@@ -763,7 +763,7 @@ def test_zero_match_search_suggests_bounded_retrieval_fallbacks(
         "search",
         "search",
         "list_entities",
-        "search_staged_patch_payloads",
+        "search",
     ]
     assert [action.args for action in result.suggested_next_actions[:3]] == [
         {"query": "derived", "graph": "map", "limit": 5, "offset": 0},
@@ -778,6 +778,7 @@ def test_zero_match_search_suggests_bounded_retrieval_fallbacks(
     }
     assert result.suggested_next_actions[4].args == {
         "query": query,
+        "scope": "staged_patches",
         "graph": "history",
         "current_staged_work_only": True,
         "limit": 5,

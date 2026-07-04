@@ -304,14 +304,15 @@ class ProfilesMixin:
         graph_argument = graph if graph != "map" else None
         if limit is not None and omitted_profile_count > 0:
             arguments: dict[str, Any] = {
-                "dataset_iri": dataset_iri,
+                "iri": dataset_iri,
+                "aspect": "profile_run",
                 "evidence_iri": evidence_iri,
             }
             if graph_argument is not None or graph is None:
                 arguments["graph"] = graph
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_profile_run",
+                    tool="doxabase.describe_resource",
                     args=arguments,
                     reason="This response was capped and omitted profile "
                         "observations. Expand the full shared-evidence run "
@@ -1348,7 +1349,8 @@ class ProfilesMixin:
         actions: list[SuggestedNextAction] = []
         for action_index, evidence_iri in enumerate(evidence_iris[:action_limit]):
             arguments = {
-                "dataset_iri": dataset.iri,
+                "iri": dataset.iri,
+                "aspect": "profile_run",
                 "evidence_iri": evidence_iri,
             }
             omitted_count = 0
@@ -1366,7 +1368,7 @@ class ProfilesMixin:
             )
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_profile_run",
+                    tool="doxabase.describe_resource",
                     args=arguments,
                     reason="This query context has profile evidence, but no "
                         "multi-observation profile_run_candidates. Inspect this "

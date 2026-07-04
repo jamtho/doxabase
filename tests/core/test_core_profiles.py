@@ -179,9 +179,11 @@ def test_record_profiled_parquet_table_records_map_and_profile_context(
     assert "describe_query_context" in [
         action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions
     ]
-    assert "describe_profile_run" in [
-        action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions
-    ]
+    assert any(
+        action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "profile_run"
+        for action in result.suggested_next_actions
+    )
 
     description = db.describe_dataset(table)
     assert description.row_count_snapshot == 12
@@ -369,9 +371,14 @@ def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
     assert result.analysis_view_bundle.query_snippet_count == 1
     assert {action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions} >= {
         "describe_dataset",
-        "describe_profile_run",
+        "describe_resource",
         "describe_query_context",
     }
+    assert any(
+        action.tool == "doxabase.describe_resource"
+        and action.args.get("aspect") == "profile_run"
+        for action in result.suggested_next_actions
+    )
 
     orders_run = db.describe_profile_run(orders, result.shared_evidence_iris[0])
     assert orders_run.total_profile_count == 3
@@ -597,11 +604,12 @@ def test_record_profile_to_capsule_manifest_records_domain_network_profiles(
     assert result.analysis_view_count == 1
     assert result.caveat_count == 1
     assert result.domain_network_profile_records[0].profile_observation_iris
-    assert {action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions} >= {
-        "describe_profile_run",
-        "describe_analysis_view",
-        "describe_pattern",
+    describe_resource_aspects = {
+        action.args.get("aspect")
+        for action in result.suggested_next_actions
+        if action.tool == "doxabase.describe_resource"
     }
+    assert describe_resource_aspects >= {"profile_run", "analysis_view", "pattern"}
 
     profile_run = db.describe_profile_run(messages, evidence, limit=None)
     assert profile_run.total_profile_count == 4
@@ -793,10 +801,13 @@ def test_record_domain_network_profile_records_reviewed_aggregates(
     assert len(result.profile_observation_iris) == 4
     assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "describe_dataset",
-        "describe_profile_run",
-        "describe_analysis_view",
-        "describe_pattern",
+        "describe_resource",
+        "describe_resource",
+        "describe_resource",
     ]
+    assert [
+        action.args.get("aspect") for action in result.suggested_next_actions[1:]
+    ] == ["profile_run", "analysis_view", "pattern"]
 
     profile_run = db.describe_profile_run(dataset, evidence, limit=None)
     assert profile_run.total_profile_count == 4
@@ -1274,7 +1285,7 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
     assert [
         action.tool.removeprefix("doxabase.") for action in sampled_aggregate.suggested_next_actions
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "get_context_graph",
         "describe_query_context",
     ]
@@ -1863,7 +1874,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         action.tool.removeprefix("doxabase.") for action in result.handoff_entrypoints.suggested_next_actions
     ] == [
         "describe_dataset",
-        "describe_profile_run",
+        "describe_resource",
         "draft_profile_map_updates",
         "get_context_graph",
         "get_context_graph",
@@ -1872,7 +1883,8 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         "iri": dataset
     }
     assert result.handoff_entrypoints.suggested_next_actions[1].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
     assert result.handoff_entrypoints.suggested_next_actions[2].args == {
@@ -2341,22 +2353,24 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
 
     context = db.describe_query_context(dataset)
 
-    assert context.suggested_next_actions[0].tool == "doxabase.describe_profile_run"
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_resource"
     assert context.suggested_next_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": matching_evidence,
     }
     assert [
         action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions[:3]
     ] == [
-        "describe_profile_run",
-        "describe_profile_run",
+        "describe_resource",
+        "describe_resource",
         "draft_query_plan",
     ]
     assert context.safe_inspection_action_indexes == [0, 1]
     assert context.first_safe_inspection_action_index == 0
     assert context.suggested_next_actions[1].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": old_evidence,
     }
     assert "sampled, unknown, or mixed basis" in (
@@ -2445,11 +2459,12 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
     assert capped.omitted_profile_count == 6
     assert len(capped.profile_observation_iris) == 3
     assert [action.tool.removeprefix("doxabase.") for action in capped.suggested_next_actions] == [
-        "describe_profile_run",
+        "describe_resource",
         "draft_profile_map_updates",
     ]
     assert capped.suggested_next_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
     assert capped.suggested_next_actions[1].args == {
@@ -2492,11 +2507,12 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert [
         action.tool.removeprefix("doxabase.") for action in bundle.handoff_entrypoints.suggested_next_actions
     ] == [
-        "describe_profile_run",
+        "describe_resource",
         "get_context_graph",
     ]
     assert bundle.handoff_entrypoints.suggested_next_actions[0].args == {
-        "dataset_iri": dataset,
+        "iri": dataset,
+        "aspect": "profile_run",
         "evidence_iri": shared_evidence,
     }
     assert bundle.handoff_entrypoints.suggested_next_actions[-1].args == {
@@ -2599,8 +2615,12 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
         for action in actions:
             if action.tool == "doxabase.describe_dataset":
                 db.describe_dataset(**action.args)
-            elif action.tool == "doxabase.describe_profile_run":
-                db.describe_profile_run(**action.args)
+            elif action.tool == "doxabase.describe_resource":
+                assert action.args["aspect"] == "profile_run"
+                db.describe_profile_run(
+                    dataset_iri=action.args["iri"],
+                    evidence_iri=action.args["evidence_iri"],
+                )
             elif action.tool == "doxabase.draft_profile_map_updates":
                 db.draft_profile_map_updates(**action.args)
             elif action.tool == "doxabase.get_context_graph":
@@ -2700,7 +2720,7 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
     assert [
         action.tool.removeprefix("doxabase.")
         for action in shadow_bundle.handoff_entrypoints.suggested_next_actions
-    ] == ["describe_profile_run", "get_context_graph"]
+    ] == ["describe_resource", "get_context_graph"]
 
     all_actions = [
         *run_a_bundle.handoff_entrypoints.suggested_next_actions,

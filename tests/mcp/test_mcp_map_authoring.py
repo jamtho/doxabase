@@ -37,10 +37,11 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
     )
     assert [
         action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
-    ] == ["describe_assertion_support", "stage_map_assertion_change"]
+    ] == ["describe_resource", "stage_map_assertion_change"]
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_assertion_support"
+        "doxabase.describe_resource"
     )
+    assert result["suggested_next_actions"][0]["args"]["aspect"] == "assertion_support"
     assert "high-risk" in result["suggested_next_actions"][0]["reason"]
     assert result["suggested_next_actions"][1]["tool"] == (
         "doxabase.stage_map_assertion_change"
@@ -263,7 +264,7 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     )
 
     assert record_result["resource_type"] == RC + "AnalysisView"
-    description = describe_analysis_view_tool(db, iri=view)
+    description = describe_resource_tool(db, aspect="analysis_view", iri=view)
     assert description["label"] == "Sent external messages"
     assert description["source_datasets"][0]["iri"] == source
     assert description["denominator"]["row_count_snapshot"] == 42
@@ -283,7 +284,8 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert context["suggested_repair_action_group_count"] == 0
     assert context.get("query_target_candidates", []) == []
     assert context["query_target_decision"]["status"] == "logical_analysis_view"
-    assert context["suggested_next_actions"][0]["tool"] == "doxabase.describe_analysis_view"
+    assert context["suggested_next_actions"][0]["tool"] == "doxabase.describe_resource"
+    assert context["suggested_next_actions"][0]["args"]["aspect"] == "analysis_view"
 
 
 def test_analysis_view_tool_accepts_multiple_query_snippets(tmp_path: Path) -> None:
@@ -316,7 +318,7 @@ def test_analysis_view_tool_accepts_multiple_query_snippets(tmp_path: Path) -> N
     )
 
     assert result["resource_type"] == RC + "AnalysisView"
-    description = describe_analysis_view_tool(db, iri=view)
+    description = describe_resource_tool(db, aspect="analysis_view", iri=view)
     assert [snippet["label"] for snippet in description["query_snippets"]] == [
         "DuckDB view definition",
         "Count check",
@@ -475,7 +477,8 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     analysis_view_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.describe_analysis_view"
+        if action["tool"] == "doxabase.describe_resource"
+        and action["args"].get("aspect") == "analysis_view"
     ]
     assert [action["args"]["iri"] for action in analysis_view_actions] == [
         view

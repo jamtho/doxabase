@@ -11,6 +11,7 @@ from rdflib.namespace import RDF
 from doxabase.agent_docs import get_agent_doc, list_agent_docs
 from doxabase.core import (
     DoxaBase,
+    DoxaBaseError,
     RCG_PREFIX,
     ROOT,
     SuggestedNextAction,
@@ -25,16 +26,15 @@ EXAMPLE_FIXTURES = (
 POST_IMPORT_SNAPSHOT_EVIDENCE_LIMIT = 20
 
 
-def list_docs_tool() -> dict[str, Any]:
-    return to_jsonable({"docs": list_agent_docs()})
-
-
 def get_doc_tool(
-    doc_id: str,
+    doc_id: str | None = None,
     max_chars: int = 12000,
     start_char: int = 0,
     section: str | None = None,
 ) -> dict[str, Any]:
+    """Fetch one agent doc, or list all docs when doc_id is omitted."""
+    if doc_id is None:
+        return to_jsonable({"docs": list_agent_docs()})
     return get_agent_doc(
         doc_id,
         max_chars=max_chars,
@@ -117,10 +117,24 @@ def list_entities_tool(
     })
 
 
+RC_PATTERN_TYPE = "https://richcanopy.org/ns/rc#Pattern"
+RC_ANALYSIS_VIEW_TYPE = "https://richcanopy.org/ns/rc#AnalysisView"
+
+
+def _detect_describe_aspect(db: DoxaBase, iri: str) -> str:
+    expanded = db.expand_iri(iri)
+    if RC_PATTERN_TYPE in db._types("patterns", expanded):
+        return "pattern"
+    if RC_ANALYSIS_VIEW_TYPE in db._types("map", expanded):
+        return "analysis_view"
+    return "resource"
+
+
 def describe_resource_tool(
     db: DoxaBase,
     iri: str,
     graph: str | None = None,
+    aspect: str = "auto",
     include_incoming: bool = True,
     limit: int = 100,
     outgoing_offset: int = 0,
@@ -128,7 +142,73 @@ def describe_resource_tool(
     include_blank_node_closure: bool = False,
     blank_node_depth: int = 2,
     blank_node_limit: int = 100,
+    evidence_iri: str | None = None,
+    predicate: str | None = None,
+    object: str | None = None,
+    object_kind: str = "auto",
+    object_datatype: str | None = None,
+    object_lang: str | None = None,
 ) -> dict[str, Any]:
+    """Describe one resource; aspect picks the view, auto-detected by type."""
+    if aspect == "auto":
+        aspect = (
+            "assertion_support"
+            if predicate is not None
+            else _detect_describe_aspect(db, iri)
+        )
+    if aspect == "pattern":
+        return to_dict(
+            db.describe_pattern(
+                iri=iri,
+                graph=graph if graph is not None else "patterns",
+            )
+        )
+    if aspect == "analysis_view":
+        return to_dict(
+            db.describe_analysis_view(
+                iri=iri,
+                graph=graph if graph is not None else "map",
+            )
+        )
+    if aspect == "profile_run":
+        if evidence_iri is None:
+            raise DoxaBaseError(
+                "aspect='profile_run' requires evidence_iri (the profile "
+                "evidence resource) alongside iri (the profiled dataset)"
+            )
+        return to_dict(
+            db.describe_profile_run(
+                dataset_iri=iri,
+                evidence_iri=evidence_iri,
+                graph=graph if graph is not None else "map",
+                limit=limit,
+            )
+        )
+    if aspect == "assertion_support":
+        if predicate is None:
+            raise DoxaBaseError(
+                "aspect='assertion_support' requires predicate (and "
+                "optionally object/object_kind/object_datatype/object_lang); "
+                "iri is the assertion subject"
+            )
+        return to_dict(
+            db.describe_assertion_support(
+                subject=iri,
+                predicate=predicate,
+                object=object,
+                graph=graph if graph is not None else "map",
+                object_kind=object_kind,  # type: ignore[arg-type]
+                object_datatype=object_datatype,
+                object_lang=object_lang,
+                limit=limit,
+            )
+        )
+    if aspect != "resource":
+        raise DoxaBaseError(
+            "describe_resource aspect must be one of 'auto', 'resource', "
+            "'pattern', 'analysis_view', 'profile_run', or "
+            f"'assertion_support'; got {aspect!r}"
+        )
     result = db.describe_resource(
         iri=iri,
         graph=graph,
@@ -139,30 +219,6 @@ def describe_resource_tool(
         include_blank_node_closure=include_blank_node_closure,
         blank_node_depth=blank_node_depth,
         blank_node_limit=blank_node_limit,
-    )
-    return to_dict(result)
-
-
-def describe_assertion_support_tool(
-    db: DoxaBase,
-    subject: str,
-    predicate: str,
-    object: str | None = None,
-    graph: str | None = "map",
-    object_kind: str = "auto",
-    object_datatype: str | None = None,
-    object_lang: str | None = None,
-    limit: int = 20,
-) -> dict[str, Any]:
-    result = db.describe_assertion_support(
-        subject=subject,
-        predicate=predicate,
-        object=object,
-        graph=graph,
-        object_kind=object_kind,  # type: ignore[arg-type]
-        object_datatype=object_datatype,
-        object_lang=object_lang,
-        limit=limit,
     )
     return to_dict(result)
 
@@ -335,25 +391,6 @@ def list_resource_revisions_tool(
             include_patch_mentions=include_patch_mentions,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,  # type: ignore[arg-type]
-            current_staged_work_only=current_staged_work_only,
-            limit=limit,
-            offset=offset,
-        )
-    )
-
-
-def search_staged_patch_payloads_tool(
-    db: DoxaBase,
-    query: str,
-    graph: str | None = "history",
-    current_staged_work_only: bool = True,
-    limit: int = 20,
-    offset: int = 0,
-) -> dict[str, Any]:
-    return to_dict(
-        db.search_staged_patch_payloads(
-            query=query,
-            graph=graph,
             current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
@@ -536,45 +573,12 @@ def describe_staged_revision_recovery_session_tool(
     )
 
 
-def describe_pattern_tool(
-    db: DoxaBase,
-    iri: str,
-    graph: str | None = "patterns",
-) -> dict[str, Any]:
-    return to_dict(db.describe_pattern(iri=iri, graph=graph))
-
-
 def describe_dataset_tool(
     db: DoxaBase,
     iri: str,
     graph: str | None = "map",
 ) -> dict[str, Any]:
     return to_dict(db.describe_dataset(iri=iri, graph=graph))
-
-
-def describe_analysis_view_tool(
-    db: DoxaBase,
-    iri: str,
-    graph: str | None = "map",
-) -> dict[str, Any]:
-    return to_dict(db.describe_analysis_view(iri=iri, graph=graph))
-
-
-def describe_profile_run_tool(
-    db: DoxaBase,
-    dataset_iri: str,
-    evidence_iri: str,
-    graph: str | None = "map",
-    limit: int | None = None,
-) -> dict[str, Any]:
-    return to_dict(
-        db.describe_profile_run(
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            graph=graph,
-            limit=limit,
-        )
-    )
 
 
 def draft_profile_map_updates_tool(
@@ -1989,9 +1993,27 @@ def search_tool(
     db: DoxaBase,
     query: str,
     graph: str | None = None,
+    scope: str = "graphs",
+    current_staged_work_only: bool = True,
     limit: int = 20,
     offset: int = 0,
 ) -> dict[str, Any]:
+    if scope == "staged_patches":
+        return to_dict(
+            db.search_staged_patch_payloads(
+                query=query,
+                graph=graph if graph is not None else "history",
+                current_staged_work_only=current_staged_work_only,
+                limit=limit,
+                offset=offset,
+            )
+        )
+    if scope != "graphs":
+        raise DoxaBaseError(
+            "search scope must be 'graphs' (literal search over named graphs) "
+            "or 'staged_patches' (search staged revision patch payloads); "
+            f"got {scope!r}"
+        )
     result = db.search(query=query, graph=graph, limit=limit, offset=offset)
     return to_jsonable({
         "query": result.query,
