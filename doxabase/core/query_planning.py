@@ -2047,22 +2047,33 @@ class QueryPlanningMixin:
             relationship_iri,
             "rc:derivationFunction",
         )
-        source_dataset_summary = self._optional_resource_summary(
-            lookup_graphs,
-            source_dataset,
+        def _reference_summary(summary):
+            # Relationship endpoints are references, not dataset cards: the
+            # full description lives behind describe_dataset.
+            if summary is None:
+                return None
+            return replace(summary, description=None)
+
+        source_dataset_summary = _reference_summary(
+            self._optional_resource_summary(lookup_graphs, source_dataset)
         )
-        target_dataset_summary = self._optional_resource_summary(
-            lookup_graphs,
-            target_dataset,
+        target_dataset_summary = _reference_summary(
+            self._optional_resource_summary(lookup_graphs, target_dataset)
         )
-        source_dataset_summaries = self._resource_summaries(
-            lookup_graphs,
-            source_dataset_iris,
-        )
-        target_dataset_summaries = self._resource_summaries(
-            lookup_graphs,
-            target_dataset_iris,
-        )
+        source_dataset_summaries = [
+            _reference_summary(summary)
+            for summary in self._resource_summaries(
+                lookup_graphs,
+                source_dataset_iris,
+            )
+        ]
+        target_dataset_summaries = [
+            _reference_summary(summary)
+            for summary in self._resource_summaries(
+                lookup_graphs,
+                target_dataset_iris,
+            )
+        ]
         foreign_key_from_summary = self._optional_resource_summary(
             lookup_graphs,
             foreign_key_from,

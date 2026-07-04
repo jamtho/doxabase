@@ -307,3 +307,25 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   end-state — the remainder is anyOf inflation on four flat recording
   tools; closing it needs the tail-params→spec structural decision.
 - Next: Phase 3.6 response diets, then the Gate-3/4 battery rerun.
+
+## Wave 15 — 2026-07-05 — Phase 3.6: response diets
+
+- Serialize-internal marks (Python API keeps everything): DatasetDescription
+  related_datasets/related_dataset_groups (relationships is the one public
+  form); QueryPlanningContext columns/partition_schemes/upstream_caveats
+  (describe_dataset owns them — the T3 90%-overlap fix); QueryTargetCandidate
+  binding_example/required_binding_details (required_bindings +
+  binding_examples survive); ContextSliceResource routes + route
+  label fields (route_counts/legend + primary_route carry the picture).
+- Relationship endpoint summaries are references now (description=None at
+  build site); graph_overview and list_entities default limits 100 → 25
+  (paging + total_count communicate the rest).
+- Measured (fixture capsule): describe_dataset 23,017→15,355;
+  describe_query_context 20,603→14,732; get_context_graph 44,053→33,096;
+  graph_overview 14,040→5,692 (end-state met); list_entities 15,201→4,337.
+  Ceilings ratcheted to actuals +≈4%.
+- Remaining to end-state, flagged for James alongside the schema-char item:
+  dataset/query-context ~3k each (relationship endpoint triple-
+  representation consolidation), slice ~1k, list_entities 337 chars (would
+  require dropping types from listings — declined).
+- Next: Gate-3/4 battery rerun vs docs/journal/trials/2026-07-baseline.md.

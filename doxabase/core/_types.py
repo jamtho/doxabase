@@ -2605,8 +2605,8 @@ class QueryTargetCandidate:
     direct_review_required: bool
     direct_review_reasons: list[QueryPlanningIssue]
     required_bindings: list[str] = field(default_factory=list)
-    required_binding_details: list[dict[str, Any]] = field(default_factory=list)
-    binding_example: str | None = None
+    required_binding_details: list[dict[str, Any]] = field(default_factory=list, metadata={"doxabase_internal": True})
+    binding_example: str | None = field(default=None, metadata={"doxabase_internal": True})
     binding_examples: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -2641,7 +2641,7 @@ class QueryPlanningContext:
     profile_summary: ProfileSummary
     layout_verification_status: ResourceSummary | None
     layout_verification_note: str | None
-    columns: list[ColumnDescription]
+    columns: list[ColumnDescription] = field(metadata={"doxabase_internal": True})
     path_templates: list[str]
     query_target_decision: QueryTargetDecision
     query_target_candidates: list[QueryTargetCandidate]
@@ -2651,9 +2651,9 @@ class QueryPlanningContext:
     unselected_direct_clean_candidate_indexes: list[int]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
-    partition_schemes: list[PartitionDescription]
+    partition_schemes: list[PartitionDescription] = field(metadata={"doxabase_internal": True})
     caveats: list[CaveatDescription]
-    upstream_caveats: list[CaveatDescription]
+    upstream_caveats: list[CaveatDescription] = field(metadata={"doxabase_internal": True})
     suggested_next_actions: list[SuggestedNextAction]
     safe_inspection_action_indexes: list[int]
     first_safe_inspection_action_index: int | None
@@ -3517,8 +3517,8 @@ class DatasetDescription:
     operational_warnings: list[QueryPlanningIssue]
     provenance: list[ResourceSummary]
     transformations: list[TransformationDescription]
-    related_datasets: list[RelatedDatasetDescription]
-    related_dataset_groups: list[RelatedDatasetGroup]
+    related_datasets: list[RelatedDatasetDescription] = field(metadata={"doxabase_internal": True})
+    related_dataset_groups: list[RelatedDatasetGroup] = field(metadata={"doxabase_internal": True})
     relationships: list[RelationshipDescription]
     tuple_grains: list[TupleGrainDescription]
     linked_patterns: list[ResourceSummary]
@@ -4187,10 +4187,12 @@ class _MapAssertionChangePrepared:
 @dataclass(frozen=True)
 class ContextSliceRoute:
     route: str
-    route_label: str
-    source_iri: str | None
-    source_label: str | None
-    depth: int
+    route_label: str = field(metadata={"doxabase_internal": True})
+    source_iri: str | None = None
+    source_label: str | None = field(
+        default=None, metadata={"doxabase_internal": True}
+    )
+    depth: int = 0
 
 
 @dataclass(frozen=True)
@@ -4212,7 +4214,7 @@ class ContextSliceResource:
     surface_role: str
     referenced_only: bool
     primary_route: ContextSliceRoute
-    routes: list[ContextSliceRoute]
+    routes: list[ContextSliceRoute] = field(metadata={"doxabase_internal": True})
 
 
 @dataclass(frozen=True)

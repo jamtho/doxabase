@@ -44,7 +44,7 @@ def get_doc_tool(
     )
 
 
-def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
+def graph_overview_tool(db: DoxaBase, limit: int = 25) -> dict[str, Any]:
     overview = db.graph_overview(limit=limit)
     return to_jsonable({
         "named_graphs": [to_dict(graph) for graph in overview.named_graphs],
@@ -178,7 +178,7 @@ def list_entities_tool(
     type: str | None = None,
     graph: str | None = "map",
     text: str | None = None,
-    limit: int = 100,
+    limit: int = 25,
     offset: int = 0,
 ) -> dict[str, Any]:
     result = db.list_entities(type=type, graph=graph, text=text, limit=limit, offset=offset)

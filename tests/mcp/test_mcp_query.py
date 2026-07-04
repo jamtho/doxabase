@@ -187,10 +187,15 @@ def test_describe_query_context_tool_returns_planning_projection(
         "year",
         "date",
     ]
-    assert result["query_target_candidates"][0]["required_binding_details"][1][
-        "partition_column"
-    ]["iri"] == "https://richcanopy.org/example/manifest/ais#bc_date"
-    assert result["query_target_candidates"][0]["binding_example"] == (
+    candidate_details = db.describe_query_context(
+        iri="https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    ).query_target_candidates[0].required_binding_details
+    assert candidate_details[1]["partition_column"].iri == (
+        "https://richcanopy.org/example/manifest/ais#bc_date"
+    )
+    assert db.describe_query_context(
+        iri="https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    ).query_target_candidates[0].binding_example == (
         "year='2026', date='2026-06-30' -> "
         "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
     )

@@ -97,7 +97,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         )
 
     @server.tool(name="doxabase.graph_overview")
-    def graph_overview(limit: int = 100) -> dict[str, Any]:
+    def graph_overview(limit: int = 25) -> dict[str, Any]:
         """Return named graph counts, common classes, predicates, and key counts."""
 
         return graph_overview_tool(db, limit=limit)
@@ -152,7 +152,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         type: str | None = None,
         graph: str | None = "map",
         text: str | None = None,
-        limit: int = 100,
+        limit: int = 25,
         offset: int = 0,
     ) -> dict[str, Any]:
         """List graph entities by RDF type, graph role, and optional text filter."""

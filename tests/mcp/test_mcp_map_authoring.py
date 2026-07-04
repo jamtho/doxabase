@@ -615,9 +615,9 @@ def test_record_map_relationship_tool_accepts_asset_level_endpoints(
         mosaic
     ]
     assert any(
-        related["relationship"] == "derived_from"
-        and related["relationship_kind"] == RC + "Derivation"
-        for related in description["related_datasets"]
+        related.relationship == "derived_from"
+        and related.relationship_kind == RC + "Derivation"
+        for related in db.describe_dataset(iri=mosaic).related_datasets
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 

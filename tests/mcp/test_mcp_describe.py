@@ -184,12 +184,14 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         == "https://richcanopy.org/ns/rc#SharedIdentifier"
         and related["relationship_kind_label"] == "SharedIdentifier"
         and related["label"] == "Trade Events"
-        for related in result["related_datasets"]
+        for related in (
+            to_dict(item) for item in db.describe_dataset(iri="https://richcanopy.org/example/manifest/polymarket#MarketSnapshots").related_datasets
+        )
     )
     trade_group = next(
-        group
-        for group in result["related_dataset_groups"]
-        if group["label"] == "Trade Events"
+        to_dict(group)
+        for group in db.describe_dataset(iri="https://richcanopy.org/example/manifest/polymarket#MarketSnapshots").related_dataset_groups
+        if group.label == "Trade Events"
     )
     condition_id_reason = next(
         reason
@@ -303,12 +305,15 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     assert any(
         related["relationship"] == "aggregated_from"
         and related["label"] == "AIS Daily Broadcast Positions"
-        for related in result["related_datasets"]
+        for related in (
+            to_dict(item)
+            for item in db.describe_dataset(iri="https://richcanopy.org/example/manifest/ais#DailyIndex").related_datasets
+        )
     )
     broadcast_group = next(
-        group
-        for group in result["related_dataset_groups"]
-        if group["label"] == "AIS Daily Broadcast Positions"
+        to_dict(group)
+        for group in db.describe_dataset(iri="https://richcanopy.org/example/manifest/ais#DailyIndex").related_dataset_groups
+        if group.label == "AIS Daily Broadcast Positions"
     )
     assert any(
         caveat["impact"] and "Grouping by MMSI may conflate" in caveat["impact"]
@@ -416,18 +421,14 @@ def test_get_context_graph_tool_returns_json_like_payload(
         "pattern_synthesis"
     )
     seed_resource = resources_by_iri[seed_iri]
-    assert seed_resource["primary_route"] == seed_resource["routes"][0]
-    assert set(seed_resource["primary_route"]) == {
-        "depth",
-        "route",
-        "route_label",
-    }
+    assert seed_resource["primary_route"]["route"] == "seed"
+    assert set(seed_resource["primary_route"]) <= {"depth", "route", "source_iri"}
     assert any(
         resource["iri"]
         == "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"
         and resource["referenced_only"] is False
         and resource["primary_route"]["route"] == "seed"
-        and any(route["route"] == "seed" for route in resource["routes"])
+        and resource["primary_route"]["route"] == "seed"
         for resource in result["resources"]
     )
 

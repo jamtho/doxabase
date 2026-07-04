@@ -91,7 +91,7 @@ class StorageMixin:
             )
             _SEED_GRAPH_CACHE[cache_key] = cached
         return cached
-    def graph_overview(self, limit: int = 100) -> GraphOverview:
+    def graph_overview(self, limit: int = 25) -> GraphOverview:
         graph_rows = self._conn.execute(
             """
             SELECT

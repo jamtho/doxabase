@@ -232,14 +232,14 @@ def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifa
         ],
     )
 
-    context = to_dict(db.get_context_graph([packet], profile="resource_brief"))
+    slice_obj = db.get_context_graph([packet], profile="resource_brief")
+    context = to_dict(slice_obj)
     outgoing_iris = {
-        resource["iri"]
-        for resource in context["resources"]
+        resource.iri
+        for resource in slice_obj.resources
         if any(
-            route["route"] == "outgoing_reference"
-            and route["source_iri"] == packet
-            for route in resource["routes"]
+            route.route == "outgoing_reference" and route.source_iri == packet
+            for route in resource.routes
         )
     }
 

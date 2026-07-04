@@ -15,7 +15,7 @@ class EntitiesMixin:
         type: str | None = None,
         graph: str | None = "map",
         text: str | None = None,
-        limit: int = 100,
+        limit: int = 25,
         offset: int = 0,
     ) -> EntityList:
         if limit < 1:
