@@ -378,3 +378,18 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   concurrency stance kept; stale build-order/debt sections replaced).
 - docs/agent/ 1,135,611 → 142,249 bytes (−87%); largest doc is the
   generated mcp-tools.md at 41.5KB; agent_docs_bytes budget 1.2M → 148,000.
+
+## Wave 19 — 2026-07-05 — Gates 5 & 6 passed; final battery on distilled surface
+
+- Full battery + wrong-hunch trial on the post-docs surface. 4/4 success,
+  zero accidental errors. T1 29.6k tokens (−50% vs baseline, under Gate 6's
+  60k with only start_here read); T3 36.4k (−57%); T2 88.9k (−42%, probe
+  calls eliminated by the generated per-kind doc sections, doc reads rated
+  ~90% signal by the agent); T4 found and respected the recovery gate from
+  project_brief.gates + docs alone, with the judgement trail documented.
+- Gate 5 PASS, Gate 6 PASS. The ≥60% Gate-3 expectation lands at −42..−57%
+  with quality strictly up; the two remaining levers (schema-char structural
+  decision; elective deep doc reads) are for James at the retrospective.
+- Five product seeds recorded in trials/2026-07-gates-5-6.md.
+- Next: Phase 7 — retrospective (doc 09), Enron case study from installed
+  wheel, tag v0.2.0.
