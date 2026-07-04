@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -119,7 +120,6 @@ def list_entities_tool(
         "suggested_next_actions": [
             to_dict(action) for action in result.suggested_next_actions
         ],
-        "suggested_next_calls": list(result.suggested_next_calls),
     })
 
 
@@ -2017,7 +2017,6 @@ def search_tool(
         "suggested_next_actions": [
             to_dict(action) for action in result.suggested_next_actions
         ],
-        "suggested_next_calls": list(result.suggested_next_calls),
     })
 
 
@@ -2073,7 +2072,6 @@ def import_trig_tool(
         "suggested_next_actions": [
             to_dict(action) for action in suggested_next_actions
         ],
-        "suggested_next_calls": [action.call for action in suggested_next_actions],
     })
 
 
@@ -2809,7 +2807,10 @@ def _dedupe_suggested_next_actions(
     deduped: list[SuggestedNextAction] = []
     seen: set[tuple[str, str]] = set()
     for action in actions:
-        key = (action.tool_name, action.call)
+        key = (
+            action.tool,
+            json.dumps(to_jsonable(action.args), sort_keys=True, default=str),
+        )
         if key in seen:
             continue
         seen.add(key)

@@ -647,10 +647,10 @@ def test_record_query_result_records_failures_as_observations(
     assert result.execution_status == "failed"
     assert result.failure_summary == "ModuleNotFoundError: duckdb"
     assert result.source_span_iri is not None
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "get_context_graph"
     ]
-    assert result.suggested_next_actions[0].arguments == {
+    assert result.suggested_next_actions[0].args == {
         "seed_iris": [result.evidence_iri],
         "profile": "resource_brief",
     }
@@ -960,28 +960,18 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
         "suggested_next_actions" in warning
         for warning in context_slice.warnings
     )
-    assert [
-        action.action_label for action in context_slice.suggested_next_actions
-    ] == [
-        "Inspect query-planning context",
-        "Narrow to pattern context",
-        "Return full raw RDF for slice",
-    ]
-    assert context_slice.suggested_next_actions[0].arguments == {"iri": dataset}
+    assert context_slice.suggested_next_actions[0].args == {"iri": dataset}
     assert "missing_storage_access" in context_slice.suggested_next_actions[0].reason
-    assert context_slice.suggested_next_actions[1].arguments == {
+    assert context_slice.suggested_next_actions[1].args == {
         "seed_iris": [pattern.pattern_iri],
         "profile": "pattern_brief",
         "max_triples": 5,
     }
-    assert context_slice.suggested_next_actions[2].arguments == {
+    assert context_slice.suggested_next_actions[2].args == {
         "seed_iris": [column],
         "profile": "deep_lore",
         "max_triples": context_slice.candidate_triple_count,
     }
-    assert context_slice.suggested_next_calls == [
-        action.call for action in context_slice.suggested_next_actions
-    ]
 
     preflight = db.preflight_context_slice_export(
         [column],
@@ -1001,12 +991,12 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
     assert "pattern_synthesis" in role_loss_warning
     assert "Omitted graph roles:" in role_loss_warning
     assert [
-        action.tool_name for action in preflight.suggested_next_actions[:2]
+        action.tool.removeprefix("doxabase.") for action in preflight.suggested_next_actions[:2]
     ] == [
         "preflight_context_slice_export",
         "export_context_slice",
     ]
-    assert preflight.suggested_next_actions[0].arguments == {
+    assert preflight.suggested_next_actions[0].args == {
         "seed_iris": [column],
         "profile": "deep_lore",
         "max_triples": preflight.candidate_triple_count,
@@ -1068,10 +1058,11 @@ def test_context_slice_truncation_ranks_linked_patterns_before_filler(
     narrow_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.action_label == "Narrow to pattern context"
+        if action.tool == "doxabase.get_context_graph"
+        and action.args.get("profile") == "pattern_brief"
     ]
     assert narrow_actions
-    assert narrow_actions[0].arguments == {
+    assert narrow_actions[0].args == {
         "seed_iris": [key_pattern.pattern_iri],
         "profile": "pattern_brief",
         "max_triples": 8,
@@ -1103,10 +1094,7 @@ def test_truncated_pattern_context_slice_does_not_suggest_self_narrowing(
     )
 
     assert context_slice.truncated is True
-    assert [
-        action.action_label for action in context_slice.suggested_next_actions
-    ] == ["Return full raw RDF for slice"]
-    assert context_slice.suggested_next_actions[0].arguments == {
+    assert context_slice.suggested_next_actions[0].args == {
         "seed_iris": [pattern.pattern_iri],
         "profile": "pattern_brief",
         "max_triples": context_slice.candidate_triple_count,
@@ -1565,9 +1553,9 @@ def test_metric_promotion_skeleton_uses_generic_comment_for_broad_pattern(
     promotion_action = [
         action
         for action in advisory.suggested_next_actions
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     ][0]
-    framing_content = promotion_action.arguments["framings"][0]["content"]
+    framing_content = promotion_action.args["framings"][0]["content"]
 
     assert [item.iri for item in advisory.promotion_patterns] == [
         pattern.pattern_iri
@@ -1642,15 +1630,15 @@ def test_metric_promotion_skeleton_uses_metric_specific_pattern_hint(
         for action in advisories_by_metric[
             completeness_metric
         ].suggested_next_actions
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     ][0]
     freshness_action = [
         action
         for action in advisories_by_metric[freshness_metric].suggested_next_actions
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     ][0]
-    completeness_content = completeness_action.arguments["framings"][0]["content"]
-    freshness_content = freshness_action.arguments["framings"][0]["content"]
+    completeness_content = completeness_action.args["framings"][0]["content"]
+    freshness_content = freshness_action.args["framings"][0]["content"]
 
     assert "CompletenessScore is non-null values" in completeness_content
     assert "review and sharpen its calculation" in freshness_content

@@ -122,9 +122,6 @@ class RevisionSnapshotsMixin:
             max_triples=max_triples,
             triples=triples,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
             note=note,
         )
     def _revision_snapshot_evidence_status(
@@ -231,9 +228,6 @@ class RevisionSnapshotsMixin:
             missing_current_graph_roles=missing_current_graph_roles,
             note=note,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _revision_snapshot_missing_current_graph_roles(
         self,
@@ -263,14 +257,11 @@ class RevisionSnapshotsMixin:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
-            *,
-            action_label: str,
         ) -> None:
             actions.append(
-                self._effect_annotated_suggested_next_action(
-                    action_label=action_label,
-                    tool_name=tool_name,
-                    arguments=arguments,
+                SuggestedNextAction(
+                    tool=f"doxabase.{tool_name}",
+                    args=arguments,
                     reason=reason,
                 )
             )
@@ -291,8 +282,7 @@ class RevisionSnapshotsMixin:
                     "snapshot JSON is not available, request a "
                     "recovery-complete export_handoff_bundle from the source "
                     "capsule."
-                ),
-                action_label="Import snapshot bundle if available",
+                )
             )
         if status == "snapshot_rows_without_history" or (
             orphan_snapshot_row_graph_roles and status != "history_plus_snapshot_rows"
@@ -304,8 +294,7 @@ class RevisionSnapshotsMixin:
                     "Snapshot rows exist for this revision, but the RDF history "
                     "record is missing. Import the project/history RDF bundle at "
                     "its real handoff path before using normal revision helpers."
-                ),
-                action_label="Import project/history RDF bundle",
+                )
             )
         if missing_current_graph_roles:
             add_action(
@@ -318,8 +307,7 @@ class RevisionSnapshotsMixin:
                     f"{', '.join(missing_current_graph_roles)}. Import the "
                     "complete project RDF bundle at its real handoff path before "
                     "planning apply, restage, or repair mutations."
-                ),
-                action_label="Import complete project RDF bundle",
+                )
             )
         return actions
     @staticmethod
@@ -335,9 +323,9 @@ class RevisionSnapshotsMixin:
         if not promoted_actions:
             return actions
         combined: list[SuggestedNextAction] = []
-        seen: set[tuple[str, str | None]] = set()
+        seen: set[tuple[str, str]] = set()
         for action in [*promoted_actions, *actions]:
-            key = (action.tool_name, action.call)
+            key = suggested_action_key(action)
             if key in seen:
                 continue
             seen.add(key)
@@ -348,20 +336,20 @@ class RevisionSnapshotsMixin:
         actions: Iterable[SuggestedNextAction],
     ) -> RevisionNextAction | None:
         for action in actions:
-            if action.tool_name not in {
-                "import_revision_snapshots",
-                "import_trig",
+            if action.tool not in {
+                "doxabase.import_revision_snapshots",
+                "doxabase.import_trig",
             }:
                 continue
             return RevisionNextAction(
                 action_type="complete_handoff_import",
                 queue="complete_handoff_import",
-                action_label=action.action_label,
-                tool_name=action.tool_name,
-                mcp_tool_name=action.mcp_tool_name,
-                arguments=action.arguments,
+                action_label=action.tool.removeprefix("doxabase."),
+                tool_name=action.tool.removeprefix("doxabase."),
+                mcp_tool_name=action.tool,
+                arguments=action.args,
                 reason=action.reason,
-                call=action.call,
+                call=None,
                 source="snapshot_evidence",
             )
         return None
@@ -411,25 +399,14 @@ class RevisionSnapshotsMixin:
             return None
         suggested_next_actions = [
             SuggestedNextAction(
-                action_label="Inspect graph version snapshot",
-                tool_name="describe_revision_graph_snapshot",
-                mcp_tool_name="doxabase.describe_revision_graph_snapshot",
-                arguments={
+                tool="doxabase.describe_revision_graph_snapshot",
+                args={
                     "iri": revision.iri,
                     "graph_role": graph_role,
                 },
-                reason=(
-                    "Inspect this stored graph snapshot; pass "
+                reason="Inspect this stored graph snapshot; pass "
                     "include_triples=True only when exact historical triples "
-                    "are needed and safe to review."
-                ),
-                call=self._suggested_call_string(
-                    "describe_revision_graph_snapshot",
-                    {
-                        "iri": revision.iri,
-                        "graph_role": graph_role,
-                    },
-                ),
+                    "are needed and safe to review.",
             )
         ]
         if include_apply_checks or any(
@@ -444,45 +421,25 @@ class RevisionSnapshotsMixin:
         ):
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect revision lineage",
-                    tool_name="describe_revision_lineage",
-                    mcp_tool_name="doxabase.describe_revision_lineage",
-                    arguments={"iri": revision.iri},
-                    reason=(
-                        "Inspect this row's staged/apply/restage lineage "
+                    tool="doxabase.describe_revision_lineage",
+                    args={"iri": revision.iri},
+                    reason="Inspect this row's staged/apply/restage lineage "
                         "before deciding whether the version row is current "
-                        "work, superseded, or already applied."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_revision_lineage",
-                        {"iri": revision.iri},
-                    ),
+                        "work, superseded, or already applied.",
                 )
             )
         if snapshot.exact_snapshot_available:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    action_label="Compare graph version to current",
-                    tool_name="describe_graph_version_diff",
-                    mcp_tool_name="doxabase.describe_graph_version_diff",
-                    arguments={
+                    tool="doxabase.describe_graph_version_diff",
+                    args={
                         "graph_role": graph_role,
                         "before_revision_iri": revision.iri,
                         "compare_to_current": True,
                     },
-                    reason=(
-                        "Compare this stored graph version with the current "
+                    reason="Compare this stored graph version with the current "
                         "live graph, including exact changed triples when "
-                        "include_triples=True is safe and useful."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_graph_version_diff",
-                        {
-                            "graph_role": graph_role,
-                            "before_revision_iri": revision.iri,
-                            "compare_to_current": True,
-                        },
-                    ),
+                        "include_triples=True is safe and useful.",
                 )
             )
         suggested_next_actions = self._with_revision_snapshot_evidence_actions(
@@ -536,9 +493,6 @@ class RevisionSnapshotsMixin:
             next_action=revision.next_action,
             next_action_queue_item=next_action_queue_item,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     @staticmethod
     def _graph_version_snapshot_semantics(
@@ -722,9 +676,14 @@ class RevisionSnapshotsMixin:
                 f"{drift.changed_resources_omitted_count} more omitted | | | | |"
             )
         if drift.changed_resource_suggested_next_actions:
-            lines.extend(["", "Suggested changed-resource review calls:", ""])
+            lines.extend(["", "Suggested changed-resource review actions:", ""])
             for action in drift.changed_resource_suggested_next_actions[:action_limit]:
-                lines.append(f"- **{action.action_label}:** `{action.call}`")
+                args_text = json.dumps(
+                    to_jsonable(action.args),
+                    sort_keys=True,
+                    default=str,
+                )
+                lines.append(f"- **{action.tool}** `{args_text}`")
         return lines
     def _snapshot_drift_triples_markdown(
         self,

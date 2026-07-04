@@ -61,7 +61,18 @@ def main() -> None:
         evidence_context,
         "draft_query_evidence_storage_overlay",
     )
-    route_candidate = overlay_action.evidence_storage_route_candidates[0]
+    route_candidate = next(
+        candidate
+        for issue in evidence_context.issues
+        if issue.details is not None
+        and isinstance(issue.details.get("repair_hint"), dict)
+        for candidate in (
+            issue.details["repair_hint"].get(
+                "evidence_storage_route_candidates"
+            )
+            or []
+        )
+    )
     candidate_arguments = route_candidate[
         "draft_query_evidence_storage_overlay_candidate_arguments"
     ]
@@ -92,8 +103,8 @@ def main() -> None:
     print(f"Baseline readiness: {baseline.readiness}")
     print(f"Baseline candidates: {len(baseline.query_target_candidates)}")
     print(f"Recorded evidence status: {query_result.execution_status}")
-    print(f"Profile inspection action: {profile_action.tool_name}")
-    print(f"Overlay action required extras: {overlay_action.required_extra_arguments}")
+    print(f"Profile inspection action: {profile_action.tool}")
+    print(f"Overlay action tool: {overlay_action.tool}")
     print(f"Route candidate kind: {route_candidate['candidate_kind']}")
     print(f"Candidate path templates: {candidate_arguments['path_templates']}")
     print(
@@ -200,7 +211,7 @@ def _single_action(context, tool_name: str):
     matches = [
         action
         for action in context.suggested_next_actions
-        if action.tool_name == tool_name
+        if action.tool == f"doxabase.{tool_name}"
     ]
     if len(matches) != 1:
         raise RuntimeError(f"Expected one {tool_name} action, got {len(matches)}")

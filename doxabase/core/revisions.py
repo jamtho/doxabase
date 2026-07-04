@@ -155,9 +155,6 @@ class RevisionsMixin:
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     @staticmethod
     def _revision_next_action_from_suggested_action(
@@ -170,12 +167,12 @@ class RevisionsMixin:
         return RevisionNextAction(
             action_type=action_type,
             queue=queue,
-            action_label=action.action_label,
-            tool_name=action.tool_name,
-            mcp_tool_name=action.mcp_tool_name,
-            arguments=action.arguments,
+            action_label=action.tool.removeprefix("doxabase."),
+            tool_name=action.tool.removeprefix("doxabase."),
+            mcp_tool_name=action.tool,
+            arguments=action.args,
             reason=action.reason,
-            call=action.call,
+            call=None,
             source=source,
         )
     def list_graph_revisions(
@@ -537,9 +534,6 @@ class RevisionsMixin:
                     snapshot_evidence=snapshot_evidence,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
-                    suggested_next_calls=[
-                        action.call for action in suggested_next_actions
-                    ],
                 )
             )
 
@@ -660,22 +654,13 @@ class RevisionsMixin:
             next_action is None
             or next_action.tool_name is None
             or next_action.mcp_tool_name is None
-            or next_action.call is None
         ):
             return None
-        return EffectAnnotatedSuggestedNextAction(
-            action_label=next_action.action_label,
-            tool_name=next_action.tool_name,
-            mcp_tool_name=next_action.mcp_tool_name,
-            arguments=next_action.arguments,
-            reason=next_action.reason,
-            call=next_action.call,
-            mutation_scope=next_action.mutation_scope,
-            mutates_project_graph=next_action.mutates_project_graph,
-            writes_history=next_action.writes_history,
-            writes_files=next_action.writes_files,
-            writes_storage=next_action.writes_storage,
-        )
+        return SuggestedNextAction(
+                   tool=next_action.mcp_tool_name,
+                   args=next_action.arguments,
+                   reason=next_action.reason,
+               )
     def _graph_revision_record_kind(
         self,
         revision_type: str | None,
@@ -1054,7 +1039,7 @@ class RevisionsMixin:
         revision_iris: set[str],
     ) -> bool:
         for key in ("iri", "revision_iri"):
-            value = action.arguments.get(key)
+            value = action_arguments(action).get(key)
             if isinstance(value, str) and value in revision_iris:
                 return True
         for key in (
@@ -1062,7 +1047,7 @@ class RevisionsMixin:
             "source_revision_iris",
             "missing_revision_iris",
         ):
-            values = action.arguments.get(key)
+            values = action_arguments(action).get(key)
             if not isinstance(values, list):
                 continue
             if any(
@@ -1084,7 +1069,7 @@ class RevisionsMixin:
             "restages_revision",
             "source_revision_iri",
         ):
-            value = action.arguments.get(key)
+            value = action_arguments(action).get(key)
             if isinstance(value, str):
                 values.append(value)
         for key in (
@@ -1092,7 +1077,7 @@ class RevisionsMixin:
             "source_revision_iris",
             "missing_revision_iris",
         ):
-            list_value = action.arguments.get(key)
+            list_value = action_arguments(action).get(key)
             if isinstance(list_value, list):
                 values.extend(
                     value for value in list_value if isinstance(value, str)
@@ -1114,61 +1099,81 @@ class RevisionsMixin:
         if apply_status is None and not suggested_next_actions:
             return None
 
-        def find_action(
-            *,
-            tool_name: str | None = None,
-            action_label: str | None = None,
-        ) -> SuggestedNextAction | None:
-            for action in suggested_next_actions:
-                if tool_name is not None and action.tool_name == tool_name:
-                    return action
-                if action_label is not None and action.action_label == action_label:
-                    return action
-            return suggested_next_actions[0] if suggested_next_actions else None
-
         def find_exact_action(
             *,
             tool_name: str | None = None,
-            action_label: str | None = None,
+            reason_contains: str | None = None,
         ) -> SuggestedNextAction | None:
             for action in suggested_next_actions:
-                if tool_name is not None and action.tool_name == tool_name:
-                    return action
-                if action_label is not None and action.action_label == action_label:
-                    return action
+                if (
+                    tool_name is not None
+                    and action.tool != f"doxabase.{tool_name}"
+                ):
+                    continue
+                if (
+                    reason_contains is not None
+                    and reason_contains not in action.reason
+                ):
+                    continue
+                return action
             return None
+
+        def find_action(
+            *,
+            tool_name: str | None = None,
+            reason_contains: str | None = None,
+        ) -> SuggestedNextAction | None:
+            found = find_exact_action(
+                tool_name=tool_name,
+                reason_contains=reason_contains,
+            )
+            if found is not None:
+                return found
+            return suggested_next_actions[0] if suggested_next_actions else None
 
         def successor_inspect_action(
             successor_iri: str,
             *,
-            action_label: str,
             reason: str,
         ) -> SuggestedNextAction:
-            exact_action = find_exact_action(action_label=action_label)
+            exact_action = next(
+                (
+                    action
+                    for action in suggested_next_actions
+                    if action.tool == "doxabase.describe_staged_revision"
+                    and action.args.get("iri") == successor_iri
+                ),
+                None,
+            )
             if exact_action is not None:
                 return exact_action
-            return self._effect_annotated_suggested_next_action(
-                action_label=action_label,
-                tool_name="describe_staged_revision",
-                arguments={"iri": successor_iri},
-                reason=reason,
-            )
+            return SuggestedNextAction(
+                       tool="doxabase.describe_staged_revision",
+                       args={"iri": successor_iri},
+                       reason=reason,
+                   )
 
         def applied_successor_action(
             applied_revision_iri: str,
             *,
-            action_label: str,
             reason: str,
         ) -> SuggestedNextAction:
-            exact_action = find_exact_action(action_label=action_label)
+            exact_action = next(
+                (
+                    action
+                    for action in suggested_next_actions
+                    if action.tool == "doxabase.describe_graph_revision"
+                    and action.args.get("iri") == applied_revision_iri
+                ),
+                None,
+            )
             if exact_action is not None:
                 return exact_action
-            return self._effect_annotated_suggested_next_action(
-                action_label=action_label,
-                tool_name="describe_graph_revision",
-                arguments={"iri": applied_revision_iri},
-                reason=reason,
-            )
+            return SuggestedNextAction(
+                       tool="doxabase.describe_graph_revision",
+                       args={"iri": applied_revision_iri},
+                       reason=reason,
+                   )
 
         action_type = "inspect_staged_revision"
         queue = "informational"
@@ -1187,12 +1192,11 @@ class RevisionsMixin:
             queue = "inspect_already_applied"
             label = "Inspect applied event"
             reason = "Inspect the applied revision event for durable history context."
-            selected_action = self._effect_annotated_suggested_next_action(
-                action_label=label,
-                tool_name="describe_graph_revision",
-                arguments={"iri": revision_iri},
-                reason=reason,
-            )
+            selected_action = SuggestedNextAction(
+                                  tool="doxabase.describe_graph_revision",
+                                  args={"iri": revision_iri},
+                                  reason=reason,
+                              )
         elif stale_resolution_state == "stale_handled_by_restage" or (
             apply_status == "conflict" and (current_restaged_by or restaged_by)
         ):
@@ -1211,7 +1215,6 @@ class RevisionsMixin:
                 )
                 selected_action = applied_successor_action(
                     applied_successor_iri,
-                    action_label=label,
                     reason=reason,
                 )
             else:
@@ -1224,7 +1227,6 @@ class RevisionsMixin:
                 )
                 selected_action = successor_inspect_action(
                     successor_iri or revision_iri,
-                    action_label=label,
                     reason=reason,
                 )
         elif (
@@ -1246,7 +1248,6 @@ class RevisionsMixin:
                 )
                 selected_action = applied_successor_action(
                     applied_successor_iri,
-                    action_label=label,
                     reason=reason,
                 )
             else:
@@ -1259,7 +1260,6 @@ class RevisionsMixin:
                 )
                 selected_action = successor_inspect_action(
                     successor_iri or revision_iri,
-                    action_label=label,
                     reason=reason,
                 )
         elif apply_decision == "inspect_restaged_source_validation_failure":
@@ -1293,6 +1293,11 @@ class RevisionsMixin:
                 "still desired."
             )
             selected_action = find_action(tool_name="apply_staged_revision")
+            if (
+                selected_action is not None
+                and "semantic review" in selected_action.reason
+            ):
+                label = "Apply only after semantic review"
         elif apply_decision in {
             "inspect_validation_results",
             "inspect_patch_conflict",
@@ -1312,7 +1317,8 @@ class RevisionsMixin:
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
         ) and find_exact_action(
-            action_label="Inspect already-effective stale source"
+            tool_name="describe_staged_revision",
+            reason_contains="no effective delta",
         ) is not None:
             action_type = "inspect_no_effective_change"
             queue = "informational"
@@ -1322,7 +1328,8 @@ class RevisionsMixin:
                 "has no effective delta; inspect before ignoring or replacing it."
             )
             selected_action = find_exact_action(
-                action_label="Inspect already-effective stale source"
+                tool_name="describe_staged_revision",
+                reason_contains="no effective delta",
             )
         elif (
             apply_decision == "restage_against_current_graph"
@@ -1340,7 +1347,7 @@ class RevisionsMixin:
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
         ) and find_exact_action(
-            action_label="Review ambiguous same-slot conflict"
+            tool_name="describe_assertion_support",
         ) is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
@@ -1351,12 +1358,14 @@ class RevisionsMixin:
                 "assertion support before staging an explicit repair."
             )
             selected_action = find_exact_action(
-                action_label="Review ambiguous same-slot conflict"
+                tool_name="describe_assertion_support",
             )
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
-        ) and find_exact_action(action_label="Draft patch repair plan") is not None:
+        ) and find_exact_action(
+            tool_name="draft_staged_revision_rebase",
+        ) is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
             label = "Draft patch repair plan"
@@ -1366,7 +1375,7 @@ class RevisionsMixin:
                 "before authoring a complete repaired successor."
             )
             selected_action = find_exact_action(
-                action_label="Draft patch repair plan"
+                tool_name="draft_staged_revision_rebase",
             )
         elif (
             apply_decision == "restage_against_current_graph"
@@ -1408,12 +1417,12 @@ class RevisionsMixin:
             return RevisionNextAction(
                 action_type=action_type,
                 queue=queue,
-                action_label=selected_action.action_label or label,
-                tool_name=selected_action.tool_name,
-                mcp_tool_name=selected_action.mcp_tool_name,
-                arguments=selected_action.arguments,
+                action_label=label,
+                tool_name=selected_action.tool.removeprefix("doxabase."),
+                mcp_tool_name=selected_action.tool,
+                arguments=selected_action.args,
                 reason=selected_action.reason or reason,
-                call=selected_action.call,
+                call=None,
                 source="suggested_next_actions",
             )
         return RevisionNextAction(

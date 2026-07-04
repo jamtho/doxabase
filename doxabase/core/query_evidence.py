@@ -104,14 +104,7 @@ class QueryEvidenceMixin:
         dataset_iri: str,
         evidence_iri: str,
         source_profile_evidence: dict[str, Any],
-    ) -> QueryEvidenceOverlaySuggestedNextAction:
-        (
-            evidence_storage_route_candidates,
-            evidence_storage_route_candidate_total,
-        ) = self._query_context_evidence_storage_route_candidates_for_evidence(
-            evidence_iri,
-            limit=6,
-        )
+    ) -> SuggestedNextAction:
         arguments = {
             "dataset_iri": dataset_iri,
             "evidence_iri": evidence_iri,
@@ -128,65 +121,17 @@ class QueryEvidenceMixin:
             "file_format": "REVIEWED_FILE_FORMAT",
             "layout_verification_note": "REVIEWED_LAYOUT_VERIFICATION_NOTE",
         }
-        required = [
-            "storage_protocol",
-            "storage_root",
-            "location_kind",
-            "file_format",
-        ]
-        placeholders = [
-            "storage_protocol",
-            "storage_root",
-            "endpoint_profile",
-            "bucket_name",
-            "key_prefix",
-            "region",
-            "path_style_access",
-            "credential_reference",
-            "location_kind",
-            "path_templates",
-            "file_format",
-            "layout_verification_note",
-        ]
-        return QueryEvidenceOverlaySuggestedNextAction(
-            action_label="Draft query evidence storage overlay",
-            tool_name="draft_query_evidence_storage_overlay",
-            mcp_tool_name="doxabase.draft_query_evidence_storage_overlay",
-            arguments=arguments,
-            reason=(
-                "This query context has singleton query/profile evidence and "
+        return SuggestedNextAction(
+                   tool="doxabase.draft_query_evidence_storage_overlay",
+                   args=arguments,
+                   reason="This query context has singleton query/profile evidence and "
                 "physical metadata blockers. Review the evidence, replace the "
                 "storage/path/layout placeholders with confirmed non-secret "
                 "values, then draft a storage overlay instead of hand-authoring "
-                "RDF."
-            ),
-            call=self._suggested_call_string(
-                "draft_query_evidence_storage_overlay",
-                arguments,
-            ),
-            source_profile_evidence=source_profile_evidence,
-            source_query_evidence=source_profile_evidence,
-            evidence_storage_route_candidates=evidence_storage_route_candidates,
-            evidence_storage_route_candidate_count=len(
-                evidence_storage_route_candidates
-            ),
-            evidence_storage_route_candidate_total_count=(
-                evidence_storage_route_candidate_total
-            ),
-            evidence_storage_route_candidates_truncated=(
-                evidence_storage_route_candidate_total
-                > len(evidence_storage_route_candidates)
-            ),
-            required_extra_arguments=required,
-            placeholder_fields=placeholders,
-            reviewed_value_fields=placeholders,
-            template_note=(
-                "Placeholders are not automatically applied from query artifacts. "
-                "Use evidence_storage_route_candidates as review-only drafts "
-                "when present, then replace placeholders with reviewed storage, "
-                "path, and layout values before calling the helper."
-            ),
-        )
+                "RDF. Placeholders are not applied automatically from query "
+                "artifacts; storage_protocol, storage_root, location_kind, and "
+                "file_format require reviewed values.",
+               )
     def _query_evidence_linked_to_dataset(
         self,
         *,
@@ -485,19 +430,11 @@ class QueryEvidenceMixin:
         if removals:
             stage_arguments["removals"] = removals
         stage_action = SuggestedNextAction(
-            action_label="Stage query evidence storage overlay",
-            tool_name="stage_graph_revision",
-            mcp_tool_name="doxabase.stage_graph_revision",
-            arguments=stage_arguments,
-            reason=(
-                "Stage the reviewed storage/path/layout overlay as a graph "
-                "revision before applying it to current map facts."
-            ),
-            call=self._suggested_call_string(
-                "stage_graph_revision",
-                stage_arguments,
-            ),
-        )
+                           tool="doxabase.stage_graph_revision",
+                           args=stage_arguments,
+                           reason="Stage the reviewed storage/path/layout overlay as a graph "
+                "revision before applying it to current map facts.",
+                       )
         dataset_replaced_layout_values = (
             self._query_evidence_overlay_replaced_layout_verification_values(
                 dataset_value,
@@ -609,7 +546,6 @@ class QueryEvidenceMixin:
             review_recommendation=review_recommendation,
             stage_arguments=stage_arguments,
             suggested_next_actions=[stage_action],
-            suggested_next_calls=[stage_action.call],
         )
     def _query_evidence_storage_overlay_stale_seed_blocker(
         self,
@@ -630,19 +566,14 @@ class QueryEvidenceMixin:
             return None
         arguments = self._stale_seed_handoff_preflight_arguments()
         action = SuggestedNextAction(
-            action_label="Preflight stale seed project handoff export",
-            tool_name="export_preflight",
-            mcp_tool_name="doxabase.export_preflight",
-            arguments=arguments,
-            reason=(
-                "The immutable base_ontology is missing current staging seed "
+                     tool="doxabase.export_preflight",
+                     args=arguments,
+                     reason="The immutable base_ontology is missing current staging seed "
                 "terms, so this overlay cannot safely produce stage arguments "
                 "in the current capsule. Preflight a project/history handoff "
                 "with map validation before recovering into a fresh seeded "
-                "capsule."
-            ),
-            call=self._suggested_call_string("export_preflight", arguments),
-        )
+                "capsule.",
+                 )
         return QueryEvidenceStorageOverlayBlocker(
             result_kind="query_evidence_storage_overlay_blocker",
             helper="draft_query_evidence_storage_overlay",
@@ -671,7 +602,6 @@ class QueryEvidenceMixin:
             mutation_allowed_after="stale_seed_recovery_required_before_staging",
             note=self._stale_seed_recovery_message(missing_seed_terms),
             suggested_next_actions=[action],
-            suggested_next_calls=[action.call],
         )
     def _query_evidence_storage_overlay_graph(
         self,
@@ -1095,9 +1025,6 @@ class QueryEvidenceMixin:
             ),
             source_span_triples=source_span_triples,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
         )
     def _query_result_suggested_next_actions(
         self,
@@ -1118,19 +1045,11 @@ class QueryEvidenceMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect recorded profile result",
-                    tool_name="describe_profile_run",
-                    mcp_tool_name="doxabase.describe_profile_run",
-                    arguments=profile_arguments,
-                    reason=(
-                        "This query result wrote profile-shaped evidence. "
+                    tool="doxabase.describe_profile_run",
+                    args=profile_arguments,
+                    reason="This query result wrote profile-shaped evidence. "
                         "Inspect the profile run before promoting map facts or "
-                        "relying on the result in a new query plan."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_profile_run",
-                        profile_arguments,
-                    ),
+                        "relying on the result in a new query plan.",
                 )
             )
         evidence_arguments = {
@@ -1139,20 +1058,12 @@ class QueryEvidenceMixin:
         }
         actions.append(
             SuggestedNextAction(
-                action_label="Inspect recorded query evidence",
-                tool_name="get_context_graph",
-                mcp_tool_name="doxabase.get_context_graph",
-                arguments=evidence_arguments,
-                reason=(
-                    "Inspect the evidence resource just written by "
+                tool="doxabase.get_context_graph",
+                args=evidence_arguments,
+                reason="Inspect the evidence resource just written by "
                     "record_query_result, including query source spans, "
                     "scanned source handles, result sources, and execution "
-                    "metadata before continuing query planning."
-                ),
-                call=self._suggested_call_string(
-                    "get_context_graph",
-                    evidence_arguments,
-                ),
+                    "metadata before continuing query planning.",
             )
         )
         if observed_asset_iri is None:
@@ -1160,19 +1071,11 @@ class QueryEvidenceMixin:
         context_arguments = {"iri": observed_asset_iri}
         actions.append(
             SuggestedNextAction(
-                action_label="Refresh query context",
-                tool_name="describe_query_context",
-                mcp_tool_name="doxabase.describe_query_context",
-                arguments=context_arguments,
-                reason=(
-                    "Refresh the dataset query context after recording this "
+                tool="doxabase.describe_query_context",
+                args=context_arguments,
+                reason="Refresh the dataset query context after recording this "
                     "external result so storage, profile, and next-plan routing "
-                    "reflect the new evidence."
-                ),
-                call=self._suggested_call_string(
-                    "describe_query_context",
-                    context_arguments,
-                ),
+                    "reflect the new evidence.",
             )
         )
         return actions

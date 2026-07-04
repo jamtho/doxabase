@@ -77,7 +77,6 @@ class SlicesMixin:
         def add_resource_brief_recovery_action(
             key: tuple[str, str],
             *,
-            action_label: str,
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
@@ -85,13 +84,10 @@ class SlicesMixin:
             if key in resource_brief_recovery_actions:
                 return
             resource_brief_recovery_actions[key] = SuggestedNextAction(
-                action_label=action_label,
-                tool_name=tool_name,
-                mcp_tool_name=f"doxabase.{tool_name}",
-                arguments=arguments,
-                reason=reason,
-                call=self._suggested_call_string(tool_name, arguments),
-            )
+                                                       tool=f"doxabase.{tool_name}",
+                                                       args=arguments,
+                                                       reason=reason,
+                                                   )
 
         def add_resource_brief_profile_run_action(
             dataset_iri: str,
@@ -107,18 +103,13 @@ class SlicesMixin:
                 "evidence_iri": evidence_iri,
             }
             resource_brief_profile_run_actions[key] = SuggestedNextAction(
-                action_label="Inspect profile run",
-                tool_name="describe_profile_run",
-                mcp_tool_name="doxabase.describe_profile_run",
-                arguments=arguments,
-                reason=(
-                    "The evidence seed is linked from profile observation "
+                                                          tool="doxabase.describe_profile_run",
+                                                          args=arguments,
+                                                          reason="The evidence seed is linked from profile observation "
                     f"'{profile_observation_iri}' for this dataset. "
                     "describe_profile_run returns the shared-evidence profile "
-                    "run before drafting map updates or exporting a handoff."
-                ),
-                call=self._suggested_call_string("describe_profile_run", arguments),
-            )
+                    "run before drafting map updates or exporting a handoff.",
+                                                      )
 
         def add_resource(
             iri: str | None,
@@ -1134,7 +1125,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("outgoing_reference", seed_iri),
-                    action_label="Page outgoing resource references",
                     tool_name="describe_resource",
                     arguments={
                         "iri": seed_iri,
@@ -1179,7 +1169,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("blank_node_reference", seed_iri),
-                    action_label="Inspect blank-node closure",
                     tool_name="describe_resource",
                     arguments={
                         "iri": seed_iri,
@@ -1206,7 +1195,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("blank_node_depth", seed_iri),
-                    action_label="Inspect deeper blank-node closure",
                     tool_name="describe_resource",
                     arguments={
                         "iri": seed_iri,
@@ -1296,7 +1284,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("incoming_reference", seed_iri),
-                    action_label="Page incoming resource references",
                     tool_name="describe_resource",
                     arguments={
                         "iri": seed_iri,
@@ -1338,7 +1325,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("incoming_blank_node_owner", seed_iri),
-                    action_label="Export graph for blank-node owner scan",
                     tool_name="export_graph",
                     arguments={
                         "path": resource_brief_export_path(
@@ -1382,7 +1368,6 @@ class SlicesMixin:
                     )
                     add_resource_brief_recovery_action(
                         ("blank_node_seed_owner", seed_iri),
-                        action_label="Export graph for blank-node seed owner scan",
                         tool_name="export_graph",
                         arguments={
                             "path": resource_brief_export_path(
@@ -1432,7 +1417,6 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("predicate_usage_subject", seed_iri),
-                    action_label="Export project graph for predicate scan",
                     tool_name="export_graph",
                     arguments={
                         "path": resource_brief_export_path(seed_iri, "predicate-usage"),
@@ -1499,7 +1483,6 @@ class SlicesMixin:
                     )
                     add_resource_brief_recovery_action(
                         ("pattern_profile", seed),
-                        action_label="Rerun as pattern brief",
                         tool_name="get_context_graph",
                         arguments={
                             "seed_iris": [seed],
@@ -1672,7 +1655,6 @@ class SlicesMixin:
                         "max_triples": max_triples,
                     }
                     if self.expand_iri("rc:Evidence") in seed_types:
-                        action_label = "Retry evidence resource brief"
                         reason = (
                             "The seed is evidence rather than a dataset, "
                             "pattern, claim, observation, or revision. "
@@ -1682,7 +1664,6 @@ class SlicesMixin:
                             "when the evidence belongs to a broader workflow."
                         )
                     else:
-                        action_label = "Retry with resource brief"
                         reason = (
                             "The seed is physical/query metadata rather than a "
                             "dataset, pattern, claim, observation, or revision. "
@@ -1692,7 +1673,6 @@ class SlicesMixin:
                         )
                     add_resource_brief_recovery_action(
                         ("resource_brief_retry", seed),
-                        action_label=action_label,
                         tool_name="get_context_graph",
                         arguments=arguments,
                         reason=reason,
@@ -1843,9 +1823,6 @@ class SlicesMixin:
             pattern_contexts=list(pattern_contexts.values()),
             warnings=warnings,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _context_slice_privacy_next_actions(
         self,
@@ -1874,20 +1851,12 @@ class SlicesMixin:
         )
         return [
             SuggestedNextAction(
-                action_label="Preflight context-slice privacy",
-                tool_name="preflight_context_slice_export",
-                mcp_tool_name="doxabase.preflight_context_slice_export",
-                arguments=arguments,
-                reason=(
-                    "Selected raw context-slice triples matched the sensitive-term "
+                tool="doxabase.preflight_context_slice_export",
+                args=arguments,
+                reason="Selected raw context-slice triples matched the sensitive-term "
                     "scanner. Use the redacted export preflight before sharing "
                     "slice content or writing an importable handoff artifact."
-                    f"{truncation_note}"
-                ),
-                call=self._suggested_call_string(
-                    "preflight_context_slice_export",
-                    arguments,
-                ),
+                    f"{truncation_note}",
             )
         ]
     def _context_slice_next_actions(
@@ -1913,20 +1882,12 @@ class SlicesMixin:
         def add_slice_action(
             arguments: dict[str, Any],
             reason: str,
-            *,
-            action_label: str,
         ) -> None:
             actions.append(
                 SuggestedNextAction(
-                    action_label=action_label,
-                    tool_name="get_context_graph",
-                    mcp_tool_name="doxabase.get_context_graph",
-                    arguments=arguments,
+                    tool="doxabase.get_context_graph",
+                    args=arguments,
                     reason=reason,
-                    call=self._suggested_call_string(
-                        "get_context_graph",
-                        arguments,
-                    ),
                 )
             )
 
@@ -1993,21 +1954,13 @@ class SlicesMixin:
                 arguments = {"iri": resource_iri}
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Inspect analysis view",
-                        tool_name="describe_analysis_view",
-                        mcp_tool_name="doxabase.describe_analysis_view",
-                        arguments=arguments,
-                        reason=(
-                            "resource_brief reached this rc:AnalysisView from "
+                        tool="doxabase.describe_analysis_view",
+                        args=arguments,
+                        reason="resource_brief reached this rc:AnalysisView from "
                             "the seed. describe_analysis_view exposes its "
                             "logical denominator, source datasets, caveats, and "
                             "query snippets before treating it as a physical "
-                            "query route."
-                        ),
-                        call=self._suggested_call_string(
-                            "describe_analysis_view",
-                            arguments,
-                        ),
+                            "query route.",
                     )
                 )
 
@@ -2104,21 +2057,13 @@ class SlicesMixin:
                     )
             actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect query-planning context",
-                    tool_name="describe_query_context",
-                    mcp_tool_name="doxabase.describe_query_context",
-                    arguments=arguments,
-                    reason=(
-                        "The seed dataset has "
+                    tool="doxabase.describe_query_context",
+                    args=arguments,
+                    reason="The seed dataset has "
                         f"{' and '.join(issue_reason_parts)}. "
                         "describe_query_context exposes readiness, target "
                         "candidates, and repair hints before drafting or "
-                        "running queries."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_query_context",
-                        arguments,
-                    ),
+                        "running queries.",
                 )
             )
 
@@ -2156,8 +2101,7 @@ class SlicesMixin:
                     "Raw triples were truncated, but this linked pattern has "
                     "structured context. Rerun around the pattern for a smaller "
                     "pattern-focused handoff before raising max_triples."
-                ),
-                action_label="Narrow to pattern context",
+                )
             )
             pattern_action_count += 1
             if pattern_action_count >= 3:
@@ -2175,8 +2119,7 @@ class SlicesMixin:
                 "Use this only when exact raw RDF triples are needed; "
                 "structured resources, route counts, and context summaries are "
                 "already complete despite the raw triple cap."
-            ),
-            action_label="Return full raw RDF for slice",
+            )
         )
         return actions
     @staticmethod

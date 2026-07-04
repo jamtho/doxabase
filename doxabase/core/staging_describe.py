@@ -471,30 +471,17 @@ class StagingDescribeMixin:
                 effective_delta_summary=effective_delta_summary,
                 next_action=next_action,
                 suggested_next_actions=suggested_next_actions,
-                suggested_next_calls=[
-                    action.call for action in suggested_next_actions
-                ],
                 snapshot_evidence=snapshot_evidence,
                 snapshot_evidence_completeness=(
                     self._snapshot_evidence_completeness_label(snapshot_evidence)
                 ),
                 blocking_preflight_actions=blocking_preflight_actions,
-                blocking_preflight_calls=[
-                    action.call
-                    for action in blocking_preflight_actions
-                    if action.call
-                ],
                 mutation_allowed_after=(
                     self._staged_apply_check_mutation_allowed_after(
                         blocking_preflight_actions
                     )
                 ),
                 first_safe_next_action=first_safe_next_action,
-                first_safe_next_call=(
-                    first_safe_next_action.call
-                    if first_safe_next_action is not None
-                    else None
-                ),
             )
             return _StagedRevisionApplicationPreview(
                 staged=staged,
@@ -861,28 +848,17 @@ class StagingDescribeMixin:
             effective_delta_summary=effective_delta_summary,
             next_action=next_action,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
             snapshot_evidence=snapshot_evidence,
             snapshot_evidence_completeness=(
                 self._snapshot_evidence_completeness_label(snapshot_evidence)
             ),
             blocking_preflight_actions=blocking_preflight_actions,
-            blocking_preflight_calls=[
-                action.call for action in blocking_preflight_actions if action.call
-            ],
             mutation_allowed_after=(
                 self._staged_apply_check_mutation_allowed_after(
                     blocking_preflight_actions
                 )
             ),
             first_safe_next_action=first_safe_next_action,
-            first_safe_next_call=(
-                first_safe_next_action.call
-                if first_safe_next_action is not None
-                else None
-            ),
         )
         return _StagedRevisionApplicationPreview(
             staged=staged,

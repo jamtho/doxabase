@@ -222,11 +222,11 @@ class PrivacyMixin:
         hint_codes = DoxaBase._shareability_hint_codes_for_value(line)
         if (
             "absolute_local_runtime_path" in hint_codes
-            and "path='/tmp/" in line
+            and '"path": "/tmp/' in line
             and (
-                "export_staged_revision(" in line
-                or "export_staged_revisions(" in line
-                or "export_profile_insight_review_bundle(" in line
+                "doxabase.export_staged_revision" in line
+                or "doxabase.export_staged_revisions" in line
+                or "doxabase.export_profile_insight_review_bundle" in line
             )
         ):
             hint_codes = [

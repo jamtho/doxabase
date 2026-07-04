@@ -60,10 +60,15 @@ class ProfileReviewMixin:
     def _profile_followthrough_action_resolution_groups(
         self,
         action_resolutions: list[ProfileFollowthroughActionResolution],
+        *,
+        pending_map_update_iris: list[str],
     ) -> dict[str, list[ProfileFollowthroughActionResolution]]:
         groups: dict[str, list[ProfileFollowthroughActionResolution]] = {}
         for resolution in action_resolutions:
-            group_name = self._profile_followthrough_resolution_group(resolution)
+            group_name = self._profile_followthrough_resolution_group(
+                resolution,
+                pending_map_update_iris=pending_map_update_iris,
+            )
             groups.setdefault(group_name, []).append(resolution)
         return groups
     def _profile_followthrough_suggested_next_action_groups(
@@ -71,12 +76,16 @@ class ProfileReviewMixin:
         action_resolutions: list[ProfileFollowthroughActionResolution],
         *,
         revision_checks: list[ProfileFollowthroughRevisionCheck],
+        pending_map_update_iris: list[str],
     ) -> dict[str, list[SuggestedNextAction]]:
         groups: dict[str, list[SuggestedNextAction]] = {}
         for resolution in action_resolutions:
             if resolution.binding_status == "missing_bindings":
                 continue
-            group_name = self._profile_followthrough_resolution_group(resolution)
+            group_name = self._profile_followthrough_resolution_group(
+                resolution,
+                pending_map_update_iris=pending_map_update_iris,
+            )
             if group_name == "pending_profile_map_update_review":
                 continue
             groups.setdefault(group_name, []).append(resolution.action)
@@ -91,13 +100,18 @@ class ProfileReviewMixin:
     @staticmethod
     def _profile_followthrough_resolution_group(
         resolution: ProfileFollowthroughActionResolution,
+        *,
+        pending_map_update_iris: list[str],
     ) -> str:
         if resolution.binding_status == "missing_bindings":
             return "missing_binding_prerequisites"
-        if DoxaBase._profile_followthrough_pending_map_update_review(resolution):
+        if DoxaBase._profile_followthrough_pending_map_update_review(
+            resolution,
+            pending_map_update_iris=pending_map_update_iris,
+        ):
             return "pending_profile_map_update_review"
         action_kind = DoxaBase._profile_followthrough_primary_action_kind(
-            resolution.tool_name
+            resolution.tool
         )
         if (
             resolution.binding_status == "resolved"
@@ -110,8 +124,6 @@ class ProfileReviewMixin:
             return "ready_resolved_mutations"
         if resolution.binding_status == "resolved":
             return "ready_resolved_actions"
-        if resolution.binding_status == "produces_bindings":
-            return "binding_producers"
         if action_kind in {"stage_reviewable_change", "direct_graph_write"}:
             return "independent_mutation_reviews"
         if action_kind == "inspect_context":
@@ -120,18 +132,27 @@ class ProfileReviewMixin:
             return "export_review_artifacts"
         return "other_followthrough"
     @staticmethod
+    def _profile_action_semantic_move(
+        action: SuggestedNextAction,
+    ) -> str | None:
+        route_sources = action.args.get("profile_route_sources")
+        if not isinstance(route_sources, list):
+            return None
+        for source in route_sources:
+            if isinstance(source, MappingABC):
+                move = source.get("semantic_move")
+                if isinstance(move, str):
+                    return move
+        return None
+    @staticmethod
     def _profile_followthrough_pending_map_update_review(
         resolution: ProfileFollowthroughActionResolution,
+        *,
+        pending_map_update_iris: list[str],
     ) -> bool:
-        if resolution.tool_name != "stage_profile_map_updates":
+        if resolution.tool != "doxabase.stage_profile_map_updates":
             return False
-        source = getattr(resolution.action, "source_profile_map_update", None)
-        if not isinstance(source, MappingABC):
-            return False
-        if source.get("action_status") == "available_after_pending_review":
-            return True
-        pending_count = source.get("pending_staged_profile_update_count")
-        return isinstance(pending_count, int) and pending_count > 0
+        return bool(pending_map_update_iris)
     def _profile_followthrough_resolve_action_bindings(
         self,
         action: SuggestedNextAction,
@@ -142,37 +163,23 @@ class ProfileReviewMixin:
     ) -> tuple[
         SuggestedNextAction,
         list[ProfileFollowthroughBindingResolution],
-        list[dict[str, Any]],
     ]:
-        source = getattr(action, "source_profile_advisory", None)
-        if not isinstance(source, MappingABC):
-            return action, [], []
-
-        produced_bindings: list[dict[str, Any]] = []
-        for binding in source.get("produces_result_bindings", []) or []:
-            if not isinstance(binding, MappingABC):
-                continue
-            produced = copy.deepcopy(dict(binding))
-            produced["action_group"] = action_group
-            produced["action_index"] = action_index
-            produced["action_label"] = action.action_label
-            produced["tool_name"] = action.tool_name
-            produced_bindings.append(produced)
-
+        route_sources = action.args.get("profile_route_sources")
         bindings = [
             binding
+            for source in (
+                route_sources if isinstance(route_sources, list) else []
+            )
+            if isinstance(source, MappingABC)
             for binding in source.get("consumes_result_bindings", []) or []
             if isinstance(binding, MappingABC)
         ]
         if not bindings:
-            return action, [], produced_bindings
+            return action, []
 
-        arguments = copy.deepcopy(action.arguments)
-        route_sources = arguments.get("profile_route_sources")
-        resolved_sources = (
-            copy.deepcopy(route_sources)
-            if isinstance(route_sources, list)
-            else route_sources
+        arguments = copy.deepcopy(action.args)
+        resolved_sources = copy.deepcopy(
+            arguments.get("profile_route_sources")
         )
         resolutions: list[ProfileFollowthroughBindingResolution] = []
 
@@ -246,15 +253,8 @@ class ProfileReviewMixin:
 
         if isinstance(resolved_sources, list):
             arguments["profile_route_sources"] = resolved_sources
-        resolved_action = replace(
-            action,
-            arguments=arguments,
-            call=self._suggested_call_string_for_arguments(
-                action.tool_name,
-                arguments,
-            ),
-        )
-        return resolved_action, resolutions, produced_bindings
+        resolved_action = replace(action, args=arguments)
+        return resolved_action, resolutions
     @staticmethod
     def _profile_followthrough_binding_value(
         binding: MappingABC[str, Any],
@@ -345,7 +345,7 @@ class ProfileReviewMixin:
             target_tool_name=(
                 str(binding["target_tool_name"])
                 if isinstance(binding.get("target_tool_name"), str)
-                else action.tool_name
+                else action.tool
             ),
             target_argument=(
                 str(binding["argument"])
@@ -369,7 +369,6 @@ class ProfileReviewMixin:
             ),
             action_group=action_group,
             action_index=action_index,
-            action_label=action.action_label,
             note=note,
         )
     def _profile_followthrough_revision_checks(
@@ -425,7 +424,6 @@ class ProfileReviewMixin:
                     ),
                     next_action_after=after.next_action if after is not None else None,
                     suggested_next_actions=list(terminal.suggested_next_actions),
-                    suggested_next_calls=list(terminal.suggested_next_calls),
                     note=note,
                 )
             )
@@ -519,6 +517,7 @@ class ProfileReviewMixin:
     ) -> str | None:
         if primary_tool_name is None:
             return None
+        primary_tool_name = primary_tool_name.removeprefix("doxabase.")
         if primary_tool_name.startswith("stage_"):
             return "stage_reviewable_change"
         if primary_tool_name.startswith("record_") or primary_tool_name in {
@@ -546,30 +545,6 @@ class ProfileReviewMixin:
         }:
             return "inspect_context"
         return "other"
-    @staticmethod
-    def _profile_followthrough_primary_action(
-        tool_names: list[str],
-        suggested_next_calls: list[str],
-    ) -> tuple[str | None, str | None]:
-        priority = {
-            "stage_pattern_promotion": 0,
-            "stage_map_assertion_change": 1,
-            "stage_systematisation": 2,
-            "record_pattern": 3,
-            "export_staged_revisions": 4,
-            "describe_staged_revision": 5,
-            "describe_pattern": 6,
-            "describe_resource": 7,
-            "list_entities": 8,
-            "get_context_graph": 9,
-        }
-        if not tool_names or not suggested_next_calls:
-            return None, None
-        best_index = min(
-            range(min(len(tool_names), len(suggested_next_calls))),
-            key=lambda index: priority.get(tool_names[index], 99),
-        )
-        return tool_names[best_index], suggested_next_calls[best_index]
     @staticmethod
     def _profile_followthrough_note(semantic_move: str) -> str:
         return {
@@ -644,80 +619,19 @@ class ProfileReviewMixin:
         recommendation_indexes: list[int],
         supporting_patterns: list[str],
         pending_staged_profile_update_iris: list[str],
-    ) -> ProfileMapUpdateSuggestedNextAction:
+    ) -> SuggestedNextAction:
         arguments = {
             "revision_iris": list(pending_staged_profile_update_iris),
         }
-        action = SuggestedNextAction(
-            action_label="Review pending staged profile map updates",
-            tool_name="plan_staged_revision_recovery",
-            mcp_tool_name="doxabase.plan_staged_revision_recovery",
-            arguments=arguments,
+        return SuggestedNextAction(
+            tool="doxabase.plan_staged_revision_recovery",
+            args=arguments,
             reason=(
                 "Pending staged profile map update(s) already anchor this "
                 "dataset/evidence pair. Review the staged frontier before "
                 "staging another profile-derived map update from the same "
                 "draft."
             ),
-            call=self._suggested_call_string(
-                "plan_staged_revision_recovery",
-                arguments,
-            ),
-        )
-        if recommendation_indexes:
-            source_profile_map_update = self._profile_map_update_route_source(
-                dataset_iri=dataset_iri,
-                evidence_iri=evidence_iri,
-                recommendations=recommendations,
-                recommendation_indexes=recommendation_indexes,
-                supporting_patterns=supporting_patterns,
-                action=action,
-                pending_staged_profile_update_iris=(
-                    pending_staged_profile_update_iris
-                ),
-            )
-            source_profile_map_update["action_status"] = "already_pending"
-        else:
-            route_group_key = self._profile_route_group_key(
-                "profile_map_updates",
-                {
-                    "dataset_iri": dataset_iri,
-                    "evidence_iri": evidence_iri,
-                    "pending_staged_profile_update_iris": (
-                        pending_staged_profile_update_iris
-                    ),
-                },
-            )
-            source_profile_map_update = self._with_profile_route_step_key(
-                {
-                    "review_lane": "profile_map_updates",
-                    "route_group_key": route_group_key,
-                    "evidence_iri": evidence_iri,
-                    "profile_evidence_iri": evidence_iri,
-                    "action_status": "already_pending",
-                    "recommendation_indexes": [],
-                    "duplicate_group_keys": [],
-                    "duplicate_recommendation_indexes": [],
-                    "duplicate_profile_observation_iris": [],
-                    "pending_staged_profile_update_iris": (
-                        list(pending_staged_profile_update_iris)
-                    ),
-                    "pending_staged_profile_update_count": len(
-                        pending_staged_profile_update_iris
-                    ),
-                    "route_anchor_iris": [dataset_iri],
-                    "route_pattern_iris": [],
-                },
-                action,
-            )
-        return ProfileMapUpdateSuggestedNextAction(
-            action_label=action.action_label,
-            tool_name=action.tool_name,
-            mcp_tool_name=action.mcp_tool_name,
-            arguments=action.arguments,
-            reason=action.reason,
-            call=action.call,
-            source_profile_map_update=source_profile_map_update,
         )
     def _profile_map_update_stage_action(
         self,
@@ -745,23 +659,15 @@ class ProfileReviewMixin:
                 "update is intentional. "
             )
         return SuggestedNextAction(
-            action_label="Review and stage profile map updates",
-            tool_name="stage_profile_map_updates",
-            mcp_tool_name="doxabase.stage_profile_map_updates",
-            arguments=arguments,
-            reason=(
-                f"{pending_intro}Review recommendation rows, sample scope, default staging "
+                   tool="doxabase.stage_profile_map_updates",
+                   args=arguments,
+                   reason=f"{pending_intro}Review recommendation rows, sample scope, default staging "
                 "guardrails, evidence, and metric/type advisory lanes; then "
                 "pass accepted default-stageable indexes to "
                 "stage_profile_map_updates. Sampled row-count updates require "
                 "an explicit override; same-evidence scalar conflicts require "
-                "choosing one value explicitly."
-            ),
-            call=self._suggested_call_string(
-                "stage_profile_map_updates",
-                arguments,
-            ),
-        )
+                "choosing one value explicitly.",
+               )
     def _profile_map_update_route_source(
         self,
         *,
@@ -854,22 +760,7 @@ class ProfileReviewMixin:
     ) -> list[dict[str, Any]]:
         if not staged_indexes:
             return []
-        staged_index_set = set(staged_indexes)
         map_sources: list[dict[str, Any]] = []
-        for action in draft.suggested_next_action_groups.get(
-            "profile_map_updates",
-            [],
-        ):
-            source = getattr(action, "source_profile_map_update", None)
-            if not isinstance(source, MappingABC):
-                continue
-            source_indexes = source.get("recommendation_indexes")
-            if not isinstance(source_indexes, list):
-                continue
-            if set(source_indexes) == staged_index_set:
-                map_sources = [dict(source)]
-                break
-
         if not map_sources:
             action = self._profile_map_update_stage_action(
                 dataset_iri=draft.dataset.iri,
@@ -1140,16 +1031,6 @@ class ProfileReviewMixin:
                 omitted_profile_count=omitted_profile_count,
             ),
         )
-    @staticmethod
-    def _suggested_call_string_for_arguments(
-        tool_name: str,
-        arguments: Mapping[str, Any],
-    ) -> str:
-        arg_text = ", ".join(
-            f"{key}={value!r}"
-            for key, value in arguments.items()
-        )
-        return f"{tool_name}({arg_text})"
     def _profile_insight_applied_source_candidate_iris(
         self,
         *,
@@ -1272,40 +1153,155 @@ class ProfileReviewMixin:
                 self._subjects(pattern_graphs, "rc:mapImplication", seed_iri)
             )
         return sorted(pattern_iris)
-    @staticmethod
     def _profile_insight_route_sources(
+        self,
         draft: ProfileMapUpdateDraft,
     ) -> list[dict[str, Any]]:
         sources: list[dict[str, Any]] = []
-        for actions in draft.suggested_next_action_groups.values():
+
+        def add_source(
+            value: MappingABC[str, Any],
+            action: SuggestedNextAction,
+        ) -> None:
+            source = dict(value)
+            if (
+                source.get("action_status") == "already_pending"
+                and not source.get("recommendation_indexes")
+                and not source.get("duplicate_profile_observation_iris")
+            ):
+                return
+            if not isinstance(source.get("route_step_key"), str):
+                return
+            sources.append(
+                DoxaBase._profile_insight_route_source_with_action_metadata(
+                    source,
+                    action,
+                )
+            )
+
+        for group_name, actions in draft.suggested_next_action_groups.items():
             for action in actions:
-                source: dict[str, Any] | None = None
-                for source_field in (
-                    "source_profile_map_update",
-                    "source_profile_advisory",
-                    "source_scalar_conflict",
-                    "source_query_context",
-                ):
-                    value = getattr(action, source_field, None)
-                    if isinstance(value, MappingABC):
-                        source = dict(value)
-                        break
-                if source is None:
-                    continue
                 if (
-                    source.get("action_status") == "already_pending"
-                    and not source.get("recommendation_indexes")
-                    and not source.get("duplicate_profile_observation_iris")
+                    group_name == "profile_map_updates"
+                    and action.tool == "doxabase.stage_profile_map_updates"
                 ):
-                    continue
-                route_step_key = source.get("route_step_key")
-                if not isinstance(route_step_key, str):
-                    continue
-                sources.append(
-                    DoxaBase._profile_insight_route_source_with_action_metadata(
-                        source,
+                    indexes = [
+                        index
+                        for index in (
+                            action.args.get("accepted_recommendation_indexes")
+                            or []
+                        )
+                        if isinstance(index, int) and not isinstance(index, bool)
+                    ]
+                    patterns = [
+                        value
+                        for value in (
+                            action.args.get("supporting_patterns") or []
+                        )
+                        if isinstance(value, str)
+                    ]
+                    add_source(
+                        self._profile_map_update_route_source(
+                            dataset_iri=draft.dataset.iri,
+                            evidence_iri=draft.evidence_iri,
+                            recommendations=draft.recommendations,
+                            recommendation_indexes=indexes,
+                            supporting_patterns=patterns,
+                            action=action,
+                            pending_staged_profile_update_iris=(
+                                draft.pending_staged_profile_update_iris
+                            ),
+                        ),
                         action,
                     )
+                if (
+                    group_name == "profile_map_updates"
+                    and action.tool
+                    == "doxabase.plan_staged_revision_recovery"
+                    and draft.pending_staged_profile_update_iris
+                ):
+                    pending_indexes = [
+                        index
+                        for index in draft.representative_recommendation_indexes
+                        if 0 <= index < len(draft.recommendations)
+                        and draft.recommendations[index].default_stageable
+                    ]
+                    pending_source = self._profile_map_update_route_source(
+                        dataset_iri=draft.dataset.iri,
+                        evidence_iri=draft.evidence_iri,
+                        recommendations=draft.recommendations,
+                        recommendation_indexes=pending_indexes,
+                        supporting_patterns=[],
+                        action=action,
+                        pending_staged_profile_update_iris=(
+                            draft.pending_staged_profile_update_iris
+                        ),
+                    )
+                    pending_source["action_status"] = "already_pending"
+                    add_source(pending_source, action)
+                route_sources = action.args.get("profile_route_sources")
+                if not isinstance(route_sources, list):
+                    continue
+                for value in route_sources:
+                    if isinstance(value, MappingABC):
+                        add_source(value, action)
+        for action, route_source in (
+            self._profile_scalar_conflict_route_source_items(
+                draft.scalar_conflict_groups
+            )
+        ):
+            add_source(route_source, action)
+        query_context_actions = [
+            action
+            for action in draft.suggested_next_action_groups.get(
+                "query_context_review",
+                [],
+            )
+            if action.tool == "doxabase.describe_query_context"
+        ]
+        if query_context_actions:
+            context = self.describe_query_context(draft.dataset.iri)
+            blocking_issues = [
+                issue
+                for issue in context.issues
+                if issue.severity == "error"
+                or issue.code == "contradicted_layout"
+            ]
+            issue_codes = self._query_issue_codes(blocking_issues)
+            route_group_key = self._profile_route_group_key(
+                "query_context_review",
+                {
+                    "dataset_iri": draft.dataset.iri,
+                    "evidence_iri": draft.evidence_iri,
+                    "readiness": context.readiness,
+                    "blocking_issue_codes": issue_codes,
+                },
+            )
+            for action in query_context_actions:
+                add_source(
+                    self._with_profile_route_step_key(
+                        {
+                            "review_lane": "query_context_review",
+                            "route_group_key": route_group_key,
+                            "evidence_iri": draft.evidence_iri,
+                            "profile_evidence_iri": draft.evidence_iri,
+                            "route_anchor_iris": [draft.dataset.iri],
+                            "readiness": context.readiness,
+                            "readiness_note": context.readiness_note,
+                            "blocking_issue_codes": issue_codes,
+                            "issue_codes": self._query_issue_codes(
+                                context.issues
+                            ),
+                            "profile_quality_summary": dict(
+                                draft.profile_quality_summary
+                            ),
+                            "sampled_evidence_caution": (
+                                draft.sampled_evidence_caution
+                            ),
+                        },
+                        action,
+                    ),
+                    action,
                 )
         return DoxaBase._dedupe_profile_route_sources(sources)
     @staticmethod
@@ -1314,11 +1310,8 @@ class ProfileReviewMixin:
         action: SuggestedNextAction,
     ) -> dict[str, Any]:
         enriched = dict(source)
-        enriched["_profile_action_label"] = action.action_label
-        enriched["_profile_action_tool_name"] = action.tool_name
-        enriched["_profile_action_mcp_tool_name"] = action.mcp_tool_name
-        enriched["_profile_action_arguments"] = to_jsonable(action.arguments)
-        enriched["_profile_action_call"] = action.call
+        enriched["_profile_action_tool"] = action.tool
+        enriched["_profile_action_arguments"] = to_jsonable(action.args)
         enriched.setdefault("_profile_route_source_origin", "live_draft")
         return enriched
     def _record_profile_insight_route_sources(
@@ -1879,23 +1872,11 @@ class ProfileReviewMixin:
                 source,
                 "semantic_move",
             ),
-            tool_name=DoxaBase._optional_string_field(
+            tool=DoxaBase._optional_string_field(
                 source,
-                "_profile_action_tool_name",
+                "_profile_action_tool",
             ),
-            mcp_tool_name=DoxaBase._optional_string_field(
-                source,
-                "_profile_action_mcp_tool_name",
-            ),
-            action_label=DoxaBase._optional_string_field(
-                source,
-                "_profile_action_label",
-            ),
-            arguments=copy.deepcopy(dict(arguments)),
-            suggested_next_call=DoxaBase._optional_string_field(
-                source,
-                "_profile_action_call",
-            ),
+            args=copy.deepcopy(dict(arguments)),
             source_origin=DoxaBase._optional_string_field(
                 source,
                 "_profile_route_source_origin",
@@ -2743,8 +2724,8 @@ class ProfileReviewMixin:
             first_action_label = "none"
             if first_action is not None:
                 first_action_label = (
-                    f"{first_action.tool_name or 'unknown_tool'}: "
-                    f"{first_action.action_label or first_action.route_step_key}"
+                    f"{first_action.tool or 'unknown_tool'}: "
+                    f"{first_action.route_step_key}"
                 )
             lines.append(
                 "| "

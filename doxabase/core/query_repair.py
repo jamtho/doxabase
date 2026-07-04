@@ -180,7 +180,7 @@ class QueryRepairMixin:
         action: MappingABC[str, Any],
         pending_rows: list[dict[str, str]],
     ) -> list[str]:
-        action_arguments = action.get("arguments")
+        action_arguments = action.get("args")
         if not isinstance(action_arguments, MappingABC):
             action_arguments = action.get("arguments_template")
         if not isinstance(action_arguments, MappingABC):
@@ -500,9 +500,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "remove_stale_partition_scheme_link",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "action_label": "Stage stale partition-scheme removal",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "reason": (
                         "Use after review confirms the selected direct-clean "
                         "query target supersedes this partition scheme for the "
@@ -515,7 +513,7 @@ class QueryRepairMixin:
                         f"{selected_candidate.candidate_path!r} should be the "
                         "planning route."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": dataset.iri,
                         "predicate": "rc:partitionedBy",
                         "object": partition.iri,
@@ -577,9 +575,7 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "replace_dataset_layout_verification_status",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "action_label": action_label,
+                    "tool": "doxabase.stage_map_assertion_change",
                     "reason": (
                         "Use after review confirms the dataset-owned path "
                         f"template has been verified by {evidence_label}."
@@ -591,7 +587,7 @@ class QueryRepairMixin:
                         f"{selected_candidate.candidate_path!r} is supported "
                         f"by {evidence_label}."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": dataset.iri,
                         "predicate": "rc:layoutVerificationStatus",
                         "object": status_curie,
@@ -682,9 +678,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "remove_stale_physical_layout_link",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "action_label": "Stage stale physical-layout removal",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "reason": (
                         "Use after review confirms the selected direct-clean "
                         "query target and verified sibling layout supersede "
@@ -697,7 +691,7 @@ class QueryRepairMixin:
                         f"{selected_candidate.candidate_path!r} and a verified "
                         "sibling layout should be the planning route."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": dataset.iri,
                         "predicate": "rc:hasPhysicalLayout",
                         "object": layout.iri,
@@ -734,9 +728,7 @@ class QueryRepairMixin:
                 action_option = {
                     "action_index": action_index,
                     "action_type": None,
-                    "tool_name": None,
-                    "mcp_tool_name": None,
-                    "action_label": None,
+                    "tool": None,
                     "action_status": status,
                     "required_extra_arguments": [],
                     "placeholder_fields": [],
@@ -768,19 +760,9 @@ class QueryRepairMixin:
                         if action.get("action_type") is not None
                         else None
                     ),
-                    "tool_name": (
-                        str(action["tool_name"])
-                        if action.get("tool_name") is not None
-                        else None
-                    ),
-                    "mcp_tool_name": (
-                        str(action["mcp_tool_name"])
-                        if action.get("mcp_tool_name") is not None
-                        else None
-                    ),
-                    "action_label": (
-                        str(action["action_label"])
-                        if action.get("action_label") is not None
+                    "tool": (
+                        str(action["tool"])
+                        if action.get("tool") is not None
                         else None
                     ),
                     "action_status": status,
@@ -875,26 +857,10 @@ class QueryRepairMixin:
         actions: list[SuggestedNextAction] = []
         seen_layout_iris: set[str] = set()
         route_intent_peer_indexes = set(route_intent_review_candidate_indexes)
-        unattended_recommended = (
-            not route_intent_peer_indexes
-            or candidate_index in route_intent_peer_indexes
-        )
-        unattended_caution = (
-            route_intent_caution if route_intent_peer_indexes else None
-        )
-        unattended_reason_codes = (
-            ["route_intent_review_candidates_present"]
-            if route_intent_peer_indexes
-            else []
-        )
-        (
-            unattended_recommended,
-            unattended_caution,
-            unattended_reason_codes,
-        ) = self._query_plan_action_unattended_fields(
-            recommended=unattended_recommended,
-            caution=unattended_caution,
-            review_reason_codes=unattended_reason_codes,
+        unattended_caution = self._query_plan_action_caution(
+            caution=(
+                route_intent_caution if route_intent_peer_indexes else None
+            ),
             pending_repair_groups_present=pending_repair_groups_present,
         )
         for signature in signatures:
@@ -959,35 +925,22 @@ class QueryRepairMixin:
                         "draft the reviewed direct-clean route while keeping "
                         "context audit fields visible."
                     )
+                reason = (
+                    f"Candidate {candidate_index} is blocked by ambiguous "
+                    "physical layout metadata. After reviewing that "
+                    f"{layout_iri} is the intended layout"
+                    f"{signature_note}, draft the query plan with "
+                    "physical_layout_iri so scan.function is inferred "
+                    "from an explicit layout choice."
+                    f"{allowance_reason}"
+                )
+                if unattended_caution:
+                    reason = f"{reason} {unattended_caution}"
                 actions.append(
-                    QueryPlanSuggestedNextAction(
-                        action_label="Select physical layout for draft",
-                        tool_name="draft_query_plan",
-                        mcp_tool_name="doxabase.draft_query_plan",
-                        arguments=arguments,
-                        reason=(
-                            f"Candidate {candidate_index} is blocked by ambiguous "
-                            "physical layout metadata. After reviewing that "
-                            f"{layout_iri} is the intended layout"
-                            f"{signature_note}, draft the query plan with "
-                            "physical_layout_iri so scan.function is inferred "
-                            "from an explicit layout choice."
-                            f"{allowance_reason}"
-                        ),
-                        call=self._suggested_call_string(
-                            "draft_query_plan",
-                            arguments,
-                        ),
-                        route_card=self._query_plan_action_route_card(
-                            candidate_index=candidate_index,
-                            candidate=candidate,
-                            columns=columns,
-                            partition_schemes=partition_schemes,
-                            physical_layout_iri=layout_iri,
-                        ),
-                        unattended_recommended=unattended_recommended,
-                        unattended_caution=unattended_caution,
-                        unattended_review_reason_codes=unattended_reason_codes,
+                    SuggestedNextAction(
+                        tool="doxabase.draft_query_plan",
+                        args=arguments,
+                        reason=reason,
                     )
                 )
         return actions
@@ -1134,8 +1087,7 @@ class QueryRepairMixin:
             "primary_repair_action_index": None,
             "primary_repair_action_type": None,
             "primary_repair_action_label": None,
-            "primary_repair_tool_name": None,
-            "primary_repair_mcp_tool_name": None,
+            "primary_repair_tool": None,
             "primary_repair_required_extra_arguments": [],
         }
         for issue_index, issue in enumerate(issues):
@@ -1161,9 +1113,11 @@ class QueryRepairMixin:
             group_action_type = repair_hint.get("action_type")
             action_index = first_option.get("action_index")
             action_type = first_option.get("action_type")
-            action_label = first_option.get("action_label")
-            if action_label is None and action_type is not None:
-                action_label = self._repair_action_type_label(str(action_type))
+            action_label = (
+                self._repair_action_type_label(str(action_type))
+                if action_type is not None
+                else None
+            )
             return {
                 "primary_repair_issue_index": issue_index,
                 "primary_repair_issue_code": issue.code,
@@ -1181,11 +1135,8 @@ class QueryRepairMixin:
                 "primary_repair_action_label": (
                     str(action_label) if action_label is not None else None
                 ),
-                "primary_repair_tool_name": self._optional_string(
-                    first_option.get("tool_name")
-                ),
-                "primary_repair_mcp_tool_name": self._optional_string(
-                    first_option.get("mcp_tool_name")
+                "primary_repair_tool": self._optional_string(
+                    first_option.get("tool")
                 ),
                 "primary_repair_required_extra_arguments": [
                     str(argument)
@@ -1317,9 +1268,7 @@ class QueryRepairMixin:
     ) -> dict[str, Any]:
         add_action = {
             "action_type": "add_reviewed_relation_template",
-            "action_label": "Add reviewed relation template",
-            "tool_name": "stage_map_assertion_change",
-            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "tool": "doxabase.stage_map_assertion_change",
             "source_subject_iri": source_resource.iri,
             "misplaced_template_subject_iri": source_resource.iri,
             "misplaced_template_source": template_source,
@@ -1346,9 +1295,7 @@ class QueryRepairMixin:
         }
         remove_action = {
             "action_type": "remove_misplaced_source_template",
-            "action_label": "Remove misplaced source template",
-            "tool_name": "stage_map_assertion_change",
-            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "tool": "doxabase.stage_map_assertion_change",
             "source_subject_iri": source_resource.iri,
             "misplaced_template_subject_iri": source_resource.iri,
             "misplaced_template_source": template_source,
@@ -1358,7 +1305,7 @@ class QueryRepairMixin:
                 "Reviewed source template as misplaced database "
                 "relation metadata."
             ),
-            "arguments": {
+            "args": {
                 "subject": source_resource.iri,
                 "predicate": "rc:pathTemplate",
                 "object": template,
@@ -1469,9 +1416,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "add_reviewed_relation_template",
-                    "action_label": "Add reviewed relation template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
@@ -1601,8 +1546,7 @@ class QueryRepairMixin:
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "set_reviewed_storage_protocol",
-                "tool_name": "stage_map_assertion_change",
-                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "tool": "doxabase.stage_map_assertion_change",
                 "required_extra_arguments": ["rationale"],
                 "rationale_template": (
                     "Reviewed protocol for storage access "
@@ -1625,8 +1569,7 @@ class QueryRepairMixin:
             },
             {
                 "action_type": "set_reviewed_storage_root",
-                "tool_name": "stage_map_assertion_change",
-                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "tool": "doxabase.stage_map_assertion_change",
                 "required_extra_arguments": ["rationale"],
                 "rationale_template": (
                     "Reviewed storage root or URL for storage access "
@@ -1654,8 +1597,7 @@ class QueryRepairMixin:
                 [
                     {
                         "action_type": "set_reviewed_bucket_name",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_map_assertion_change",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed bucket name for storage access "
@@ -1679,8 +1621,7 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "set_reviewed_key_prefix",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_map_assertion_change",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed key prefix for storage access "
@@ -1708,14 +1649,13 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "remove_conflicting_bucket_name",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed bucket metadata as inappropriate for storage "
                         f"access {storage_access.iri}."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": storage_access.iri,
                         "predicate": "rc:bucketName",
                         "object": storage_access.bucket_name,
@@ -1733,14 +1673,13 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "remove_conflicting_key_prefix",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed key-prefix metadata as inappropriate for "
                         f"storage access {storage_access.iri}."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": storage_access.iri,
                         "predicate": "rc:keyPrefix",
                         "object": storage_access.key_prefix,
@@ -1759,8 +1698,7 @@ class QueryRepairMixin:
                 [
                     {
                         "action_type": "add_reviewed_path_template",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_map_assertion_change",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed protocol-appropriate path template for "
@@ -1783,14 +1721,13 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "remove_conflicting_path_template",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_map_assertion_change",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed path template as conflicting with storage "
                             f"access {storage_access.iri}."
                         ),
-                        "arguments": {
+                        "args": {
                             "subject": template_source_resource.iri,
                             "predicate": "rc:pathTemplate",
                             "object": template,
@@ -1910,9 +1847,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "add_reviewed_path_template",
-                    "action_label": "Add reviewed path template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed file/object path template for storage access "
@@ -1935,15 +1870,13 @@ class QueryRepairMixin:
                 },
                 {
                     "action_type": "set_root_as_exact_object_location",
-                    "action_label": "Mark root as exact object location",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed storage root as the exact dataset object or "
                         f"location for {storage_access.iri}."
                     ),
-                    "arguments": {
+                    "args": {
                         "subject": storage_access.iri,
                         "predicate": "rc:locationKind",
                         "object": "object",
@@ -2000,11 +1933,9 @@ class QueryRepairMixin:
                 "actions": [
                     {
                         "action_type": "stage_reviewed_physical_layout",
-                        "tool_name": "stage_query_physical_layout_repair",
-                        "mcp_tool_name": (
+                        "tool": (
                             "doxabase.stage_query_physical_layout_repair"
                         ),
-                        "action_label": "Stage physical layout repair",
                         "reason": (
                             "Use when review has identified the dataset's "
                             "physical layout, and the change should carry "
@@ -2061,9 +1992,7 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "record_reviewed_physical_layout",
-                        "tool_name": "record_map_physical_layout",
-                        "mcp_tool_name": "doxabase.record_map_physical_layout",
-                        "action_label": "Record physical layout and link dataset",
+                        "tool": "doxabase.record_map_physical_layout",
                         "reason": (
                             "Use when review has identified the dataset's file "
                             "format or database table layout."
@@ -2175,9 +2104,7 @@ class QueryRepairMixin:
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "stage_reviewed_storage_access",
-                "tool_name": "stage_query_storage_access_repair",
-                "mcp_tool_name": "doxabase.stage_query_storage_access_repair",
-                "action_label": "Stage storage access repair",
+                "tool": "doxabase.stage_query_storage_access_repair",
                 "reason": (
                     "Use when review has identified the non-secret storage "
                     "protocol and location, and the change should carry "
@@ -2278,9 +2205,7 @@ class QueryRepairMixin:
             },
             {
                 "action_type": "record_reviewed_storage_access",
-                "tool_name": "record_map_storage_access",
-                "mcp_tool_name": "doxabase.record_map_storage_access",
-                "action_label": "Record storage access and link dataset",
+                "tool": "doxabase.record_map_storage_access",
                 "reason": (
                     "Use when review has identified the non-secret "
                     "storage protocol and location for this dataset."
@@ -2357,11 +2282,7 @@ class QueryRepairMixin:
             },
             {
                 "action_type": "stage_existing_storage_access_link",
-                "tool_name": "stage_map_assertion_change",
-                "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                "action_label": (
-                    "Stage link to an existing storage access"
-                ),
+                "tool": "doxabase.stage_map_assertion_change",
                 "reason": (
                     "Use when a suitable storage access resource already "
                     "exists and the dataset should link to it after "

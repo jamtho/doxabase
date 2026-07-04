@@ -41,40 +41,29 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert before_context["readiness"] == "insufficient_metadata"
     assert before_context.get("query_target_candidates", []) == []
     assert [
-        action["tool_name"] for action in before_context["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in before_context["suggested_next_actions"]
     ] == [
         "describe_profile_run",
         "draft_query_evidence_storage_overlay",
     ]
     assert before_context["safe_inspection_action_indexes"] == [0]
     assert before_context["first_safe_inspection_action_index"] == 0
-    assert before_context.get("unattended_recommended_action_indexes", []) == []
-    assert before_context.get("first_unattended_action_index") is None
     overlay_action = before_context["suggested_next_actions"][1]
-    assert overlay_action["arguments"]["dataset_iri"] == dataset
-    assert overlay_action["arguments"]["evidence_iri"] == result["evidence_iri"]
-    assert overlay_action["required_extra_arguments"] == [
-        "storage_protocol",
-        "storage_root",
-        "location_kind",
-        "file_format",
-    ]
-    assert "path_templates" in overlay_action["placeholder_fields"]
-    assert overlay_action["source_profile_evidence"]["query_hash"] == (
-        "sha256:mcp-orders-status"
+    assert overlay_action["args"]["dataset_iri"] == dataset
+    assert overlay_action["args"]["evidence_iri"] == result["evidence_iri"]
+    assert "reviewed values" in overlay_action["reason"]
+    route_candidate = next(
+        candidate
+        for issue in before_context["issues"]
+        if isinstance(issue.get("details"), dict)
+        and isinstance(issue["details"].get("repair_hint"), dict)
+        for candidate in (
+            issue["details"]["repair_hint"].get(
+                "evidence_storage_route_candidates"
+            )
+            or []
+        )
     )
-    assert overlay_action["source_query_evidence"] == (
-        overlay_action["source_profile_evidence"]
-    )
-    assert overlay_action["source_profile_evidence"]["scanned_source_paths"] == [
-        str(csv_path)
-    ]
-    assert overlay_action["source_profile_evidence"]["scanned_source_handles"] == [
-        str(csv_path)
-    ]
-    assert overlay_action["evidence_storage_route_candidate_count"] == 1
-    assert overlay_action["evidence_storage_route_candidate_total_count"] == 1
-    route_candidate = overlay_action["evidence_storage_route_candidates"][0]
     assert route_candidate["candidate_kind"] == "local_path_from_query_evidence"
     assert route_candidate[
         "draft_query_evidence_storage_overlay_candidate_arguments"
@@ -116,9 +105,6 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     ]
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
     assert draft["source_query_evidence"] == draft["source_profile_evidence"]
-    assert draft["evidence_storage_route_candidates"] == (
-        overlay_action["evidence_storage_route_candidates"]
-    )
     assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
     assert draft["reviewed_overlay"]["route_roles"] == [RC + "CurrentRoute"]
     assert draft["reviewed_overlay"]["path_templates"] == ["orders.csv"]
@@ -128,7 +114,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert draft["stage_arguments"]["supporting_observations"] == [
         result["observation_iri"]
     ]
-    assert draft["suggested_next_actions"][0]["mcp_tool_name"] == (
+    assert draft["suggested_next_actions"][0]["tool"] == (
         "doxabase.stage_graph_revision"
     )
 
@@ -232,7 +218,7 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert resolution["current_next_action"]["queue"] == "apply_after_review"
     assert resolution["closes_current_staged_work"] is True
     assert [
-        action["tool_name"] for action in resolution["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in resolution["suggested_next_actions"]
     ] == [
         "describe_graph_revision",
         "describe_staged_revision",
@@ -487,8 +473,8 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
         "True (0 result(s))"
     )
     assert export["revision_summaries"][0]["suggested_next_actions"][-1][
-        "tool_name"
-    ] == "apply_staged_revision"
+        "tool"
+    ] == "doxabase.apply_staged_revision"
     assert export["revision_summaries"][0]["next_action"]["action_type"] == (
         "apply_after_review"
     )
@@ -686,16 +672,16 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
     assert result["anchors"] == [pattern.pattern_iri, target, implication]
     revision_iri = result["staged_revisions"][0]["revision_iri"]
     assert result["next_action_queue"] == {"apply_after_review": [revision_iri]}
-    assert result["suggested_next_actions"][0]["tool_name"] == (
-        "export_staged_revisions"
+    assert result["suggested_next_actions"][0]["tool"] == (
+        "doxabase.export_staged_revisions"
     )
-    assert result["suggested_next_actions"][0]["arguments"]["path"].startswith(
+    assert result["suggested_next_actions"][0]["args"]["path"].startswith(
         "/tmp/systematisation-review-"
     )
     assert [
-        action["arguments"]
+        action["args"]
         for action in result["suggested_next_actions"]
-        if action["tool_name"] == "check_staged_revision_apply"
+        if action["tool"] == "doxabase.check_staged_revision_apply"
     ] == [{"iri": revision_iri}]
     assert result["framings"][0]["stance"] == (
         "https://richcanopy.org/ns/rc#CandidateRevision"
@@ -798,14 +784,14 @@ def test_search_staged_patch_payloads_tool_returns_json_like_payload(
     assert match["target_graph"] == "ontology"
     assert match["patch_subject_iris"] == [term]
     assert "literal" in match["matched_term_roles"]
-    assert match["suggested_next_actions"][0]["tool_name"] == (
-        "describe_staged_revision"
+    assert match["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_staged_revision"
     )
-    assert match["suggested_next_actions"][1]["tool_name"] == (
-        "export_staged_revisions"
+    assert match["suggested_next_actions"][1]["tool"] == (
+        "doxabase.export_staged_revisions"
     )
     assert (
-        match["suggested_next_actions"][1]["arguments"]["fail_on_sensitive"]
+        match["suggested_next_actions"][1]["args"]["fail_on_sensitive"]
         is True
     )
     assert result["suggested_next_actions"][0] == match["suggested_next_actions"][0]

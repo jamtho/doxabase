@@ -45,7 +45,7 @@ def test_first_workflow_example_runs(tmp_path: Path) -> None:
     assert "Key counts:" in output
     assert "Tables:" in output
     assert "Query decision:" in output
-    assert "Next action: draft_query_plan(" in output
+    assert "Next action: doxabase.draft_query_plan" in output
     assert "docs/agent/query-planning.md#ais-dailyindex-question-to-handoff-gap" in (
         output
     )
@@ -152,7 +152,7 @@ def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
     assert "Recovery queues: {'repair_or_replace': 1, 'restage_after_review': 1}" in (
         output
     )
-    assert "Helper mutation actions: ['stage_map_assertion_change']" in output
+    assert "Helper mutation actions: ['doxabase.stage_map_assertion_change']" in output
     assert "same_slot_replacement" in output
     assert "Independent successor status: ready" in output
     assert "Repair draft: drafted / same_slot_replacement" in output
@@ -209,10 +209,9 @@ def test_query_evidence_storage_overlay_smoke_example_runs(tmp_path: Path) -> No
     assert "Baseline readiness: insufficient_metadata" in output
     assert "Baseline candidates: 0" in output
     assert "Recorded evidence status: succeeded" in output
-    assert "Profile inspection action: describe_profile_run" in output
+    assert "Profile inspection action: doxabase.describe_profile_run" in output
     assert (
-        "Overlay action required extras: "
-        "['storage_protocol', 'storage_root', 'location_kind', 'file_format']"
+        "Overlay action tool: doxabase.draft_query_evidence_storage_overlay"
         in output
     )
     assert "Route candidate kind: local_path_from_query_evidence" in output

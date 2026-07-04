@@ -36,13 +36,10 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "next_best_expansion" in result
     assert "full_frontier_expansion" in result
     assert result.get("safety_first_action") is None
-    assert result.get("safety_first_call") is None
     assert result.get("safety_first_source") is None
     assert "frontier_first_action" in result
-    assert "frontier_first_call" in result
     assert "frontier_first_source" in result
     assert "first_unattended_action" in result
-    assert "first_unattended_call" in result
     assert "first_unattended_source" in result
     assert "frontier_status" in result
     frontier_status = result["frontier_status"]
@@ -52,9 +49,6 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(frontier_status["hidden_queue_types"], list)
     assert isinstance(frontier_status["active_queue_types"], list)
     assert isinstance(frontier_status["returned_queue_types"], list)
-    assert frontier_status["first_unattended_call"] == result[
-        "first_unattended_call"
-    ]
     assert frontier_status["first_unattended_source"] == result[
         "first_unattended_source"
     ]
@@ -65,23 +59,15 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
         "no_current_recommended_task",
     }
     if result.get("safety_first_action") is not None:
-        assert result["safety_first_call"] == result["safety_first_action"]["call"]
         assert result["safety_first_source"] in {
             "health_tasks:privacy_export_review",
             "health_tasks:seed_recovery_review",
         }
         assert result["first_unattended_action"] == result["safety_first_action"]
-        assert result["first_unattended_call"] == result["safety_first_call"]
     if result["frontier_first_action"] is not None:
-        assert result["frontier_first_call"] == result["frontier_first_action"][
-            "call"
-        ]
         if result.get("safety_first_action") is None:
             assert result["first_unattended_action"] == result[
                 "frontier_first_action"
-            ]
-            assert result["first_unattended_call"] == result[
-                "frontier_first_call"
             ]
     if result["next_best_expansion"] is not None:
         assert result["next_best_expansion"]["task_type"] in {
@@ -165,10 +151,10 @@ def test_project_brief_tool_serializes_fixture_storage_health_task(
     assert fixture_task["fixture_names"] == ["AIS"]
     assert fixture_task["known_fixture_table_iris"] == [dataset]
     assert fixture_task["storage_access_count"] == 0
-    assert fixture_task["suggested_next_action"]["tool_name"] == (
-        "describe_query_context"
+    assert fixture_task["suggested_next_action"]["tool"] == (
+        "doxabase.describe_query_context"
     )
-    assert fixture_task["suggested_next_action"]["arguments"] == {
+    assert fixture_task["suggested_next_action"]["args"] == {
         "iri": dataset
     }
     repair_task = next(
@@ -181,8 +167,8 @@ def test_project_brief_tool_serializes_fixture_storage_health_task(
     )
     assert repair_task["task_advisories"][0]["storage_access_count"] == 0
     assert repair_task["task_advisories"][0]["suggested_next_action"][
-        "tool_name"
-    ] == "describe_query_context"
+        "tool"
+    ] == "doxabase.describe_query_context"
     assert repair_task["task_group"]["group_type"] == (
         "query_fixture_staleness_review"
     )
@@ -203,13 +189,10 @@ def test_project_brief_tool_routes_query_repair_tasks_to_context(
     repair_task = result["recommended_next_tasks"][0]
     assert repair_task["task_type"] == "query_repair_review"
     assert repair_task["source"] == "describe_query_context"
-    assert repair_task["suggested_next_action"]["tool_name"] == (
-        "describe_query_context"
+    assert repair_task["suggested_next_action"]["tool"] == (
+        "doxabase.describe_query_context"
     )
-    assert repair_task["suggested_next_action"]["arguments"] == {"iri": dataset}
-    assert repair_task["suggested_next_call"] == (
-        "describe_query_context(iri='https://example.test/project#Orders')"
-    )
+    assert repair_task["suggested_next_action"]["args"] == {"iri": dataset}
 
 
 def test_project_brief_tool_routes_blocked_context_tasks_to_context_review(
@@ -241,18 +224,14 @@ def test_project_brief_tool_routes_blocked_context_tasks_to_context_review(
     result = project_brief_tool(db, limit=5)
 
     context_action = result["datasets"][0]["query"]["suggested_next_actions"][0]
-    assert context_action["tool_name"] == "draft_query_plan"
+    assert context_action["tool"] == "doxabase.draft_query_plan"
     context_task = result["recommended_next_tasks"][0]
     assert context_task["task_type"] == "query_context_review"
     assert context_task["source"] == "describe_query_context"
-    assert context_task["suggested_next_action"]["tool_name"] == (
-        "describe_query_context"
+    assert context_task["suggested_next_action"]["tool"] == (
+        "doxabase.describe_query_context"
     )
-    assert context_task["suggested_next_action"]["arguments"] == {"iri": dataset}
-    assert context_task["suggested_next_call"] == (
-        "describe_query_context("
-        "iri='https://example.test/project#LocationBlockedEvents')"
-    )
+    assert context_task["suggested_next_action"]["args"] == {"iri": dataset}
 
 
 def test_project_brief_tool_routes_ready_query_handoffs_to_draft_plan(
@@ -291,9 +270,9 @@ def test_project_brief_tool_routes_ready_query_handoffs_to_draft_plan(
     task = result["recommended_next_tasks"][0]
     assert task["task_type"] == "query_plan_handoff"
     assert task["source"] == "draft_query_plan"
-    assert task["suggested_next_action"]["tool_name"] == "draft_query_plan"
-    assert task["suggested_next_action"]["arguments"]["iri"] == dataset
-    task_selector = task["suggested_next_action"]["arguments"]["candidate_selector"]
+    assert task["suggested_next_action"]["tool"] == "doxabase.draft_query_plan"
+    assert task["suggested_next_action"]["args"]["iri"] == dataset
+    task_selector = task["suggested_next_action"]["args"]["candidate_selector"]
     assert isinstance(task_selector, str)
     assert task_selector.startswith("query-target:")
 
@@ -329,7 +308,7 @@ def test_project_brief_tool_marks_pending_staged_query_repairs(
     repair_group = db.describe_query_context(
         dataset,
     ).suggested_repair_action_groups[0]
-    remove_arguments = dict(repair_group.actions[0]["arguments"])
+    remove_arguments = dict(repair_group.actions[0]["args"])
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
     )
@@ -342,8 +321,8 @@ def test_project_brief_tool_marks_pending_staged_query_repairs(
         task["task_type"] for task in result["recommended_next_tasks"]
     ] == ["staged_frontier_review", "staged_review", "query_repair_review"]
     frontier_task = result["recommended_next_tasks"][0]
-    assert frontier_task["suggested_next_action"]["tool_name"] == (
-        "plan_staged_revision_recovery"
+    assert frontier_task["suggested_next_action"]["tool"] == (
+        "doxabase.plan_staged_revision_recovery"
     )
     repair_task = result["recommended_next_tasks"][2]
     assert repair_task["pending_staged_repair_iris"] == [staged.revision_iri]
@@ -388,8 +367,8 @@ def test_project_brief_tool_does_not_gate_query_repair_on_unrelated_staged_work(
     assert repair_task["priority"] == 10
     assert repair_task.get("pending_staged_repair_iris", []) == []
     assert "Pending staged repair(s)" not in repair_task["reason"]
-    assert repair_task["suggested_next_action"]["tool_name"] == (
-        "describe_query_context"
+    assert repair_task["suggested_next_action"]["tool"] == (
+        "doxabase.describe_query_context"
     )
     assert staged["revision_iri"] in {
         item["revision_iri"] for item in result["staged_review"]["items"]
@@ -457,8 +436,8 @@ def test_project_brief_tool_gates_duplicate_profile_staging(
         task["task_type"] for task in result["recommended_next_tasks"]
     ] == ["staged_frontier_review", "staged_review", "profile_review"]
     frontier_task, staged_task, profile_task = result["recommended_next_tasks"]
-    assert frontier_task["suggested_next_action"]["tool_name"] == (
-        "plan_staged_revision_recovery"
+    assert frontier_task["suggested_next_action"]["tool"] == (
+        "doxabase.plan_staged_revision_recovery"
     )
     assert staged_task["resource"]["iri"] == staged["staged_revision"]["revision_iri"]
     assert profile_task["pending_staged_profile_update_iris"] == [
@@ -466,10 +445,10 @@ def test_project_brief_tool_gates_duplicate_profile_staging(
     ]
     assert profile_task["profile_evidence_iri"] == evidence
     assert "Pending staged profile update(s)" in profile_task["reason"]
-    assert profile_task["suggested_next_action"]["tool_name"] == (
-        "draft_profile_map_updates"
+    assert profile_task["suggested_next_action"]["tool"] == (
+        "doxabase.draft_profile_map_updates"
     )
-    assert profile_task["suggested_next_action"]["arguments"] == {
+    assert profile_task["suggested_next_action"]["args"] == {
         "dataset_iri": dataset,
         "evidence_iri": evidence,
     }
@@ -551,8 +530,8 @@ def test_project_brief_tool_keeps_profile_advisories_visible_with_pending_map_up
         staged["staged_revision"]["revision_iri"]
     ]
     assert "profile advisory/conflict lanes remain open" in profile_task["reason"]
-    assert profile_task["suggested_next_action"]["tool_name"] == (
-        "draft_profile_map_updates"
+    assert profile_task["suggested_next_action"]["tool"] == (
+        "doxabase.draft_profile_map_updates"
     )
 
 
@@ -645,12 +624,9 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
     assert profile_task["profile_evidence_iri"] == evidence
     assert profile_task.get("pending_staged_profile_update_iris", []) == []
     assert "Pending staged profile update(s)" not in profile_task["reason"]
-    assert profile_task["suggested_next_action"]["tool_name"] == (
-        "get_context_graph"
+    assert profile_task["suggested_next_action"]["tool"] == (
+        "doxabase.get_context_graph"
     )
-    assert profile_task["suggested_next_action"]["source_profile_advisory"][
-        "review_lane"
-    ] == "metric_vocabulary_review"
     assert staged["revision_iri"] in {
         item["revision_iri"] for item in result["staged_review"]["items"]
     }
@@ -718,8 +694,8 @@ def test_query_storage_frontier_tool_route_regression(
         if task["resource"] and task["resource"]["iri"] == non_table_asset
     )
     assert non_table_task["task_type"] == "non_tabular_asset_review"
-    assert non_table_task["suggested_next_action"]["tool_name"] == (
-        "get_context_graph"
+    assert non_table_task["suggested_next_action"]["tool"] == (
+        "doxabase.get_context_graph"
     )
 
     orphan_context = describe_query_context_tool(db, iri=orphan)
@@ -783,7 +759,7 @@ def test_query_storage_frontier_tool_route_regression(
         "required_extra_arguments"
     ] == ["rationale"]
     remove_arguments = dict(
-        action_by_type["remove_misplaced_source_template"]["arguments"]
+        action_by_type["remove_misplaced_source_template"]["args"]
     )
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
@@ -806,8 +782,8 @@ def test_query_storage_frontier_tool_route_regression(
     )
     assert staged_task_index < query_task_index
     assert query_task["pending_staged_repair_iris"] == [staged["revision_iri"]]
-    assert query_task["suggested_next_action"]["tool_name"] == (
-        "describe_query_context"
+    assert query_task["suggested_next_action"]["tool"] == (
+        "doxabase.describe_query_context"
     )
 
     allowed_plan = draft_query_plan_tool(

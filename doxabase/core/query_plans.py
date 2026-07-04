@@ -11,28 +11,19 @@ from doxabase.core._types import *  # noqa: F401,F403
 
 class QueryPlansMixin:
     @staticmethod
-    def _query_plan_action_unattended_fields(
+    def _query_plan_action_caution(
         *,
-        recommended: bool,
         caution: str | None,
-        review_reason_codes: list[str],
         pending_repair_groups_present: bool,
-    ) -> tuple[bool, str | None, list[str]]:
+    ) -> str | None:
         if not pending_repair_groups_present:
-            return recommended, caution, list(review_reason_codes)
+            return caution
         repair_caution = (
             "Pending query repair groups have non-skippable options; review "
             "suggested_repair_action_groups before treating draft_query_plan "
             "actions as unattended."
         )
-        reason_codes = list(review_reason_codes)
-        if "query_repair_groups_present" not in reason_codes:
-            reason_codes.append("query_repair_groups_present")
-        return (
-            False,
-            f"{caution} {repair_caution}" if caution else repair_caution,
-            reason_codes,
-        )
+        return f"{caution} {repair_caution}" if caution else repair_caution
     def _query_context_database_relation_candidates_from_evidence(
         self,
         dataset: DatasetDescription,
@@ -2190,76 +2181,6 @@ class QueryPlansMixin:
         ):
             codes.append("scan_function_not_inferred")
         return list(dict.fromkeys(codes))
-    def _query_plan_action_route_card(
-        self,
-        *,
-        candidate_index: int,
-        candidate: QueryTargetCandidate,
-        columns: list[ColumnDescription],
-        partition_schemes: list[PartitionDescription],
-        physical_layout_iri: str | None = None,
-    ) -> dict[str, Any]:
-        binding_requirements = self._draft_query_plan_binding_requirements(
-            candidate,
-            columns=columns,
-            partition_schemes=partition_schemes,
-        )
-        binding_examples = self._query_plan_action_binding_examples(
-            candidate,
-            binding_requirements,
-        )
-        route_role_labels = [
-            role.label or self._local_name(role.iri) or role.iri
-            for role in candidate.route_roles
-        ]
-        card: dict[str, Any] = {
-            "candidate_index": candidate_index,
-            "candidate_selector": candidate.candidate_selector,
-            "template": candidate.template,
-            "template_source": candidate.template_source,
-            "source_resource": candidate.source_resource,
-            "storage_access": candidate.storage_access,
-            "storage_label": self._draft_query_plan_resource_label(
-                candidate.storage_access
-            ),
-            "storage_protocol": candidate.storage_protocol,
-            "access_mode": candidate.access_mode,
-            "location_kind": candidate.location_kind,
-            "storage_root": candidate.storage_root,
-            "endpoint_profile": candidate.endpoint_profile,
-            "bucket_name": candidate.bucket_name,
-            "key_prefix": candidate.key_prefix,
-            "region": candidate.region,
-            "credential_reference": candidate.credential_reference,
-            "path_style_access": candidate.path_style_access,
-            "requires_endpoint_profile": candidate.requires_endpoint_profile,
-            "route_roles": candidate.route_roles,
-            "route_role_labels": route_role_labels,
-            "candidate_path": candidate.candidate_path,
-            "relation_identifier": candidate.relation_identifier,
-            "connection_reference": candidate.connection_reference,
-            "composition": candidate.composition,
-            "candidate_path_status": candidate.candidate_path_status,
-            "direct_review_required": candidate.direct_review_required,
-            "review_required": candidate.review_required,
-            "direct_issue_codes": self._query_issue_codes(
-                candidate.direct_review_reasons
-            ),
-            "issue_codes": self._query_issue_codes(candidate.review_reasons),
-            "required_bindings": self._query_plan_required_binding_names(
-                binding_requirements
-            ),
-            "required_binding_details": (
-                self._query_plan_required_binding_details(binding_requirements)
-            ),
-            "binding_example": (
-                self._query_plan_action_binding_example_summary(binding_examples)
-            ),
-            "binding_examples": binding_examples,
-        }
-        if physical_layout_iri is not None:
-            card["physical_layout_iri"] = physical_layout_iri
-        return card
     @staticmethod
     def _query_plan_required_binding_names(
         binding_requirements: list[DraftQueryPlanBinding],

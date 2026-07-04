@@ -225,25 +225,10 @@ class BriefMixin:
             next_best_expansion=next_best_expansion,
             full_frontier_expansion=full_frontier_expansion,
             safety_first_action=safety_first_action,
-            safety_first_call=(
-                safety_first_action.call
-                if safety_first_action is not None
-                else None
-            ),
             safety_first_source=safety_first_source,
             frontier_first_action=frontier_first_action,
-            frontier_first_call=(
-                frontier_first_action.call
-                if frontier_first_action is not None
-                else None
-            ),
             frontier_first_source=frontier_first_source,
             first_unattended_action=first_unattended_action,
-            first_unattended_call=(
-                first_unattended_action.call
-                if first_unattended_action is not None
-                else None
-            ),
             first_unattended_source=first_unattended_source,
             frontier_status=frontier_status,
             datasets=datasets,
@@ -284,7 +269,6 @@ class BriefMixin:
                 query_context.direct_clean_candidate_indexes
             ),
             suggested_next_actions=query_context.suggested_next_actions[:3],
-            suggested_next_calls=query_context.suggested_next_calls[:3],
         )
     @staticmethod
     def _project_brief_non_tabular_query_summary() -> ProjectBriefDatasetQuerySummary:
@@ -301,7 +285,6 @@ class BriefMixin:
             ready_candidate_indexes=[],
             direct_clean_candidate_indexes=[],
             suggested_next_actions=[],
-            suggested_next_calls=[],
         )
     def _project_brief_profile_summary(
         self,
@@ -344,11 +327,12 @@ class BriefMixin:
             )
             pending_staged_advisory_iris = (
                 self._project_brief_pending_staged_profile_advisory_iris(
-                    pending_staged_advisory_actions,
+                    draft,
                 )
             )
             task_advisories = (
                 self._project_brief_profile_task_advisories(
+                    draft,
                     pending_staged_advisory_actions,
                 )
             )
@@ -371,12 +355,8 @@ class BriefMixin:
                 pending_staged_profile_advisory_actions=(
                     pending_staged_advisory_actions[:3]
                 ),
-                pending_staged_profile_advisory_calls=[
-                    action.call for action in pending_staged_advisory_actions[:3]
-                ],
                 task_advisories=task_advisories,
                 suggested_next_actions=suggested_next_actions,
-                suggested_next_calls=[action.call for action in suggested_next_actions],
             )
             drafts.append(
                 replace(
@@ -417,111 +397,129 @@ class BriefMixin:
         self,
         draft: ProfileMapUpdateDraft,
     ) -> list[SuggestedNextAction]:
+        pending_set = set(
+            self._project_brief_pending_staged_profile_advisory_iris(draft)
+        )
+        if not pending_set:
+            return []
         actions: list[SuggestedNextAction] = []
         for group_name in ("metric_vocabulary_review", "profile_type_review"):
             for action in draft.suggested_next_action_groups.get(group_name, []):
-                source = getattr(action, "source_profile_advisory", None)
-                if not isinstance(source, MappingABC):
-                    continue
-                if source.get("action_status") != "already_pending":
-                    continue
-                if not self._project_brief_profile_advisory_pending_iris(source):
-                    continue
-                actions.append(self._privacy_redacted_suggested_next_action(action))
+                referenced: set[str] = set()
+                iri = action.args.get("iri")
+                if isinstance(iri, str):
+                    referenced.add(iri)
+                for value in action.args.get("revision_iris") or []:
+                    if isinstance(value, str):
+                        referenced.add(value)
+                if referenced & pending_set:
+                    actions.append(
+                        self._privacy_redacted_suggested_next_action(action)
+                    )
         return self._dedupe_suggested_next_actions(actions)
     @staticmethod
-    def _project_brief_profile_advisory_pending_iris(
-        source_profile_advisory: MappingABC[str, Any],
-    ) -> list[str]:
-        pending_iris: list[str] = []
-        for field_name in (
-            "pending_staged_promotion_iris",
-            "pending_staged_assertion_iris",
-            "pending_staged_fallback_iris",
-        ):
-            for iri in DoxaBase._string_values_from_any(
-                source_profile_advisory.get(field_name),
-            ):
-                DoxaBase._append_unique(pending_iris, iri)
-        return pending_iris
-    @staticmethod
     def _project_brief_pending_staged_profile_advisory_iris(
-        actions: Iterable[SuggestedNextAction],
+        draft: ProfileMapUpdateDraft,
     ) -> list[str]:
         pending_iris: list[str] = []
-        for action in actions:
-            source = getattr(action, "source_profile_advisory", None)
-            if not isinstance(source, MappingABC):
-                continue
-            for iri in DoxaBase._project_brief_profile_advisory_pending_iris(
-                source,
+        for advisory in [*draft.metric_advisories, *draft.type_advisories]:
+            for field_name in (
+                "pending_staged_promotion_iris",
+                "pending_staged_assertion_iris",
             ):
-                DoxaBase._append_unique(pending_iris, iri)
+                for iri in getattr(advisory, field_name, None) or []:
+                    DoxaBase._append_unique(pending_iris, iri)
         return pending_iris
-    @staticmethod
     def _project_brief_profile_task_advisories(
-        pending_staged_advisory_actions: Iterable[SuggestedNextAction],
+        self,
+        draft: ProfileMapUpdateDraft,
+        pending_staged_advisory_actions: list[SuggestedNextAction],
     ) -> list[dict[str, Any]]:
         advisories: list[dict[str, Any]] = []
         seen_keys: set[tuple[Any, ...]] = set()
-        for action in pending_staged_advisory_actions:
-            source = getattr(action, "source_profile_advisory", None)
-            if not isinstance(source, MappingABC):
-                continue
-            pending_iris = (
-                DoxaBase._project_brief_profile_advisory_pending_iris(source)
-            )
-            if not pending_iris:
-                continue
-            key = (
-                source.get("review_lane"),
-                source.get("semantic_move"),
-                source.get("route_group_key"),
-                tuple(pending_iris),
-            )
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            advisory = {
-                "code": "pending_staged_profile_advisory_review",
-                "severity": "warning",
-                "source": "draft_profile_map_updates",
-                "recommended_handling": (
-                    "inspect_pending_staged_revision_before_restaging"
-                ),
-                "reason": (
-                    "A profile advisory route already has pending staged work; "
-                    "inspect that staged revision before staging duplicate "
-                    "advisory follow-through."
-                ),
-                "review_lane": source.get("review_lane"),
-                "semantic_move": source.get("semantic_move"),
-                "route_group_key": source.get("route_group_key"),
-                "route_step_key": source.get("route_step_key"),
-                "action_status": source.get("action_status"),
-                "advisory_statuses": to_jsonable(
-                    source.get("advisory_statuses", []),
-                ),
-                "pending_staged_revision_iris": pending_iris,
-                "pending_staged_promotion_iris": (
-                    DoxaBase._string_values_from_any(
-                        source.get("pending_staged_promotion_iris"),
-                    )
-                ),
-                "pending_staged_assertion_iris": (
-                    DoxaBase._string_values_from_any(
-                        source.get("pending_staged_assertion_iris"),
-                    )
-                ),
-                "pending_staged_fallback_iris": (
-                    DoxaBase._string_values_from_any(
-                        source.get("pending_staged_fallback_iris"),
-                    )
-                ),
-                "suggested_next_action": to_jsonable(action),
-                "suggested_next_call": action.call,
-            }
-            advisories.append(advisory)
+        entries = [
+            (
+                "metric_vocabulary_review",
+                "define_metric",
+                "pending_staged_promotion_iris",
+                draft.metric_advisories,
+            ),
+            (
+                "profile_type_review",
+                "define_value_type",
+                "pending_staged_promotion_iris",
+                draft.type_advisories,
+            ),
+            (
+                "profile_type_review",
+                "assert_map_type",
+                "pending_staged_assertion_iris",
+                draft.type_advisories,
+            ),
+        ]
+        for review_lane, semantic_move, field_name, advisory_rows in entries:
+            for advisory_row in advisory_rows:
+                pending_iris = [
+                    iri
+                    for iri in getattr(advisory_row, field_name, None) or []
+                    if isinstance(iri, str)
+                ]
+                if not pending_iris:
+                    continue
+                key = (review_lane, semantic_move, tuple(pending_iris))
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                pending_set = set(pending_iris)
+                matching_action = next(
+                    (
+                        action
+                        for action in pending_staged_advisory_actions
+                        if pending_set
+                        & {
+                            value
+                            for value in [
+                                action.args.get("iri"),
+                                *(action.args.get("revision_iris") or []),
+                            ]
+                            if isinstance(value, str)
+                        }
+                    ),
+                    None,
+                )
+                advisories.append(
+                    {
+                        "code": "pending_staged_profile_advisory_review",
+                        "severity": "warning",
+                        "source": "draft_profile_map_updates",
+                        "recommended_handling": (
+                            "inspect_pending_staged_revision_before_restaging"
+                        ),
+                        "reason": (
+                            "A profile advisory route already has pending "
+                            "staged work; inspect that staged revision before "
+                            "staging duplicate advisory follow-through."
+                        ),
+                        "review_lane": review_lane,
+                        "semantic_move": semantic_move,
+                        "pending_staged_revision_iris": pending_iris,
+                        "pending_staged_promotion_iris": (
+                            pending_iris
+                            if field_name == "pending_staged_promotion_iris"
+                            else []
+                        ),
+                        "pending_staged_assertion_iris": (
+                            pending_iris
+                            if field_name == "pending_staged_assertion_iris"
+                            else []
+                        ),
+                        "suggested_next_action": (
+                            to_jsonable(matching_action)
+                            if matching_action is not None
+                            else None
+                        ),
+                    }
+                )
         return advisories
     @staticmethod
     def _project_brief_profile_draft_status(
@@ -578,7 +576,6 @@ class BriefMixin:
                 "profile or query repair work."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
         )
     def _project_brief_recovery_session_frontier_task(
         self,
@@ -626,7 +623,6 @@ class BriefMixin:
                 "preserved."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             task_group={
                 "matching_recovery_session_count": len(matching_session_iris),
                 "matching_recovery_session_iris": ordered_session_iris,
@@ -707,7 +703,7 @@ class BriefMixin:
         session_iri: str,
         *,
         history_graphs: list[str],
-    ) -> EffectAnnotatedSuggestedNextAction:
+    ) -> SuggestedNextAction:
         include_drafts = self._optional_bool_object(
             self._first_object(
                 history_graphs,
@@ -737,36 +733,25 @@ class BriefMixin:
             arguments["include_drafts"] = include_drafts
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return self._effect_annotated_suggested_next_action(
-            action_label="Continue staged recovery session",
-            tool_name="describe_staged_revision_recovery_session",
-            arguments=arguments,
-            reason=(
-                "A persisted staged-revision recovery session overlaps current "
+        return SuggestedNextAction(
+                   tool="doxabase.describe_staged_revision_recovery_session",
+                   args=arguments,
+                   reason="A persisted staged-revision recovery session overlaps current "
                 "staged work. Describe it so live recovery state, imported "
                 "session provenance, and apply-one-then-recheck hazards stay "
-                "connected."
-            ),
-        )
+                "connected.",
+               )
     def _project_brief_plan_staged_revision_recovery_action(
         self,
     ) -> SuggestedNextAction:
         arguments = {"current_staged_work_only": True}
         return SuggestedNextAction(
-            action_label="Plan current staged recovery",
-            tool_name="plan_staged_revision_recovery",
-            mcp_tool_name="doxabase.plan_staged_revision_recovery",
-            arguments=arguments,
-            reason=(
-                "Inspect current staged work, mutation_frontier_iris, and "
+                   tool="doxabase.plan_staged_revision_recovery",
+                   args=arguments,
+                   reason="Inspect current staged work, mutation_frontier_iris, and "
                 "requires_recheck_after_each_apply before taking another graph "
-                "mutation."
-            ),
-            call=self._suggested_call_string(
-                "plan_staged_revision_recovery",
-                arguments,
-            ),
-        )
+                "mutation.",
+               )
     def _project_brief_health_tasks(
         self,
         *,
@@ -894,16 +879,11 @@ class BriefMixin:
             "profile_candidate_limit": full_profile_candidate_limit,
         }
         action = SuggestedNextAction(
-            action_label="Expand full project brief frontier",
-            tool_name="project_brief",
-            mcp_tool_name="doxabase.project_brief",
-            arguments=arguments,
-            reason=(
-                "Expose all currently counted recommended-task payloads and any "
-                "profile drafts hidden by profile_candidate_limit in one rerun."
-            ),
-            call=self._suggested_call_string("project_brief", arguments),
-        )
+                     tool="doxabase.project_brief",
+                     args=arguments,
+                     reason="Expose all currently counted recommended-task payloads and any "
+                "profile drafts hidden by profile_candidate_limit in one rerun.",
+                 )
         queue_types: list[str] = []
         omitted_queue_counts: dict[str, int] = {}
         for task in expansion_tasks:
@@ -919,7 +899,6 @@ class BriefMixin:
                 "candidate limits together."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             queue_types=list(dict.fromkeys(queue_types)),
             omitted_queue_counts=omitted_queue_counts,
             suggested_limit=full_limit,
@@ -1079,22 +1058,6 @@ class BriefMixin:
             hidden_queue_types=hidden_queue_types,
             active_queue_types=list(queue_counts),
             returned_queue_types=list(returned_queue_counts),
-            must_rerun_call=(
-                must_rerun_action.call if must_rerun_action is not None else None
-            ),
-            safety_first_call=(
-                safety_first_action.call if safety_first_action is not None else None
-            ),
-            frontier_first_call=(
-                frontier_first_action.call
-                if frontier_first_action is not None
-                else None
-            ),
-            first_unattended_call=(
-                first_unattended_action.call
-                if first_unattended_action is not None
-                else None
-            ),
             first_unattended_source=first_unattended_source,
             mutation_allowed_after=mutation_allowed_after,
             note=note,
@@ -1116,18 +1079,13 @@ class BriefMixin:
             "profile_candidate_limit": suggested_profile_candidate_limit,
         }
         action = SuggestedNextAction(
-            action_label="Expand profile candidate frontier",
-            tool_name="project_brief",
-            mcp_tool_name="doxabase.project_brief",
-            arguments=arguments,
-            reason=(
-                "Some profile evidence candidates were omitted before draft "
+                     tool="doxabase.project_brief",
+                     args=arguments,
+                     reason="Some profile evidence candidates were omitted before draft "
                 "queues were built; rerun project_brief with a larger "
                 "profile_candidate_limit before assuming profile_review is "
-                "exhausted."
-            ),
-            call=self._suggested_call_string("project_brief", arguments),
-        )
+                "exhausted.",
+                 )
         return ProjectBriefHealthTask(
             priority=10,
             task_type="expand_profile_candidate_limit",
@@ -1137,7 +1095,6 @@ class BriefMixin:
                 "candidates before they can enter profile_review queues."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             queue_types=["profile_review"],
             suggested_limit=limit,
             suggested_profile_candidate_limit=suggested_profile_candidate_limit,
@@ -1167,19 +1124,14 @@ class BriefMixin:
             "profile_candidate_limit": profile_candidate_limit,
         }
         action = SuggestedNextAction(
-            action_label="Expand project brief frontier",
-            tool_name="project_brief",
-            mcp_tool_name="doxabase.project_brief",
-            arguments=arguments,
-            reason=(
-                "Some active queues were omitted from the bounded recommended "
+                     tool="doxabase.project_brief",
+                     args=arguments,
+                     reason="Some active queues were omitted from the bounded recommended "
                 "task slice; rerun project_brief with a larger limit before "
                 "repeating the same visible tasks. The suggested limit may be "
                 "iterative; use exhaustive_suggested_limit when you need one "
-                "rerun that exposes every currently counted task payload."
-            ),
-            call=self._suggested_call_string("project_brief", arguments),
-        )
+                "rerun that exposes every currently counted task payload.",
+                 )
         queue_types = list(
             dict.fromkeys(
                 [*omitted_queue_counts.keys(), *limit_crowded_queue_types]
@@ -1194,7 +1146,6 @@ class BriefMixin:
                 "payloads from recommended_next_tasks."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             queue_types=queue_types,
             omitted_queue_counts=dict(omitted_queue_counts),
             suggested_limit=suggested_limit,
@@ -1245,20 +1196,16 @@ class BriefMixin:
             )
         arguments = {"iri": representative_dataset_iri}
         action = SuggestedNextAction(
-            action_label="Inspect fixture storage frontier",
-            tool_name="describe_query_context",
-            mcp_tool_name="doxabase.describe_query_context",
-            arguments=arguments,
-            reason=action_reason,
-            call=self._suggested_call_string("describe_query_context", arguments),
-        )
+                     tool="doxabase.describe_query_context",
+                     args=arguments,
+                     reason=action_reason,
+                 )
         return ProjectBriefHealthTask(
             priority=15,
             task_type="query_fixture_staleness_review",
             source="fixture_storage_access_check",
             reason=reason,
             suggested_next_action=action,
-            suggested_next_call=action.call,
             queue_types=["query_repair_review"],
             fixture_names=list(hint["fixture_names"]),
             known_fixture_table_iris=known_fixture_table_iris,
@@ -1308,7 +1255,6 @@ class BriefMixin:
             "recommended_handling": "review_health_task_before_staging",
             "reason": fixture_task.reason,
             "suggested_next_action": suggested_next_action,
-            "suggested_next_call": fixture_task.suggested_next_call,
             "fixture_names": list(fixture_task.fixture_names),
             "known_fixture_table_iris": list(fixture_task.known_fixture_table_iris),
             "storage_access_count": fixture_task.storage_access_count,
@@ -1359,17 +1305,12 @@ class BriefMixin:
         if preflight.sensitive_literal_count == 0:
             return None
         action = SuggestedNextAction(
-            action_label="Review export privacy",
-            tool_name="export_preflight",
-            mcp_tool_name="doxabase.export_preflight",
-            arguments=arguments,
-            reason=(
-                "Run a redacted export preflight before sharing RDF or handoff "
+                     tool="doxabase.export_preflight",
+                     args=arguments,
+                     reason="Run a redacted export preflight before sharing RDF or handoff "
                 "exports; follow its blocking export action when the scanner is "
-                "clean."
-            ),
-            call=self._suggested_call_string("export_preflight", arguments),
-        )
+                "clean.",
+                 )
         return ProjectBriefHealthTask(
             priority=16,
             task_type="privacy_export_review",
@@ -1380,7 +1321,6 @@ class BriefMixin:
                 "reports only the count and a redacted export preflight route."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             sensitive_literal_count=preflight.sensitive_literal_count,
         )
     def _project_brief_export_validation_health_task(
@@ -1393,7 +1333,7 @@ class BriefMixin:
             (
                 candidate
                 for candidate in preflight.suggested_next_actions
-                if candidate.tool_name == "validate_graph"
+                if candidate.tool == "doxabase.validate_graph"
             ),
             None,
         )
@@ -1403,20 +1343,12 @@ class BriefMixin:
                 "limit_results": max(preflight.limit, 20),
             }
             action = SuggestedNextAction(
-                action_label="Inspect export validation failures",
-                tool_name="validate_graph",
-                mcp_tool_name="doxabase.validate_graph",
-                arguments=arguments,
-                reason=(
-                    "The live graph validation gate failed for this export "
+                         tool="doxabase.validate_graph",
+                         args=arguments,
+                         reason="The live graph validation gate failed for this export "
                     "scope. Inspect SHACL diagnostics and repair the graph "
-                    "before writing a recovery or share artifact."
-                ),
-                call=self._suggested_call_string(
-                    "validate_graph",
-                    arguments,
-                ),
-            )
+                    "before writing a recovery or share artifact.",
+                     )
         return ProjectBriefHealthTask(
             priority=18,
             task_type="export_validation_review",
@@ -1427,7 +1359,6 @@ class BriefMixin:
                 "or share artifacts."
             ),
             suggested_next_action=action,
-            suggested_next_call=action.call if action is not None else None,
             would_block_invalid_export=preflight.would_block_invalid_export,
             validation_scope=preflight.validation_scope,
             validation_conforms=preflight.validation_conforms,
@@ -1452,33 +1383,23 @@ class BriefMixin:
         arguments = self._stale_seed_handoff_preflight_arguments()
         if current_staged_revision_count > 0:
             action = SuggestedNextAction(
-                action_label="Preflight stale seed handoff export",
-                tool_name="export_preflight",
-                mcp_tool_name="doxabase.export_preflight",
-                arguments=arguments,
-                reason=(
-                    "Current staged graph revision rows exist; preflight a "
+                         tool="doxabase.export_preflight",
+                         args=arguments,
+                         reason="Current staged graph revision rows exist; preflight a "
                     "project/history plus revision snapshots handoff with map "
-                    "validation before recovering into a fresh seeded capsule."
-                ),
-                call=self._suggested_call_string("export_preflight", arguments),
-            )
+                    "validation before recovering into a fresh seeded capsule.",
+                     )
             queue_types = ["staged_review"]
             staged_count: int | None = current_staged_revision_count
         else:
             action = SuggestedNextAction(
-                action_label="Preflight stale seed project handoff export",
-                tool_name="export_preflight",
-                mcp_tool_name="doxabase.export_preflight",
-                arguments=arguments,
-                reason=(
-                    "The immutable base_ontology is missing current staging seed "
+                         tool="doxabase.export_preflight",
+                         args=arguments,
+                         reason="The immutable base_ontology is missing current staging seed "
                     "terms; preflight a project/history handoff with map "
                     "validation before recovering into a fresh seeded capsule. "
-                    "The companion revision snapshot bundle may be empty."
-                ),
-                call=self._suggested_call_string("export_preflight", arguments),
-            )
+                    "The companion revision snapshot bundle may be empty.",
+                     )
             queue_types = []
             staged_count = 0
         return ProjectBriefHealthTask(
@@ -1487,7 +1408,6 @@ class BriefMixin:
             source="base_ontology_seed_check",
             reason=self._stale_seed_recovery_message(missing_seed_terms),
             suggested_next_action=action,
-            suggested_next_call=action.call,
             queue_types=queue_types,
             missing_seed_terms=missing_seed_terms,
             current_staged_revision_count=staged_count,
@@ -1572,7 +1492,6 @@ class BriefMixin:
                         "of query-planning repair lanes."
                     ),
                     suggested_next_action=action,
-                    suggested_next_call=action.call,
                 )
             )
         else:
@@ -1603,7 +1522,6 @@ class BriefMixin:
                             f"action groups.{pending_note}"
                         ),
                         suggested_next_action=repair_action,
-                        suggested_next_call=repair_action.call,
                         pending_staged_repair_iris=pending_staged_repair_iris,
                     )
                 )
@@ -1625,7 +1543,6 @@ class BriefMixin:
                             "query metadata."
                         ),
                         suggested_next_action=review_action,
-                        suggested_next_call=review_action.call,
                     )
                 )
             elif dataset.query.readiness not in {
@@ -1646,7 +1563,6 @@ class BriefMixin:
                             f"{dataset.query.readiness}."
                         ),
                         suggested_next_action=review_action,
-                        suggested_next_call=review_action.call,
                     )
                 )
             else:
@@ -1660,7 +1576,7 @@ class BriefMixin:
                     ProjectBriefRecommendedTask(
                         priority=60,
                         task_type="query_plan_handoff",
-                        source=handoff_action.tool_name,
+                        source=handoff_action.tool.removeprefix("doxabase."),
                         resource=dataset.dataset,
                         reason=(
                             "Dataset query context is ready for a non-executed "
@@ -1668,7 +1584,6 @@ class BriefMixin:
                             "before treating ready query work as exhausted."
                         ),
                         suggested_next_action=handoff_action,
-                        suggested_next_call=handoff_action.call,
                         query_plan_handoff_summary=handoff_summary,
                     )
                 )
@@ -1744,9 +1659,7 @@ class BriefMixin:
                             pending_note=pending_note,
                         ),
                         suggested_next_action=action,
-                        suggested_next_call=action.call,
                         inspection_next_action=inspection_action,
-                        inspection_next_call=inspection_action.call,
                         profile_evidence_iri=draft.evidence_iri,
                         pending_staged_profile_update_iris=(
                             pending_staged_profile_update_iris
@@ -1823,20 +1736,12 @@ class BriefMixin:
             "profile": "deep_lore",
         }
         return SuggestedNextAction(
-            action_label="Inspect non-tabular asset context",
-            tool_name="get_context_graph",
-            mcp_tool_name="doxabase.get_context_graph",
-            arguments=arguments,
-            reason=(
-                "Inspect the non-tabular asset's map context, caveats, "
+                   tool="doxabase.get_context_graph",
+                   args=arguments,
+                   reason="Inspect the non-tabular asset's map context, caveats, "
                 "patterns, observations, and evidence without treating it as a "
-                "table query target."
-            ),
-            call=self._suggested_call_string(
-                "get_context_graph",
-                arguments,
-            ),
-        )
+                "table query target.",
+               )
     def _project_brief_describe_analysis_view_action(
         self,
         dataset_iri: str,
@@ -1844,24 +1749,16 @@ class BriefMixin:
         query_summary: ProjectBriefDatasetQuerySummary,
     ) -> SuggestedNextAction:
         for action in query_summary.suggested_next_actions:
-            if action.tool_name == "describe_analysis_view":
+            if action.tool == "doxabase.describe_analysis_view":
                 return action
         arguments = {"iri": dataset_iri}
         return SuggestedNextAction(
-            action_label="Describe analysis view",
-            tool_name="describe_analysis_view",
-            mcp_tool_name="doxabase.describe_analysis_view",
-            arguments=arguments,
-            reason=(
-                "Read the logical view denominator, source datasets, caveats, "
+                   tool="doxabase.describe_analysis_view",
+                   args=arguments,
+                   reason="Read the logical view denominator, source datasets, caveats, "
                 "and query snippet metadata before deciding whether to query "
-                "the source datasets or materialize a new physical route."
-            ),
-            call=self._suggested_call_string(
-                "describe_analysis_view",
-                arguments,
-            ),
-        )
+                "the source datasets or materialize a new physical route.",
+               )
     def _project_brief_analysis_packet_tasks(
         self,
         analysis_packet_count: int,
@@ -1899,7 +1796,6 @@ class BriefMixin:
                         "assuming analysis handoff work is exhausted."
                     ),
                     suggested_next_action=action,
-                    suggested_next_call=action.call,
                 )
             )
         return tasks
@@ -1912,47 +1808,33 @@ class BriefMixin:
             "profile": "resource_brief",
         }
         return SuggestedNextAction(
-            action_label="Inspect analysis packet context",
-            tool_name="get_context_graph",
-            mcp_tool_name="doxabase.get_context_graph",
-            arguments=arguments,
-            reason=(
-                "Inspect the packet, linked analysis views, artifact locators, "
+                   tool="doxabase.get_context_graph",
+                   args=arguments,
+                   reason="Inspect the packet, linked analysis views, artifact locators, "
                 "query recipes, follow-up tasks, and supporting patterns as one "
-                "bounded handoff context."
-            ),
-            call=self._suggested_call_string(
-                "get_context_graph",
-                arguments,
-            ),
-        )
+                "bounded handoff context.",
+               )
     def _project_brief_describe_query_context_action(
         self,
         dataset_iri: str,
     ) -> SuggestedNextAction:
         arguments = {"iri": dataset_iri}
         return SuggestedNextAction(
-            action_label="Review query context",
-            tool_name="describe_query_context",
-            mcp_tool_name="doxabase.describe_query_context",
-            arguments=arguments,
-            reason="Inspect the dataset query context before choosing a repair or plan.",
-            call=self._suggested_call_string(
-                "describe_query_context",
-                arguments,
-            ),
-        )
+                   tool="doxabase.describe_query_context",
+                   args=arguments,
+                   reason="Inspect the dataset query context before choosing a repair or plan.",
+               )
     def _project_brief_query_plan_handoff_action(
         self,
         dataset: ProjectBriefDatasetSummary,
     ) -> SuggestedNextAction:
         for action in dataset.query.suggested_next_actions:
-            if action.tool_name == "draft_query_plan":
+            if action.tool == "doxabase.draft_query_plan":
                 return action
 
         query_context = self.describe_query_context(dataset.dataset.iri)
         for action in query_context.suggested_next_actions:
-            if action.tool_name == "draft_query_plan":
+            if action.tool == "doxabase.draft_query_plan":
                 return action
 
         arguments = {"iri": dataset.dataset.iri}
@@ -1963,24 +1845,19 @@ class BriefMixin:
         if candidate_indexes:
             arguments["candidate_index"] = candidate_indexes[0]
         return SuggestedNextAction(
-            action_label="Draft query plan handoff",
-            tool_name="draft_query_plan",
-            mcp_tool_name="doxabase.draft_query_plan",
-            arguments=arguments,
-            reason=(
-                "Draft a non-executed query-plan handoff for a dataset whose "
-                "query context is ready for planning."
-            ),
-            call=self._suggested_call_string("draft_query_plan", arguments),
-        )
+                   tool="doxabase.draft_query_plan",
+                   args=arguments,
+                   reason="Draft a non-executed query-plan handoff for a dataset whose "
+                "query context is ready for planning.",
+               )
     def _project_brief_query_plan_handoff_summary(
         self,
         action: SuggestedNextAction,
     ) -> DraftQueryPlanHandoffSummary | None:
-        if action.tool_name != "draft_query_plan":
+        if action.tool != "doxabase.draft_query_plan":
             return None
         try:
-            return self.draft_query_plan(**action.arguments).handoff_summary
+            return self.draft_query_plan(**action.args).handoff_summary
         except DoxaBaseError:
             return None
     @staticmethod
@@ -2202,7 +2079,6 @@ class BriefMixin:
                         "or apply follow-up."
                     ),
                     suggested_next_action=item.suggested_next_action,
-                    suggested_next_call=item.suggested_next_action.call,
                 )
             )
         return tasks
@@ -2216,16 +2092,10 @@ class BriefMixin:
             "evidence_iri": evidence_iri,
         }
         return SuggestedNextAction(
-            action_label="Review profile map updates",
-            tool_name="draft_profile_map_updates",
-            mcp_tool_name="doxabase.draft_profile_map_updates",
-            arguments=arguments,
-            reason="Review profile-derived map updates and advisory lanes.",
-            call=self._suggested_call_string(
-                "draft_profile_map_updates",
-                arguments,
-            ),
-        )
+                   tool="doxabase.draft_profile_map_updates",
+                   args=arguments,
+                   reason="Review profile-derived map updates and advisory lanes.",
+               )
     def _resource_brief_seed_exists(self, graphs: list[str], seed: str) -> bool:
         return (
             self._subject_exists(seed, graphs)
@@ -2608,7 +2478,6 @@ class BriefMixin:
                     source_revision_iris=list(group.source_revision_iris),
                     row_iris=list(group.row_iris),
                     action=action,
-                    call=action.call if action is not None else None,
                     semantic_risk_level=group.semantic_risk_level,
                     semantic_risk_reasons=list(group.semantic_risk_reasons),
                     alternative_set_iris=list(group.alternative_set_iris),
@@ -2650,7 +2519,7 @@ class BriefMixin:
             if lane.lane == "repair_or_replace"
         }
         for action in helper_mutation_frontier_actions:
-            restages_revision = action.arguments.get("restages_revision")
+            restages_revision = action.args.get("restages_revision")
             source_revision_iris = (
                 [restages_revision] if isinstance(restages_revision, str) else []
             )
@@ -2667,7 +2536,6 @@ class BriefMixin:
                     source_revision_iris=source_revision_iris,
                     row_iris=list(context["row_iris"]),
                     action=action,
-                    call=action.call,
                     semantic_risk_level=context["semantic_risk_level"],
                     semantic_risk_reasons=list(context["semantic_risk_reasons"]),
                     alternative_set_iris=list(context["alternative_set_iris"]),
@@ -2754,7 +2622,7 @@ class BriefMixin:
         matching_actions = [
             action
             for action in suggested_next_actions
-            if action.tool_name in review_tool_order
+            if action_tool_name(action) in review_tool_order
             and DoxaBase._staged_recovery_action_is_safe_review(action)
             and DoxaBase._suggested_action_references_any_revision(
                 action,
@@ -2763,7 +2631,7 @@ class BriefMixin:
         ]
         return min(
             matching_actions,
-            key=lambda action: review_tool_order[action.tool_name],
+            key=lambda action: review_tool_order[action_tool_name(action)],
             default=None,
         )
     def _staged_recovery_frontier_review_action(
@@ -2793,7 +2661,7 @@ class BriefMixin:
         matching_actions = [
             action
             for action in suggested_next_actions
-            if action.tool_name in review_tool_order
+            if action_tool_name(action) in review_tool_order
             and DoxaBase._staged_recovery_action_is_safe_review(action)
             and DoxaBase._suggested_action_references_any_revision(
                 action,
@@ -2803,23 +2671,18 @@ class BriefMixin:
         if matching_actions:
             return min(
                 matching_actions,
-                key=lambda action: review_tool_order[action.tool_name],
+                key=lambda action: review_tool_order[action_tool_name(action)],
             )
         review_iri = next(iter(target_iris), None)
         if review_iri is None:
             return None
         arguments = {"iri": review_iri, "include_current_apply_check": True}
         return SuggestedNextAction(
-            action_label="Inspect mutation frontier target",
-            tool_name="describe_staged_revision",
-            mcp_tool_name="doxabase.describe_staged_revision",
-            arguments=arguments,
-            reason=(
-                "Inspect the staged revision before running its mutation "
-                "frontier action."
-            ),
-            call=self._suggested_call_string("describe_staged_revision", arguments),
-        )
+                   tool="doxabase.describe_staged_revision",
+                   args=arguments,
+                   reason="Inspect the staged revision before running its mutation "
+                "frontier action.",
+               )
     @staticmethod
     def _revision_mutation_frontier_iris(
         queue_items: Iterable[RevisionNextActionQueueItem],
@@ -2845,15 +2708,10 @@ class BriefMixin:
     def _post_handoff_import_project_brief_action(self) -> SuggestedNextAction:
         arguments: dict[str, Any] = {}
         return SuggestedNextAction(
-            action_label="Resume project frontier",
-            tool_name="project_brief",
-            mcp_tool_name="doxabase.project_brief",
-            arguments=arguments,
-            reason=(
-                "The handoff import had no revision rows to recover. Rerun the "
+                   tool="doxabase.project_brief",
+                   args=arguments,
+                   reason="The handoff import had no revision rows to recover. Rerun the "
                 "receiving capsule's project brief so the next agent resumes "
                 "from its current safety gates, frontier expansion, or project "
-                "work queue."
-            ),
-            call=self._suggested_call_string("project_brief", arguments),
-        )
+                "work queue.",
+               )

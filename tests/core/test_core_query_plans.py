@@ -271,17 +271,7 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
     query_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_plan"
-    )
-    route_card = query_action.route_card
-    assert route_card["required_bindings"] == ["year", "region", "date"]
-    assert route_card["binding_example"] == (
-        "year='2026', region='REVIEWED_REGION', date='2026-06-30' -> "
-        "/warehouse/events/year=2026/region=REVIEWED_REGION/"
-        "dt=2026-06-30/*.parquet"
-    )
-    assert route_card["required_binding_details"][2]["partition_column"].iri == (
-        event_date
+        if action.tool == "doxabase.draft_query_plan"
     )
 
     assert plan.selected_candidate is not None
@@ -680,11 +670,8 @@ def test_query_target_candidates_surface_global_blockers(
     query_action = context.suggested_next_actions[0]
     local_selector = local_target.candidate_selector
     archive_selector = archive_target.candidate_selector
-    assert query_action.tool_name == "draft_query_plan"
-    assert query_action.action_label == (
-        "Draft direct-clean candidate with context allowance"
-    )
-    assert query_action.arguments == {
+    assert query_action.tool == "doxabase.draft_query_plan"
+    assert query_action.args == {
         "iri": dataset,
         "candidate_selector": local_selector,
         "allow_context_blocked_candidate": True,
@@ -693,61 +680,14 @@ def test_query_target_candidates_surface_global_blockers(
         f"Other direct-clean candidate indexes exist ({archive_index})"
         in query_action.reason
     )
-    assert query_action.route_card["candidate_index"] == local_index
-    assert query_action.route_card["candidate_selector"] == local_selector
-    assert query_action.route_card["storage_label"] == "Orders local access"
-    assert [role.iri for role in query_action.route_card["route_roles"]] == [
-        RC + "SampleRoute"
-    ]
-    assert query_action.route_card["direct_issue_codes"] == []
-    assert "query_context_has_other_blockers" in (
-        query_action.route_card["issue_codes"]
-    )
-    assert query_action.unattended_recommended is False
-    assert context.query_target_decision.route_intent_caution in (
-        query_action.unattended_caution or ""
-    )
-    assert "suggested_repair_action_groups" in (
-        query_action.unattended_caution or ""
-    )
-    assert query_action.unattended_review_reason_codes == [
-        "route_intent_review_candidates_present",
-        "query_repair_groups_present",
-    ]
     peer_action = context.suggested_next_actions[1]
-    assert peer_action.tool_name == "draft_query_plan"
-    assert peer_action.action_label == (
-        "Draft peer direct-clean candidate with context allowance"
-    )
-    assert peer_action.arguments == {
+    assert peer_action.tool == "doxabase.draft_query_plan"
+    assert peer_action.args == {
         "iri": dataset,
         "candidate_selector": archive_selector,
         "allow_context_blocked_candidate": True,
     }
     assert "peer candidate has no direct warning or error" in peer_action.reason
-    assert peer_action.route_card["candidate_index"] == archive_index
-    assert peer_action.route_card["candidate_selector"] == archive_selector
-    assert peer_action.route_card["storage_label"] == (
-        "Orders archive local access"
-    )
-    assert {role.iri for role in peer_action.route_card["route_roles"]} == {
-        RC + "ProductionRoute",
-        RC + "CurrentRoute",
-    }
-    assert peer_action.unattended_recommended is False
-    assert context.query_target_decision.route_intent_caution in (
-        peer_action.unattended_caution or ""
-    )
-    assert "suggested_repair_action_groups" in (
-        peer_action.unattended_caution or ""
-    )
-    assert peer_action.unattended_review_reason_codes == [
-        "route_intent_review_candidates_present",
-        "query_repair_groups_present",
-    ]
-    assert context.unattended_recommended_action_indexes == []
-    assert context.first_unattended_action_index is None
-    assert context.suggested_next_calls == []
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
     assert plan.source_context.selection_mode == "automatic"
@@ -963,22 +903,15 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert "Other direct-ready candidate indexes exist (1)" in (
         context.suggested_next_actions[0].reason
     )
-    assert [action.action_label for action in context.suggested_next_actions] == [
-        "Draft metadata-ready query plan",
-        "Draft peer metadata-ready query plan",
-    ]
     selectors = [
         candidate.candidate_selector for candidate in context.query_target_candidates
     ]
     assert len(selectors) == len(set(selectors)) == 2
     assert all(selector.startswith("query-target:") for selector in selectors)
-    assert context.suggested_next_actions[1].arguments == {
+    assert context.suggested_next_actions[1].args == {
         "iri": dataset,
         "candidate_selector": selectors[1],
     }
-    assert context.suggested_next_calls == [
-        action.call for action in context.suggested_next_actions
-    ]
 
     automatic_plan = db.draft_query_plan(dataset)
 
@@ -1128,16 +1061,11 @@ def test_query_context_suggests_overlay_for_blocked_candidate_query_evidence(
     overlay_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_evidence_storage_overlay"
+        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
-    source = overlay_action.source_query_evidence
-    assert source["profile_observation_count"] == 0
-    assert source["execution_status"] == "blocked"
-    assert source["query_source_paths"] == [str(tmp_path / "orders_status.sql")]
-    assert source["scanned_source_paths"] == ["warehouse/orders.csv"]
+    assert overlay_action.args["evidence_iri"] == result.evidence_iri
 
 
 def test_object_root_candidate_stays_visible_with_partition_templates(
@@ -1217,7 +1145,7 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     assert context.ready_candidate_indexes == [
         context.query_target_decision.candidate_index
     ]
-    assert context.suggested_next_actions[0].arguments == {
+    assert context.suggested_next_actions[0].args == {
         "iri": dataset,
         "candidate_selector": root_target.candidate_selector,
         "allow_context_blocked_candidate": True,
@@ -1228,7 +1156,7 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     assert automatic_plan.handoff_kind == "context_review_required"
     assert automatic_plan.review_gate.context_blocked_candidate_used is False
 
-    plan = db.draft_query_plan(**context.suggested_next_actions[0].arguments)
+    plan = db.draft_query_plan(**context.suggested_next_actions[0].args)
 
     assert plan.selected_candidate is not None
     assert plan.selected_candidate.template_source == "storage_access_location"
@@ -1286,11 +1214,12 @@ def test_draft_query_plan_blocks_selected_layout_path_extension_mismatch(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.action_label == "Select physical layout for draft"
+        if action.tool == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action.args
     ]
 
     assert [issue.code for issue in context.issues] == ["ambiguous_physical_layout"]
-    assert [action.arguments for action in selection_actions] == [
+    assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
             "candidate_selector": target.candidate_selector,
@@ -1384,9 +1313,10 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.action_label == "Select physical layout for draft"
+        if action.tool == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action.args
     ]
-    assert [action.arguments for action in selection_actions] == [
+    assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
             "candidate_selector": clean_selector,
@@ -1443,7 +1373,7 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
 
-    selected_from_action = db.draft_query_plan(**selection_actions[0].arguments)
+    selected_from_action = db.draft_query_plan(**selection_actions[0].args)
 
     assert selected_from_action.source_context.allow_context_blocked_candidate is True
     assert selected_from_action.review_gate.context_blocked_candidate_allowed is True
@@ -1724,22 +1654,18 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert context.unselected_direct_clean_candidate_indexes == (
         context.unselected_ready_candidate_indexes
     )
-    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
-    assert context.suggested_next_actions[0].arguments == {
+    assert context.suggested_next_actions[0].tool == "doxabase.draft_query_plan"
+    assert context.suggested_next_actions[0].args == {
         "iri": dataset,
         "candidate_selector": context.query_target_candidates[
             context.query_target_decision.candidate_index
         ].candidate_selector,
     }
     assert {
-        action.tool_name for action in context.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions
     } == {"draft_query_plan"}
     peer_actions = context.suggested_next_actions[1:]
-    assert [action.action_label for action in peer_actions] == [
-        "Draft peer metadata-ready query plan",
-        "Draft peer metadata-ready query plan",
-    ]
-    assert [action.arguments for action in peer_actions] == [
+    assert [action.args for action in peer_actions] == [
         {
             "iri": dataset,
             "candidate_selector": local_partition.candidate_selector,
@@ -1768,7 +1694,7 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert partition_plan.review_gate.executable_without_review is True
     assert partition_plan.review_gate.binding_values_required is True
 
-    peer_action_plan = db.draft_query_plan(**peer_actions[0].arguments)
+    peer_action_plan = db.draft_query_plan(**peer_actions[0].args)
 
     assert peer_action_plan.review_gate.context_blocked_candidate_used is False
     assert peer_action_plan.review_gate.blocking_reason_codes == []
@@ -1920,17 +1846,12 @@ def test_query_target_candidates_expose_storage_route_roles(
     assert "route_intent_review_candidates_present" in (
         context.query_target_decision.selection_reason_codes
     )
-    production_action_index = next(
-        index
-        for index, action in enumerate(context.suggested_next_actions)
-        if action.tool_name == "draft_query_plan"
-        and action.route_card["candidate_index"]
-        == context.query_target_candidates.index(production_candidate)
+    assert any(
+        action.tool == "doxabase.draft_query_plan"
+        and action.args.get("candidate_selector")
+        == production_candidate.candidate_selector
+        for action in context.suggested_next_actions
     )
-    assert context.unattended_recommended_action_indexes == [
-        production_action_index
-    ]
-    assert context.first_unattended_action_index == production_action_index
 
     production_plan = db.draft_query_plan(
         dataset,

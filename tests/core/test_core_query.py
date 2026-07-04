@@ -46,7 +46,7 @@ def test_context_slice_skips_query_context_action_for_non_tabular_seed(
         for issue in dataset.operational_warnings
     } == {"layout_needs_verification"}
     assert [
-        action.tool_name for action in slice_context.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in slice_context.suggested_next_actions
     ] == []
     assert brief.queue_counts == {"non_tabular_asset_review": 1}
     assert "query_repair_review" not in brief.queue_counts
@@ -122,7 +122,7 @@ def test_describe_assertion_support_suggests_dataset_context_for_relationships(
         and link.matched_resource.iri == customer_id
         for link in relationship_support.nearby_caveat_links
     )
-    assert relationship_support.suggested_next_actions[0].arguments["seed_iris"][
+    assert relationship_support.suggested_next_actions[0].args["seed_iris"][
         :3
     ] == [
         orders,
@@ -130,8 +130,8 @@ def test_describe_assertion_support_suggests_dataset_context_for_relationships(
         customer_id,
     ]
     assert any(
-        action.tool_name == "describe_dataset"
-        and action.arguments["iri"] == orders
+        action.tool == "doxabase.describe_dataset"
+        and action.args["iri"] == orders
         for action in relationship_support.suggested_next_actions
     )
 
@@ -144,8 +144,8 @@ def test_describe_assertion_support_suggests_dataset_context_for_relationships(
     assert guessed_dataset_relationship.assertion_present is False
     assert guessed_dataset_relationship.owner_dataset is None
     assert any(
-        action.tool_name == "describe_dataset"
-        and action.arguments["iri"] == orders
+        action.tool == "doxabase.describe_dataset"
+        and action.args["iri"] == orders
         for action in guessed_dataset_relationship.suggested_next_actions
     )
     assert "Dataset-context suggested actions" in (
@@ -231,29 +231,7 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     query_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_plan"
-    )
-    route_card = query_action.route_card
-    assert route_card["candidate_index"] == 0
-    assert route_card["candidate_selector"] == target.candidate_selector
-    assert route_card["storage_label"] == "AIS local object-store access profile"
-    assert route_card["access_mode"].iri == RC + "ReadOnlyAccess"
-    assert route_card["storage_root"] == "s3://ais-noaa/"
-    assert route_card["endpoint_profile"] == "local-minio"
-    assert route_card["bucket_name"] == "ais-noaa"
-    assert route_card["region"] == "local"
-    assert route_card["credential_reference"] == "profile:ais-readonly"
-    assert route_card["path_style_access"] is True
-    assert route_card["requires_endpoint_profile"] is True
-    assert route_card["candidate_path"] == target.candidate_path
-    assert route_card["direct_issue_codes"] == [
-        "layout_needs_verification",
-        "verification_status_not_recorded",
-    ]
-    assert route_card["required_bindings"] == ["year", "date"]
-    assert route_card["binding_example"] == (
-        "year='2026', date='2026-06-30' -> "
-        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+        if action.tool == "doxabase.draft_query_plan"
     )
     assert any(
         issue.code == "layout_needs_verification"
@@ -319,7 +297,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "record_reviewed_storage_access",
         "stage_existing_storage_access_link",
     ]
-    assert [action["tool_name"] for action in repair_actions] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in repair_actions] == [
         "stage_query_storage_access_repair",
         "record_map_storage_access",
         "stage_map_assertion_change",
@@ -420,9 +398,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         staged_storage_option,
         action_index=0,
         action_type="stage_reviewed_storage_access",
-        tool_name="stage_query_storage_access_repair",
-        mcp_tool_name="doxabase.stage_query_storage_access_repair",
-        action_label="Stage storage access repair",
+        tool="doxabase.stage_query_storage_access_repair",
         required_extra_arguments=[
             "storage_access_iri",
             "storage_protocol",
@@ -458,9 +434,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool_name="record_map_storage_access",
-        mcp_tool_name="doxabase.record_map_storage_access",
-        action_label="Record storage access and link dataset",
+        tool="doxabase.record_map_storage_access",
         required_extra_arguments=[
             "iri",
             "storage_protocol",
@@ -479,9 +453,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         link_option,
         action_index=2,
         action_type="stage_existing_storage_access_link",
-        tool_name="stage_map_assertion_change",
-        mcp_tool_name="doxabase.stage_map_assertion_change",
-        action_label="Stage link to an existing storage access",
+        tool="doxabase.stage_map_assertion_change",
         required_extra_arguments=["object", "rationale"],
         placeholder_fields=["object"],
         reviewed_value_fields=["object"],
@@ -492,7 +464,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "record_reviewed_storage_access",
         "stage_existing_storage_access_link",
     ]
-    assert [action["tool_name"] for action in repair_group.actions] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in repair_group.actions] == [
         "stage_query_storage_access_repair",
         "record_map_storage_access",
         "stage_map_assertion_change",
@@ -555,7 +527,7 @@ def test_describe_query_context_marks_non_tabular_asset_not_applicable(
     assert context.issues[0].severity == "info"
     assert context.storage_accesses[0].iri == storage.iri
     assert context.suggested_repair_action_group_count == 0
-    assert context.suggested_next_actions[0].tool_name == "get_context_graph"
+    assert context.suggested_next_actions[0].tool == "doxabase.get_context_graph"
 
     plan = db.draft_query_plan(asset)
 
@@ -704,14 +676,8 @@ def test_describe_query_context_advises_s3_credential_marker_when_omitted(
     draft_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_plan"
+        if action.tool == "doxabase.draft_query_plan"
     )
-    assert draft_action.route_card["issue_codes"] == [
-        "s3_credential_reference_not_recorded"
-    ]
-    assert draft_action.route_card["direct_issue_codes"] == [
-        "s3_credential_reference_not_recorded"
-    ]
 
     plan = db.draft_query_plan(dataset)
     assert plan.review_gate.all_issue_codes == [
@@ -1004,7 +970,7 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     ]
     assert "set_reviewed_bucket_name" not in action_by_type
     assert "set_reviewed_key_prefix" not in action_by_type
-    assert action_by_type["remove_conflicting_bucket_name"]["arguments"] == {
+    assert action_by_type["remove_conflicting_bucket_name"]["args"] == {
         "subject": storage.iri,
         "predicate": "rc:bucketName",
         "object": "public",
@@ -1012,7 +978,7 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
         "change_kind": "remove",
         "graph": "map",
     }
-    assert action_by_type["remove_conflicting_key_prefix"]["arguments"] == {
+    assert action_by_type["remove_conflicting_key_prefix"]["args"] == {
         "subject": storage.iri,
         "predicate": "rc:keyPrefix",
         "object": "snapshots",
@@ -1345,7 +1311,7 @@ def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
     assert action_by_type["add_reviewed_path_template"][
         "reviewed_value_fields"
     ] == ["object"]
-    assert action_by_type["remove_conflicting_path_template"]["arguments"] == {
+    assert action_by_type["remove_conflicting_path_template"]["args"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",
         "object": "s3://public-bucket/snapshots/*.parquet",
@@ -1560,21 +1526,16 @@ def test_query_evidence_storage_overlay_returns_stale_seed_blocker(
     assert blocker.mutation_allowed_after == (
         "stale_seed_recovery_required_before_staging"
     )
-    assert blocker.source_query_context_readiness == "insufficient_metadata"
-    assert "missing_storage_access" in blocker.source_query_context_issue_codes
     assert "immutable base_ontology is missing current staging vocabulary" in (
         blocker.note
     )
-    assert blocker.suggested_next_actions[0].tool_name == "export_preflight"
-    assert blocker.suggested_next_actions[0].arguments == {
+    assert blocker.suggested_next_actions[0].tool == "doxabase.export_preflight"
+    assert blocker.suggested_next_actions[0].args == {
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
         "validation_scope": "map",
     }
-    assert blocker.suggested_next_calls == [
-        blocker.suggested_next_actions[0].call
-    ]
 
 
 def test_query_context_suggests_overlay_for_ordinary_query_evidence(
@@ -1606,19 +1567,12 @@ def test_query_context_suggests_overlay_for_ordinary_query_evidence(
     overlay_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_evidence_storage_overlay"
+        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action.arguments["dataset_iri"] == dataset
-    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
-    source = overlay_action.source_query_evidence
-    assert source["profile_observation_count"] == 0
-    assert source["execution_status"] == "succeeded"
-    assert source["query_hash"] == "sha256:ordinary-query-evidence"
-    assert source["result_sources"] == [str(result_path)]
-    assert source["scanned_source_paths"] == [str(csv_path)]
-    assert source["scanned_source_handles"] == [str(csv_path)]
+    assert overlay_action.args["dataset_iri"] == dataset
+    assert overlay_action.args["evidence_iri"] == result.evidence_iri
 
 
 def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
@@ -1644,10 +1598,21 @@ def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
     overlay_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_evidence_storage_overlay"
+        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
     )
-    assert overlay_action.evidence_storage_route_candidate_count == 1
-    s3_candidate = overlay_action.evidence_storage_route_candidates[0]
+    s3_candidate = next(
+        candidate
+        for issue in context.issues
+        if issue.details is not None
+        and isinstance(issue.details.get("repair_hint"), dict)
+        for candidate in (
+            issue.details["repair_hint"].get(
+                "evidence_storage_route_candidates"
+            )
+            or []
+        )
+        if candidate["candidate_kind"] == "s3_path_from_query_evidence"
+    )
     assert s3_candidate["candidate_kind"] == "s3_path_from_query_evidence"
     assert s3_candidate["source_field"] == "scanned_source_paths"
     assert s3_candidate["source_value"] == (
@@ -2120,24 +2085,25 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.action_label == "Select physical layout for draft"
+        if action.tool == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action.args
     ]
     profile_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool_name == "describe_profile_run"
+        if action.tool == "doxabase.describe_profile_run"
     ]
 
     assert profile_actions
-    assert profile_actions[0].arguments == {
+    assert profile_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": evidence,
     }
 
     assert {
         (
-            action.arguments["candidate_selector"],
-            action.arguments["physical_layout_iri"],
+            action.args["candidate_selector"],
+            action.args["physical_layout_iri"],
         )
         for action in selection_actions
     } == {
@@ -2146,16 +2112,16 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     }
     assert all(
         not (
-            action.arguments["candidate_selector"] == local_candidate.candidate_selector
-            and action.arguments["physical_layout_iri"] == table_layout.iri
+            action.args["candidate_selector"] == local_candidate.candidate_selector
+            and action.args["physical_layout_iri"] == table_layout.iri
         )
         for action in selection_actions
     )
     assert all(
         not (
-            action.arguments["candidate_selector"]
+            action.args["candidate_selector"]
             == database_candidate.candidate_selector
-            and action.arguments["physical_layout_iri"] == csv_layout.iri
+            and action.args["physical_layout_iri"] == csv_layout.iri
         )
         for action in selection_actions
     )
@@ -2163,10 +2129,10 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
     database_action = next(
         action
         for action in selection_actions
-        if action.arguments["candidate_selector"] == database_candidate.candidate_selector
-        and action.arguments["physical_layout_iri"] == table_layout.iri
+        if action.args["candidate_selector"] == database_candidate.candidate_selector
+        and action.args["physical_layout_iri"] == table_layout.iri
     )
-    database_plan = db.draft_query_plan(**database_action.arguments)
+    database_plan = db.draft_query_plan(**database_action.args)
 
     assert database_plan.selected_candidate is not None
     assert database_plan.selected_candidate.storage_access is not None
@@ -2267,115 +2233,6 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     )
     assert issue.resource is not None
     assert issue.resource.iri == storage.iri
-    assert issue.details == {
-        "template": partition_template,
-        "template_source": "partition_scheme",
-        "template_source_resource_iri": partition.iri,
-        "storage_access_iri": storage.iri,
-        "storage_protocol_iri": RC + "DatabaseStorage",
-        "allowed_relation_template_sources": ["storage_access"],
-        "repair_hint": {
-            "action_type": "move_database_relation_template_to_storage_access",
-            "requires_review": True,
-            "source_subject_iri": partition.iri,
-            "misplaced_template_subject_iri": partition.iri,
-            "misplaced_template_source": "partition_scheme",
-            "misplaced_template": partition_template,
-            "source": {
-                "subject_iri": partition.iri,
-                "template_source": "partition_scheme",
-                "predicate": "rc:pathTemplate",
-                "template": partition_template,
-            },
-            "target": {
-                "storage_access_iri": storage.iri,
-                "predicate": "rc:pathTemplate",
-                "required_template_source": "storage_access",
-            },
-                "candidate_relation_identifier": {
-                    "value": partition_template,
-                    "requires_review": True,
-                    "already_on_storage_access": False,
-                    "storage_access_relation_templates": [
-                        "mart.events",
-                        "mart.events_archive",
-                    ],
-                    "review_note": (
-                        "Dataset and partition path templates are not database "
-                        "relation identifiers by default; replace this value with "
-                        "the reviewed schema/table/relation before staging the add."
-                    ),
-                },
-                "actions": [
-                    {
-                        "action_type": "remove_misplaced_source_template",
-                        "action_label": "Remove misplaced source template",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                        "source_subject_iri": partition.iri,
-                        "misplaced_template_subject_iri": partition.iri,
-                        "misplaced_template_source": "partition_scheme",
-                        "misplaced_template": partition_template,
-                        "required_extra_arguments": ["rationale"],
-                        "rationale_template": (
-                            "Reviewed source template as misplaced database "
-                            "relation metadata."
-                        ),
-                        "arguments": {
-                            "subject": partition.iri,
-                            "predicate": "rc:pathTemplate",
-                            "object": partition_template,
-                            "object_kind": "literal",
-                            "change_kind": "remove",
-                            "graph": "map",
-                        },
-                        "condition": (
-                            "Only after review confirms the source template was "
-                            "misplaced relation metadata rather than a real "
-                            "file/object path."
-                        ),
-                    },
-                    {
-                        "action_type": "add_reviewed_relation_template",
-                        "action_label": "Add reviewed relation template",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                        "source_subject_iri": partition.iri,
-                        "misplaced_template_subject_iri": partition.iri,
-                        "misplaced_template_source": "partition_scheme",
-                        "misplaced_template": partition_template,
-                        "required_extra_arguments": ["object", "rationale"],
-                        "rationale_template": (
-                            "Reviewed database relation identifier for "
-                            f"{storage.iri}."
-                        ),
-                        "arguments_template": {
-                            "subject": storage.iri,
-                            "predicate": "rc:pathTemplate",
-                            "object": "<reviewed_database_relation_identifier>",
-                            "object_kind": "literal",
-                            "change_kind": "add",
-                            "graph": "map",
-                        },
-                        "placeholder_fields": ["object"],
-                        "reviewed_value_fields": ["object"],
-                        "action_status": "already_satisfied",
-                        "skip_when_already_satisfied": True,
-                        "existing_storage_access_relation_templates": [
-                            "mart.events",
-                            "mart.events_archive",
-                        ],
-                        "condition": (
-                            "The storage access already carries database relation "
-                            "template(s). Inspect query target candidates; if one is "
-                            "the reviewed relation, run remove_misplaced_source_template "
-                            "instead of adding another relation template. If none is "
-                            "correct, stage a separate reviewed add."
-                        ),
-                    },
-                ],
-            },
-        }
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.issue_index == context.issues.index(issue)
@@ -2438,7 +2295,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert relation_target.review_required is False
     assert relation_target.direct_review_required is False
     assert context.query_target_decision.candidate_index == relation_target_index
-    flat_tools = {action.tool_name for action in context.suggested_next_actions}
+    flat_tools = {action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions}
     assert "record_map_storage_access" not in flat_tools
     assert "stage_map_assertion_change" not in flat_tools
     assert flat_tools == {"draft_query_plan"}
@@ -2466,14 +2323,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert plan.handoff_summary.primary_repair_action_type == (
         "remove_misplaced_source_template"
     )
-    assert (
-        plan.handoff_summary.primary_repair_action_label
-        == "Remove misplaced source template"
-    )
-    assert plan.handoff_summary.primary_repair_tool_name == (
-        "stage_map_assertion_change"
-    )
-    assert plan.handoff_summary.primary_repair_mcp_tool_name == (
+    assert plan.handoff_summary.primary_repair_tool == (
         "doxabase.stage_map_assertion_change"
     )
     assert plan.handoff_summary.primary_repair_required_extra_arguments == [
@@ -2583,21 +2433,6 @@ def test_review_gated_query_target_decision_flags_unselected_route_intent(
     assert "route_intent_review_candidates_present" in (
         context.query_target_decision.selection_reason_codes
     )
-    assert context.unattended_recommended_action_indexes
-    assert context.first_unattended_action_index == (
-        context.unattended_recommended_action_indexes[0]
-    )
-    for action_index in context.unattended_recommended_action_indexes:
-        action = context.suggested_next_actions[action_index]
-        assert action.tool_name == "draft_query_plan"
-        assert action.route_card["candidate_index"] == production_index
-        assert action.unattended_recommended is True
-    assert all(
-        action.unattended_recommended is False
-        for action in context.suggested_next_actions
-        if action.tool_name == "draft_query_plan"
-        and action.route_card["candidate_index"] != production_index
-    )
 
 
 def test_database_storage_does_not_treat_dataset_template_as_relation(
@@ -2673,7 +2508,7 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     assert repair_hint["actions"][0]["rationale_template"] == (
         f"Reviewed database relation identifier for {storage.iri}."
     )
-    assert repair_hint["actions"][1]["arguments"] == {
+    assert repair_hint["actions"][1]["args"] == {
         "subject": dataset,
         "predicate": "rc:pathTemplate",
         "object": dataset_template,
@@ -2697,7 +2532,7 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     assert [reason.code for reason in target.direct_review_reasons] == [
         "database_relation_template_source_mismatch"
     ]
-    assert [action.tool_name for action in context.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions] == [
         "draft_query_plan",
     ]
 
@@ -2809,14 +2644,8 @@ def test_database_root_only_storage_requires_relation_template(
     assert [action["action_type"] for action in repair_group.actions] == [
         "add_reviewed_relation_template"
     ]
-    assert repair_group.actions[0]["action_label"] == (
-        "Add reviewed relation template"
-    )
-    assert repair_group.pending_action_options[0]["action_label"] == (
-        "Add reviewed relation template"
-    )
     assert {
-        action.tool_name for action in context.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions
     } == {"draft_query_plan"}
     assert repair_hint["source"] == {
         "storage_access_iri": storage.iri,
@@ -2830,9 +2659,8 @@ def test_database_root_only_storage_requires_relation_template(
     }
     assert repair_hint["candidate_relation_identifier"]["requires_review"] is True
     add_action = repair_hint["actions"][0]
-    assert add_action["action_label"] == "Add reviewed relation template"
-    assert add_action["tool_name"] == "stage_map_assertion_change"
-    assert add_action["mcp_tool_name"] == "doxabase.stage_map_assertion_change"
+    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
+    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
     assert add_action["required_extra_arguments"] == ["object", "rationale"]
     assert add_action["placeholder_fields"] == ["object"]
     assert add_action["reviewed_value_fields"] == ["object"]
@@ -2953,8 +2781,7 @@ def test_describe_query_context_demotes_non_object_root_only_location(
         "set_root_as_exact_object_location",
     ]
     add_action = repair_hint["actions"][0]
-    assert add_action["action_label"] == "Add reviewed path template"
-    assert add_action["tool_name"] == "stage_map_assertion_change"
+    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
     assert add_action["arguments_template"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",
@@ -2967,8 +2794,7 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert add_action["placeholder_fields"] == ["object"]
     assert add_action["reviewed_value_fields"] == ["object"]
     exact_root_action = repair_hint["actions"][1]
-    assert exact_root_action["action_label"] == "Mark root as exact object location"
-    assert exact_root_action["arguments"] == {
+    assert exact_root_action["args"] == {
         "subject": storage.iri,
         "predicate": "rc:locationKind",
         "object": "object",
@@ -2989,12 +2815,6 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert [action["action_type"] for action in repair_group.actions] == [
         "add_reviewed_path_template",
         "set_root_as_exact_object_location",
-    ]
-    assert [
-        action["action_label"] for action in repair_group.pending_action_options
-    ] == [
-        "Add reviewed path template",
-        "Mark root as exact object location",
     ]
     assert context.storage_accesses[0].location_kind == location_kind
     target = context.query_target_candidates[0]
@@ -3175,8 +2995,8 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
     ]
     assert plan.review_gate.reason_codes == ["query_context_has_other_blockers"]
     assert plan.handoff_kind == "context_review_required"
-    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
-    assert context.suggested_next_actions[0].arguments == {
+    assert context.suggested_next_actions[0].tool == "doxabase.draft_query_plan"
+    assert context.suggested_next_actions[0].args == {
         "iri": dataset,
         "candidate_selector": context.query_target_candidates[
             context.query_target_decision.candidate_index
@@ -3376,31 +3196,20 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.scanned_source_paths == ["warehouse/orders.csv"]
     assert len(result.scanned_source_span_iris) == 1
     assert result.evidence_triples > result.source_span_triples > 0
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "describe_profile_run",
         "get_context_graph",
         "describe_query_context",
     ]
-    assert result.suggested_next_actions[0].arguments == {
+    assert result.suggested_next_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": result.evidence_iri,
     }
-    assert result.suggested_next_actions[1].arguments == {
+    assert result.suggested_next_actions[1].args == {
         "seed_iris": [result.evidence_iri],
         "profile": "resource_brief",
     }
-    assert result.suggested_next_actions[2].arguments == {"iri": dataset}
-    assert result.suggested_next_calls == [
-        (
-            f"describe_profile_run(dataset_iri='{dataset}', "
-            f"evidence_iri='{result.evidence_iri}')"
-        ),
-        (
-            "get_context_graph("
-            f"seed_iris=['{result.evidence_iri}'], profile='resource_brief')"
-        ),
-        f"describe_query_context(iri='{dataset}')",
-    ]
+    assert result.suggested_next_actions[2].args == {"iri": dataset}
     assert db.validate_graph(scope="all").conforms
 
     evidence = db.describe_resource(result.evidence_iri, graph="evidence")
@@ -3494,11 +3303,11 @@ def test_record_query_result_preserves_database_relation_source_handle(
     assert result.scanned_source_paths == []
     assert result.scanned_source_handles == [relation_handle]
     assert result.scanned_source_span_iris == []
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "get_context_graph",
         "describe_query_context",
     ]
-    assert result.suggested_next_actions[0].arguments == {
+    assert result.suggested_next_actions[0].args == {
         "seed_iris": [result.evidence_iri],
         "profile": "resource_brief",
     }
@@ -3508,7 +3317,7 @@ def test_record_query_result_preserves_database_relation_source_handle(
     }
     assert (RC + "scannedSourceHandle", relation_handle) in evidence_outgoing
     evidence_slice = db.get_context_graph(
-        **result.suggested_next_actions[0].arguments,
+        **result.suggested_next_actions[0].args,
         max_triples=80,
     )
     assert result.evidence_iri in {
@@ -3632,18 +3441,16 @@ def test_context_slice_suggests_query_context_for_seed_operational_warnings(
     assert context_slice.dataset_contexts[0].operational_warnings[0].code == (
         "missing_storage_access"
     )
-    assert [action.tool_name for action in context_slice.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in context_slice.suggested_next_actions] == [
         "describe_query_context"
     ]
     action = context_slice.suggested_next_actions[0]
-    assert action.action_label == "Inspect query-planning context"
-    assert action.mcp_tool_name == "doxabase.describe_query_context"
-    assert action.arguments == {"iri": dataset}
+    assert action.tool == "doxabase.describe_query_context"
+    assert action.args == {"iri": dataset}
     assert "missing_storage_access" in action.reason
     assert "repair hints" in action.reason
-    assert context_slice.suggested_next_calls == [action.call]
 
-    query_context = db.describe_query_context(**action.arguments)
+    query_context = db.describe_query_context(**action.args)
     assert query_context.readiness == "insufficient_metadata"
     assert query_context.issues[0].code == "missing_storage_access"
 

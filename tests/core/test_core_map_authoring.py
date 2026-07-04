@@ -460,25 +460,18 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert [triple.object for triple in column_support.same_subject_predicate_triples] == [
         RC + "Varchar"
     ]
-    assert "get_context_graph" in column_support.suggested_next_calls[0]
-    assert "https://example.test/project#PriceSnapshots" in (
-        column_support.suggested_next_calls[0]
-    )
-    assert column_support.suggested_next_actions[0].tool_name == (
-        "get_context_graph"
-    )
-    assert column_support.suggested_next_actions[0].action_label == (
-        "Load context slice"
-    )
-    assert column_support.suggested_next_actions[0].mcp_tool_name == (
+    assert column_support.suggested_next_actions[0].tool == (
         "doxabase.get_context_graph"
     )
-    assert column_support.suggested_next_actions[0].arguments["seed_iris"][0] == (
+    assert column_support.suggested_next_actions[0].tool == (
+        "doxabase.get_context_graph"
+    )
+    assert column_support.suggested_next_actions[0].args["seed_iris"][0] == (
         "https://example.test/project#PriceSnapshots"
     )
     assert any(
-        action.tool_name == "describe_dataset"
-        and action.arguments["iri"] == "https://example.test/project#PriceSnapshots"
+        action.tool == "doxabase.describe_dataset"
+        and action.args["iri"] == "https://example.test/project#PriceSnapshots"
         for action in column_support.suggested_next_actions
     )
 
@@ -517,12 +510,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         "pattern_target",
     ) in absent_routes
     assert "owning dataset" in absent_support.support_scope_note
-    assert "https://example.test/project#PriceSnapshots" in (
-        absent_support.suggested_next_calls[0]
-    )
     assert any(
-        action.tool_name == "describe_assertion_support"
-        and action.arguments["object"] is None
+        action.tool == "doxabase.describe_assertion_support"
+        and action.args["object"] is None
         for action in absent_support.suggested_next_actions
     )
 
@@ -685,12 +675,11 @@ def test_stage_map_assertion_change_packages_support_context(
         for impact in draft_change.impacts
     )
     assert draft_change.judgement_panel.semantic_risk_level == "high"
-    assert [action.tool_name for action in draft_change.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in draft_change.suggested_next_actions] == [
         "describe_assertion_support",
         "stage_map_assertion_change",
     ]
     assert "high-risk" in draft_change.suggested_next_actions[0].reason
-    assert "explicit override" in draft_change.suggested_next_actions[1].action_label
     assert draft_change.stage_arguments["rationale"].startswith(
         "Testing a tempting but risky coercion"
     )
@@ -809,10 +798,7 @@ def test_stage_map_assertion_change_packages_support_context(
     assert check.status == "ready"
     assert check.semantic_risk_level == "high"
     assert check.semantic_risk_reasons == panel.semantic_risk_reasons
-    assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
-    assert check.suggested_next_actions[-1].action_label == (
-        "Apply only after semantic review"
-    )
+    assert check.suggested_next_actions[-1].tool == "doxabase.apply_staged_revision"
     assert "semantic review" in check.suggested_next_actions[-1].reason
     export_path = tmp_path / "price-change-review.md"
     db.export_staged_revision(staged_change.staged_revision.revision_iri, export_path)
@@ -1233,9 +1219,6 @@ def test_stale_map_assertion_apply_check_preserves_review_risk(
     )
     assert ready_check.status == "ready"
     assert ready_check.semantic_risk_level == "high"
-    assert ready_check.suggested_next_actions[-1].action_label == (
-        "Apply only after semantic review"
-    )
 
     db.record_map_dataset(
         f"{base}UnrelatedAuditLog",
@@ -2063,9 +2046,8 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert context.suggested_repair_action_group_count == 0
     assert context.query_target_candidates == []
     assert context.query_target_decision.status == "logical_analysis_view"
-    assert context.suggested_next_actions[0].tool_name == "describe_analysis_view"
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_analysis_view"
     assert context.safe_inspection_action_indexes == [0, 1]
-    assert context.first_unattended_action_index is None
 
     brief = db.project_brief(limit=5)
     view_tasks = [
@@ -2077,7 +2059,7 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert view_tasks[0].task_type == "analysis_view_review"
     assert view_tasks[0].source == "describe_analysis_view"
     assert view_tasks[0].suggested_next_action is not None
-    assert view_tasks[0].suggested_next_action.tool_name == "describe_analysis_view"
+    assert view_tasks[0].suggested_next_action.tool == "doxabase.describe_analysis_view"
     assert "query_context_review" not in [
         task.task_type for task in view_tasks
     ]
@@ -2205,7 +2187,7 @@ def test_record_map_analysis_view_bundle_records_reviewed_sidecar_specs(
         "Plausible messages",
         "Message-like rows",
     ]
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "describe_query_context",
         "describe_query_context",
     ]
@@ -2372,7 +2354,7 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert len(result.query_recipe_records) == 2
     assert len(result.followup_task_iris) == 1
     assert result.pattern_iri is not None
-    assert {action.tool_name for action in result.suggested_next_actions} >= {
+    assert {action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions} >= {
         "get_context_graph",
         "describe_query_context",
     }
@@ -2408,9 +2390,9 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     analysis_view_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool_name"] == "describe_analysis_view"
+        if action["tool"] == "doxabase.describe_analysis_view"
     ]
-    assert {action["arguments"]["iri"] for action in analysis_view_actions} == {
+    assert {action["args"]["iri"] for action in analysis_view_actions} == {
         parent_view,
         lane_view,
     }
@@ -2426,8 +2408,8 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert packet_task.resource is not None
     assert packet_task.resource.iri == packet
     assert packet_task.suggested_next_action is not None
-    assert packet_task.suggested_next_action.tool_name == "get_context_graph"
-    assert packet_task.suggested_next_action.arguments == {
+    assert packet_task.suggested_next_action.tool == "doxabase.get_context_graph"
+    assert packet_task.suggested_next_action.args == {
         "seed_iris": [packet],
         "profile": "resource_brief",
     }
@@ -2605,8 +2587,8 @@ def test_record_map_table_bundle_records_parquet_table_map(
     assert result.physical_layout.iri == f"{base}orders_parquet_layout"
     assert result.column_iris == [f"{table}__order_id", amount]
     assert [record.resource_type for record in result.columns] == [RC + "Column"] * 2
-    assert result.suggested_next_actions[0].tool_name == "describe_dataset"
-    assert result.suggested_next_actions[1].tool_name == "describe_query_context"
+    assert result.suggested_next_actions[0].tool == "doxabase.describe_dataset"
+    assert result.suggested_next_actions[1].tool == "doxabase.describe_query_context"
 
     description = db.describe_dataset(table)
     assert description.label == "Orders"

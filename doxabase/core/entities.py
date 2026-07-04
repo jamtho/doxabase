@@ -136,9 +136,6 @@ class EntitiesMixin:
             has_more=next_offset is not None,
             next_offset=next_offset,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _list_entities_next_page_action(
         self,
@@ -157,13 +154,10 @@ class EntitiesMixin:
         if text is not None:
             arguments["text"] = text
         return SuggestedNextAction(
-            action_label="List next entity page",
-            tool_name="list_entities",
-            mcp_tool_name="doxabase.list_entities",
-            arguments=arguments,
-            reason="More matching entities exist beyond the returned page.",
-            call=self._suggested_call_string("list_entities", arguments),
-        )
+                   tool="doxabase.list_entities",
+                   args=arguments,
+                   reason="More matching entities exist beyond the returned page.",
+               )
     def describe_resource(
         self,
         iri: str,
@@ -461,9 +455,6 @@ class EntitiesMixin:
             support_scope_note=support_scope_note,
             absence_note=absence_note,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _draft_assertion_support_review_arguments(
         self,
@@ -657,17 +648,12 @@ class EntitiesMixin:
             }
             tool_name = "describe_resource_revision_lineage"
             return SuggestedNextAction(
-                action_label="Inspect changed resource lineage",
-                tool_name=tool_name,
-                mcp_tool_name=f"doxabase.{tool_name}",
-                arguments=arguments,
-                reason=(
-                    "This changed resource overlaps a staged patch subject, "
+                       tool=f"doxabase.{tool_name}",
+                       args=arguments,
+                       reason="This changed resource overlaps a staged patch subject, "
                     "patch object, or revision anchor; inspect its resource-level "
-                    "revision route before restaging or applying."
-                ),
-                call=self._suggested_call_string(tool_name, arguments),
-            )
+                    "revision route before restaging or applying.",
+                   )
         arguments = {
             "resource_iri": resource_iri,
             "include_patch_mentions": True,
@@ -675,17 +661,12 @@ class EntitiesMixin:
         }
         tool_name = "list_resource_revisions"
         return SuggestedNextAction(
-            action_label="List changed resource revisions",
-            tool_name=tool_name,
-            mcp_tool_name=f"doxabase.{tool_name}",
-            arguments=arguments,
-            reason=(
-                "Review other staged, applied, or historical revision records "
+                   tool=f"doxabase.{tool_name}",
+                   args=arguments,
+                   reason="Review other staged, applied, or historical revision records "
                 "that mention this changed resource before deciding whether "
-                "the graph drift is relevant."
-            ),
-            call=self._suggested_call_string(tool_name, arguments),
-        )
+                "the graph drift is relevant.",
+               )
     def _impact_resource_summary(
         self,
         lookup_graphs: list[str],
@@ -1143,17 +1124,12 @@ class EntitiesMixin:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
-            action_label: str | None = None,
         ) -> None:
             actions.append(
                 SuggestedNextAction(
-                    action_label=action_label
-                    or self._suggested_action_label(tool_name),
-                    tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
-                    arguments=arguments,
+                    tool=f"doxabase.{tool_name}",
+                    args=arguments,
                     reason=reason,
-                    call=self._suggested_call_string(tool_name, arguments),
                 )
             )
 

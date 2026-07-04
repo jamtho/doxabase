@@ -477,32 +477,16 @@ class MapAuthoringMixin:
         ]
         suggested_next_actions = [
             SuggestedNextAction(
-                action_label="Describe bundled table",
-                tool_name="describe_dataset",
-                mcp_tool_name="doxabase.describe_dataset",
-                arguments={"iri": dataset_iri},
-                reason=(
-                    "Inspect the map table bundle just recorded, including "
-                    "columns, storage access, and physical layout links."
-                ),
-                call=self._suggested_call_string(
-                    "describe_dataset",
-                    {"iri": dataset_iri},
-                ),
+                tool="doxabase.describe_dataset",
+                args={"iri": dataset_iri},
+                reason="Inspect the map table bundle just recorded, including "
+                    "columns, storage access, and physical layout links.",
             ),
             SuggestedNextAction(
-                action_label="Inspect bundled table query context",
-                tool_name="describe_query_context",
-                mcp_tool_name="doxabase.describe_query_context",
-                arguments={"iri": dataset_iri},
-                reason=(
-                    "Check whether the bundled table metadata is sufficient for "
-                    "query planning or needs reviewed storage/layout repairs."
-                ),
-                call=self._suggested_call_string(
-                    "describe_query_context",
-                    {"iri": dataset_iri},
-                ),
+                tool="doxabase.describe_query_context",
+                args={"iri": dataset_iri},
+                reason="Check whether the bundled table metadata is sufficient for "
+                    "query planning or needs reviewed storage/layout repairs.",
             ),
         ]
         return MapTableBundleRecord(
@@ -512,7 +496,6 @@ class MapAuthoringMixin:
             columns=column_records,
             column_iris=[record.iri for record in column_records],
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def record_map_column(
         self,

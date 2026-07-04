@@ -188,7 +188,7 @@ def test_privacy_handoff_fallback_keeps_clean_slice_when_staged_markdown_is_dirt
     assert handoff_preflight.graph_sensitive_literal_count >= 1
     assert handoff_preflight.snapshot_sensitive_literal_count == 0
     assert "preflight_context_slice_export" in [
-        action.tool_name for action in handoff_preflight.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in handoff_preflight.suggested_next_actions
     ]
     assert fake_secret not in json.dumps(to_dict(handoff_preflight))
 
@@ -690,15 +690,11 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     assert "stage a repaired or alternative candidate" in check.recommended_resolution
     assert check.validation_conforms is None
     assert check.validation_skipped_reason == "conflicts_present"
-    assert [action.tool_name for action in check.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions] == [
         "describe_staged_revision",
         "export_staged_revision",
     ]
-    assert [action.action_label for action in check.suggested_next_actions] == [
-        "Review patch conflict",
-        "Export conflict bundle",
-    ]
-    assert check.suggested_next_actions[1].arguments["fail_on_sensitive"] is True
+    assert check.suggested_next_actions[1].args["fail_on_sensitive"] is True
     assert check.patch_checks[0].target_graph == unknown_graph
     assert check.patch_checks[0].can_apply is False
     assert check.patch_checks[0].conflict is not None
@@ -773,7 +769,7 @@ def test_stored_malformed_staged_patch_conflict_includes_parser_detail(
     assert check.decision == "inspect_patch_conflict"
     assert check.blocking_reasons == ["patch_conflict"]
     assert all(
-        action.tool_name != "restage_staged_revision"
+        action.tool != "doxabase.restage_staged_revision"
         for action in check.suggested_next_actions
     )
     assert check.patch_checks[0].conflict is not None
@@ -1030,7 +1026,7 @@ def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
     assert check.next_action.queue == "apply_after_review"
     assert check.next_action.tool_name == "apply_staged_revision"
     assert any(
-        action.tool_name == "apply_staged_revision"
+        action.tool == "doxabase.apply_staged_revision"
         for action in check.suggested_next_actions
     )
 
@@ -1046,18 +1042,18 @@ def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
     assert source_check.next_action.queue == "informational"
     assert source_check.next_action.tool_name == "describe_staged_revision"
     assert source_check.next_action.arguments == {"iri": repair.revision_iri}
-    assert [action.tool_name for action in source_check.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in source_check.suggested_next_actions] == [
         "describe_staged_revision",
         "export_staged_revision",
     ]
-    assert source_check.suggested_next_actions[0].arguments == {
+    assert source_check.suggested_next_actions[0].args == {
         "iri": repair.revision_iri,
     }
-    assert source_check.suggested_next_actions[1].arguments["iri"] == (
+    assert source_check.suggested_next_actions[1].args["iri"] == (
         source.revision_iri
     )
     assert "handled-validation-failure" in (
-        source_check.suggested_next_actions[1].arguments["path"]
+        source_check.suggested_next_actions[1].args["path"]
     )
     assert source_check.recommended_resolution is not None
     assert "already has a refreshed successor" in (
@@ -1183,7 +1179,7 @@ def test_list_graph_versions_can_include_staged_apply_checks(
     assert row.next_action_queue_item.queue == "restage_after_review"
     assert row.next_action_queue_item.resolved_target_iri == staged.revision_iri
     assert [
-        action.tool_name for action in row.suggested_next_actions[:3]
+        action.tool.removeprefix("doxabase.") for action in row.suggested_next_actions[:3]
     ] == [
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",
@@ -2136,39 +2132,36 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "link_alternatives": False
     }
     rerun_action = draft.suggested_next_actions[0]
-    assert rerun_action.tool_name == "stage_systematisation"
-    assert rerun_action.action_label == (
-        "Rerun with explicit alternative routing"
-    )
-    assert rerun_action.arguments["summary"] == (
+    assert rerun_action.tool == "doxabase.stage_systematisation"
+    assert rerun_action.args["summary"] == (
         "Promote temporal interpretation alternatives"
     )
-    assert rerun_action.arguments["intent"] == (
+    assert rerun_action.args["intent"] == (
         "Stage alternative RDF framings for temporal semantics that do not "
         "fit a simple dataset or column map helper."
     )
-    assert rerun_action.arguments["link_alternatives"] is False
-    assert rerun_action.arguments["shared_additions"] == [
+    assert rerun_action.args["link_alternatives"] is False
+    assert rerun_action.args["shared_additions"] == [
         {"graph": "ontology", "content": shared_ontology},
         {"graph": "shapes", "content": shared_shape},
     ]
-    assert [framing["label"] for framing in rerun_action.arguments["framings"]] == [
+    assert [framing["label"] for framing in rerun_action.args["framings"]] == [
         "Incomplete map scope without timezone evidence",
         "Repaired map scope with timezone evidence",
         "Pattern-first temporal lore",
     ]
     assert "link_alternatives=False" in rerun_action.reason
     export_action = draft.suggested_next_actions[1]
-    assert export_action.tool_name == "export_staged_revisions"
-    assert export_action.arguments["revision_iris"] == revision_iris
-    assert export_action.arguments["path"].startswith(
+    assert export_action.tool == "doxabase.export_staged_revisions"
+    assert export_action.args["revision_iris"] == revision_iris
+    assert export_action.args["path"].startswith(
         "/tmp/systematisation-review-"
     )
-    assert export_action.arguments["path"].endswith(".md")
+    assert export_action.args["path"].endswith(".md")
     assert [
-        action.arguments
+        action.args
         for action in draft.suggested_next_actions
-        if action.tool_name == "check_staged_revision_apply"
+        if action.tool == "doxabase.check_staged_revision_apply"
     ] == [{"iri": revision_iri} for revision_iri in revision_iris]
     export_path = tmp_path / "temporal-interpretation-review.md"
     export = db.export_staged_revisions(
@@ -2465,40 +2458,32 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert before_context.readiness == "insufficient_metadata"
     assert before_context.query_target_candidates == []
     assert [
-        action.tool_name for action in before_context.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in before_context.suggested_next_actions
     ] == [
         "describe_profile_run",
         "draft_query_evidence_storage_overlay",
     ]
     assert before_context.safe_inspection_action_indexes == [0]
     assert before_context.first_safe_inspection_action_index == 0
-    assert before_context.unattended_recommended_action_indexes == []
-    assert before_context.first_unattended_action_index is None
     overlay_action = before_context.suggested_next_actions[1]
-    assert overlay_action.arguments["dataset_iri"] == dataset
-    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
-    assert overlay_action.arguments["storage_protocol"] == (
+    assert overlay_action.args["dataset_iri"] == dataset
+    assert overlay_action.args["evidence_iri"] == result.evidence_iri
+    assert overlay_action.args["storage_protocol"] == (
         "REVIEWED_STORAGE_PROTOCOL"
     )
-    assert getattr(overlay_action, "required_extra_arguments") == [
-        "storage_protocol",
-        "storage_root",
-        "location_kind",
-        "file_format",
-    ]
-    assert "path_templates" in getattr(overlay_action, "placeholder_fields")
-    assert getattr(overlay_action, "source_profile_evidence")[
-        "query_hash"
-    ] == "sha256:orders-status"
-    assert getattr(overlay_action, "source_profile_evidence")[
-        "scanned_source_paths"
-    ] == [str(csv_path)]
-    assert getattr(overlay_action, "source_profile_evidence")[
-        "scanned_source_handles"
-    ] == [str(csv_path)]
-    assert overlay_action.evidence_storage_route_candidate_count == 1
-    assert overlay_action.evidence_storage_route_candidate_total_count == 1
-    local_candidate = overlay_action.evidence_storage_route_candidates[0]
+    assert "reviewed values" in overlay_action.reason
+    local_candidate = next(
+        candidate
+        for issue in before_context.issues
+        if issue.details is not None
+        and isinstance(issue.details.get("repair_hint"), dict)
+        for candidate in (
+            issue.details["repair_hint"].get(
+                "evidence_storage_route_candidates"
+            )
+            or []
+        )
+    )
     assert local_candidate["candidate_kind"] == "local_path_from_query_evidence"
     assert local_candidate["source_field"] == "scanned_source_paths"
     assert local_candidate["source_value"] == str(csv_path)
@@ -2536,20 +2521,12 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert _mutable_graph_counts(db) == before_counts
     assert draft.result_kind == "query_evidence_storage_overlay_draft"
     assert draft.mode == "non_mutating_stage_arguments"
-    assert draft.source_query_context_readiness == "insufficient_metadata"
-    assert set(draft.source_query_context_issue_codes) >= {
-        "missing_storage_access",
-        "missing_physical_layout",
-    }
     assert draft.source_profile_evidence["execution_status"] == "succeeded"
     assert draft.source_profile_evidence["query_hash"] == "sha256:orders-status"
     assert draft.source_profile_evidence["result_sources"] == [str(result_path)]
     assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
     assert draft.source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
     assert draft.source_profile_evidence["scanned_source_handles"] == [str(csv_path)]
-    assert draft.evidence_storage_route_candidates == (
-        overlay_action.evidence_storage_route_candidates
-    )
     assert draft.reviewed_overlay["storage_access_iri"] == draft.storage_access_iri
     assert draft.reviewed_overlay["physical_layout_iri"] == draft.physical_layout_iri
     assert draft.reviewed_overlay["storage_label"] == "Reviewed Orders storage route"
@@ -2577,8 +2554,8 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         result.observation_iri
     ]
     assert draft.stage_arguments["evidence"] == [result.evidence_iri]
-    assert draft.suggested_next_actions[0].tool_name == "stage_graph_revision"
-    assert draft.suggested_next_actions[0].arguments == draft.stage_arguments
+    assert draft.suggested_next_actions[0].tool == "doxabase.stage_graph_revision"
+    assert draft.suggested_next_actions[0].args == draft.stage_arguments
 
     staged = db.stage_graph_revision(**draft.stage_arguments)
     assert staged.validation_conforms is True
@@ -2713,7 +2690,7 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     ] == ["mart.events"]
     remove_action = repair_hint["actions"][0]
     assert remove_action["required_extra_arguments"] == ["rationale"]
-    remove_arguments = dict(remove_action["arguments"])
+    remove_arguments = dict(remove_action["args"])
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
     )
@@ -2827,15 +2804,15 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
     assert term in match.parsed_resource_iris
     assert "literal" in match.matched_term_roles
     assert match.parse_error is None
-    assert [action.tool_name for action in match.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in match.suggested_next_actions] == [
         "describe_staged_revision",
         "export_staged_revisions",
         "list_resource_revisions",
     ]
     assert (
-        match.suggested_next_actions[1].arguments["fail_on_sensitive"] is True
+        match.suggested_next_actions[1].args["fail_on_sensitive"] is True
     )
-    assert results.suggested_next_actions[0].arguments == {
+    assert results.suggested_next_actions[0].args == {
         "iri": staged.revision_iri,
         "include_current_apply_check": True,
     }

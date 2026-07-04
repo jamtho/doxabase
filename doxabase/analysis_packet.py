@@ -71,7 +71,6 @@ def apply_manifest_file(
             "artifact_count": len(record.artifact_iris),
             "query_recipe_count": len(record.query_recipe_iris),
             "followup_task_count": len(record.followup_task_iris),
-            "suggested_next_calls": record.suggested_next_calls,
             "validation_scope": validation.scope,
             "validation_conforms": validation.conforms,
             "validation_result_count": validation.result_count,

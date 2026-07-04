@@ -65,8 +65,8 @@ def test_describe_query_context_tool_suggests_stale_partition_link_repair(
     assert repair_group["action_status_counts"] == {"pending_review": 1}
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action = repair_group["actions"][0]
-    assert action["tool_name"] == "stage_map_assertion_change"
-    assert action["arguments"] == {
+    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert action["args"] == {
         "subject": dataset,
         "predicate": "rc:partitionedBy",
         "object": stale_partition["iri"],
@@ -126,8 +126,8 @@ def test_describe_query_context_tool_suggests_stale_physical_layout_link_repair(
     assert repair_group["action_status_counts"] == {"pending_review": 1}
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action = repair_group["actions"][0]
-    assert action["tool_name"] == "stage_map_assertion_change"
-    assert action["arguments"] == {
+    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert action["args"] == {
         "subject": dataset,
         "predicate": "rc:hasPhysicalLayout",
         "object": stale_layout["iri"],
@@ -202,32 +202,23 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
         listing_option,
         action_index=0,
         action_type="replace_dataset_layout_verification_status",
-        tool_name="stage_map_assertion_change",
-        mcp_tool_name="doxabase.stage_map_assertion_change",
-        action_label="Stage dataset layout verified by listing",
+        tool="doxabase.stage_map_assertion_change",
         required_extra_arguments=["rationale"],
         placeholder_fields=[],
         reviewed_value_fields=[],
     )
     action = repair_group["actions"][0]
-    assert action["arguments"]["subject"] == dataset
-    assert action["arguments"]["predicate"] == "rc:layoutVerificationStatus"
-    assert action["arguments"]["object"] == "rc:VerifiedByListingLayout"
-    assert action["arguments"]["object_kind"] == "iri"
-    assert action["arguments"]["change_kind"] == "replace"
-    assert action["arguments"]["validation_scope"] == "all"
+    assert action["args"]["subject"] == dataset
+    assert action["args"]["predicate"] == "rc:layoutVerificationStatus"
+    assert action["args"]["object"] == "rc:VerifiedByListingLayout"
+    assert action["args"]["object_kind"] == "iri"
+    assert action["args"]["change_kind"] == "replace"
+    assert action["args"]["validation_scope"] == "all"
     assert result["suggested_next_actions"]
     draft_action = result["suggested_next_actions"][0]
-    assert draft_action["tool_name"] == "draft_query_plan"
-    assert draft_action["unattended_recommended"] is False
-    assert "query_repair_groups_present" in (
-        draft_action["unattended_review_reason_codes"]
-    )
-    assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
-    assert result.get("unattended_recommended_action_indexes", []) == []
-    assert result.get("first_unattended_action_index") is None
+    assert draft_action["tool"] == "doxabase.draft_query_plan"
 
-    arguments = dict(action["arguments"])
+    arguments = dict(action["args"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
     staged = stage_map_assertion_change_tool(db, **arguments)
     assert staged["staged_revision"]["validation_conforms"] is True
@@ -283,9 +274,7 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         staged_option,
         action_index=0,
         action_type="stage_reviewed_physical_layout",
-        tool_name="stage_query_physical_layout_repair",
-        mcp_tool_name="doxabase.stage_query_physical_layout_repair",
-        action_label="Stage physical layout repair",
+        tool="doxabase.stage_query_physical_layout_repair",
         required_extra_arguments=[
             "layout_iri",
             "file_format",
@@ -312,9 +301,7 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         layout_option,
         action_index=1,
         action_type="record_reviewed_physical_layout",
-        tool_name="record_map_physical_layout",
-        mcp_tool_name="doxabase.record_map_physical_layout",
-        action_label="Record physical layout and link dataset",
+        tool="doxabase.record_map_physical_layout",
         required_extra_arguments=["iri", "file_format"],
         placeholder_fields=[
             "file_format",
@@ -334,16 +321,9 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     )
     assert result["suggested_next_actions"]
     draft_action = result["suggested_next_actions"][0]
-    assert draft_action["tool_name"] == "draft_query_plan"
-    assert draft_action["unattended_recommended"] is False
-    assert "query_repair_groups_present" in (
-        draft_action["unattended_review_reason_codes"]
-    )
-    assert "suggested_repair_action_groups" in draft_action["unattended_caution"]
-    assert result.get("unattended_recommended_action_indexes", []) == []
-    assert result.get("first_unattended_action_index") is None
+    assert draft_action["tool"] == "doxabase.draft_query_plan"
     action = repair_group["actions"][0]
-    assert action["tool_name"] == "stage_query_physical_layout_repair"
+    assert action["tool"] == "doxabase.stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset
     assert action["arguments_template"]["layout_iri"] == (
         "<reviewed physical layout IRI>"
@@ -352,7 +332,7 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         "<reviewed rc:FileFormat IRI>"
     )
     direct_action = repair_group["actions"][1]
-    assert direct_action["tool_name"] == "record_map_physical_layout"
+    assert direct_action["tool"] == "doxabase.record_map_physical_layout"
     assert direct_action["arguments_template"]["datasets"] == [dataset]
     staged = stage_query_physical_layout_repair_tool(
         db,
@@ -421,21 +401,17 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     selection_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["action_label"] == "Select physical layout for draft"
+        if action["tool"] == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action["args"]
     ]
     candidate_selector = context["query_target_candidates"][0]["candidate_selector"]
-    assert [action["arguments"] for action in selection_actions] == [
+    assert [action["args"] for action in selection_actions] == [
         {
             "iri": dataset,
             "candidate_selector": candidate_selector,
             "physical_layout_iri": parquet_layout["iri"],
         },
     ]
-    route_card = selection_actions[0]["route_card"]
-    assert route_card["candidate_selector"] == candidate_selector
-    assert route_card["physical_layout_iri"] == parquet_layout["iri"]
-    assert "ambiguous_physical_layout" in route_card["direct_issue_codes"]
-    assert selection_actions[0]["call"].startswith("draft_query_plan(")
     assert automatic["scan"].get("function") is None
     assert automatic["review_gate"]["blocking_reason_codes"] == [
         "ambiguous_physical_layout"
@@ -523,13 +499,14 @@ def test_query_plan_tool_blocks_cross_route_physical_layout_selection(
     selection_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["action_label"] == "Select physical layout for draft"
+        if action["tool"] == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action["args"]
     ]
 
     assert {
         (
-            action["arguments"]["candidate_selector"],
-            action["arguments"]["physical_layout_iri"],
+            action["args"]["candidate_selector"],
+            action["args"]["physical_layout_iri"],
         )
         for action in selection_actions
     } == {
@@ -624,7 +601,7 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     ] == ["object"]
     assert "set_reviewed_bucket_name" not in action_by_type
     assert "set_reviewed_key_prefix" not in action_by_type
-    assert action_by_type["remove_conflicting_bucket_name"]["arguments"][
+    assert action_by_type["remove_conflicting_bucket_name"]["args"][
         "object"
     ] == "public"
 

@@ -35,7 +35,7 @@ class RecoveryMixin:
         repair_actions = [
             action
             for action in check.suggested_next_actions
-            if action.tool_name == "stage_map_assertion_change"
+            if action.tool == "doxabase.stage_map_assertion_change"
         ]
         repair_candidates = [
             candidate
@@ -60,7 +60,7 @@ class RecoveryMixin:
         )
         for candidate in validation_repair_candidates:
             if all(
-                candidate.action.arguments != existing.arguments
+                candidate.action.args != existing.args
                 for existing in repair_actions
             ):
                 repair_candidates.append(candidate)
@@ -69,13 +69,13 @@ class RecoveryMixin:
         preferred_action = repair_actions[0] if repair_actions else None
         action_candidates = [*repair_actions, *check.suggested_next_actions]
         if any(
-            action.tool_name != "draft_staged_revision_rebase"
+            action.tool != "doxabase.draft_staged_revision_rebase"
             for action in action_candidates
         ):
             action_candidates = [
                 action
                 for action in action_candidates
-                if action.tool_name != "draft_staged_revision_rebase"
+                if action.tool != "doxabase.draft_staged_revision_rebase"
             ]
         suggested_next_actions = self._dedupe_suggested_next_actions(
             action_candidates
@@ -131,9 +131,6 @@ class RecoveryMixin:
             next_action=draft_next_action,
             next_action_queue_item=next_action_queue_item,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
             note=note,
         )
     def _staged_rebase_draft_route(
@@ -318,13 +315,9 @@ class RecoveryMixin:
         actions: Iterable[SuggestedNextAction],
     ) -> list[SuggestedNextAction]:
         deduped: list[SuggestedNextAction] = []
-        seen: set[tuple[str, str, str]] = set()
+        seen: set[tuple[str, str]] = set()
         for action in actions:
-            key = (
-                action.tool_name,
-                action.call,
-                json.dumps(action.arguments, sort_keys=True, default=str),
-            )
+            key = suggested_action_key(action)
             if key in seen:
                 continue
             seen.add(key)
@@ -339,12 +332,12 @@ class RecoveryMixin:
         return RevisionNextAction(
             action_type="repair_or_replace",
             queue="repair_or_replace",
-            action_label=action.action_label,
-            tool_name=action.tool_name,
-            mcp_tool_name=action.mcp_tool_name,
-            arguments=action.arguments,
+            action_label=action.tool.removeprefix("doxabase."),
+            tool_name=action.tool.removeprefix("doxabase."),
+            mcp_tool_name=action.tool,
+            arguments=action.args,
             reason=action.reason,
-            call=action.call,
+            call=None,
             source="draft_staged_revision_rebase",
         )
     @staticmethod
@@ -361,12 +354,12 @@ class RecoveryMixin:
             (
                 action
                 for action in suggested_next_actions
-                if action.tool_name
+                if action.tool
                 in {
-                    "describe_staged_revision",
-                    "export_staged_revision",
-                    "export_staged_revisions",
-                    "describe_revision_lineage",
+                    "doxabase.describe_staged_revision",
+                    "doxabase.export_staged_revision",
+                    "doxabase.export_staged_revisions",
+                    "doxabase.describe_revision_lineage",
                 }
             ),
             suggested_next_actions[0] if suggested_next_actions else None,
@@ -385,12 +378,12 @@ class RecoveryMixin:
             return RevisionNextAction(
                 action_type=action_type,
                 queue=queue,
-                action_label=selected_action.action_label,
-                tool_name=selected_action.tool_name,
-                mcp_tool_name=selected_action.mcp_tool_name,
-                arguments=selected_action.arguments,
+                action_label=selected_action.tool.removeprefix("doxabase."),
+                tool_name=selected_action.tool.removeprefix("doxabase."),
+                mcp_tool_name=selected_action.tool,
+                arguments=selected_action.args,
                 reason=selected_action.reason,
-                call=selected_action.call,
+                call=None,
                 source="draft_staged_revision_rebase",
             )
         return RevisionNextAction(
@@ -415,7 +408,7 @@ class RecoveryMixin:
         *,
         validation_results: list[ValidationDiagnostic],
     ) -> StagedRevisionRebaseCandidate | None:
-        arguments = action.arguments
+        arguments = action.args
         subject = arguments.get("subject")
         predicate = arguments.get("predicate")
         object_value = arguments.get("object")
@@ -1018,33 +1011,15 @@ class RecoveryMixin:
             mutation_frontier_iris=mutation_frontier_iris,
             mutation_frontier_items=mutation_frontier_items,
             helper_mutation_frontier_actions=helper_mutation_frontier_actions,
-            helper_mutation_frontier_calls=[
-                action.call
-                for action in helper_mutation_frontier_actions
-                if action.call
-            ],
             mutation_allowed_after=mutation_allowed_after,
             first_mutation_action=first_mutation_action,
-            first_mutation_call=(
-                first_mutation_action.call
-                if first_mutation_action is not None
-                else None
-            ),
             first_safe_review_or_mutation_action=(
                 first_safe_review_or_mutation_action
-            ),
-            first_safe_review_or_mutation_call=(
-                first_safe_review_or_mutation_action.call
-                if first_safe_review_or_mutation_action is not None
-                else None
             ),
             first_safe_review_or_mutation_source=(
                 first_safe_review_or_mutation_source
             ),
             blocking_preflight_actions=blocking_preflight_actions,
-            blocking_preflight_calls=[
-                action.call for action in blocking_preflight_actions if action.call
-            ],
             recommended_unattended_steps=recommended_unattended_steps,
             requires_recheck_after_each_apply=requires_recheck_after_each_apply,
             semantic_review_required_queue_counts=(
@@ -1096,9 +1071,6 @@ class RecoveryMixin:
             revision_summaries=batch.revision_summaries,
             bundle_summary=batch.bundle_summary,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
             warnings=list(dict.fromkeys(warnings)),
             note=(
                 "Read-only staged revision recovery plan. It did not stage, "
@@ -1470,9 +1442,7 @@ class RecoveryMixin:
             applied_event_iris=applied_event_iris,
             current_revision_by_source=current_plan.current_revision_by_source,
             mutation_frontier_iris=current_plan.mutation_frontier_iris,
-            helper_mutation_frontier_calls=current_plan.helper_mutation_frontier_calls,
             suggested_next_actions=current_plan.suggested_next_actions,
-            suggested_next_calls=current_plan.suggested_next_calls,
             warnings=warnings,
             note=(
                 "Recovery sessions persist source revisions and planning "
@@ -1786,12 +1756,9 @@ class RecoveryMixin:
             )
         suggested_next_actions = snapshot_evidence.suggested_next_actions or [
             SuggestedNextAction(
-                action_label=next_action.action_label,
-                tool_name=next_action.tool_name or "import_trig",
-                mcp_tool_name=next_action.mcp_tool_name or "doxabase.import_trig",
-                arguments=next_action.arguments,
+                tool=next_action.mcp_tool_name or "doxabase.import_trig",
+                args=next_action.arguments,
                 reason=next_action.reason,
-                call=next_action.call or "",
             )
         ]
         queue_item = self._revision_next_action_queue_item(
@@ -1880,14 +1847,11 @@ class RecoveryMixin:
             source="plan_staged_revision_recovery",
         )
         suggested_action = SuggestedNextAction(
-            action_label=next_action.action_label,
-            tool_name=next_action.tool_name or "describe_graph_revision",
-            mcp_tool_name=next_action.mcp_tool_name
+                               tool=next_action.mcp_tool_name
             or "doxabase.describe_graph_revision",
-            arguments=arguments,
-            reason=next_action.reason,
-            call=next_action.call or "",
-        )
+                               args=arguments,
+                               reason=next_action.reason,
+                           )
         queue_item = self._revision_next_action_queue_item(
             row_iri=revision.iri,
             next_action=next_action,
@@ -1973,14 +1937,11 @@ class RecoveryMixin:
             source="plan_staged_revision_recovery",
         )
         suggested_action = SuggestedNextAction(
-            action_label=next_action.action_label,
-            tool_name=next_action.tool_name or "describe_graph_revision",
-            mcp_tool_name=next_action.mcp_tool_name
+                               tool=next_action.mcp_tool_name
             or "doxabase.describe_graph_revision",
-            arguments=arguments,
-            reason=next_action.reason,
-            call=next_action.call or "",
-        )
+                               args=arguments,
+                               reason=next_action.reason,
+                           )
         queue_item = self._revision_next_action_queue_item(
             row_iri=revision.iri,
             next_action=next_action,
@@ -2076,15 +2037,10 @@ class RecoveryMixin:
             revision.suggested_next_actions
             or [
                 SuggestedNextAction(
-                    action_label=next_action.action_label,
-                    tool_name=next_action.tool_name or "describe_graph_revision",
-                    mcp_tool_name=(
-                        next_action.mcp_tool_name
-                        or "doxabase.describe_graph_revision"
-                    ),
-                    arguments=arguments,
+                    tool=next_action.mcp_tool_name
+                        or "doxabase.describe_graph_revision",
+                    args=arguments,
                     reason=next_action.reason,
-                    call=next_action.call or "",
                 )
             ]
         )
@@ -2173,15 +2129,11 @@ class RecoveryMixin:
             mutation_frontier_iris=[],
             mutation_frontier_items=[],
             helper_mutation_frontier_actions=[],
-            helper_mutation_frontier_calls=[],
             mutation_allowed_after="no_mutation_frontier",
             first_mutation_action=None,
-            first_mutation_call=None,
             first_safe_review_or_mutation_action=None,
-            first_safe_review_or_mutation_call=None,
             first_safe_review_or_mutation_source=None,
             blocking_preflight_actions=[],
-            blocking_preflight_calls=[],
             recommended_unattended_steps=[],
             requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
@@ -2200,7 +2152,6 @@ class RecoveryMixin:
             revision_summaries=[],
             bundle_summary=None,
             suggested_next_actions=[],
-            suggested_next_calls=[],
             warnings=[],
             note=(
                 "No staged revisions matched the recovery-plan selection. "
@@ -2637,11 +2588,6 @@ class RecoveryMixin:
                 repair_draft_error=repair_draft_error,
                 repair_draft_deferred_reason=repair_draft_deferred_reason,
                 suggested_next_actions=suggested_next_actions,
-                suggested_next_calls=[
-                    action.call
-                    for action in suggested_next_actions
-                    if action.call
-                ],
                 batch_item=item,
                 note=item.note,
             ),
@@ -2656,7 +2602,7 @@ class RecoveryMixin:
         if repair_draft is None or repair_draft.preferred_action is not None:
             return False
         if any(
-            action.tool_name == "draft_staged_revision_rebase"
+            action.tool == "doxabase.draft_staged_revision_rebase"
             for action in repair_draft.suggested_next_actions
         ):
             return False
@@ -2694,14 +2640,20 @@ class RecoveryMixin:
     ) -> bool:
         if action is None:
             return False
-        return action.tool_name in STAGED_RECOVERY_MUTATING_TOOL_NAMES
+        return action_tool_name(action) in STAGED_RECOVERY_MUTATING_TOOL_NAMES
     @staticmethod
     def _staged_recovery_action_is_safe_review(
         action: SuggestedNextAction | RevisionNextAction | None,
     ) -> bool:
         if action is None:
             return False
-        if getattr(action, "mutation_scope", None) == "none":
+        mutation_scope = getattr(action, "mutation_scope", None)
+        if mutation_scope is None:
+            mutation_scope = staged_action_effect_metadata(
+                action_tool_name(action),
+                action_arguments(action),
+            )["mutation_scope"]
+        if mutation_scope == "none":
             return True
         return not DoxaBase._staged_recovery_action_is_mutating(action)
     @staticmethod
@@ -2710,8 +2662,8 @@ class RecoveryMixin:
     ) -> bool:
         return (
             action is not None
-            and action.tool_name == "restage_staged_revisions"
-            and action.arguments.get("dry_run") is True
+            and action_tool_name(action) == "restage_staged_revisions"
+            and action_arguments(action).get("dry_run") is True
             and DoxaBase._staged_recovery_action_is_safe_review(action)
         )
     @staticmethod
@@ -2749,19 +2701,19 @@ class RecoveryMixin:
             )
         for lane in lanes:
             for action in lane.suggested_next_actions:
-                if action.tool_name in {
-                    "import_revision_snapshots",
-                    "import_trig",
+                if action.tool in {
+                    "doxabase.import_revision_snapshots",
+                    "doxabase.import_trig",
                 }:
                     handoff_preflight_actions.append(action)
-                elif action.tool_name in {
-                    "describe_staged_revision",
-                    "export_staged_revision",
-                    "export_staged_revisions",
-                    "describe_revision_lineage",
-                    "describe_graph_revision",
-                    "describe_applied_revision_diff",
-                    "draft_staged_revision_rebase",
+                elif action.tool in {
+                    "doxabase.describe_staged_revision",
+                    "doxabase.export_staged_revision",
+                    "doxabase.export_staged_revisions",
+                    "doxabase.describe_revision_lineage",
+                    "doxabase.describe_graph_revision",
+                    "doxabase.describe_applied_revision_diff",
+                    "doxabase.draft_staged_revision_rebase",
                 }:
                     review_first_actions.append(action)
                 else:
@@ -2776,7 +2728,10 @@ class RecoveryMixin:
         return [
             action
             for action in suggested_next_actions
-            if action.tool_name in {"import_revision_snapshots", "import_trig"}
+            if action.tool in {
+                "doxabase.import_revision_snapshots",
+                "doxabase.import_trig",
+            }
         ]
     @staticmethod
     def _staged_recovery_mutation_allowed_after(
@@ -2947,13 +2902,13 @@ class RecoveryMixin:
                 )
             )
 
-        helper_items_by_call = {
-            item.call: item
+        helper_items_by_key = {
+            suggested_action_key(item.action): item
             for item in mutation_frontier_items
-            if item.item_kind == "helper_action" and item.call
+            if item.item_kind == "helper_action" and item.action is not None
         }
         for action in helper_mutation_frontier_actions:
-            item = helper_items_by_call.get(action.call)
+            item = helper_items_by_key.get(suggested_action_key(action))
             requires_semantic_review = (
                 bool(item.requires_semantic_review_before_mutation)
                 if item is not None
@@ -3152,7 +3107,6 @@ class RecoveryMixin:
             step_kind=step_kind,
             label=label,
             action=action,
-            call=action.call if action is not None else None,
             can_run_now=can_run_now,
             prerequisite=prerequisite,
             mutates=mutates,
@@ -3188,25 +3142,13 @@ class RecoveryMixin:
             "revision_iris": list(revision_iris),
             "dry_run": True,
         }
-        return EffectAnnotatedSuggestedNextAction(
-            action_label="Dry-run batch restage",
-            tool_name="restage_staged_revisions",
-            mcp_tool_name="doxabase.restage_staged_revisions",
-            arguments=arguments,
-            reason=(
-                "Planner found mechanically restageable stale revisions. Run a "
+        return SuggestedNextAction(
+                   tool="doxabase.restage_staged_revisions",
+                   args=arguments,
+                   reason="Planner found mechanically restageable stale revisions. Run a "
                 "batch dry-run over would_restage_revision_iris before creating "
-                "successors, then restage only the reviewed worklist."
-            ),
-            call=self._suggested_call_string(
-                "restage_staged_revisions",
-                arguments,
-            ),
-            mutation_scope="none",
-            mutates_project_graph=False,
-            writes_history=False,
-            writes_files=False,
-        )
+                "successors, then restage only the reviewed worklist.",
+               )
     def _staged_recovery_batch_restage_real_action(
         self,
         revision_iris: list[str],
@@ -3215,25 +3157,13 @@ class RecoveryMixin:
             "revision_iris": list(revision_iris),
             "dry_run": False,
         }
-        return EffectAnnotatedSuggestedNextAction(
-            action_label="Run reviewed batch restage",
-            tool_name="restage_staged_revisions",
-            mcp_tool_name="doxabase.restage_staged_revisions",
-            arguments=arguments,
-            reason=(
-                "Run the real batch restage only after the dry-run "
+        return SuggestedNextAction(
+                   tool="doxabase.restage_staged_revisions",
+                   args=arguments,
+                   reason="Run the real batch restage only after the dry-run "
                 "classification has been reviewed and still matches the "
-                "mechanical worklist."
-            ),
-            call=self._suggested_call_string(
-                "restage_staged_revisions",
-                arguments,
-            ),
-            mutation_scope="history",
-            mutates_project_graph=False,
-            writes_history=True,
-            writes_files=False,
-        )
+                "mechanical worklist.",
+               )
     @staticmethod
     def _stale_seed_recovery_message(missing_seed_terms: Iterable[str]) -> str:
         missing_text = ", ".join(missing_seed_terms)
@@ -3352,7 +3282,6 @@ class RecoveryMixin:
                 ),
             ),
             "resume_action": to_jsonable(resume_action),
-            "resume_call": resume_action.call,
         }
     def _handoff_bundle_recovery_summary(
         self,
@@ -3393,7 +3322,7 @@ class RecoveryMixin:
             not dry_run
             and not matching_recovery_session_iris
             and first_action is not None
-            and first_action.tool_name == "start_staged_revision_recovery_session"
+            and first_action.tool == "doxabase.start_staged_revision_recovery_session"
         )
         if privacy_review_required_before_recovery:
             recommended_next_step = "review_handoff_privacy_before_recovery"
@@ -3422,16 +3351,16 @@ class RecoveryMixin:
         if imported_session_continuation_required:
             for action in suggested_next_actions:
                 if (
-                    action.tool_name
-                    == "describe_staged_revision_recovery_session"
+                    action.tool
+                    == "doxabase.describe_staged_revision_recovery_session"
                 ):
                     resume_recovery_session_action = action
                     break
         resume_recovery_session_iri = (
-            resume_recovery_session_action.arguments.get("session_iri")
+            resume_recovery_session_action.args.get("session_iri")
             if resume_recovery_session_action is not None
             and isinstance(
-                resume_recovery_session_action.arguments.get("session_iri"),
+                resume_recovery_session_action.args.get("session_iri"),
                 str,
             )
             else (
@@ -3440,11 +3369,6 @@ class RecoveryMixin:
                 and matching_recovery_session_iris
                 else None
             )
-        )
-        resume_recovery_session_call = (
-            resume_recovery_session_action.call
-            if resume_recovery_session_action is not None
-            else None
         )
 
         profile_route_keys: list[str] = []
@@ -3473,14 +3397,14 @@ class RecoveryMixin:
         if privacy_review_required_before_recovery:
             if (
                 first_action is not None
-                and first_action.tool_name == "export_preflight"
+                and first_action.tool == "doxabase.export_preflight"
             ):
                 first_safe_action = first_action
                 first_safe_action_source = "handoff_import_privacy_review"
         elif validation_review_required_before_recovery:
             if (
                 first_action is not None
-                and first_action.tool_name == "validate_graph"
+                and first_action.tool == "doxabase.validate_graph"
             ):
                 first_safe_action = first_action
                 first_safe_action_source = "handoff_import_validation_review"
@@ -3622,7 +3546,6 @@ class RecoveryMixin:
             matching_recovery_session_count=len(matching_recovery_session_iris),
             matching_recovery_session_iris=list(matching_recovery_session_iris),
             resume_recovery_session_iri=resume_recovery_session_iri,
-            resume_recovery_session_call=resume_recovery_session_call,
             recovery_plan_available=recovery_plan is not None,
             recovery_lane_counts=(
                 dict(recovery_plan.lane_counts)
@@ -3655,9 +3578,6 @@ class RecoveryMixin:
             ),
             first_mutation_action=first_mutation_action,
             first_safe_review_or_mutation_action=first_safe_action,
-            first_safe_review_or_mutation_call=(
-                first_safe_action.call if first_safe_action is not None else None
-            ),
             first_safe_review_or_mutation_source=first_safe_action_source,
             profile_route_revision_count=profile_route_revision_count,
             profile_route_group_count=profile_route_group_count,
@@ -3719,7 +3639,6 @@ class RecoveryMixin:
                             replace(
                                 step,
                                 action=replacement,
-                                call=replacement.call,
                                 revision_iris=(
                                     self._suggested_action_revision_iris(
                                         replacement
@@ -3752,31 +3671,15 @@ class RecoveryMixin:
         return replace(
             recovery_plan,
             blocking_preflight_actions=blocking_preflight_actions,
-            blocking_preflight_calls=[
-                action.call for action in blocking_preflight_actions if action.call
-            ],
             recommended_unattended_steps=recommended_unattended_steps,
             first_mutation_action=first_mutation_action,
-            first_mutation_call=(
-                first_mutation_action.call
-                if first_mutation_action is not None
-                else None
-            ),
             first_safe_review_or_mutation_action=(
                 first_safe_review_or_mutation_action
-            ),
-            first_safe_review_or_mutation_call=(
-                first_safe_review_or_mutation_action.call
-                if first_safe_review_or_mutation_action is not None
-                else None
             ),
             first_safe_review_or_mutation_source=(
                 first_safe_review_or_mutation_source
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
         )
     def _import_handoff_bundle_privacy_gated_recovery_plan(
         self,
@@ -3784,7 +3687,6 @@ class RecoveryMixin:
         privacy_action: SuggestedNextAction,
     ) -> StagedRevisionRecoveryPlan:
         redacted_plan = self._privacy_redacted_api_value(recovery_plan)
-        privacy_calls = [privacy_action.call] if privacy_action.call else []
         privacy_note = (
             "Imported handoff privacy review is required before following "
             "nested recovery or mutation actions."
@@ -3814,7 +3716,6 @@ class RecoveryMixin:
                 repair_draft=None,
                 repair_draft_deferred_reason="handoff_import_privacy_review_required",
                 suggested_next_actions=[privacy_action],
-                suggested_next_calls=privacy_calls,
                 batch_item=gated_batch_item(lane.batch_item),
                 note=gated_note(lane.note),
             )
@@ -3826,7 +3727,6 @@ class RecoveryMixin:
                 summary,
                 next_action=None,
                 suggested_next_actions=[privacy_action],
-                suggested_next_calls=privacy_calls,
             )
 
         bundle_summary = redacted_plan.bundle_summary
@@ -3878,17 +3778,13 @@ class RecoveryMixin:
             mutation_frontier_iris=[],
             mutation_frontier_items=[],
             first_mutation_action=None,
-            first_mutation_call=None,
             first_safe_review_or_mutation_action=privacy_action,
-            first_safe_review_or_mutation_call=privacy_action.call,
             first_safe_review_or_mutation_source="handoff_import_privacy_review",
             helper_mutation_frontier_actions=[],
-            helper_mutation_frontier_calls=[],
             mutation_allowed_after=(
                 "handoff_import_privacy_review_required_before_recovery"
             ),
             blocking_preflight_actions=[privacy_action],
-            blocking_preflight_calls=privacy_calls,
             recommended_unattended_steps=privacy_steps,
             revision_summaries=[
                 gated_summary(summary)
@@ -3896,7 +3792,6 @@ class RecoveryMixin:
             ],
             bundle_summary=bundle_summary,
             suggested_next_actions=[privacy_action],
-            suggested_next_calls=privacy_calls,
             warnings=[
                 privacy_note,
                 *redacted_plan.warnings,
@@ -3912,7 +3807,6 @@ class RecoveryMixin:
         if not session_actions:
             return recovery_plan
         session_action = session_actions[0]
-        session_calls = [action.call for action in session_actions if action.call]
         session_note = (
             "Continue the imported source recovery session before following "
             "nested recovery or mutation actions."
@@ -3950,22 +3844,15 @@ class RecoveryMixin:
         return replace(
             recovery_plan,
             first_mutation_action=None,
-            first_mutation_call=None,
             first_safe_review_or_mutation_action=session_action,
-            first_safe_review_or_mutation_call=session_action.call,
             first_safe_review_or_mutation_source="imported_recovery_session",
             helper_mutation_frontier_actions=[],
-            helper_mutation_frontier_calls=[],
             mutation_allowed_after=(
                 "imported_recovery_session_required_before_mutation"
             ),
             blocking_preflight_actions=session_actions,
-            blocking_preflight_calls=session_calls,
             recommended_unattended_steps=session_steps,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
             warnings=[
                 session_note,
                 *recovery_plan.warnings,
@@ -3977,9 +3864,6 @@ class RecoveryMixin:
         recovery_plan: StagedRevisionRecoveryPlan,
         validation_action: SuggestedNextAction,
     ) -> StagedRevisionRecoveryPlan:
-        validation_calls = (
-            [validation_action.call] if validation_action.call else []
-        )
         validation_note = (
             "Imported handoff validation review is required before following "
             "nested recovery or mutation actions."
@@ -4011,7 +3895,6 @@ class RecoveryMixin:
                     "handoff_import_validation_review_required"
                 ),
                 suggested_next_actions=[validation_action],
-                suggested_next_calls=validation_calls,
                 batch_item=gated_batch_item(lane.batch_item),
                 note=gated_note(lane.note),
             )
@@ -4023,7 +3906,6 @@ class RecoveryMixin:
                 summary,
                 next_action=None,
                 suggested_next_actions=[validation_action],
-                suggested_next_calls=validation_calls,
             )
 
         bundle_summary = recovery_plan.bundle_summary
@@ -4075,17 +3957,13 @@ class RecoveryMixin:
             mutation_frontier_iris=[],
             mutation_frontier_items=[],
             first_mutation_action=None,
-            first_mutation_call=None,
             first_safe_review_or_mutation_action=validation_action,
-            first_safe_review_or_mutation_call=validation_action.call,
             first_safe_review_or_mutation_source="handoff_import_validation_review",
             helper_mutation_frontier_actions=[],
-            helper_mutation_frontier_calls=[],
             mutation_allowed_after=(
                 "handoff_import_validation_review_required_before_recovery"
             ),
             blocking_preflight_actions=[validation_action],
-            blocking_preflight_calls=validation_calls,
             recommended_unattended_steps=validation_steps,
             revision_summaries=[
                 gated_summary(summary)
@@ -4093,7 +3971,6 @@ class RecoveryMixin:
             ],
             bundle_summary=bundle_summary,
             suggested_next_actions=[validation_action],
-            suggested_next_calls=validation_calls,
             warnings=[
                 validation_note,
                 *recovery_plan.warnings,
@@ -4196,17 +4073,14 @@ class RecoveryMixin:
             arguments["include_drafts"] = include_drafts
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return self._effect_annotated_suggested_next_action(
-            action_label="Continue imported recovery session",
-            tool_name="describe_staged_revision_recovery_session",
-            arguments=arguments,
-            reason=(
-                "The handoff imported a persisted staged-revision recovery "
+        return SuggestedNextAction(
+                   tool="doxabase.describe_staged_revision_recovery_session",
+                   args=arguments,
+                   reason="The handoff imported a persisted staged-revision recovery "
                 "session whose source revisions overlap the manifest revisions. "
                 "Describe it before starting a receiver-local session so source "
-                "session provenance and live recovery state stay connected."
-            ),
-        )
+                "session provenance and live recovery state stay connected.",
+               )
     def _start_receiver_recovery_session_action(
         self,
         revision_iris: list[str],
@@ -4226,17 +4100,14 @@ class RecoveryMixin:
             arguments["handoff_manifest_path"] = manifest_path
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return self._effect_annotated_suggested_next_action(
-            action_label="Start receiver-local recovery session",
-            tool_name="start_staged_revision_recovery_session",
-            arguments=arguments,
-            reason=(
-                "No matching imported recovery session was found. Persist a "
+        return SuggestedNextAction(
+                   tool="doxabase.start_staged_revision_recovery_session",
+                   args=arguments,
+                   reason="No matching imported recovery session was found. Persist a "
                 "receiver-local session for the imported manifest revisions so "
                 "multi-step restage, repair, and apply work can be replanned "
-                "from one stable session IRI."
-            ),
-        )
+                "from one stable session IRI.",
+               )
     def _subject_exists(self, subject: str, graphs: list[str]) -> bool:
         graph_filter, params = self._graph_filter(graphs)
         row = self._conn.execute(

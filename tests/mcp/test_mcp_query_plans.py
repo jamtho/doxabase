@@ -70,23 +70,16 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stale_seed_blocker(
     assert result_payload["mutation_allowed_after"] == (
         "stale_seed_recovery_required_before_staging"
     )
-    assert result_payload["evidence_storage_route_candidate_count"] == 1
-    assert result_payload["evidence_storage_route_candidates"][0][
-        "candidate_kind"
-    ] == "local_path_from_query_evidence"
     assert "stage_arguments" not in result_payload
-    assert result_payload["suggested_next_actions"][0]["tool_name"] == (
-        "export_preflight"
+    assert result_payload["suggested_next_actions"][0]["tool"] == (
+        "doxabase.export_preflight"
     )
-    assert result_payload["suggested_next_actions"][0]["arguments"] == {
+    assert result_payload["suggested_next_actions"][0]["args"] == {
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
         "validation_scope": "map",
     }
-    assert result_payload["suggested_next_calls"] == [
-        result_payload["suggested_next_actions"][0]["call"]
-    ]
 
 
 def test_draft_query_evidence_storage_overlay_tool_accepts_blocked_query_evidence(
@@ -392,19 +385,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     selected_selector = context["query_target_candidates"][
         context["query_target_decision"]["candidate_index"]
     ]["candidate_selector"]
-    assert query_action["tool_name"] == "draft_query_plan"
-    assert query_action["action_label"] == (
-        "Draft direct-clean candidate with context allowance"
-    )
-    assert query_action["arguments"] == {
+    assert query_action["tool"] == "doxabase.draft_query_plan"
+    assert query_action["args"] == {
         "iri": dataset,
         "candidate_selector": selected_selector,
         "allow_context_blocked_candidate": True,
     }
-    assert "query_repair_groups_present" in (
-        query_action["unattended_review_reason_codes"]
-    )
-    assert context.get("suggested_next_calls", []) == []
 
     result = draft_query_plan_tool(
         db,
@@ -542,9 +528,9 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
     assert relation_candidate_index in context["direct_clean_candidate_indexes"]
     assert archive_candidate_index in context["unselected_direct_clean_candidate_indexes"]
     assert [
-        action["arguments"]
+        action["args"]
         for action in context["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
+        if action["tool"] == "doxabase.draft_query_plan"
     ] == [
         {
             "iri": dataset,
@@ -556,14 +542,6 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
             "candidate_selector": archive_candidate_selector,
             "allow_context_blocked_candidate": True,
         },
-    ]
-    assert [
-        action["action_label"]
-        for action in context["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-    ] == [
-        "Draft direct-clean candidate with context allowance",
-        "Draft peer direct-clean candidate with context allowance",
     ]
 
     result = draft_query_plan_tool(
@@ -673,102 +651,6 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         for issue in context["issues"]
         if issue["code"] == "database_relation_template_source_mismatch"
     )
-    assert issue["details"] == {
-        "template": dataset_template,
-        "template_source": "dataset",
-        "template_source_resource_iri": dataset,
-        "storage_access_iri": storage.iri,
-        "storage_protocol_iri": RC + "DatabaseStorage",
-        "allowed_relation_template_sources": ["storage_access"],
-        "repair_hint": {
-            "action_type": "move_database_relation_template_to_storage_access",
-            "requires_review": True,
-            "source_subject_iri": dataset,
-            "misplaced_template_subject_iri": dataset,
-            "misplaced_template_source": "dataset",
-            "misplaced_template": dataset_template,
-            "source": {
-                "subject_iri": dataset,
-                "template_source": "dataset",
-                "predicate": "rc:pathTemplate",
-                "template": dataset_template,
-            },
-            "target": {
-                "storage_access_iri": storage.iri,
-                "predicate": "rc:pathTemplate",
-                "required_template_source": "storage_access",
-            },
-            "candidate_relation_identifier": {
-                "value": dataset_template,
-                "requires_review": True,
-                "already_on_storage_access": False,
-                "review_note": (
-                    "Dataset and partition path templates are not database "
-                    "relation identifiers by default; replace this value with "
-                    "the reviewed schema/table/relation before staging the add."
-                ),
-            },
-            "actions": [
-                {
-                    "action_type": "add_reviewed_relation_template",
-                    "action_label": "Add reviewed relation template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "source_subject_iri": dataset,
-                    "misplaced_template_subject_iri": dataset,
-                    "misplaced_template_source": "dataset",
-                    "misplaced_template": dataset_template,
-                    "required_extra_arguments": ["object", "rationale"],
-                    "rationale_template": (
-                        "Reviewed database relation identifier for "
-                        f"{storage.iri}."
-                    ),
-                    "arguments_template": {
-                        "subject": storage.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": "<reviewed_database_relation_identifier>",
-                        "object_kind": "literal",
-                        "change_kind": "add",
-                        "graph": "map",
-                    },
-                    "placeholder_fields": ["object"],
-                    "reviewed_value_fields": ["object"],
-                    "condition": (
-                        "Replace the placeholder object with the reviewed "
-                        "database relation identifier before staging."
-                    ),
-                },
-                {
-                    "action_type": "remove_misplaced_source_template",
-                    "action_label": "Remove misplaced source template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "source_subject_iri": dataset,
-                    "misplaced_template_subject_iri": dataset,
-                    "misplaced_template_source": "dataset",
-                    "misplaced_template": dataset_template,
-                    "required_extra_arguments": ["rationale"],
-                    "rationale_template": (
-                        "Reviewed source template as misplaced database "
-                        "relation metadata."
-                    ),
-                    "arguments": {
-                        "subject": dataset,
-                        "predicate": "rc:pathTemplate",
-                        "object": dataset_template,
-                        "object_kind": "literal",
-                        "change_kind": "remove",
-                        "graph": "map",
-                    },
-                    "condition": (
-                        "Only after review confirms the source template was "
-                        "misplaced relation metadata rather than a real "
-                        "file/object path."
-                    ),
-                },
-            ],
-        },
-    }
     target = context["query_target_candidates"][0]
     assert target.get("candidate_path") is None
     assert target.get("relation_identifier") is None
@@ -777,7 +659,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     assert target["direct_review_reasons"][0]["code"] == (
         "database_relation_template_source_mismatch"
     )
-    assert [action["tool_name"] for action in context["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]] == [
         "draft_query_plan",
     ]
     assert plan["selected_candidate"]["template_source"] == "dataset"
@@ -799,13 +681,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     assert plan["handoff_summary"]["primary_repair_action_type"] == (
         "add_reviewed_relation_template"
     )
-    assert plan["handoff_summary"]["primary_repair_action_label"] == (
-        "Add reviewed relation template"
-    )
-    assert plan["handoff_summary"]["primary_repair_tool_name"] == (
-        "stage_map_assertion_change"
-    )
-    assert plan["handoff_summary"]["primary_repair_mcp_tool_name"] == (
+    assert plan["handoff_summary"]["primary_repair_tool"] == (
         "doxabase.stage_map_assertion_change"
     )
     assert plan["handoff_summary"]["primary_repair_required_extra_arguments"] == [
@@ -892,9 +768,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         staged_storage_option,
         action_index=0,
         action_type="stage_reviewed_storage_access",
-        tool_name="stage_query_storage_access_repair",
-        mcp_tool_name="doxabase.stage_query_storage_access_repair",
-        action_label="Stage storage access repair",
+        tool="doxabase.stage_query_storage_access_repair",
         required_extra_arguments=[
             "storage_access_iri",
             "storage_protocol",
@@ -930,9 +804,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool_name="record_map_storage_access",
-        mcp_tool_name="doxabase.record_map_storage_access",
-        action_label="Record storage access and link dataset",
+        tool="doxabase.record_map_storage_access",
         required_extra_arguments=[
             "iri",
             "storage_protocol",
@@ -951,9 +823,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         link_option,
         action_index=2,
         action_type="stage_existing_storage_access_link",
-        tool_name="stage_map_assertion_change",
-        mcp_tool_name="doxabase.stage_map_assertion_change",
-        action_label="Stage link to an existing storage access",
+        tool="doxabase.stage_map_assertion_change",
         required_extra_arguments=["object", "rationale"],
         placeholder_fields=["object"],
         reviewed_value_fields=["object"],

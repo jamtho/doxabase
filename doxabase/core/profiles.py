@@ -290,9 +290,6 @@ class ProfilesMixin:
                 "IRI; no separate persisted profile-run node is implied."
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _describe_profile_run_suggested_actions(
         self,
@@ -314,19 +311,11 @@ class ProfilesMixin:
                 arguments["graph"] = graph
             actions.append(
                 SuggestedNextAction(
-                    action_label="Expand full profile run",
-                    tool_name="describe_profile_run",
-                    mcp_tool_name="doxabase.describe_profile_run",
-                    arguments=arguments,
-                    reason=(
-                        "This response was capped and omitted profile "
+                    tool="doxabase.describe_profile_run",
+                    args=arguments,
+                    reason="This response was capped and omitted profile "
                         "observations. Expand the full shared-evidence run "
-                        "before drafting map updates or advisory follow-through."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_profile_run",
-                        arguments,
-                    ),
+                        "before drafting map updates or advisory follow-through.",
                 )
             )
 
@@ -338,23 +327,26 @@ class ProfilesMixin:
             draft_arguments["graph"] = graph
         actions.append(
             SuggestedNextAction(
-                action_label="Inspect profile map-update status",
-                tool_name="draft_profile_map_updates",
-                mcp_tool_name="doxabase.draft_profile_map_updates",
-                arguments=draft_arguments,
-                reason=(
-                    "Compare this shared-evidence profile run with current map "
+                tool="doxabase.draft_profile_map_updates",
+                args=draft_arguments,
+                reason="Compare this shared-evidence profile run with current map "
                     "facts and inspect whether map updates, scalar conflicts, "
                     "metric vocabulary, type findings, or query-context review "
-                    "lanes remain before staging changes."
-                ),
-                call=self._suggested_call_string(
-                    "draft_profile_map_updates",
-                    draft_arguments,
-                ),
+                    "lanes remain before staging changes.",
             )
         )
         return actions
+    @staticmethod
+    def _profile_action_route_source_mapping(
+        action: SuggestedNextAction,
+    ) -> dict[str, Any] | None:
+        route_sources = action.args.get("profile_route_sources")
+        if not isinstance(route_sources, list):
+            return None
+        for source in route_sources:
+            if isinstance(source, MappingABC):
+                return dict(source)
+        return None
     def _profile_type_assertion_batch_plan(
         self,
         action_resolutions: list[ProfileFollowthroughActionResolution],
@@ -366,10 +358,10 @@ class ProfilesMixin:
         skipped_reasons: list[dict[str, Any]] = []
 
         for resolution in action_resolutions:
-            if resolution.tool_name != "stage_map_assertion_change":
+            if resolution.tool != "doxabase.stage_map_assertion_change":
                 continue
-            source = getattr(resolution.action, "source_profile_advisory", None)
-            if not isinstance(source, MappingABC):
+            source = self._profile_action_route_source_mapping(resolution.action)
+            if source is None:
                 continue
             if source.get("review_lane") != "profile_type_review":
                 continue
@@ -399,8 +391,8 @@ class ProfilesMixin:
                 )
                 continue
 
-            predicate = str(resolution.action.arguments["predicate"])
-            object_value = str(resolution.action.arguments["object"])
+            predicate = str(resolution.action.args["predicate"])
+            object_value = str(resolution.action.args["object"])
             key = (predicate, object_value)
             if key not in batches:
                 batch_key = self._profile_type_assertion_batch_key(
@@ -478,11 +470,11 @@ class ProfilesMixin:
             return f"unsupported_binding_status:{resolution.binding_status}"
         if source_profile_advisory.get("pending_staged_assertion_iris"):
             return "pending_staged_assertion"
-        predicate = resolution.action.arguments.get("predicate")
+        predicate = resolution.action.args.get("predicate")
         if predicate != "rc:physicalType":
             return "unsupported_predicate"
         for required_field in ("subject", "object"):
-            if not isinstance(resolution.action.arguments.get(required_field), str):
+            if not isinstance(resolution.action.args.get(required_field), str):
                 return f"missing_{required_field}"
         route_group_key = source_profile_advisory.get("route_group_key")
         route_step_key = source_profile_advisory.get("route_step_key")
@@ -504,7 +496,7 @@ class ProfilesMixin:
             "reason": reason,
             "action_group": resolution.action_group,
             "action_index": resolution.action_index,
-            "tool_name": resolution.tool_name,
+            "tool": resolution.tool,
             "binding_status": resolution.binding_status,
             "missing_binding_keys": list(resolution.missing_binding_keys),
             "route_group_key": source_profile_advisory.get("route_group_key"),
@@ -516,8 +508,8 @@ class ProfilesMixin:
             "duplicate_advisory_indexes": DoxaBase._int_values(
                 source_profile_advisory.get("duplicate_advisory_indexes"),
             ),
-            "predicate": resolution.action.arguments.get("predicate"),
-            "object": resolution.action.arguments.get("object"),
+            "predicate": resolution.action.args.get("predicate"),
+            "object": resolution.action.args.get("object"),
         }
     @staticmethod
     def _profile_type_assertion_batch_item(
@@ -545,17 +537,16 @@ class ProfilesMixin:
             "duplicate_group_keys": duplicate_group_keys,
             "route_group_keys": [route_group_key],
             "route_step_keys": [route_step_key],
-            "subject": resolution.action.arguments["subject"],
-            "predicate": resolution.action.arguments["predicate"],
-            "object": resolution.action.arguments["object"],
+            "subject": resolution.action.args["subject"],
+            "predicate": resolution.action.args["predicate"],
+            "object": resolution.action.args["object"],
             "supporting_observations": list(
-                resolution.action.arguments.get("supporting_observations", [])
+                resolution.action.args.get("supporting_observations", [])
             ),
             "supporting_patterns": list(
-                resolution.action.arguments.get("supporting_patterns", [])
+                resolution.action.args.get("supporting_patterns", [])
             ),
             "action": resolution.action,
-            "call": resolution.action.call,
         }
     @staticmethod
     def _profile_type_assertion_batch_key(
@@ -567,261 +558,6 @@ class ProfilesMixin:
             json.dumps(payload, sort_keys=True).encode("utf-8")
         ).hexdigest()[:16]
         return f"profile-type-assertion-batch:{digest}"
-    @staticmethod
-    def _profile_action_route_summary_groups(
-        suggested_next_action_groups: Mapping[str, list[SuggestedNextAction]],
-    ) -> dict[str, list[ProfileActionRouteSummary]]:
-        return {
-            group_name: [
-                DoxaBase._profile_action_route_summary(
-                    action,
-                    action_group=group_name,
-                    action_index=action_index,
-                )
-                for action_index, action in enumerate(actions)
-            ]
-            for group_name, actions in suggested_next_action_groups.items()
-        }
-    @staticmethod
-    def _profile_action_route_summaries_from_groups(
-        summary_groups: Mapping[str, list[ProfileActionRouteSummary]],
-    ) -> list[ProfileActionRouteSummary]:
-        return [
-            summary
-            for summaries in summary_groups.values()
-            for summary in summaries
-        ]
-    @staticmethod
-    def _profile_action_route_summary(
-        action: SuggestedNextAction,
-        *,
-        action_group: str,
-        action_index: int,
-    ) -> ProfileActionRouteSummary:
-        source_kind, source = DoxaBase._profile_action_route_source(action)
-        review_lane = DoxaBase._string_field(
-            getattr(action, "review_lane", None),
-        ) or DoxaBase._string_field(source.get("review_lane"))
-        semantic_move = DoxaBase._string_field(
-            getattr(action, "semantic_move", None),
-        ) or DoxaBase._string_field(source.get("semantic_move"))
-        route_group_key = DoxaBase._string_field(
-            getattr(action, "route_group_key", None),
-        ) or DoxaBase._string_field(source.get("route_group_key"))
-        route_step_key = DoxaBase._string_field(
-            getattr(action, "route_step_key", None),
-        ) or DoxaBase._string_field(source.get("route_step_key"))
-        unattended_choice_role = DoxaBase._string_field(
-            getattr(action, "unattended_choice_role", None),
-        ) or DoxaBase._string_field(source.get("unattended_choice_role"))
-        unattended_recommended_value = getattr(
-            action,
-            "unattended_recommended",
-            source.get("unattended_recommended"),
-        )
-        consumes_binding_keys = DoxaBase._profile_route_binding_keys(
-            source.get("consumes_result_bindings")
-        )
-        produces_binding_keys = DoxaBase._profile_route_binding_keys(
-            source.get("produces_result_bindings")
-        )
-        action_kind = DoxaBase._profile_followthrough_primary_action_kind(
-            action.tool_name
-        )
-        return ProfileActionRouteSummary(
-            action_group=action_group,
-            action_index=action_index,
-            tool_name=action.tool_name,
-            mcp_tool_name=action.mcp_tool_name,
-            action_label=action.action_label,
-            action_kind=action_kind,
-            writes_graph=action_kind
-            in {"stage_reviewable_change", "direct_graph_write"},
-            review_lane=review_lane,
-            semantic_move=semantic_move,
-            route_group_key=route_group_key,
-            route_step_key=route_step_key,
-            source_kind=source_kind,
-            advisory_indexes=DoxaBase._int_values(source.get("advisory_indexes")),
-            recommendation_indexes=(
-                DoxaBase._profile_route_recommendation_indexes(source)
-            ),
-            duplicate_group_keys=DoxaBase._string_values_from_any(
-                source.get("duplicate_group_keys"),
-            ),
-            route_anchor_iris=DoxaBase._string_values_from_any(
-                source.get("route_anchor_iris"),
-            ),
-            route_pattern_iris=DoxaBase._string_values_from_any(
-                source.get("route_pattern_iris"),
-            ),
-            consumes_binding_keys=consumes_binding_keys,
-            produces_binding_keys=produces_binding_keys,
-            requires_result_bindings=(
-                bool(consumes_binding_keys)
-                and action_group
-                not in {"ready_resolved_actions", "ready_resolved_mutations"}
-            ),
-            produces_result_bindings=bool(produces_binding_keys),
-            unattended_choice_role=unattended_choice_role,
-            unattended_recommended=bool(unattended_recommended_value),
-            argument_keys=sorted(str(key) for key in action.arguments),
-            has_arguments=bool(action.arguments),
-            has_call=bool(action.call),
-        )
-    @staticmethod
-    def _profile_action_route_source(
-        action: SuggestedNextAction,
-    ) -> tuple[str | None, MappingABC[str, Any]]:
-        for source_kind, attr_name in (
-            ("profile_advisory", "source_profile_advisory"),
-            ("profile_map_update", "source_profile_map_update"),
-            ("profile_scalar_conflict", "source_scalar_conflict"),
-        ):
-            source = getattr(action, attr_name, None)
-            if isinstance(source, MappingABC):
-                return source_kind, source
-        return None, {}
-    @staticmethod
-    def _profile_route_binding_keys(value: Any) -> list[str]:
-        if not isinstance(value, list):
-            return []
-        binding_keys: list[str] = []
-        for item in value:
-            if not isinstance(item, MappingABC):
-                continue
-            binding_key = item.get("binding_key")
-            if isinstance(binding_key, str):
-                DoxaBase._append_unique(binding_keys, binding_key)
-        return binding_keys
-    @staticmethod
-    def _profile_route_recommendation_indexes(
-        source: MappingABC[str, Any],
-    ) -> list[int]:
-        indexes: list[int] = []
-        for field_name in (
-            "recommendation_indexes",
-            "duplicate_recommendation_indexes",
-            "representative_recommendation_indexes",
-            "accepted_recommendation_indexes",
-        ):
-            for index in DoxaBase._int_values(source.get(field_name)):
-                DoxaBase._append_unique(indexes, index)
-        return indexes
-    def _profile_mixed_support_review_groups(
-        self,
-        suggested_next_action_groups: Mapping[str, list[SuggestedNextAction]],
-    ) -> list[ProfileMixedSupportReviewGroup]:
-        grouped: dict[tuple[str, ...], dict[str, Any]] = {}
-        group_order: list[tuple[str, ...]] = []
-        for review_lane in ("metric_vocabulary_review", "profile_type_review"):
-            for action in suggested_next_action_groups.get(review_lane, []):
-                source = getattr(action, "source_profile_advisory", None)
-                if not isinstance(source, MappingABC):
-                    continue
-                mixed_support = source.get("mixed_support")
-                if not isinstance(mixed_support, MappingABC):
-                    continue
-                pattern_iris = tuple(
-                    self._string_values_from_any(
-                        mixed_support.get("pattern_iris")
-                    )
-                )
-                if not pattern_iris:
-                    continue
-                if pattern_iris not in grouped:
-                    grouped[pattern_iris] = {
-                        "pattern_iris": list(pattern_iris),
-                        "review_lanes": [],
-                        "semantic_moves": [],
-                        "route_group_keys": [],
-                        "route_step_keys": [],
-                        "route_anchor_iris": [],
-                        "route_pattern_iris": [],
-                        "tool_names": [],
-                        "action_labels": [],
-                        "suggested_next_calls": [],
-                        "metric_advisory_indexes": [],
-                        "type_advisory_indexes": [],
-                        "duplicate_group_keys": [],
-                        "duplicate_advisory_indexes": [],
-                        "duplicate_profile_observation_iris": [],
-                        "source_profile_advisories": [],
-                    }
-                    group_order.append(pattern_iris)
-                item = grouped[pattern_iris]
-                self._append_unique(item["review_lanes"], review_lane)
-                semantic_move = self._profile_advisory_semantic_move(
-                    action,
-                    source,
-                )
-                if semantic_move is not None:
-                    self._append_unique(item["semantic_moves"], semantic_move)
-                route_group_key = source.get("route_group_key")
-                if isinstance(route_group_key, str):
-                    self._append_unique(
-                        item["route_group_keys"],
-                        route_group_key,
-                    )
-                self._append_unique(item["tool_names"], action.tool_name)
-                self._append_unique(item["action_labels"], action.action_label)
-                if action.call:
-                    self._append_unique(item["suggested_next_calls"], action.call)
-                self._append_profile_followthrough_source_fields(item, source)
-
-        return [
-            self._profile_mixed_support_review_group(
-                group_index=group_index,
-                item=grouped[key],
-            )
-            for group_index, key in enumerate(group_order)
-        ]
-    @staticmethod
-    def _profile_mixed_support_review_group(
-        *,
-        group_index: int,
-        item: Mapping[str, Any],
-    ) -> ProfileMixedSupportReviewGroup:
-        pattern_iris = list(item["pattern_iris"])
-        review_lanes = list(item["review_lanes"])
-        semantic_moves = list(item["semantic_moves"])
-        note = (
-            "Shared profile support pattern(s) feed multiple review lanes. "
-            "Compare the grouped actions before applying, exporting, or "
-            "treating any one lane as settled."
-        )
-        if review_lanes:
-            note = f"{note} Review lanes: {', '.join(review_lanes)}."
-        if semantic_moves:
-            note = f"{note} Semantic moves: {', '.join(semantic_moves)}."
-        return ProfileMixedSupportReviewGroup(
-            group_index=group_index,
-            pattern_iris=pattern_iris,
-            pattern_count=len(pattern_iris),
-            review_lanes=review_lanes,
-            semantic_moves=semantic_moves,
-            route_group_keys=list(item["route_group_keys"]),
-            route_step_keys=list(item["route_step_keys"]),
-            route_anchor_iris=list(item["route_anchor_iris"]),
-            route_pattern_iris=list(item["route_pattern_iris"]),
-            action_count=(
-                len(item["route_step_keys"])
-                or len(item["action_labels"])
-                or len(item["suggested_next_calls"])
-            ),
-            tool_names=list(item["tool_names"]),
-            action_labels=list(item["action_labels"]),
-            suggested_next_calls=list(item["suggested_next_calls"]),
-            metric_advisory_indexes=list(item["metric_advisory_indexes"]),
-            type_advisory_indexes=list(item["type_advisory_indexes"]),
-            duplicate_group_keys=list(item["duplicate_group_keys"]),
-            duplicate_advisory_indexes=list(item["duplicate_advisory_indexes"]),
-            duplicate_profile_observation_iris=list(
-                item["duplicate_profile_observation_iris"]
-            ),
-            source_profile_advisories=list(item["source_profile_advisories"]),
-            note=note,
-        )
     @staticmethod
     def _string_values_from_any(values: Any) -> list[str]:
         if not isinstance(values, list):
@@ -862,53 +598,11 @@ class ProfilesMixin:
             f"'{context.readiness}'. Review or repair query context before "
             "treating profile-derived map updates as query-ready context."
         )
-        route_group_key = self._profile_route_group_key(
-            "query_context_review",
-            {
-                "dataset_iri": dataset.iri,
-                "evidence_iri": evidence_iri,
-                "readiness": context.readiness,
-                "blocking_issue_codes": issue_codes,
-            },
-        )
-        action = SuggestedNextAction(
-            action_label="Review query context blockers",
-            tool_name="describe_query_context",
-            mcp_tool_name="doxabase.describe_query_context",
-            arguments=arguments,
-            reason=reason,
-            call=self._suggested_call_string(
-                "describe_query_context",
-                arguments,
-            ),
-        )
         return [
-            ProfileQueryContextSuggestedNextAction(
-                action_label=action.action_label,
-                tool_name=action.tool_name,
-                mcp_tool_name=action.mcp_tool_name,
-                arguments=action.arguments,
-                reason=action.reason,
-                call=action.call,
-                source_query_context=self._with_profile_route_step_key(
-                    {
-                        "review_lane": "query_context_review",
-                        "route_group_key": route_group_key,
-                        "evidence_iri": evidence_iri,
-                        "profile_evidence_iri": evidence_iri,
-                        "route_anchor_iris": [dataset.iri],
-                        "readiness": context.readiness,
-                        "readiness_note": context.readiness_note,
-                        "blocking_issue_codes": issue_codes,
-                        "issue_codes": self._query_issue_codes(context.issues),
-                        "suggested_repair_action_group_count": (
-                            context.suggested_repair_action_group_count
-                        ),
-                        "profile_quality_summary": dict(profile_quality_summary),
-                        "sampled_evidence_caution": sampled_evidence_caution,
-                    },
-                    action,
-                ),
+            SuggestedNextAction(
+                tool="doxabase.describe_query_context",
+                args=arguments,
+                reason=reason,
             )
         ]
     @staticmethod
@@ -1168,11 +862,10 @@ class ProfilesMixin:
         route_group_key: str,
         action: SuggestedNextAction,
     ) -> str:
-        arguments = action.arguments
+        arguments = action.args
         payload = {
             "route_group_key": route_group_key,
-            "tool_name": action.tool_name,
-            "action_label": action.action_label,
+            "tool": action.tool,
             "arguments": DoxaBase._profile_route_step_argument_identity(arguments),
         }
         return DoxaBase._profile_route_key("profile-route-step", payload)
@@ -1202,18 +895,10 @@ class ProfilesMixin:
         arguments = {"iri": staged_revision.revision_iri}
         actions.append(
             SuggestedNextAction(
-                action_label="Check staged profile map updates",
-                tool_name="check_staged_revision_apply",
-                mcp_tool_name="doxabase.check_staged_revision_apply",
-                arguments=arguments,
-                reason=(
-                    "Run the read-only apply check before reviewing, exporting, "
-                    "or applying the grouped profile-derived map revision."
-                ),
-                call=self._suggested_call_string(
-                    "check_staged_revision_apply",
-                    arguments,
-                ),
+                tool="doxabase.check_staged_revision_apply",
+                args=arguments,
+                reason="Run the read-only apply check before reviewing, exporting, "
+                    "or applying the grouped profile-derived map revision.",
             )
         )
         export_arguments = {
@@ -1228,20 +913,12 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                action_label="Export profile insight review bundle",
-                tool_name="export_profile_insight_review_bundle",
-                mcp_tool_name="doxabase.export_profile_insight_review_bundle",
-                arguments=export_arguments,
-                reason=(
-                    "Export a grouped review bundle for staged revisions tied "
+                tool="doxabase.export_profile_insight_review_bundle",
+                args=export_arguments,
+                reason="Export a grouped review bundle for staged revisions tied "
                     "to this profile run. Re-run this export after staging any "
                     "related metric vocabulary, type-review, or caveat "
-                    "alternatives so the bundle can compare the lanes together."
-                ),
-                call=self._suggested_call_string(
-                    "export_profile_insight_review_bundle",
-                    export_arguments,
-                ),
+                    "alternatives so the bundle can compare the lanes together.",
             )
         )
         if any(
@@ -1253,30 +930,14 @@ class ProfilesMixin:
                 "evidence_iri": evidence_iri,
             }
             actions.append(
-                ProfileMapUpdateRerunSuggestedNextAction(
-                    action_label="Rerun profile map update draft",
-                    tool_name="draft_profile_map_updates",
-                    mcp_tool_name="doxabase.draft_profile_map_updates",
-                    arguments=rerun_arguments,
-                    reason=(
-                        "After reviewing and applying the staged unmapped "
+                SuggestedNextAction(
+                    tool="doxabase.draft_profile_map_updates",
+                    args=rerun_arguments,
+                    reason="After reviewing and applying the staged unmapped "
                         "column shell(s), rerun the profile map-update draft "
                         "for the same dataset and evidence so type advisories "
                         "and follow-up map recommendations can reclassify "
-                        "against map-present columns."
-                    ),
-                    call=self._suggested_call_string(
-                        "draft_profile_map_updates",
-                        rerun_arguments,
-                    ),
-                    preconditions={
-                        "staged_revision_applied": staged_revision.revision_iri,
-                        "why": (
-                            "The rerun only reflects the newly mapped column "
-                            "after the staged profile map-update revision has "
-                            "been reviewed and applied."
-                        ),
-                    },
+                        "against map-present columns.",
                 )
             )
         return actions
@@ -1704,24 +1365,15 @@ class ProfilesMixin:
                 profiles_by_evidence.get(evidence_iri, []),
             )
             actions.append(
-                ProfileEvidenceSuggestedNextAction(
-                    action_label="Inspect singleton profile evidence",
-                    tool_name="describe_profile_run",
-                    mcp_tool_name="doxabase.describe_profile_run",
-                    arguments=arguments,
-                    reason=(
-                        "This query context has profile evidence, but no "
+                SuggestedNextAction(
+                    tool="doxabase.describe_profile_run",
+                    args=arguments,
+                    reason="This query context has profile evidence, but no "
                         "multi-observation profile_run_candidates. Inspect this "
                         "singleton evidence before draft_query_plan; it may be a "
                         "recorded external query result or another one-observation "
                         "profile handoff."
-                        f"{omitted_note}"
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_profile_run",
-                        arguments,
-                    ),
-                    source_profile_evidence=source_profile_evidence,
+                        f"{omitted_note}",
                 )
             )
             if self._query_context_should_suggest_evidence_storage_overlay(
@@ -2371,8 +2023,6 @@ class ProfilesMixin:
         semantic_move: str,
     ) -> list[SuggestedNextAction]:
         if semantic_move == "define_value_type":
-            inspect_label = "Inspect pending value type vocabulary promotion"
-            export_label = "Export pending value type vocabulary promotions"
             export_slug = "profile-value-type-vocabulary-pending"
             inspect_reason = (
                 "A current staged value-type vocabulary skeleton already "
@@ -2386,8 +2036,6 @@ class ProfilesMixin:
                 "scanner-matching content appears before export."
             )
         else:
-            inspect_label = "Inspect pending profile type assertion"
-            export_label = "Export pending profile type assertions"
             export_slug = "profile-type-assertion-pending"
             inspect_reason = (
                 "A current staged profile type assertion already covers this "
@@ -2408,15 +2056,9 @@ class ProfilesMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label=inspect_label,
-                    tool_name="describe_staged_revision",
-                    mcp_tool_name="doxabase.describe_staged_revision",
-                    arguments=arguments,
+                    tool="doxabase.describe_staged_revision",
+                    args=arguments,
                     reason=inspect_reason,
-                    call=self._suggested_call_string(
-                        "describe_staged_revision",
-                        arguments,
-                    ),
                 )
             )
         arguments = {
@@ -2429,15 +2071,9 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                action_label=export_label,
-                tool_name="export_staged_revisions",
-                mcp_tool_name="doxabase.export_staged_revisions",
-                arguments=arguments,
+                tool="doxabase.export_staged_revisions",
+                args=arguments,
                 reason=export_reason,
-                call=self._suggested_call_string(
-                    "export_staged_revisions",
-                    arguments,
-                ),
             )
         )
         return actions
@@ -2453,19 +2089,11 @@ class ProfilesMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect pending profile fallback",
-                    tool_name="describe_staged_revision",
-                    mcp_tool_name="doxabase.describe_staged_revision",
-                    arguments=arguments,
-                    reason=(
-                        "A current staged profile fallback already covers this "
+                    tool="doxabase.describe_staged_revision",
+                    args=arguments,
+                    reason="A current staged profile fallback already covers this "
                         "route. Inspect it before drafting another fallback for "
-                        "the same advisory."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_staged_revision",
-                        arguments,
-                    ),
+                        "the same advisory.",
                 )
             )
         arguments = {
@@ -2478,20 +2106,12 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                action_label="Export pending profile fallbacks",
-                tool_name="export_staged_revisions",
-                mcp_tool_name="doxabase.export_staged_revisions",
-                arguments=arguments,
-                reason=(
-                    "Write a grouped review bundle for the pending staged "
+                tool="doxabase.export_staged_revisions",
+                args=arguments,
+                reason="Write a grouped review bundle for the pending staged "
                     "profile fallback(s) before deciding whether more fallback "
                     "work is needed. The export blocks if scanner-matching "
-                    "content appears before export."
-                ),
-                call=self._suggested_call_string(
-                    "export_staged_revisions",
-                    arguments,
-                ),
+                    "content appears before export.",
             )
         )
         return actions
@@ -3824,7 +3444,7 @@ class ProfilesMixin:
         for group in action_groups:
             for action in group:
                 key = json.dumps(
-                    [action.tool_name, action.arguments],
+                    [action.tool, action.args],
                     sort_keys=True,
                     default=str,
                 )

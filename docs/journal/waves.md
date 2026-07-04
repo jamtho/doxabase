@@ -133,3 +133,26 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   handoff/distillation-session-2026-07-04.md step 2b.
 - Session likely ends here on budget. Next agent: read the handoff; the
   order is 3.4 → 3.3+5.1 brief rebuild → 3.5/3.6 → Phase 4 per doc 08.
+
+## Wave 8 — 2026-07-04 — Phase 3.4: SuggestedNextAction collapsed
+
+- One frozen dataclass (tool, args, reason) replaces the base + 10
+  subclasses; ~184 construction sites rewritten (sub-agent execution, spec
+  in the handoff; independently re-gated before landing). All display-string
+  fields (suggested_next_calls and the ~30 *_call variants), route-summary
+  mirrors, and unattended-recommendation indexes deleted; load-bearing
+  caution/placeholder text folded into reason. Net −4,247 lines.
+- Structural judgement call (reviewed, accepted): profile route-source
+  ride-alongs now travel only as a real staging-tool argument
+  (args["profile_route_sources"]); insight-bundle lanes reconstruct live
+  sources from state.
+- One whole test deleted with its helper (mixed-support review grouping);
+  everything else 763 passed + 1 skipped.
+- Scoreboard: project_brief 76,764 → 28,035 (baseline 100,462);
+  describe_query_context 24,259 → 20,601; slice 44,366 → 44,053; largest
+  module 4,903 → 4,817. Ceilings ratcheted.
+- ≤5 suggestion cap deferred (no clean choke point; ~70 builder sites) —
+  fold into the 3.3+5.1 brief rebuild for the brief itself and revisit
+  globally in Phase 4's per-family merges.
+- response-conventions.md now states the exact tool/args/reason shape.
+- Next: 3.3+5.1 project_brief rebuild (spec in handoff step 3).

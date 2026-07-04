@@ -259,12 +259,12 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     applied_row = second_page["revisions"][0]
     assert applied_row["next_action"]["tool_name"] == "describe_graph_revision"
     assert [
-        action["tool_name"] for action in applied_row["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in applied_row["suggested_next_actions"]
     ] == [
         "describe_graph_revision",
         "describe_applied_revision_diff",
     ]
-    assert applied_row["suggested_next_actions"][1]["arguments"] == {
+    assert applied_row["suggested_next_actions"][1]["args"] == {
         "iri": applied["applied_revision_iri"]
     }
 
@@ -333,24 +333,17 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert staged_row["count_basis"] == "stored_snapshot_rows"
     assert staged_row["exact_snapshot_available"] is True
     assert staged_row["snapshot_evidence_status"] == "history_plus_snapshot_rows"
-    assert staged_row["suggested_next_actions"][0]["tool_name"] == (
-        "describe_revision_graph_snapshot"
+    assert staged_row["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_revision_graph_snapshot"
     )
-    assert staged_row["suggested_next_actions"][1]["tool_name"] == (
-        "describe_revision_lineage"
+    assert staged_row["suggested_next_actions"][1]["tool"] == (
+        "doxabase.describe_revision_lineage"
     )
-    assert staged_row["suggested_next_actions"][1]["arguments"] == {
+    assert staged_row["suggested_next_actions"][1]["args"] == {
         "iri": staged["revision_iri"]
     }
-    assert staged_row["suggested_next_actions"][2]["tool_name"] == (
-        "describe_graph_version_diff"
-    )
-    assert staged_row["suggested_next_calls"][0] == (
-        "describe_revision_graph_snapshot("
-        f"iri={staged['revision_iri']!r}, graph_role='map')"
-    )
-    assert staged_row["suggested_next_calls"][1] == (
-        f"describe_revision_lineage(iri={staged['revision_iri']!r})"
+    assert staged_row["suggested_next_actions"][2]["tool"] == (
+        "doxabase.describe_graph_version_diff"
     )
 
     assert applied_row["record_kind"] == "applied_event"
@@ -362,13 +355,13 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert applied_row["triple_count"] == db.triple_count("map")
     assert applied_row["exact_snapshot_available"] is True
     assert [
-        action["tool_name"] for action in applied_row["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in applied_row["suggested_next_actions"]
     ] == [
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",
         "describe_graph_version_diff",
     ]
-    assert applied_row["suggested_next_actions"][1]["arguments"] == {
+    assert applied_row["suggested_next_actions"][1]["args"] == {
         "iri": applied["applied_revision_iri"]
     }
 
@@ -457,14 +450,14 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
         first_applied["applied_revision_iri"]
     )
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in stored_diff["changed_resource_suggested_next_actions"]
     ] == [
         "describe_resource_revision_lineage",
         "describe_resource_revision_lineage",
     ]
     assert stored_diff["changed_resource_suggested_next_actions"][0][
-        "arguments"
+        "args"
     ] == {
         "resource_iri": "https://example.test/project#Messages",
         "revision_iri": first_staged["revision_iri"],
@@ -486,8 +479,8 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
     assert current_diff["exact_changed_triples_included"] is True
     assert current_diff["triples_added_count"] == 1
     assert len(current_diff["triples_added"]) == 1
-    assert current_diff["suggested_next_actions"][0]["tool_name"] == (
-        "describe_revision_graph_snapshot"
+    assert current_diff["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_revision_graph_snapshot"
     )
 
 
@@ -644,13 +637,5 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         staged["revision_iri"],
     ]
     assert generic_lineage["next_action"]["queue"] == "inspect_already_applied"
-    assert generic_lineage["suggested_next_calls"] == [
-        f"describe_graph_revision(iri='{applied['applied_revision_iri']}')",
-        (
-            "describe_applied_revision_diff("
-            f"iri='{applied['applied_revision_iri']}')"
-        ),
-        f"describe_staged_revision(iri='{staged['revision_iri']}')",
-    ]
     assert generic_lineage.get("warnings", []) == []
 

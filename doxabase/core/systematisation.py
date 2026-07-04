@@ -239,9 +239,10 @@ class SystematisationMixin:
         if profile_route_sources is not None and not profile_route_source_values:
             warnings.append(
                 "profile_route_sources was provided, but no usable profile "
-                "route source objects were found. Pass the action source block, "
-                "for example query_action.source_query_context, rather than the "
-                "whole suggested action object."
+                "route source objects were found. Pass route source objects, "
+                "for example entries from a suggested action's "
+                "args['profile_route_sources'], rather than the whole "
+                "suggested action object."
             )
         if not anchor_values:
             warnings.append(
@@ -306,9 +307,9 @@ class SystematisationMixin:
                 warnings.append(
                     "profile_route_sources was provided for framing "
                     f"{label!r}, but no usable profile route source objects were "
-                    "found. Pass the action source block, for example "
-                    "query_action.source_query_context, rather than the whole "
-                    "suggested action object."
+                    "found. Pass route source objects, for example entries "
+                    "from a suggested action's args['profile_route_sources'], "
+                    "rather than the whole suggested action object."
                 )
             framing_effective_profile_route_sources = (
                 self._merge_profile_route_sources(
@@ -578,22 +579,14 @@ class SystematisationMixin:
                 )
                 warning_suggested_actions.append(
                     SuggestedNextAction(
-                        action_label="Rerun with explicit alternative routing",
-                        tool_name="stage_systematisation",
-                        mcp_tool_name="doxabase.stage_systematisation",
-                        arguments=rerun_arguments,
-                        reason=(
-                            "The first framing did not route to apply review, "
+                        tool="doxabase.stage_systematisation",
+                        args=rerun_arguments,
+                        reason="The first framing did not route to apply review, "
                             "but later framings default-linked to it as "
                             "alternatives. Rerun with link_alternatives=False "
                             "so diagnostic and ready framings can be reviewed "
                             "without anchoring ready siblings to a failed first "
-                            "framing."
-                        ),
-                        call=self._suggested_call_string(
-                            "stage_systematisation",
-                            rerun_arguments,
-                        ),
+                            "framing.",
                     )
                 )
         suggested_next_actions = [
@@ -621,7 +614,6 @@ class SystematisationMixin:
                 bundle_summary.semantic_review_required_queue_counts
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def _systematisation_shared_patch_summaries(
         self,
@@ -816,16 +808,12 @@ class SystematisationMixin:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
-            action_label: str,
         ) -> None:
             actions.append(
                 SuggestedNextAction(
-                    action_label=action_label,
-                    tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
-                    arguments=arguments,
+                    tool=f"doxabase.{tool_name}",
+                    args=arguments,
                     reason=reason,
-                    call=self._suggested_call_string(tool_name, arguments),
                 )
             )
 
@@ -844,7 +832,6 @@ class SystematisationMixin:
                 "the staged framings. The suggested call blocks if "
                 "scanner-matching content appears before export."
             ),
-            "Export staged framing bundle",
         )
         for revision_iri in revision_iris:
             add_action(
@@ -854,7 +841,6 @@ class SystematisationMixin:
                     "Recheck live apply status and follow the returned "
                     "next_action before applying, repairing, or restaging."
                 ),
-                "Check staged revision apply route",
             )
         return actions
     def _staged_description_shared_semantic_context_patch_summaries(
@@ -1358,17 +1344,12 @@ class SystematisationMixin:
                 "framing."
             )
         action = SuggestedNextAction(
-            action_label="Rerun with shared context moved into selected framings",
-            tool_name="stage_systematisation",
-            mcp_tool_name="doxabase.stage_systematisation",
-            arguments=stage_args,
-            reason=(
-                "Read-only draft: rerun the systematisation with shared "
+                     tool="doxabase.stage_systematisation",
+                     args=stage_args,
+                     reason="Read-only draft: rerun the systematisation with shared "
                 "ontology/shapes patches copied into only the selected framing "
-                "patches, avoiding manual Turtle reconstruction."
-            ),
-            call=self._suggested_call_string("stage_systematisation", stage_args),
-        )
+                "patches, avoiding manual Turtle reconstruction.",
+                 )
         return SystematisationSharedContextRerunDraft(
             result_kind="systematisation_shared_context_rerun_draft",
             helper="draft_systematisation_shared_context_rerun",
@@ -1382,7 +1363,6 @@ class SystematisationMixin:
             framings=framing_records,
             stage_systematisation_arguments=stage_args,
             suggested_next_actions=[action],
-            suggested_next_calls=[action.call] if action.call else [],
             warnings=warnings,
             note=(
                 "Review the selected target framings semantically before "

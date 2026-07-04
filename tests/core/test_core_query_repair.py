@@ -70,7 +70,7 @@ def test_multipatch_same_slot_subpatch_routes_to_patch_repair_plan(
     assert check.recommended_resolution is not None
     assert "patch_repair_plan" in check.recommended_resolution
     assert not any(
-        action.tool_name == "restage_staged_revision"
+        action.tool == "doxabase.restage_staged_revision"
         for action in check.suggested_next_actions
     )
 
@@ -82,11 +82,11 @@ def test_multipatch_same_slot_subpatch_routes_to_patch_repair_plan(
     assert same_slot_plan.effect_class == "same_slot_replace"
     assert same_slot_plan.recommended_action_kind == "stage_map_assertion_change"
     assert same_slot_plan.action is not None
-    assert same_slot_plan.action.tool_name == "stage_map_assertion_change"
-    assert same_slot_plan.action.arguments["subject"] == orders
-    assert same_slot_plan.action.arguments["predicate"] == RC + "rowSemantics"
-    assert same_slot_plan.action.arguments["object"] == RC + "SnapshotRow"
-    assert same_slot_plan.action.arguments["restages_revision"] == source.revision_iri
+    assert same_slot_plan.action.tool == "doxabase.stage_map_assertion_change"
+    assert same_slot_plan.action.args["subject"] == orders
+    assert same_slot_plan.action.args["predicate"] == RC + "rowSemantics"
+    assert same_slot_plan.action.args["object"] == RC + "SnapshotRow"
+    assert same_slot_plan.action.args["restages_revision"] == source.revision_iri
     assert same_slot_plan.current_same_subject_predicate_triples[0].object == (
         RC + "EventRow"
     )
@@ -168,11 +168,11 @@ def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     assert check.recommended_resolution is not None
     assert "multiple values" in check.recommended_resolution
     assert not any(
-        action.tool_name == "stage_map_assertion_change"
+        action.tool == "doxabase.stage_map_assertion_change"
         for action in check.suggested_next_actions
     )
     assert not any(
-        action.tool_name == "restage_staged_revision"
+        action.tool == "doxabase.restage_staged_revision"
         for action in check.suggested_next_actions
     )
     draft = db.draft_staged_revision_rebase(source.revision_iri)
@@ -245,13 +245,13 @@ def test_stale_authored_replacement_suggests_same_slot_repair(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.arguments["subject"] == orders
-    assert action.arguments["predicate"] == RC + "rowSemantics"
-    assert action.arguments["object"] == RC + "SnapshotRow"
-    assert action.arguments["change_kind"] == "replace"
-    assert action.arguments["restages_revision"] == (
+    assert action.args["subject"] == orders
+    assert action.args["predicate"] == RC + "rowSemantics"
+    assert action.args["object"] == RC + "SnapshotRow"
+    assert action.args["change_kind"] == "replace"
+    assert action.args["restages_revision"] == (
         source.staged_revision.revision_iri
     )
 
@@ -262,7 +262,7 @@ def test_stale_authored_replacement_suggests_same_slot_repair(
     assert batch.not_restageable_revision_iris_by_reason == {
         "same_slot_replacement": [source.staged_revision.revision_iri]
     }
-    repair = db.stage_map_assertion_change(**action.arguments)
+    repair = db.stage_map_assertion_change(**action.args)
     assert db.check_staged_revision_apply(
         repair.staged_revision.revision_iri
     ).status == "ready"
@@ -669,31 +669,22 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
     )
     assert repair_group.repair_context["verified_storage_access_iris"] == [storage]
     assert repair_group.repair_context["verified_physical_layout_iris"] == [layout]
-    assert [action["arguments"]["object"] for action in repair_group.actions] == [
+    assert [action["args"]["object"] for action in repair_group.actions] == [
         "rc:VerifiedByListingLayout",
         "rc:VerifiedByQueryLayout",
     ]
     listing_action = repair_group.actions[0]
-    assert listing_action["tool_name"] == "stage_map_assertion_change"
-    assert listing_action["arguments"]["subject"] == dataset
-    assert listing_action["arguments"]["predicate"] == (
+    assert listing_action["tool"] == "doxabase.stage_map_assertion_change"
+    assert listing_action["args"]["subject"] == dataset
+    assert listing_action["args"]["predicate"] == (
         "rc:layoutVerificationStatus"
     )
-    assert listing_action["arguments"]["change_kind"] == "replace"
+    assert listing_action["args"]["change_kind"] == "replace"
     assert context.suggested_next_actions
     draft_action = context.suggested_next_actions[0]
-    assert draft_action.tool_name == "draft_query_plan"
-    assert draft_action.unattended_recommended is False
-    assert "query_repair_groups_present" in (
-        draft_action.unattended_review_reason_codes
-    )
-    assert draft_action.unattended_caution is not None
-    assert "suggested_repair_action_groups" in draft_action.unattended_caution
-    assert context.unattended_recommended_action_indexes == []
-    assert context.first_unattended_action_index is None
-    assert context.suggested_next_calls == []
+    assert draft_action.tool == "doxabase.draft_query_plan"
 
-    arguments = dict(listing_action["arguments"])
+    arguments = dict(listing_action["args"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
     status_repair = db.stage_map_assertion_change(**arguments)
     assert db.check_staged_revision_apply(status_repair.revision_iri).status == (
@@ -709,9 +700,6 @@ def test_describe_query_context_suggests_dataset_layout_status_repair(
     assert repaired_context.layout_verification_status.iri == (
         RC + "VerifiedByListingLayout"
     )
-    assert repaired_context.suggested_next_calls == [
-        action.call for action in repaired_context.suggested_next_actions
-    ]
 
 
 def test_missing_storage_access_lifts_database_relation_candidate_from_query_evidence(
@@ -761,11 +749,6 @@ def test_missing_storage_access_lifts_database_relation_candidate_from_query_evi
         "location_kind": "connection",
         "path_templates": ["analytics.support_ticket_daily"],
     }
-    assert repair_hint["evidence_storage_route_candidate_source"] == (
-        "query_result_scanned_source_paths_and_handles"
-    )
-    assert repair_hint["evidence_storage_route_candidate_count"] == 3
-    assert repair_hint["evidence_storage_route_candidate_total_count"] == 3
     route_candidates = repair_hint["evidence_storage_route_candidates"]
     assert [item["candidate_kind"] for item in route_candidates] == [
         "database_relation_from_query_evidence",
@@ -806,9 +789,6 @@ def test_missing_storage_access_lifts_database_relation_candidate_from_query_evi
     assert repair_group.repair_context["database_relation_candidates"] == [
         candidate
     ]
-    assert repair_group.repair_context["evidence_storage_route_candidates"] == (
-        route_candidates
-    )
     assert repair_group.repair_context[
         "database_relation_candidate_review_note"
     ].startswith("These candidates are parsed")
@@ -876,9 +856,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
         staged_option,
         action_index=0,
         action_type="stage_reviewed_physical_layout",
-        tool_name="stage_query_physical_layout_repair",
-        mcp_tool_name="doxabase.stage_query_physical_layout_repair",
-        action_label="Stage physical layout repair",
+        tool="doxabase.stage_query_physical_layout_repair",
         required_extra_arguments=[
             "layout_iri",
             "file_format",
@@ -909,9 +887,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
         layout_option,
         action_index=1,
         action_type="record_reviewed_physical_layout",
-        tool_name="record_map_physical_layout",
-        mcp_tool_name="doxabase.record_map_physical_layout",
-        action_label="Record physical layout and link dataset",
+        tool="doxabase.record_map_physical_layout",
         required_extra_arguments=["iri", "file_format"],
         placeholder_fields=[
             "file_format",
@@ -931,18 +907,9 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     )
     assert context.suggested_next_actions
     draft_action = context.suggested_next_actions[0]
-    assert draft_action.tool_name == "draft_query_plan"
-    assert draft_action.unattended_recommended is False
-    assert "query_repair_groups_present" in (
-        draft_action.unattended_review_reason_codes
-    )
-    assert draft_action.unattended_caution is not None
-    assert "suggested_repair_action_groups" in draft_action.unattended_caution
-    assert context.unattended_recommended_action_indexes == []
-    assert context.first_unattended_action_index is None
-    assert context.suggested_next_calls == []
+    assert draft_action.tool == "doxabase.draft_query_plan"
     action = repair_group.actions[0]
-    assert action["tool_name"] == "stage_query_physical_layout_repair"
+    assert action["tool"] == "doxabase.stage_query_physical_layout_repair"
     assert action["arguments_template"]["dataset_iri"] == dataset
     assert action["arguments_template"]["layout_iri"] == (
         "<reviewed physical layout IRI>"
@@ -952,7 +919,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     )
     assert "rc:PostgreSQLTable" in action["condition"]
     direct_action = repair_group.actions[1]
-    assert direct_action["tool_name"] == "record_map_physical_layout"
+    assert direct_action["tool"] == "doxabase.record_map_physical_layout"
     assert direct_action["arguments_template"]["datasets"] == [dataset]
     assert direct_action["arguments_template"]["file_format"] == (
         "<reviewed rc:FileFormat IRI>"
@@ -975,9 +942,6 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     assert "missing_physical_layout" not in {
         issue.code for issue in repaired_context.issues
     }
-    assert repaired_context.suggested_next_calls == [
-        action.call for action in repaired_context.suggested_next_actions
-    ]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "database_relation_handoff"
     assert plan.scan.physical_layout is not None
@@ -1131,9 +1095,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         pending_staged_storage_option,
         action_index=0,
         action_type="stage_reviewed_storage_access",
-        tool_name="stage_query_storage_access_repair",
-        mcp_tool_name="doxabase.stage_query_storage_access_repair",
-        action_label="Stage storage access repair",
+        tool="doxabase.stage_query_storage_access_repair",
         required_extra_arguments=[
             "storage_access_iri",
             "storage_protocol",
@@ -1168,9 +1130,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         pending_storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool_name="record_map_storage_access",
-        mcp_tool_name="doxabase.record_map_storage_access",
-        action_label="Record storage access and link dataset",
+        tool="doxabase.record_map_storage_access",
         required_extra_arguments=[
             "iri",
             "storage_protocol",
@@ -1443,7 +1403,7 @@ def test_missing_storage_access_repair_omits_duplicate_path_template(
     draft_actions = [
         action
         for action in after.suggested_next_actions
-        if action.tool_name == "draft_query_plan"
+        if action.tool == "doxabase.draft_query_plan"
     ]
     assert len(draft_actions) == 1
 
@@ -1485,7 +1445,7 @@ def test_describe_query_context_flags_known_fixture_without_storage_access(
     assert advisory["storage_access_count"] == 0
     assert advisory["dataset_matches_known_fixture"] is True
     assert dataset in advisory["known_fixture_table_iris"]
-    assert advisory["suggested_next_action"]["tool_name"] == "project_brief"
+    assert advisory["suggested_next_action"]["tool"] == "doxabase.project_brief"
 
 
 def test_describe_query_context_reports_storage_access_owned_target_candidate(
@@ -1629,9 +1589,7 @@ def test_query_context_suggests_stale_partition_link_repair(
         stale_partition_option,
         action_index=0,
         action_type="remove_stale_partition_scheme_link",
-        tool_name="stage_map_assertion_change",
-        mcp_tool_name="doxabase.stage_map_assertion_change",
-        action_label="Stage stale partition-scheme removal",
+        tool="doxabase.stage_map_assertion_change",
         required_extra_arguments=["rationale"],
         placeholder_fields=[],
         reviewed_value_fields=[],
@@ -1639,8 +1597,8 @@ def test_query_context_suggests_stale_partition_link_repair(
     assert "selected direct-clean query target" in stale_partition_option["reason"]
     assert "stale blocker" in stale_partition_option["condition"]
     action = repair_group.actions[0]
-    assert action["tool_name"] == "stage_map_assertion_change"
-    assert action["arguments"] == {
+    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert action["args"] == {
         "subject": dataset,
         "predicate": "rc:partitionedBy",
         "object": stale_partition.iri,
@@ -1650,7 +1608,7 @@ def test_query_context_suggests_stale_partition_link_repair(
         "validation_scope": "all",
     }
     staged = db.stage_map_assertion_change(
-        **action["arguments"],
+        **action["args"],
         rationale=(
             "Reviewed DailyIndex wildcard storage as the intended route; the "
             "broadcast partition link is stale."
@@ -1717,9 +1675,7 @@ def test_query_context_suggests_stale_physical_layout_link_repair(
         stale_layout_option,
         action_index=0,
         action_type="remove_stale_physical_layout_link",
-        tool_name="stage_map_assertion_change",
-        mcp_tool_name="doxabase.stage_map_assertion_change",
-        action_label="Stage stale physical-layout removal",
+        tool="doxabase.stage_map_assertion_change",
         required_extra_arguments=["rationale"],
         placeholder_fields=[],
         reviewed_value_fields=[],
@@ -1727,8 +1683,8 @@ def test_query_context_suggests_stale_physical_layout_link_repair(
     assert "verified sibling layout" in stale_layout_option["reason"]
     assert "stale blocker" in stale_layout_option["condition"]
     action = repair_group.actions[0]
-    assert action["tool_name"] == "stage_map_assertion_change"
-    assert action["arguments"] == {
+    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert action["args"] == {
         "subject": dataset,
         "predicate": "rc:hasPhysicalLayout",
         "object": stale_layout.iri,
@@ -1738,7 +1694,7 @@ def test_query_context_suggests_stale_physical_layout_link_repair(
         "validation_scope": "all",
     }
     staged = db.stage_map_assertion_change(
-        **action["arguments"],
+        **action["args"],
         rationale=(
             "Reviewed Events local storage as the intended route; the older "
             "candidate physical-layout link is stale."
@@ -1802,19 +1758,12 @@ def test_distinct_physical_layout_signatures_require_explicit_review(
     assert context.issues[1].resource.iri == csv_layout.iri
     layout_selection_actions = [
         action for action in context.suggested_next_actions
-        if action.arguments.get("physical_layout_iri") is not None
+        if action.args.get("physical_layout_iri") is not None
     ]
     assert {
-        action.arguments["physical_layout_iri"] for action in layout_selection_actions
+        action.args["physical_layout_iri"] for action in layout_selection_actions
     } == {parquet_layout.iri}
     layout_action = layout_selection_actions[0]
-    assert layout_action.route_card["physical_layout_iri"] == parquet_layout.iri
-    assert layout_action.route_card["candidate_selector"] == (
-        context.query_target_candidates[0].candidate_selector
-    )
-    assert "ambiguous_physical_layout" in (
-        layout_action.route_card["direct_issue_codes"]
-    )
 
     selected_layout_plan = db.draft_query_plan(
         dataset,
@@ -1951,11 +1900,11 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
         for task in brief.recommended_next_tasks
         if task.task_type == "query_repair_review"
         and task.suggested_next_action is not None
-        and task.suggested_next_action.arguments == {"iri": dataset}
+        and task.suggested_next_action.args == {"iri": dataset}
     )
     assert repair_task.source == "describe_query_context"
     assert repair_task.suggested_next_action is not None
-    assert repair_task.suggested_next_action.tool_name == "describe_query_context"
+    assert repair_task.suggested_next_action.tool == "doxabase.describe_query_context"
 
     storage = db.stage_query_storage_access_repair(
         dataset_iri=dataset,
@@ -2053,7 +2002,7 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     assert result.query_hash == "sha256:event-status-storage-route"
     assert result.source_span_iri is not None
     assert len(result.scanned_source_span_iris) == 1
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "describe_profile_run",
         "get_context_graph",
         "describe_query_context",
@@ -2091,7 +2040,7 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
 
     evidence_slice = db.get_context_graph(
-        **result.suggested_next_actions[1].arguments,
+        **result.suggested_next_actions[1].args,
         max_triples=120,
     )
     assert result.evidence_iri in {
@@ -2155,9 +2104,10 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     selection_actions = [
         action
         for action in context.suggested_next_actions
-        if action.action_label == "Select physical layout for draft"
+        if action.tool == "doxabase.draft_query_plan"
+        and "physical_layout_iri" in action.args
     ]
-    assert [action.arguments for action in selection_actions] == [
+    assert [action.args for action in selection_actions] == [
         {
             "iri": dataset,
             "candidate_selector": target.candidate_selector,
@@ -2260,7 +2210,7 @@ def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
         "remove_misplaced_source_template",
         "add_reviewed_relation_template",
     ]
-    assert repair_hint["actions"][0]["arguments"] == {
+    assert repair_hint["actions"][0]["args"] == {
         "subject": dataset,
         "predicate": "rc:pathTemplate",
         "object": relation,
@@ -2349,16 +2299,15 @@ def test_context_slice_column_seed_suggests_query_context_for_owner_repairs(
         query_actions = [
             action
             for action in context_slice.suggested_next_actions
-            if action.tool_name == "describe_query_context"
+            if action.tool == "doxabase.describe_query_context"
         ]
         assert len(query_actions) == 1
         action = query_actions[0]
-        assert action.action_label == "Inspect query-planning context"
-        assert action.arguments == {"iri": dataset}
+        assert action.args == {"iri": dataset}
         assert "database_relation_template_source_mismatch" in action.reason
         assert "repair hints" in action.reason
 
-        query_context = db.describe_query_context(**action.arguments)
+        query_context = db.describe_query_context(**action.args)
         assert query_context.suggested_repair_action_groups[0].issue_code == (
             "database_relation_template_source_mismatch"
         )

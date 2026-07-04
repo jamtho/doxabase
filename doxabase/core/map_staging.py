@@ -464,7 +464,6 @@ class MapStagingMixin:
             review_recommendation=prepared.review_recommendation,
             stage_arguments=prepared.stage_arguments,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def _draft_map_assertion_change_next_actions(
         self,
@@ -474,20 +473,12 @@ class MapStagingMixin:
         limit: int,
     ) -> list[SuggestedNextAction]:
         stage_action = SuggestedNextAction(
-            action_label="Stage map assertion change",
-            tool_name="stage_map_assertion_change",
-            mcp_tool_name="doxabase.stage_map_assertion_change",
-            arguments=prepared.stage_arguments,
-            reason=(
-                "Stage this reviewed map assertion change only after the draft "
+                           tool="doxabase.stage_map_assertion_change",
+                           args=prepared.stage_arguments,
+                           reason="Stage this reviewed map assertion change only after the draft "
                 "support, impacts, validation preview, and judgement panel still "
-                "justify the write."
-            ),
-            call=self._suggested_call_string(
-                "stage_map_assertion_change",
-                prepared.stage_arguments,
-            ),
-        )
+                "justify the write.",
+                       )
         if not self._draft_map_assertion_change_requires_support_review(
             judgement_panel
         ):
@@ -498,24 +489,15 @@ class MapStagingMixin:
             limit=limit,
         )
         review_action = SuggestedNextAction(
-            action_label="Review assertion support before staging",
-            tool_name="describe_assertion_support",
-            mcp_tool_name="doxabase.describe_assertion_support",
-            arguments=review_arguments,
-            reason=(
-                "This draft is high-risk or marked do-not-stage; inspect support "
+                            tool="doxabase.describe_assertion_support",
+                            args=review_arguments,
+                            reason="This draft is high-risk or marked do-not-stage; inspect support "
                 "routes, caveat scopes, and current-value rationale before any "
                 "write. Mechanical validation means the patch can replay, not that "
-                "the semantic change is good."
-            ),
-            call=self._suggested_call_string(
-                "describe_assertion_support",
-                review_arguments,
-            ),
-        )
+                "the semantic change is good.",
+                        )
         override_stage_action = replace(
             stage_action,
-            action_label="Stage map assertion change after explicit override",
             reason=(
                 "Override the draft review warning only after explicitly deciding "
                 "the high-risk or do-not-stage judgement is outweighed by current "

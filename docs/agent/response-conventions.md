@@ -28,12 +28,11 @@ responses never silently drop content without reporting it.
 
 ## Suggestions
 
-`suggested_next_actions` entries tell you three things: which MCP tool to
-call (`mcp_tool_name`), with what arguments (`arguments` — placeholder
-values are UPPERCASE and must be replaced with reviewed values, never
-passed through), and why (`reason`). Ignore any other decoration on a
-suggestion. (The distillation program is collapsing these entries to
-exactly `tool`/`args`/`reason`; the semantics above are stable.)
+`suggested_next_actions` entries have exactly three fields: `tool` (the
+MCP tool name to call), `args` (the arguments to call it with —
+placeholder values are UPPERCASE or angle-bracketed and must be replaced
+with reviewed values, never passed through), and `reason` (one sentence
+of why).
 
 Suggestions are hints from mechanics, not instructions: the capsule cannot
 see your task. Prefer your own judgement about what to do next; see the

@@ -96,9 +96,6 @@ class QueryPlanningMixin:
                 suggested_next_actions
             )
         )
-        unattended_recommended_action_indexes = (
-            self._unattended_recommended_action_indexes(suggested_next_actions)
-        )
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -148,18 +145,6 @@ class QueryPlanningMixin:
                 safe_inspection_action_indexes[0]
                 if safe_inspection_action_indexes
                 else None
-            ),
-            unattended_recommended_action_indexes=(
-                unattended_recommended_action_indexes
-            ),
-            first_unattended_action_index=(
-                unattended_recommended_action_indexes[0]
-                if unattended_recommended_action_indexes
-                else None
-            ),
-            suggested_next_calls=self._query_context_suggested_next_calls(
-                suggested_next_actions,
-                pending_repair_groups_present=pending_repair_groups_present,
             ),
         )
     def _non_tabular_query_context(
@@ -241,48 +226,19 @@ class QueryPlanningMixin:
             suggested_next_actions=suggested_next_actions,
             safe_inspection_action_indexes=[0],
             first_safe_inspection_action_index=0,
-            unattended_recommended_action_indexes=[],
-            first_unattended_action_index=None,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
-    @staticmethod
-    def _unattended_recommended_action_indexes(
-        actions: Iterable[SuggestedNextAction],
-    ) -> list[int]:
-        return [
-            index
-            for index, action in enumerate(actions)
-            if getattr(action, "unattended_recommended", False) is True
-        ]
     @staticmethod
     def _query_context_safe_inspection_action_indexes(
         actions: Iterable[SuggestedNextAction],
     ) -> list[int]:
         safe_inspection_tools = {
-            "get_context_graph",
-            "describe_profile_run",
+            "doxabase.get_context_graph",
+            "doxabase.describe_profile_run",
         }
         return [
             index
             for index, action in enumerate(actions)
-            if action.tool_name in safe_inspection_tools
-        ]
-    @staticmethod
-    def _query_context_suggested_next_calls(
-        actions: Iterable[SuggestedNextAction],
-        *,
-        pending_repair_groups_present: bool,
-    ) -> list[str]:
-        return [
-            action.call
-            for action in actions
-            if action.call
-            and not (
-                pending_repair_groups_present
-                and action.tool_name == "draft_query_plan"
-            )
+            if action.tool in safe_inspection_tools
         ]
     def _layout_status_is_verified(self, status: ResourceSummary | None) -> bool:
         if status is None:
@@ -343,14 +299,12 @@ class QueryPlanningMixin:
                     "evidence_iri": candidate_run.evidence_iri,
                 }
                 if candidate_index == 0:
-                    action_label = "Inspect profile run evidence"
                     reason = (
                         "Inspect the profile observations behind the selected "
                         "row-count/profile handoff before relying on profiler "
                         "evidence in a query plan."
                     )
                 else:
-                    action_label = "Inspect additional profile run evidence"
                     reason = (
                         "Multiple profile-run candidates carry different row "
                         "count evidence, or the selected snapshot-matching "
@@ -360,15 +314,9 @@ class QueryPlanningMixin:
                     )
                 actions.append(
                     SuggestedNextAction(
-                        action_label=action_label,
-                        tool_name="describe_profile_run",
-                        mcp_tool_name="doxabase.describe_profile_run",
-                        arguments=profile_arguments,
+                        tool="doxabase.describe_profile_run",
+                        args=profile_arguments,
                         reason=reason,
-                        call=self._suggested_call_string(
-                            "describe_profile_run",
-                            profile_arguments,
-                        ),
                     )
                 )
         elif profile_summary.evidence_iris:
@@ -379,10 +327,10 @@ class QueryPlanningMixin:
             )
             actions.extend(singleton_actions)
             ordinary_query_evidence_exclusions.update(
-                action.arguments["evidence_iri"]
+                action.args["evidence_iri"]
                 for action in singleton_actions
-                if action.tool_name == "draft_query_evidence_storage_overlay"
-                and isinstance(action.arguments.get("evidence_iri"), str)
+                if action.tool == "doxabase.draft_query_evidence_storage_overlay"
+                and isinstance(action.args.get("evidence_iri"), str)
             )
         actions.extend(
             self._query_context_ordinary_query_evidence_actions(
@@ -406,7 +354,6 @@ class QueryPlanningMixin:
         if graph is not None and graph != "map":
             arguments["graph"] = graph
 
-        action_label = "Draft selected query plan"
         reason = (
             "Draft a non-executed query plan for the selected query target "
             "candidate, then read review_gate, scan, bindings, and issues."
@@ -416,7 +363,6 @@ class QueryPlanningMixin:
             and candidate.direct_review_required is False
         ):
             arguments["allow_context_blocked_candidate"] = True
-            action_label = "Draft direct-clean candidate with context allowance"
             reason = (
                 "The selected candidate has no direct warning or error, but "
                 "sibling or broader context blockers make the whole context "
@@ -436,14 +382,12 @@ class QueryPlanningMixin:
                     "intended."
                 )
         elif decision.status == "candidate_needs_review":
-            action_label = "Draft review-gated query plan"
             reason = (
                 "Draft a non-executed review plan for this candidate so the "
                 "scan, relation, runtime, and blocking reason fields are "
                 "available before repair or execution."
             )
         elif decision.status == "ready":
-            action_label = "Draft metadata-ready query plan"
             reason = (
                 "Draft the selected query target and inspect bindings, runtime "
                 "resolution requirements, and analysis caveats before any "
@@ -462,48 +406,26 @@ class QueryPlanningMixin:
         selected_route_intent_peer_indexes = set(
             decision.route_intent_review_candidate_indexes
         )
-        selected_unattended_recommended = True
-        selected_unattended_caution = None
-        selected_unattended_review_reason_codes: list[str] = []
-        if (
-            selected_route_intent_peer_indexes
-            and decision.candidate_index not in selected_route_intent_peer_indexes
-        ):
-            selected_unattended_recommended = False
-            selected_unattended_caution = decision.route_intent_caution
-            selected_unattended_review_reason_codes = [
-                "route_intent_review_candidates_present"
-            ]
-        (
-            selected_unattended_recommended,
-            selected_unattended_caution,
-            selected_unattended_review_reason_codes,
-        ) = self._query_plan_action_unattended_fields(
-            recommended=selected_unattended_recommended,
-            caution=selected_unattended_caution,
-            review_reason_codes=selected_unattended_review_reason_codes,
+        selected_caution = self._query_plan_action_caution(
+            caution=(
+                decision.route_intent_caution
+                if (
+                    selected_route_intent_peer_indexes
+                    and decision.candidate_index
+                    not in selected_route_intent_peer_indexes
+                )
+                else None
+            ),
             pending_repair_groups_present=pending_repair_groups_present,
         )
+        if selected_caution:
+            reason = f"{reason} {selected_caution}"
 
         actions.append(
-            QueryPlanSuggestedNextAction(
-                action_label=action_label,
-                tool_name="draft_query_plan",
-                mcp_tool_name="doxabase.draft_query_plan",
-                arguments=arguments,
+            SuggestedNextAction(
+                tool="doxabase.draft_query_plan",
+                args=arguments,
                 reason=reason,
-                call=self._suggested_call_string("draft_query_plan", arguments),
-                route_card=self._query_plan_action_route_card(
-                    candidate_index=decision.candidate_index,
-                    candidate=candidate,
-                    columns=dataset.columns,
-                    partition_schemes=dataset.partition_schemes,
-                ),
-                unattended_recommended=selected_unattended_recommended,
-                unattended_caution=selected_unattended_caution,
-                unattended_review_reason_codes=(
-                    selected_unattended_review_reason_codes
-                ),
             )
         )
         peer_action_indexes: list[int] = []
@@ -532,7 +454,6 @@ class QueryPlanningMixin:
                 peer_arguments["graph"] = graph
             if peer_action_allowance and peer_candidate.direct_review_required is False:
                 peer_arguments["allow_context_blocked_candidate"] = True
-                peer_label = "Draft peer direct-clean candidate with context allowance"
                 peer_reason = (
                     "A peer candidate has no direct warning or error, but "
                     "sibling or broader context blockers make the whole context "
@@ -541,58 +462,26 @@ class QueryPlanningMixin:
                     "instead of parsing peer indexes from prose."
                 )
             else:
-                peer_label = "Draft peer metadata-ready query plan"
                 peer_reason = (
                     "A peer candidate is also direct-ready. Draft this explicit "
                     "candidate_selector when candidate review shows this path or "
                     "relation is the intended handoff."
                 )
-            peer_unattended_recommended = (
-                not selected_route_intent_peer_indexes
-                or peer_index in selected_route_intent_peer_indexes
-            )
-            peer_unattended_caution = (
-                decision.route_intent_caution
-                if peer_index in selected_route_intent_peer_indexes
-                else None
-            )
-            peer_unattended_review_reason_codes = (
-                ["route_intent_review_candidates_present"]
-                if peer_index in selected_route_intent_peer_indexes
-                else []
-            )
-            (
-                peer_unattended_recommended,
-                peer_unattended_caution,
-                peer_unattended_review_reason_codes,
-            ) = self._query_plan_action_unattended_fields(
-                recommended=peer_unattended_recommended,
-                caution=peer_unattended_caution,
-                review_reason_codes=peer_unattended_review_reason_codes,
+            peer_caution = self._query_plan_action_caution(
+                caution=(
+                    decision.route_intent_caution
+                    if peer_index in selected_route_intent_peer_indexes
+                    else None
+                ),
                 pending_repair_groups_present=pending_repair_groups_present,
             )
+            if peer_caution:
+                peer_reason = f"{peer_reason} {peer_caution}"
             actions.append(
-                QueryPlanSuggestedNextAction(
-                    action_label=peer_label,
-                    tool_name="draft_query_plan",
-                    mcp_tool_name="doxabase.draft_query_plan",
-                    arguments=peer_arguments,
+                SuggestedNextAction(
+                    tool="doxabase.draft_query_plan",
+                    args=peer_arguments,
                     reason=peer_reason,
-                    call=self._suggested_call_string(
-                        "draft_query_plan",
-                        peer_arguments,
-                    ),
-                    route_card=self._query_plan_action_route_card(
-                        candidate_index=peer_index,
-                        candidate=peer_candidate,
-                        columns=dataset.columns,
-                        partition_schemes=dataset.partition_schemes,
-                    ),
-                    unattended_recommended=peer_unattended_recommended,
-                    unattended_caution=peer_unattended_caution,
-                    unattended_review_reason_codes=(
-                        peer_unattended_review_reason_codes
-                    ),
                 )
             )
         layout_action_indexes = [

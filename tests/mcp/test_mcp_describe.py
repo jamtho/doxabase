@@ -361,25 +361,16 @@ def test_get_context_graph_tool_returns_json_like_payload(
     assert result["truncation_scope"] == "triples_only"
     assert result["truncated"] is True
     assert result["omitted_triple_count"] > 0
-    assert [
-        action["action_label"] for action in result["suggested_next_actions"]
-    ] == [
-        "Narrow to pattern context",
-        "Return full raw RDF for slice",
-    ]
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["args"] == {
         "seed_iris": [pattern["pattern_iri"]],
         "profile": "pattern_brief",
         "max_triples": 120,
     }
-    assert result["suggested_next_actions"][1]["arguments"] == {
+    assert result["suggested_next_actions"][1]["args"] == {
         "seed_iris": [seed_iri],
         "profile": "dataset_brief",
         "max_triples": result["candidate_triple_count"],
     }
-    assert result["suggested_next_calls"] == [
-        action["call"] for action in result["suggested_next_actions"]
-    ]
     assert result.get("triples") is None
     assert seed_iri in result["trig"]
     preflight = preflight_context_slice_export_tool(
@@ -399,12 +390,12 @@ def test_get_context_graph_tool_returns_json_like_payload(
     )
     assert "pattern_synthesis" in role_loss_warning
     assert [
-        action["tool_name"] for action in preflight["suggested_next_actions"][:2]
+        action["tool"].removeprefix("doxabase.") for action in preflight["suggested_next_actions"][:2]
     ] == [
         "preflight_context_slice_export",
         "export_context_slice",
     ]
-    assert preflight["suggested_next_actions"][0]["arguments"] == {
+    assert preflight["suggested_next_actions"][0]["args"] == {
         "seed_iris": [seed_iri],
         "profile": "dataset_brief",
         "max_triples": preflight["candidate_triple_count"],
@@ -457,13 +448,12 @@ def test_get_context_graph_tool_returns_json_like_payload(
     assert warning_result["truncated"] is False
     assert warning_result.get("warnings", []) == []
     assert [
-        action["tool_name"] for action in warning_result["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in warning_result["suggested_next_actions"]
     ] == ["describe_query_context"]
     warning_action = warning_result["suggested_next_actions"][0]
-    assert warning_action["mcp_tool_name"] == "doxabase.describe_query_context"
-    assert warning_action["arguments"] == {"iri": warning_dataset}
+    assert warning_action["tool"] == "doxabase.describe_query_context"
+    assert warning_action["args"] == {"iri": warning_dataset}
     assert "missing_storage_access" in warning_action["reason"]
-    assert warning_result["suggested_next_calls"] == [warning_action["call"]]
 
     repair_db = DoxaBase.create(tmp_path / "repair-capsule.sqlite")
     repair_dataset = "https://example.test/project#WarehouseOrders"
@@ -500,10 +490,10 @@ def test_get_context_graph_tool_returns_json_like_payload(
     )
     assert repair_result["truncated"] is False
     assert [
-        action["tool_name"] for action in repair_result["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in repair_result["suggested_next_actions"]
     ] == ["describe_query_context"]
     repair_action = repair_result["suggested_next_actions"][0]
-    assert repair_action["arguments"] == {"iri": repair_dataset}
+    assert repair_action["args"] == {"iri": repair_dataset}
     assert (
         "database_relation_template_source_mismatch" in repair_action["reason"]
     )
@@ -511,7 +501,6 @@ def test_get_context_graph_tool_returns_json_like_payload(
     assert repair_context["suggested_repair_action_groups"][0]["issue_code"] == (
         "database_relation_template_source_mismatch"
     )
-    assert repair_result["suggested_next_calls"] == [repair_action["call"]]
 
     mismatch = get_context_graph_tool(
         db,
@@ -586,13 +575,13 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result.get("nearby_caveat_links", []) == []
     assert result.get("related_routes", []) == []
     assert result.get("related_route_summaries", []) == []
-    assert result["suggested_next_actions"][0]["tool_name"] == (
-        "get_context_graph"
-    )
-    assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+    assert result["suggested_next_actions"][0]["tool"] == (
         "doxabase.get_context_graph"
     )
-    assert result["suggested_next_actions"][0]["arguments"]["seed_iris"] == [
+    assert result["suggested_next_actions"][0]["tool"] == (
+        "doxabase.get_context_graph"
+    )
+    assert result["suggested_next_actions"][0]["args"]["seed_iris"] == [
         "https://example.test/project#Messages",
         "https://example.test/project#message_id",
     ]
@@ -639,16 +628,13 @@ def test_search_tool_serializes_pagination_metadata(tmp_path: Path) -> None:
     assert result["omitted_count"] == 1
     assert result["has_more"] is True
     assert result["next_offset"] == 2
-    assert result["suggested_next_actions"][0]["tool_name"] == "search"
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.search"
+    assert result["suggested_next_actions"][0]["args"] == {
         "query": "SearchToolPageProbe",
         "limit": 2,
         "offset": 2,
         "graph": "map",
     }
-    assert result["suggested_next_calls"] == [
-        action["call"] for action in result["suggested_next_actions"]
-    ]
 
 
 def test_list_entities_tool_serializes_pagination_metadata(
@@ -677,17 +663,14 @@ def test_list_entities_tool_serializes_pagination_metadata(
     assert result["omitted_count"] == 1
     assert result["has_more"] is True
     assert result["next_offset"] == 2
-    assert result["suggested_next_actions"][0]["tool_name"] == "list_entities"
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.list_entities"
+    assert result["suggested_next_actions"][0]["args"] == {
         "limit": 2,
         "offset": 2,
         "type": "rc:Dataset",
         "graph": "map",
         "text": "EntityToolPageProbe",
     }
-    assert result["suggested_next_calls"] == [
-        action["call"] for action in result["suggested_next_actions"]
-    ]
 
 
 def test_search_tool_serializes_zero_match_retrieval_fallbacks(
@@ -713,29 +696,26 @@ def test_search_tool_serializes_zero_match_retrieval_fallbacks(
 
     assert result["count"] == 0
     assert result.get("scope_hint") is None
-    assert result["suggested_next_calls"] == [
-        action["call"] for action in result["suggested_next_actions"]
-    ]
-    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "search",
         "search",
         "search",
         "list_entities",
         "search_staged_patch_payloads",
     ]
-    assert result["suggested_next_actions"][1]["arguments"] == {
+    assert result["suggested_next_actions"][1]["args"] == {
         "query": "harbor",
         "graph": "map",
         "limit": 5,
         "offset": 0,
     }
-    assert result["suggested_next_actions"][3]["arguments"] == {
+    assert result["suggested_next_actions"][3]["args"] == {
         "graph": "map",
         "text": "derived",
         "limit": 5,
         "offset": 0,
     }
-    assert result["suggested_next_actions"][4]["mcp_tool_name"] == (
+    assert result["suggested_next_actions"][4]["tool"] == (
         "doxabase.search_staged_patch_payloads"
     )
 
@@ -771,17 +751,14 @@ def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(
         "suggested_next_actions"
     ]
     first_action = result["suggested_next_actions"][0]
-    assert first_action["tool_name"] == "search"
-    assert first_action["mcp_tool_name"] == "doxabase.search"
-    assert first_action["arguments"] == {
+    assert first_action["tool"] == "doxabase.search"
+    assert first_action["tool"] == "doxabase.search"
+    assert first_action["args"] == {
         "query": "storage",
         "graph": "map",
         "limit": 5,
         "offset": 0,
     }
-    assert result["suggested_next_calls"] == result["scope_hint"][
-        "suggested_next_calls"
-    ]
 
     scoped = search_tool(db, query="storage", graph="map", limit=5)
     assert scoped.get("scope_hint") is None

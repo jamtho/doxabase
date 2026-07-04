@@ -470,7 +470,6 @@ class ExportsMixin:
             warnings=warnings,
             scanner_note=scanner_note,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
             validation_scope=validation.scope if validation is not None else None,
             validation_conforms=(
                 validation.conforms if validation is not None else None
@@ -614,18 +613,18 @@ class ExportsMixin:
         resource_brief_retry_keys: set[tuple[tuple[str, ...], int]] = set()
         if not write:
             for context_action in context_suggested_next_actions:
-                if context_action.tool_name != "get_context_graph":
+                if context_action.tool != "doxabase.get_context_graph":
                     continue
-                retry_profile = context_action.arguments.get("profile")
+                retry_profile = context_action.args.get("profile")
                 if retry_profile != "resource_brief":
                     continue
                 retry_seed_values = self._string_values(
                     "seed_iris",
-                    context_action.arguments.get("seed_iris", seed_values),
+                    context_action.args.get("seed_iris", seed_values),
                     required=True,
                 )
                 retry_max_triples = int(
-                    context_action.arguments.get("max_triples", max_triples)
+                    context_action.args.get("max_triples", max_triples)
                 )
                 retry_key = (tuple(retry_seed_values), retry_max_triples)
                 if retry_key in resource_brief_retry_keys:
@@ -640,20 +639,12 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Preflight resource brief retry",
-                        tool_name="preflight_context_slice_export",
-                        mcp_tool_name="doxabase.preflight_context_slice_export",
-                        arguments=arguments,
-                        reason=(
-                            "The described slice reported that profile-specific "
+                        tool="doxabase.preflight_context_slice_export",
+                        args=arguments,
+                        reason="The described slice reported that profile-specific "
                             "expansion did not apply. Rerun export preflight "
                             "with resource_brief before writing an under-broad "
-                            "context-slice artifact."
-                        ),
-                        call=self._suggested_call_string(
-                            "preflight_context_slice_export",
-                            arguments,
-                        ),
+                            "context-slice artifact.",
                     )
                 )
         if truncated:
@@ -667,21 +658,13 @@ class ExportsMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label="Preflight full context slice",
-                    tool_name="preflight_context_slice_export",
-                    mcp_tool_name="doxabase.preflight_context_slice_export",
-                    arguments=arguments,
-                    reason=(
-                        "The current context-slice export is truncated, so "
+                    tool="doxabase.preflight_context_slice_export",
+                    args=arguments,
+                    reason="The current context-slice export is truncated, so "
                         "graphs and graph_counts may omit structured lore "
                         "roles selected by the slice. Rerun the preflight with "
                         "the full candidate triple cap before writing a handoff "
-                        "artifact, or narrow the seed/profile first."
-                    ),
-                    call=self._suggested_call_string(
-                        "preflight_context_slice_export",
-                        arguments,
-                    ),
+                        "artifact, or narrow the seed/profile first.",
                 )
             )
         if would_block_invalid_export and validation_scope is not None:
@@ -691,20 +674,12 @@ class ExportsMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect context-slice validation failures",
-                    tool_name="validate_graph",
-                    mcp_tool_name="doxabase.validate_graph",
-                    arguments=arguments,
-                    reason=(
-                        "The live graph validation gate failed for the graph "
+                    tool="doxabase.validate_graph",
+                    args=arguments,
+                    reason="The live graph validation gate failed for the graph "
                         "roles selected by this context slice. Inspect SHACL "
                         "diagnostics and repair the graph before writing an "
-                        "importable slice."
-                    ),
-                    call=self._suggested_call_string(
-                        "validate_graph",
-                        arguments,
-                    ),
+                        "importable slice.",
                 )
             )
         if would_block_sensitive_export:
@@ -716,20 +691,12 @@ class ExportsMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    action_label="Inspect blocked context slice",
-                    tool_name="get_context_graph",
-                    mcp_tool_name="doxabase.get_context_graph",
-                    arguments=inspect_arguments,
-                    reason=(
-                        "The context-slice export preflight found redacted "
+                    tool="doxabase.get_context_graph",
+                    args=inspect_arguments,
+                    reason="The context-slice export preflight found redacted "
                         "sensitive-looking terms. Inspect the selected slice "
                         "locally, then narrow to clean seed resources or scrub "
-                        "project content before writing an artifact."
-                    ),
-                    call=self._suggested_call_string(
-                        "get_context_graph",
-                        inspect_arguments,
-                    ),
+                        "project content before writing an artifact.",
                 )
             )
             if not includes_history:
@@ -740,20 +707,12 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Preflight project export privacy",
-                        tool_name="export_preflight",
-                        mcp_tool_name="doxabase.export_preflight",
-                        arguments=preflight_arguments,
-                        reason=(
-                            "The resource-scoped slice is blocked by privacy "
+                        tool="doxabase.export_preflight",
+                        args=preflight_arguments,
+                        reason="The resource-scoped slice is blocked by privacy "
                             "matches. Run the broader redacted export preflight "
                             "before choosing whether to narrow scope, scrub "
-                            "content, or defer sharing."
-                        ),
-                        call=self._suggested_call_string(
-                            "export_preflight",
-                            preflight_arguments,
-                        ),
+                            "content, or defer sharing.",
                     )
                 )
         if (
@@ -781,18 +740,10 @@ class ExportsMixin:
                 arguments["validation_scope"] = validation_scope
             actions.append(
                 SuggestedNextAction(
-                    action_label="Export context slice",
-                    tool_name="export_context_slice",
-                    mcp_tool_name="doxabase.export_context_slice",
-                    arguments=arguments,
-                    reason=(
-                        "Write an importable TriG bundle for only the selected "
-                        "context-slice triples after reviewing the preflight scan."
-                    ),
-                    call=self._suggested_call_string(
-                        "export_context_slice",
-                        arguments,
-                    ),
+                    tool="doxabase.export_context_slice",
+                    args=arguments,
+                    reason="Write an importable TriG bundle for only the selected "
+                        "context-slice triples after reviewing the preflight scan.",
                 )
             )
         if includes_history:
@@ -820,7 +771,6 @@ class ExportsMixin:
                 handoff_arguments["revision_iris"] = revision_iris
             if would_block_sensitive_export or would_block_invalid_export:
                 tool_name = "export_preflight"
-                action_label = "Preflight recovery handoff bundle"
                 reason = (
                     "The selected history-bearing context slice is blocked by "
                     "privacy or validation review, so resolve the preflight "
@@ -828,46 +778,22 @@ class ExportsMixin:
                 )
             else:
                 tool_name = "export_handoff_bundle"
-                action_label = "Export recovery handoff bundle"
                 reason = (
                     "History-bearing context slices are importable review "
                     "context but do not carry revision snapshot rows; use a "
                     "handoff bundle for exact revision recovery in another "
                     "capsule."
                 )
-            placeholder_fields = [
-                field
-                for field in (
-                    "trig_path",
-                    "revision_snapshot_path",
-                    "manifest_path",
-                )
-                if field in handoff_arguments
-            ]
-            action_class = (
-                SuggestedNextAction
-                if would_block_sensitive_export or would_block_invalid_export
-                else TemplatedSuggestedNextAction
-            )
-            action_kwargs: dict[str, Any] = {}
             if not would_block_sensitive_export and not would_block_invalid_export:
-                action_kwargs = {
-                    "required_extra_arguments": placeholder_fields,
-                    "placeholder_fields": placeholder_fields,
-                    "reviewed_value_fields": placeholder_fields,
-                }
+                reason = (
+                    f"{reason} Replace the angle-bracketed path placeholders "
+                    "with reviewed output paths before calling."
+                )
             actions.append(
-                action_class(
-                    action_label=action_label,
-                    tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
-                    arguments=handoff_arguments,
+                SuggestedNextAction(
+                    tool=f"doxabase.{tool_name}",
+                    args=handoff_arguments,
                     reason=reason,
-                    call=self._suggested_call_string(
-                        tool_name,
-                        handoff_arguments,
-                    ),
-                    **action_kwargs,
                 )
             )
         return actions
@@ -1120,7 +1046,6 @@ class ExportsMixin:
             warnings=warnings,
             scanner_note=scanner_note,
             suggested_next_actions=[],
-            suggested_next_calls=[],
             validation_scope=validation.scope if validation is not None else None,
             validation_conforms=(
                 validation.conforms if validation is not None else None
@@ -1143,7 +1068,6 @@ class ExportsMixin:
         return replace(
             record,
             suggested_next_actions=actions,
-            suggested_next_calls=[action.call for action in actions],
         )
     def export_revision_snapshots(
         self,
@@ -1636,8 +1560,7 @@ class ExportsMixin:
             "recommended_import_sequence": [
                 {
                     "step": 1,
-                    "tool_name": "import_trig",
-                    "mcp_tool_name": "doxabase.import_trig",
+                    "tool": "doxabase.import_trig",
                     "path": trig.path,
                     "expected_snapshot_evidence_status": (
                         "history_only_count_digest"
@@ -1645,8 +1568,7 @@ class ExportsMixin:
                 },
                 {
                     "step": 2,
-                    "tool_name": "import_revision_snapshots",
-                    "mcp_tool_name": "doxabase.import_revision_snapshots",
+                    "tool": "doxabase.import_revision_snapshots",
                     "path": revision_snapshots.path,
                     "expected_snapshot_evidence_status": (
                         "history_plus_snapshot_rows"
@@ -1993,9 +1915,6 @@ class ExportsMixin:
             matching_recovery_session_iris=matching_recovery_session_iris,
             recovery_summary=recovery_summary,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
             warnings=warnings,
         )
     @staticmethod
@@ -2003,8 +1922,8 @@ class ExportsMixin:
         action: SuggestedNextAction,
     ) -> bool:
         return (
-            action.tool_name == "import_revision_snapshots"
-            and action.arguments.get("path_is_placeholder") is True
+            action.tool == "doxabase.import_revision_snapshots"
+            and action.args.get("path_is_placeholder") is True
         )
     @staticmethod
     def _import_handoff_bundle_missing_resolved_snapshots(
@@ -2075,16 +1994,10 @@ class ExportsMixin:
                 f"{', '.join(missing_graph_roles)}."
             )
         return SuggestedNextAction(
-            action_label="Import broader source snapshot bundle",
-            tool_name="import_revision_snapshots",
-            mcp_tool_name="doxabase.import_revision_snapshots",
-            arguments=arguments,
-            reason=reason,
-            call=self._suggested_call_string(
-                "import_revision_snapshots",
-                arguments,
-            ),
-        )
+                   tool="doxabase.import_revision_snapshots",
+                   args=arguments,
+                   reason=reason,
+               )
     def _handoff_manifest_artifact_path(
         self,
         manifest: MappingABC[str, Any],
@@ -2240,7 +2153,7 @@ class ExportsMixin:
     def _import_handoff_bundle_validation_review_action(
         self,
         manifest: MappingABC[str, Any],
-    ) -> EffectAnnotatedSuggestedNextAction | None:
+    ) -> SuggestedNextAction | None:
         validation_scope = self._handoff_manifest_invalid_validation_scope(manifest)
         if validation_scope is None:
             return None
@@ -2252,16 +2165,13 @@ class ExportsMixin:
             "scope": validation_scope,
             "limit_results": limit_results,
         }
-        return self._effect_annotated_suggested_next_action(
-            action_label="Inspect imported handoff validation failures",
-            tool_name="validate_graph",
-            arguments=arguments,
-            reason=(
-                "The imported handoff manifest records that export validation "
+        return SuggestedNextAction(
+                   tool="doxabase.validate_graph",
+                   args=arguments,
+                   reason="The imported handoff manifest records that export validation "
                 "failed for this graph scope. Inspect receiver-side SHACL "
-                "diagnostics before following recovery or mutation actions."
-            ),
-        )
+                "diagnostics before following recovery or mutation actions.",
+               )
     def _import_handoff_bundle_privacy_review_action(
         self,
         *,
@@ -2269,7 +2179,7 @@ class ExportsMixin:
         revision_iris: list[str],
         snapshot_graph_roles: list[str],
         sensitive_literal_count: int,
-    ) -> EffectAnnotatedSuggestedNextAction:
+    ) -> SuggestedNextAction:
         arguments: dict[str, Any] = {
             "export_kind": "handoff_bundle",
             "graphs": graph_roles or ["project"],
@@ -2279,16 +2189,13 @@ class ExportsMixin:
             arguments["revision_iris"] = revision_iris
         if snapshot_graph_roles:
             arguments["snapshot_graph_roles"] = snapshot_graph_roles
-        return self._effect_annotated_suggested_next_action(
-            action_label="Review imported handoff privacy",
-            tool_name="export_preflight",
-            arguments=arguments,
-            reason=(
-                "The imported handoff manifest records sensitive-looking "
+        return SuggestedNextAction(
+                   tool="doxabase.export_preflight",
+                   args=arguments,
+                   reason="The imported handoff manifest records sensitive-looking "
                 "artifact terms. Run this redacted receiver-side preflight "
-                "before following staged recovery or mutation actions."
-            ),
-        )
+                "before following staged recovery or mutation actions.",
+               )
     def _import_handoff_bundle_suggested_action(
         self,
         *,
@@ -2310,7 +2217,6 @@ class ExportsMixin:
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
         if privacy_review_required_before_recovery:
-            action_label = "Import privacy-gated handoff bundle"
             reason = (
                 "Dry-run parsed a recovery-complete handoff manifest that "
                 "records sensitive-looking artifact terms. The dry-run is the "
@@ -2319,7 +2225,6 @@ class ExportsMixin:
                 "gate before any recovery or mutation actions."
             )
         elif validation_review_required_before_recovery:
-            action_label = "Import validation-gated handoff bundle"
             reason = (
                 "Dry-run parsed a recovery-complete handoff manifest that "
                 "records failed export validation. The dry-run is the "
@@ -2328,20 +2233,16 @@ class ExportsMixin:
                 "any recovery or mutation actions."
             )
         else:
-            action_label = "Import handoff bundle"
             reason = (
                 "Dry-run parsed a recovery-complete handoff manifest. Run the "
                 "real import to load project/history RDF first, then companion "
                 "revision snapshot rows, and return a staged recovery plan."
             )
         return SuggestedNextAction(
-            action_label=action_label,
-            tool_name="import_handoff_bundle",
-            mcp_tool_name="doxabase.import_handoff_bundle",
-            arguments=arguments,
-            reason=reason,
-            call=self._suggested_call_string("import_handoff_bundle", arguments),
-        )
+                   tool="doxabase.import_handoff_bundle",
+                   args=arguments,
+                   reason=reason,
+               )
     @staticmethod
     def _preflight_handoff_bundle_export_paths(
         trig_path: str | Path,
@@ -2440,19 +2341,11 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Inspect export validation failures",
-                        tool_name="validate_graph",
-                        mcp_tool_name="doxabase.validate_graph",
-                        arguments=arguments,
-                        reason=(
-                            "The live graph validation gate failed for this "
+                        tool="doxabase.validate_graph",
+                        args=arguments,
+                        reason="The live graph validation gate failed for this "
                             "export scope. Inspect SHACL diagnostics and repair "
-                            "the graph before writing a recovery or share artifact."
-                        ),
-                        call=self._suggested_call_string(
-                            "validate_graph",
-                            arguments,
-                        ),
+                            "the graph before writing a recovery or share artifact.",
                     )
                 )
             if record.graph_sensitive_literal_count and record.graphs:
@@ -2462,18 +2355,10 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Inspect graph privacy matches",
-                        tool_name="scan_sensitive_literals",
-                        mcp_tool_name="doxabase.scan_sensitive_literals",
-                        arguments=arguments,
-                        reason=(
-                            "Review redacted graph-term matches before changing "
-                            "scope or removing sensitive-looking graph content."
-                        ),
-                        call=self._suggested_call_string(
-                            "scan_sensitive_literals",
-                            arguments,
-                        ),
+                        tool="doxabase.scan_sensitive_literals",
+                        args=arguments,
+                        reason="Review redacted graph-term matches before changing "
+                            "scope or removing sensitive-looking graph content.",
                     )
                 )
             if record.snapshot_sensitive_literal_count:
@@ -2485,20 +2370,12 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        action_label="Review snapshot privacy matches",
-                        tool_name="export_preflight",
-                        mcp_tool_name="doxabase.export_preflight",
-                        arguments=arguments,
-                        reason=(
-                            "Stored revision snapshots can contain historical "
+                        tool="doxabase.export_preflight",
+                        args=arguments,
+                        reason="Stored revision snapshots can contain historical "
                             "terms outside current graph content; use the "
                             "snapshot-only preflight matches when narrowing or "
-                            "cleaning the handoff scope."
-                        ),
-                        call=self._suggested_call_string(
-                            "export_preflight",
-                            arguments,
-                        ),
+                            "cleaning the handoff scope.",
                     )
                 )
             if record.graph_sensitive_literal_count and record.graphs:
@@ -2509,26 +2386,15 @@ class ExportsMixin:
                     "limit": max(record.limit, 20),
                 }
                 actions.append(
-                    TemplatedSuggestedNextAction(
-                        action_label="Preflight resource-scoped context slice",
-                        tool_name="preflight_context_slice_export",
-                        mcp_tool_name="doxabase.preflight_context_slice_export",
-                        arguments=arguments,
-                        reason=(
-                            "If the intended handoff only needs clean context "
+                    SuggestedNextAction(
+                        tool="doxabase.preflight_context_slice_export",
+                        args=arguments,
+                        reason="If the intended handoff only needs clean context "
                             "around known resources, preflight a context-slice "
                             "export instead of weakening fail_on_sensitive on "
                             "the blocked broader export. Context-slice exports "
                             "are importable review context, not recovery-complete "
-                            "revision handoffs."
-                        ),
-                        call=self._suggested_call_string(
-                            "preflight_context_slice_export",
-                            arguments,
-                        ),
-                        required_extra_arguments=["seed_iris"],
-                        placeholder_fields=["seed_iris"],
-                        reviewed_value_fields=["seed_iris"],
+                            "revision handoffs.",
                     )
                 )
             return actions
@@ -2543,7 +2409,6 @@ class ExportsMixin:
             if record.validation_scope is not None:
                 arguments["validation_scope"] = record.validation_scope
             tool_name = "export_graph"
-            action_label = "Export graph artifact"
             reason = (
                 "The selected graph terms scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the write "
@@ -2559,7 +2424,6 @@ class ExportsMixin:
             if record.validation_scope is not None:
                 arguments["validation_scope"] = record.validation_scope
             tool_name = "export_trig"
-            action_label = "Export TriG bundle"
             reason = (
                 "The selected named graphs scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the write "
@@ -2575,7 +2439,6 @@ class ExportsMixin:
             if record.snapshot_graph_roles:
                 arguments["graph_roles"] = record.snapshot_graph_roles
             tool_name = "export_revision_snapshots"
-            action_label = "Export revision snapshots"
             reason = (
                 "The selected snapshot rows scanned clean; keep "
                 "fail_on_sensitive=True so the write still blocks if snapshot "
@@ -2597,40 +2460,26 @@ class ExportsMixin:
             if record.snapshot_graph_roles:
                 arguments["snapshot_graph_roles"] = record.snapshot_graph_roles
             tool_name = "export_handoff_bundle"
-            action_label = "Export handoff bundle"
             reason = (
                 "The selected RDF graphs and snapshot rows scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the paired "
                 "write still blocks if content changes before export."
             )
 
-        action_class = SuggestedNextAction
-        action_kwargs: dict[str, Any] = {}
         if (
             record.export_kind == "handoff_bundle"
             and tool_name == "export_handoff_bundle"
         ):
-            placeholder_fields = [
-                "trig_path",
-                "revision_snapshot_path",
-                "manifest_path",
-            ]
-            action_class = TemplatedSuggestedNextAction
-            action_kwargs = {
-                "required_extra_arguments": placeholder_fields,
-                "placeholder_fields": placeholder_fields,
-                "reviewed_value_fields": placeholder_fields,
-            }
+            reason = (
+                f"{reason} Replace the angle-bracketed path placeholders with "
+                "reviewed output paths before calling."
+            )
 
         return [
-            action_class(
-                action_label=action_label,
-                tool_name=tool_name,
-                mcp_tool_name=f"doxabase.{tool_name}",
-                arguments=arguments,
+            SuggestedNextAction(
+                tool=f"doxabase.{tool_name}",
+                args=arguments,
                 reason=reason,
-                call=self._suggested_call_string(tool_name, arguments),
-                **action_kwargs,
             )
         ]
     def _revision_snapshot_export_privacy_warnings(

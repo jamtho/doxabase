@@ -43,28 +43,22 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
     assert check["mutation_allowed_after"] == (
         "handoff_preflight_required_before_mutation"
     )
-    assert [action["tool_name"] for action in check["blocking_preflight_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in check["blocking_preflight_actions"]] == [
         "import_revision_snapshots"
     ]
-    assert check["suggested_next_actions"][0]["tool_name"] == (
-        "import_revision_snapshots"
+    assert check["suggested_next_actions"][0]["tool"] == (
+        "doxabase.import_revision_snapshots"
     )
-    assert check["suggested_next_actions"][0]["mutation_scope"] == (
-        "snapshot_storage"
-    )
-    assert check["suggested_next_actions"][0]["writes_storage"] is True
     assert any(
-        action["tool_name"] == "apply_staged_revision"
+        action["tool"] == "doxabase.apply_staged_revision"
         for action in check["suggested_next_actions"][1:]
     )
-    assert check["blocking_preflight_calls"]
     assert check["first_safe_next_action"]["tool_name"] == (
         "import_revision_snapshots"
     )
     assert check["first_safe_next_action"]["queue"] == "complete_handoff_import"
     assert check["first_safe_next_action"]["mutation_scope"] == "snapshot_storage"
     assert check["first_safe_next_action"]["writes_storage"] is True
-    assert check["first_safe_next_call"] == check["blocking_preflight_calls"][0]
 
 
 def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:
@@ -109,12 +103,11 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["patch_checks"][0]["effective_triples_to_remove"] == 0
     assert check["patch_checks"][0]["already_present_triples"] == 0
     assert check["patch_checks"][0]["already_absent_triples"] == 3
-    assert check["suggested_next_actions"][0]["tool_name"] == (
-        "describe_staged_revision"
+    assert check["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_staged_revision"
     )
-    assert check["suggested_next_calls"][0].startswith("describe_staged_revision(")
-    assert check["suggested_next_actions"][-1]["tool_name"] == (
-        "apply_staged_revision"
+    assert check["suggested_next_actions"][-1]["tool"] == (
+        "doxabase.apply_staged_revision"
     )
 
     sibling = stage_graph_revision_tool(
@@ -149,15 +142,12 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
             "applying another row."
         )
     ]
-    assert result["suggested_next_actions"][0]["tool_name"] == (
-        "plan_staged_revision_recovery"
+    assert result["suggested_next_actions"][0]["tool"] == (
+        "doxabase.plan_staged_revision_recovery"
     )
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["args"] == {
         "current_staged_work_only": True
     }
-    assert result["suggested_next_calls"][0] == (
-        "plan_staged_revision_recovery(current_staged_work_only=True)"
-    )
     assert len(result["post_apply_recheck_revisions"]) == 1
     recheck = result["post_apply_recheck_revisions"][0]
     assert recheck["iri"] == sibling["revision_iri"]
@@ -171,11 +161,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert recheck["next_action"]["action_type"] == "restage_after_review"
     assert recheck["next_action"]["tool_name"] == "restage_staged_revision"
     assert recheck["next_action"]["arguments"] == {"iri": sibling["revision_iri"]}
-    assert recheck["suggested_next_actions"][-1]["tool_name"] == (
-        "restage_staged_revision"
-    )
-    assert recheck["suggested_next_calls"][-1].startswith(
-        "restage_staged_revision("
+    assert recheck["suggested_next_actions"][-1]["tool"] == (
+        "doxabase.restage_staged_revision"
     )
     assert result["patches_applied"] == 1
     assert result["triples_added"] == 3
@@ -277,25 +264,19 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         sibling["revision_iri"]: "history_only_count_digest",
         staged["revision_iri"]: "history_only_count_digest",
     }
-    assert trig_import["suggested_next_actions"][0]["tool_name"] == (
-        "import_revision_snapshots"
+    assert trig_import["suggested_next_actions"][0]["tool"] == (
+        "doxabase.import_revision_snapshots"
     )
-    assert trig_import["suggested_next_calls"] == [
-        (
-            "import_revision_snapshots("
-            "path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
-        )
-    ]
     snapshot_status_before_import = describe_revision_snapshot_evidence_tool(
         round_trip,
         result["applied_revision_iri"],
     )
     assert snapshot_status_before_import["status"] == "history_only_count_digest"
     assert snapshot_status_before_import["suggested_next_actions"][0][
-        "tool_name"
-    ] == "import_revision_snapshots"
+        "tool"
+    ] == "doxabase.import_revision_snapshots"
     assert snapshot_status_before_import["suggested_next_actions"][0][
-        "arguments"
+        "args"
     ] == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
@@ -311,7 +292,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         result["applied_revision_iri"],
     )
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in imported_detail_before_snapshots["suggested_next_actions"][
             :2
         ]
@@ -336,10 +317,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert imported_diff_before_snapshots["snapshot_evidence"][
         "suggested_next_actions"
-    ][0]["tool_name"] == "import_revision_snapshots"
+    ][0]["tool"] == "doxabase.import_revision_snapshots"
     assert imported_diff_before_snapshots["suggested_next_actions"][0][
-        "tool_name"
-    ] == "import_revision_snapshots"
+        "tool"
+    ] == "doxabase.import_revision_snapshots"
     assert (
         imported_diff_before_snapshots["graph_diffs"][0][
             "exact_changed_triples_available"
@@ -360,8 +341,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert rdf_only_snapshot["exact_snapshot_available"] is False
     assert rdf_only_snapshot["triples_included"] is False
     assert rdf_only_snapshot.get("triples", []) == []
-    assert rdf_only_snapshot["suggested_next_actions"][0]["tool_name"] == (
-        "import_revision_snapshots"
+    assert rdf_only_snapshot["suggested_next_actions"][0]["tool"] == (
+        "doxabase.import_revision_snapshots"
     )
     rdf_only_version_diff = describe_graph_version_diff_tool(
         round_trip,
@@ -370,8 +351,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         after_revision_iri=result["applied_revision_iri"],
     )
     assert rdf_only_version_diff["exact_changed_triples_available"] is False
-    assert rdf_only_version_diff["suggested_next_actions"][0]["tool_name"] == (
-        "import_revision_snapshots"
+    assert rdf_only_version_diff["suggested_next_actions"][0]["tool"] == (
+        "doxabase.import_revision_snapshots"
     )
     snapshot_import = import_revision_snapshots_tool(
         round_trip,
@@ -400,7 +381,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     }
     assert orphan_import["post_import_snapshot_evidence"][0][
         "suggested_next_actions"
-    ][0]["tool_name"] == "import_trig"
+    ][0]["tool"] == "doxabase.import_trig"
     snapshot_status_after_import = describe_revision_snapshot_evidence_tool(
         round_trip,
         result["applied_revision_iri"],
@@ -784,9 +765,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         for action in open_lanes["profile_type_review"]["remaining_actions"]
     } == set(open_lanes["profile_type_review"]["route_step_keys"])
     assert {
-        action["arguments"]["predicate"]
+        action["args"]["predicate"]
         for action in open_lanes["profile_type_review"]["remaining_actions"]
-        if action["tool_name"] == "stage_map_assertion_change"
+        if action["tool"] == "doxabase.stage_map_assertion_change"
     } == {"rc:valueType"}
     type_action_details = [
         action["target_detail"]
@@ -819,9 +800,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         for lane in result["executor_decision_summary"]["open_review_lanes"]
     }
     assert {
-        action["arguments"]["predicate"]
+        action["args"]["predicate"]
         for action in executor_lanes["profile_type_review"]["remaining_actions"]
-        if action["tool_name"] == "stage_map_assertion_change"
+        if action["tool"] == "doxabase.stage_map_assertion_change"
     } == {"rc:valueType"}
 
     candidate_groups = {

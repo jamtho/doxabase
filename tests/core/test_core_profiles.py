@@ -61,7 +61,6 @@ def test_profile_privacy_orientation_payloads_redact_sensitive_evidence_summarie
         sort_keys=True,
     )
     assert fake_secret not in query_payload
-    assert redacted in query_payload
 
     review_bundle = db.export_profile_insight_review_bundle(
         dataset,
@@ -179,10 +178,10 @@ def test_record_profiled_parquet_table_records_map_and_profile_context(
     ).recommendation_count
     assert result.query_readiness == db.describe_query_context(table).readiness
     assert "describe_query_context" in [
-        action.tool_name for action in result.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions
     ]
     assert "describe_profile_run" in [
-        action.tool_name for action in result.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions
     ]
 
     description = db.describe_dataset(table)
@@ -369,7 +368,7 @@ def test_record_profile_to_capsule_manifest_records_reviewed_tables_and_views(
     assert result.query_readiness_counts == {"ready_for_query_planning": 2}
     assert result.analysis_view_bundle is not None
     assert result.analysis_view_bundle.query_snippet_count == 1
-    assert {action.tool_name for action in result.suggested_next_actions} >= {
+    assert {action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions} >= {
         "describe_dataset",
         "describe_profile_run",
         "describe_query_context",
@@ -440,7 +439,7 @@ def test_record_profile_to_capsule_manifest_replays_stable_pattern_iris(
     assert first.table_iris == [messages]
     assert second.table_iris == [messages]
     next_action_keys = [
-        (action.tool_name, json.dumps(action.arguments, sort_keys=True))
+        (action.tool, json.dumps(action.args, sort_keys=True))
         for action in second.suggested_next_actions
     ]
     assert len(next_action_keys) == len(set(next_action_keys))
@@ -599,7 +598,7 @@ def test_record_profile_to_capsule_manifest_records_domain_network_profiles(
     assert result.analysis_view_count == 1
     assert result.caveat_count == 1
     assert result.domain_network_profile_records[0].profile_observation_iris
-    assert {action.tool_name for action in result.suggested_next_actions} >= {
+    assert {action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions} >= {
         "describe_profile_run",
         "describe_analysis_view",
         "describe_pattern",
@@ -793,7 +792,7 @@ def test_record_domain_network_profile_records_reviewed_aggregates(
     assert result.caveat.iri == caveat
     assert result.pattern is not None
     assert len(result.profile_observation_iris) == 4
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "describe_dataset",
         "describe_profile_run",
         "describe_analysis_view",
@@ -1247,15 +1246,15 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
     )
 
     assert aggregate.observation_type == "observation"
-    assert [action.tool_name for action in aggregate.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in aggregate.suggested_next_actions] == [
         "get_context_graph",
         "describe_query_context"
     ]
-    assert aggregate.suggested_next_actions[0].arguments == {
+    assert aggregate.suggested_next_actions[0].args == {
         "seed_iris": [aggregate.evidence_iri],
         "profile": "resource_brief",
     }
-    assert aggregate.suggested_next_actions[1].arguments == {"iri": dataset}
+    assert aggregate.suggested_next_actions[1].args == {"iri": dataset}
 
     sampled_aggregate = db.record_query_result(
         summary="Orders status aggregate also recorded source rows scanned.",
@@ -1274,7 +1273,7 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
 
     assert sampled_aggregate.observation_type == "profile"
     assert [
-        action.tool_name for action in sampled_aggregate.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in sampled_aggregate.suggested_next_actions
     ] == [
         "describe_profile_run",
         "get_context_graph",
@@ -1862,7 +1861,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert result.handoff_entrypoints.dataset_describe_available is True
     assert result.handoff_entrypoints.profile_run_available is True
     assert [
-        action.tool_name for action in result.handoff_entrypoints.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in result.handoff_entrypoints.suggested_next_actions
     ] == [
         "describe_dataset",
         "describe_profile_run",
@@ -1870,34 +1869,21 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         "get_context_graph",
         "get_context_graph",
     ]
-    assert result.handoff_entrypoints.suggested_next_actions[0].arguments == {
+    assert result.handoff_entrypoints.suggested_next_actions[0].args == {
         "iri": dataset
     }
-    assert result.handoff_entrypoints.suggested_next_actions[1].arguments == {
+    assert result.handoff_entrypoints.suggested_next_actions[1].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    assert result.handoff_entrypoints.suggested_next_actions[2].arguments == {
+    assert result.handoff_entrypoints.suggested_next_actions[2].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    assert result.handoff_entrypoints.suggested_next_actions[-1].arguments == {
+    assert result.handoff_entrypoints.suggested_next_actions[-1].args == {
         "seed_iris": profile_observation_iris,
         "profile": "dataset_brief",
     }
-    assert result.handoff_entrypoints.suggested_next_calls[0] == (
-        f"describe_dataset('{dataset}')"
-    )
-    assert result.handoff_entrypoints.suggested_next_calls[1] == (
-        f"describe_profile_run('{dataset}', '{shared_evidence}')"
-    )
-    assert result.handoff_entrypoints.suggested_next_calls[2] == (
-        f"draft_profile_map_updates('{dataset}', '{shared_evidence}')"
-    )
-    assert result.handoff_entrypoints.suggested_next_calls[-1] == (
-        f"get_context_graph({profile_observation_iris!r}, "
-        "profile='dataset_brief')"
-    )
 
     description = db.describe_dataset(dataset)
 
@@ -2356,13 +2342,13 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
 
     context = db.describe_query_context(dataset)
 
-    assert context.suggested_next_actions[0].tool_name == "describe_profile_run"
-    assert context.suggested_next_actions[0].arguments == {
+    assert context.suggested_next_actions[0].tool == "doxabase.describe_profile_run"
+    assert context.suggested_next_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": matching_evidence,
     }
     assert [
-        action.tool_name for action in context.suggested_next_actions[:3]
+        action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions[:3]
     ] == [
         "describe_profile_run",
         "describe_profile_run",
@@ -2370,12 +2356,7 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
     ]
     assert context.safe_inspection_action_indexes == [0, 1]
     assert context.first_safe_inspection_action_index == 0
-    assert context.unattended_recommended_action_indexes == [2]
-    assert context.first_unattended_action_index == 2
-    assert context.suggested_next_actions[1].action_label == (
-        "Inspect additional profile run evidence"
-    )
-    assert context.suggested_next_actions[1].arguments == {
+    assert context.suggested_next_actions[1].args == {
         "dataset_iri": dataset,
         "evidence_iri": old_evidence,
     }
@@ -2450,19 +2431,13 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
         ),
     }
     assert "no separate persisted profile-run node" in profile_run.retrieval_note
-    assert [action.tool_name for action in profile_run.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in profile_run.suggested_next_actions] == [
         "draft_profile_map_updates"
     ]
-    assert profile_run.suggested_next_actions[0].action_label == (
-        "Inspect profile map-update status"
-    )
-    assert profile_run.suggested_next_actions[0].arguments == {
+    assert profile_run.suggested_next_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    assert profile_run.suggested_next_calls == [
-        action.call for action in profile_run.suggested_next_actions
-    ]
 
     capped = db.describe_profile_run(dataset, shared_evidence, limit=3)
 
@@ -2470,15 +2445,15 @@ def test_describe_profile_run_returns_wide_shared_evidence_run(
     assert capped.total_profile_count == 9
     assert capped.omitted_profile_count == 6
     assert len(capped.profile_observation_iris) == 3
-    assert [action.tool_name for action in capped.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in capped.suggested_next_actions] == [
         "describe_profile_run",
         "draft_profile_map_updates",
     ]
-    assert capped.suggested_next_actions[0].arguments == {
+    assert capped.suggested_next_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    assert capped.suggested_next_actions[1].arguments == {
+    assert capped.suggested_next_actions[1].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
@@ -2515,32 +2490,20 @@ def test_describe_profile_run_works_for_observation_only_dataset(
         bundle.dataset_profile.observation.observation_iri,
         bundle.column_profiles[0].observation.observation_iri,
     ]
-    assert bundle.handoff_entrypoints.suggested_next_calls[0] == (
-        f"describe_profile_run('{dataset}', '{shared_evidence}')"
-    )
     assert [
-        action.tool_name for action in bundle.handoff_entrypoints.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in bundle.handoff_entrypoints.suggested_next_actions
     ] == [
         "describe_profile_run",
         "get_context_graph",
     ]
-    assert bundle.handoff_entrypoints.suggested_next_actions[0].arguments == {
+    assert bundle.handoff_entrypoints.suggested_next_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    assert bundle.handoff_entrypoints.suggested_next_actions[-1].arguments == {
+    assert bundle.handoff_entrypoints.suggested_next_actions[-1].args == {
         "seed_iris": bundle.handoff_entrypoints.profile_observation_iris,
         "profile": "dataset_brief",
     }
-    assert bundle.handoff_entrypoints.suggested_next_calls[-1] == (
-        "get_context_graph("
-        f"{bundle.handoff_entrypoints.profile_observation_iris!r}, "
-        "profile='dataset_brief')"
-    )
-    assert not any(
-        call.startswith("describe_dataset")
-        for call in bundle.handoff_entrypoints.suggested_next_calls
-    )
     assert "No map dataset subject" in bundle.handoff_entrypoints.handoff_note
 
     with pytest.raises(DoxaBaseError, match="was not found") as exc_info:
@@ -2558,7 +2521,7 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert profile_run.returned_dataset_profile_count == 1
     assert profile_run.returned_unmapped_column_profile_count == 1
     assert profile_run.returned_profile_count == 2
-    assert [action.tool_name for action in profile_run.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in profile_run.suggested_next_actions] == [
         "draft_profile_map_updates"
     ]
 
@@ -2597,13 +2560,6 @@ def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snaps
     assert bundle.handoff_entrypoints.map_dataset_recorded is False
     assert bundle.handoff_entrypoints.dataset_describe_available is True
     assert bundle.handoff_entrypoints.profile_run_available is True
-    assert bundle.handoff_entrypoints.suggested_next_calls[:2] == [
-        f"describe_dataset('{dataset}')",
-        f"describe_profile_run('{dataset}', '{shared_evidence}')",
-    ]
-    assert bundle.handoff_entrypoints.suggested_next_calls[2] == (
-        f"draft_profile_map_updates('{dataset}', '{shared_evidence}')"
-    )
     assert "already existed" in bundle.handoff_entrypoints.handoff_note
     assert "did not write dataset map facts" in bundle.handoff_entrypoints.handoff_note
     assert "row-count snapshot" in bundle.handoff_entrypoints.handoff_note
@@ -2642,14 +2598,14 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
 
     def run_handoff_actions(actions) -> None:
         for action in actions:
-            if action.tool_name == "describe_dataset":
-                db.describe_dataset(**action.arguments)
-            elif action.tool_name == "describe_profile_run":
-                db.describe_profile_run(**action.arguments)
-            elif action.tool_name == "draft_profile_map_updates":
-                db.draft_profile_map_updates(**action.arguments)
-            elif action.tool_name == "get_context_graph":
-                db.get_context_graph(**action.arguments)
+            if action.tool == "doxabase.describe_dataset":
+                db.describe_dataset(**action.args)
+            elif action.tool == "doxabase.describe_profile_run":
+                db.describe_profile_run(**action.args)
+            elif action.tool == "doxabase.draft_profile_map_updates":
+                db.draft_profile_map_updates(**action.args)
+            elif action.tool == "doxabase.get_context_graph":
+                db.get_context_graph(**action.args)
             else:
                 raise AssertionError(f"Unexpected action {action.tool_name!r}")
 
@@ -2743,7 +2699,7 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
     assert run_b_bundle.handoff_entrypoints.mapped_profiled_column_iris == [amount]
     assert shadow_bundle.handoff_entrypoints.dataset_describe_available is False
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in shadow_bundle.handoff_entrypoints.suggested_next_actions
     ] == ["describe_profile_run", "get_context_graph"]
 
@@ -2859,9 +2815,9 @@ def test_generic_revision_list_surfaces_profile_gate_cautions(
     promotion_action = next(
         action
         for action in draft.type_advisories[0].suggested_next_actions
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     )
-    promoted = db.stage_pattern_promotion(**promotion_action.arguments)
+    promoted = db.stage_pattern_promotion(**promotion_action.args)
     promoted_iri = promoted.staged_revisions[0].revision_iri
 
     listing = db.list_graph_revisions(
@@ -2912,7 +2868,7 @@ def test_generic_revision_list_surfaces_profile_gate_cautions(
     assert "do not follow generic apply_after_review until profile gate is resolved" in (
         exported
     )
-    assert support.pattern_iri in promotion_action.arguments["patterns"]
+    assert support.pattern_iri in promotion_action.args["patterns"]
     assert profile_bundle.handoff_entrypoints.profile_observation_iris
 
 
@@ -2966,7 +2922,7 @@ def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
     assert "not defined as rc:ValueType" in advisory.rationale
     assert "not defined in ontology" in advisory.routing_note
     assert [
-        action.tool_name for action in advisory.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in advisory.suggested_next_actions
     ] == [
         "get_context_graph",
         "record_pattern",
@@ -2974,7 +2930,7 @@ def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
     ]
     assert "profile_type_review" in draft.suggested_next_action_groups
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in draft.suggested_next_action_groups["profile_type_review"]
     ] == [
         "get_context_graph",
@@ -2984,16 +2940,6 @@ def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
     grouped_actions = draft.suggested_next_action_groups["profile_type_review"]
     context_action = grouped_actions[0]
     pattern_action = grouped_actions[1]
-    assert "semantic_move" not in context_action.source_profile_advisory
-    assert (
-        "produces_result_bindings"
-        not in pattern_action.source_profile_advisory
-    )
-    plan_by_move = {
-        item.semantic_move: item for item in draft.advisory_followthrough_plan
-    }
-    assert set(plan_by_move) == {"caveat_fallback"}
-    assert plan_by_move["caveat_fallback"].review_lane == "profile_type_review"
 
 
 def test_profile_type_context_action_omits_undefined_value_type_seed(
@@ -3038,21 +2984,21 @@ def test_profile_type_context_action_omits_undefined_value_type_seed(
     value_type_action = [
         action
         for action in advisory.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
-        and action.arguments["predicate"] == "rc:valueType"
+        if action.tool == "doxabase.stage_map_assertion_change"
+        and action.args["predicate"] == "rc:valueType"
     ][0]
 
-    assert context_action.tool_name == "get_context_graph"
-    assert context_action.arguments == {
+    assert context_action.tool == "doxabase.get_context_graph"
+    assert context_action.args == {
         "seed_iris": [advisory.profile_observation_iri, status_column, RC + "Integer"],
         "profile": "dataset_brief",
     }
-    assert status_value_type not in context_action.arguments["seed_iris"]
-    context_slice = db.get_context_graph(**context_action.arguments)
+    assert status_value_type not in context_action.args["seed_iris"]
+    context_slice = db.get_context_graph(**context_action.args)
     assert status_column in {resource.iri for resource in context_slice.resources}
 
-    assert status_value_type in pattern_action.arguments["map_implications"]
-    assert value_type_action.arguments["object"] == status_value_type
+    assert status_value_type in pattern_action.args["map_implications"]
+    assert value_type_action.args["object"] == status_value_type
 
 
 def test_profile_type_assertion_leaves_value_type_promotion_lane_open(
@@ -3119,18 +3065,13 @@ def test_profile_type_assertion_leaves_value_type_promotion_lane_open(
 
     draft = db.draft_profile_map_updates(dataset, evidence)
     advisory = draft.type_advisories[0]
-    value_type_plan = next(
-        item
-        for item in draft.advisory_followthrough_plan
-        if item.semantic_move == "define_value_type"
-    )
     value_type_action = [
         action
         for action in advisory.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
-        and action.arguments["predicate"] == "rc:valueType"
+        if action.tool == "doxabase.stage_map_assertion_change"
+        and action.args["predicate"] == "rc:valueType"
     ][0]
-    value_type_args = dict(value_type_action.arguments)
+    value_type_args = dict(value_type_action.args)
     value_type_args["supporting_patterns"] = [
         target_pattern.pattern_iri,
         implication_pattern.pattern_iri,
@@ -3148,9 +3089,12 @@ def test_profile_type_assertion_leaves_value_type_promotion_lane_open(
         for candidate in review.candidates
         if candidate.revision_iri == staged_assertion.revision_iri
     )
+    value_type_route_group_key = value_type_action.args[
+        "profile_route_sources"
+    ][0]["route_group_key"]
     route_group = {
         group["route_group_key"]: group for group in candidate.profile_route_groups
-    }[value_type_plan.route_group_key]
+    }[value_type_route_group_key]
     assert route_group["match_strength"] == "direct_action"
     assert route_group["closed_semantic_moves"] == ["assert_map_type"]
     assert "define_value_type" in route_group["remaining_semantic_moves"]
@@ -3161,7 +3105,7 @@ def test_profile_type_assertion_leaves_value_type_promotion_lane_open(
     }
     assert set(open_lanes) == {"profile_type_review"}
     assert open_lanes["profile_type_review"].route_group_keys == [
-        value_type_plan.route_group_key
+        value_type_route_group_key
     ]
     assert open_lanes["profile_type_review"].closed_semantic_moves == [
         "assert_map_type"
@@ -3251,7 +3195,7 @@ def test_profile_type_review_lane_is_representative_action_queue(
                 group_observations
             )
             assert [
-                action.tool_name for action in advisory.suggested_next_actions
+                action.tool.removeprefix("doxabase.") for action in advisory.suggested_next_actions
             ] == [
                 "get_context_graph",
                 "record_pattern",
@@ -3260,21 +3204,16 @@ def test_profile_type_review_lane_is_representative_action_queue(
             ]
             record_action = advisory.suggested_next_actions[1]
             stage_action = advisory.suggested_next_actions[3]
-            assert set(record_action.arguments["supporting_observations"]) == (
+            assert set(record_action.args["supporting_observations"]) == (
                 group_observations
             )
-            assert set(stage_action.arguments["supporting_observations"]) == (
+            assert set(stage_action.args["supporting_observations"]) == (
                 group_observations
             )
 
     profile_type_actions = draft.suggested_next_action_groups["profile_type_review"]
-    profile_type_labels = [action.action_label for action in profile_type_actions]
-    assert profile_type_labels.count("Inspect profile type context") == 2
-    assert profile_type_labels.count("Record type-finding pattern") == 2
-    assert profile_type_labels.count("Stage type-finding fallback") == 2
-    assert profile_type_labels.count("Stage physical type assertion") == 2
     assert [
-        action.tool_name for action in profile_type_actions
+        action.tool.removeprefix("doxabase.") for action in profile_type_actions
     ] == [
         "get_context_graph",
         "record_pattern",
@@ -3285,22 +3224,6 @@ def test_profile_type_review_lane_is_representative_action_queue(
         "stage_systematisation",
         "stage_map_assertion_change",
     ]
-    assert [
-        action.source_profile_advisory["advisory_kind"]
-        for action in profile_type_actions
-    ] == ["profile_type_review"] * 8
-    assert [
-        action.source_profile_advisory["index_field"]
-        for action in profile_type_actions
-    ] == ["type_advisory_index"] * 8
-    assert [
-        action.source_profile_advisory["advisory_indexes"]
-        for action in profile_type_actions
-    ] == [[0, 2], [0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3], [1, 3]]
-    assert [
-        action.source_profile_advisory["duplicate_advisory_indexes"]
-        for action in profile_type_actions
-    ] == [[0, 2], [0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3], [1, 3]]
 
 
 def test_query_storage_repair_profile_route_sources_close_query_lane(
@@ -3340,9 +3263,6 @@ def test_query_storage_repair_profile_route_sources_close_query_lane(
 
     draft = db.draft_profile_map_updates(dataset, evidence)
     query_action = draft.suggested_next_action_groups["query_context_review"][0]
-    assert query_action.source_query_context["blocking_issue_codes"] == [
-        "missing_storage_access"
-    ]
 
     repair = db.stage_query_storage_access_repair(
         dataset,
@@ -3351,19 +3271,19 @@ def test_query_storage_repair_profile_route_sources_close_query_lane(
         storage_root=str(tmp_path / "warehouse"),
         location_kind="directory",
         rationale="Reviewed local storage root for the profile/query interlock.",
-        profile_route_sources=[query_action.source_query_context],
+        profile_route_sources=[
+            next(
+                source
+                for source in db._profile_insight_route_sources(draft)
+                if source["review_lane"] == "query_context_review"
+            )
+        ],
     )
     described = db.describe_staged_revision(repair.revision_iri)
     assert len(described.profile_route_sources) == 1
     stored_source = described.profile_route_sources[0]
     assert stored_source["review_lane"] == "query_context_review"
     assert stored_source["direct_review_lane"] == "query_context_review"
-    assert stored_source["route_group_key"] == (
-        query_action.source_query_context["route_group_key"]
-    )
-    assert stored_source["route_step_key"] == (
-        query_action.source_query_context["route_step_key"]
-    )
 
     review = db.export_profile_insight_review_bundle(
         dataset,
@@ -3438,12 +3358,6 @@ def test_query_storage_repair_profile_route_sources_preserve_sample_caution(
     draft = db.draft_profile_map_updates(dataset, evidence)
     assert draft.sampled_evidence_caution is not None
     query_action = draft.suggested_next_action_groups["query_context_review"][0]
-    assert query_action.source_query_context["profile_quality_summary"] == (
-        draft.profile_quality_summary
-    )
-    assert query_action.source_query_context["sampled_evidence_caution"] == (
-        draft.sampled_evidence_caution
-    )
 
     repair = db.stage_query_storage_access_repair(
         dataset,
@@ -3452,7 +3366,13 @@ def test_query_storage_repair_profile_route_sources_preserve_sample_caution(
         storage_root=str(tmp_path / "warehouse"),
         location_kind="directory",
         rationale="Reviewed storage route for sampled-profile query context.",
-        profile_route_sources=[query_action.source_query_context],
+        profile_route_sources=[
+            next(
+                source
+                for source in db._profile_insight_route_sources(draft)
+                if source["review_lane"] == "query_context_review"
+            )
+        ],
     )
     generic_path = tmp_path / "sampled-query-repair-staged-review.md"
     generic = db.export_staged_revisions([repair.revision_iri], generic_path)
@@ -3527,7 +3447,7 @@ def test_profile_helper_pattern_defaults_include_project_metric_implications(
         profile.pattern.pattern_iri
     ]
     assert "stage_pattern_promotion" in [
-        action.tool_name for action in advisory.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in advisory.suggested_next_actions
     ]
 
 
@@ -3582,11 +3502,8 @@ def test_column_profile_helper_pattern_defaults_include_project_value_type_impli
     assert advisory.promotion_pattern_count == 1
     assert [item.iri for item in advisory.promotion_patterns] == [pattern_iri]
     assert "stage_pattern_promotion" in [
-        action.tool_name for action in advisory.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in advisory.suggested_next_actions
     ]
-    assert "define_value_type" in {
-        item.semantic_move for item in draft.advisory_followthrough_plan
-    }
 
 
 def test_profile_bundle_all_profiles_pattern_defaults_include_column_metrics(
@@ -3671,12 +3588,12 @@ def test_profile_bundle_all_profiles_pattern_defaults_include_column_metrics(
         promotion_actions = [
             action
             for action in advisory.suggested_next_actions
-            if action.tool_name == "stage_pattern_promotion"
+            if action.tool == "doxabase.stage_pattern_promotion"
         ]
         assert len(promotion_actions) == 1
-        assert promotion_actions[0].arguments["patterns"] == [pattern_iri]
-        assert promotion_actions[0].arguments["anchors"] == [metric_iri]
-        assert promotion_actions[0].arguments["evidence"] == [evidence]
+        assert promotion_actions[0].args["patterns"] == [pattern_iri]
+        assert promotion_actions[0].args["anchors"] == [metric_iri]
+        assert promotion_actions[0].args["evidence"] == [evidence]
 
 
 def test_applied_metric_promotion_closes_profile_review_lane(
@@ -3728,15 +3645,9 @@ def test_applied_metric_promotion_closes_profile_review_lane(
     promotion_action = next(
         action
         for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     )
-    assert promotion_action.source_profile_advisory["advisory_statuses"] == [
-        "project_metric_undefined",
-    ]
-    assert promotion_action.arguments["profile_route_sources"] == [
-        promotion_action.source_profile_advisory
-    ]
-    staged_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
+    staged_promotion = db.stage_pattern_promotion(**promotion_action.args)
     staged_iri = staged_promotion.staged_revisions[0].revision_iri
     staged_review = db.export_profile_insight_review_bundle(
         dataset,
@@ -3764,9 +3675,6 @@ def test_applied_metric_promotion_closes_profile_review_lane(
     defined_action = rerun.suggested_next_action_groups[
         "metric_vocabulary_review"
     ][0]
-    assert defined_action.source_profile_advisory["advisory_statuses"] == [
-        "project_metric_defined",
-    ]
 
     review = db.export_profile_insight_review_bundle(
         dataset,

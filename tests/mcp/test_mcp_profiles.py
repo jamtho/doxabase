@@ -74,7 +74,7 @@ def test_query_context_keeps_query_overlay_with_profile_run_candidates(
         "evidence_iri"
     ] == profile_evidence
     action_tools = [
-        action["tool_name"] for action in context["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]
     ]
     assert action_tools[:2] == [
         "describe_profile_run",
@@ -83,20 +83,14 @@ def test_query_context_keeps_query_overlay_with_profile_run_candidates(
     overlay_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_evidence_storage_overlay"
+        if action["tool"] == "doxabase.draft_query_evidence_storage_overlay"
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action["arguments"]["dataset_iri"] == dataset
-    assert overlay_action["arguments"]["evidence_iri"] == (
+    assert overlay_action["args"]["dataset_iri"] == dataset
+    assert overlay_action["args"]["evidence_iri"] == (
         query_result["evidence_iri"]
     )
-    assert overlay_action["source_query_evidence"]["query_hash"] == (
-        "sha256:mixed-profile-query"
-    )
-    assert overlay_action["source_query_evidence"]["scanned_source_paths"] == [
-        str(csv_path)
-    ]
 
 
 def test_record_profiled_parquet_table_tool_returns_json_like_payload(
@@ -155,7 +149,7 @@ def test_record_profiled_parquet_table_tool_returns_json_like_payload(
     assert isinstance(result["profile_draft_recommendation_count"], int)
     assert isinstance(result["query_readiness"], str)
     assert "describe_profile_run" in {
-        action["tool_name"] for action in result["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
     }
 
     profile_run = describe_profile_run_tool(
@@ -235,7 +229,7 @@ def test_record_profile_to_capsule_manifest_tool_returns_json_like_payload(
     assert result["query_readiness_counts"] == {"ready_for_query_planning": 1}
     assert result["analysis_view_bundle"]["query_snippet_count"] == 1
     assert "describe_query_context" in {
-        action["tool_name"] for action in result["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
     }
     assert (
         describe_query_context_tool(db, iri=view)["readiness"]
@@ -305,7 +299,7 @@ def test_record_domain_network_profile_tool_returns_handoff_payload(
         "https://richcanopy.org/doxabase/generated/pattern/"
     )
     assert len(result["profile_observation_iris"]) == 2
-    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "describe_dataset",
         "describe_profile_run",
         "describe_analysis_view",
@@ -381,19 +375,18 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
         "row_count_snapshot_basis"
     ] == "full_scan"
     assert [
-        action["tool_name"] for action in context["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]
     ] == [
         "describe_profile_run",
         "draft_query_plan",
     ]
 
     profile_action = context["suggested_next_actions"][0]
-    assert profile_action["action_label"] == "Inspect profile run evidence"
-    assert profile_action["arguments"] == {
+    assert profile_action["args"] == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
-    profile_run = describe_profile_run_tool(db, **profile_action["arguments"])
+    profile_run = describe_profile_run_tool(db, **profile_action["args"])
     assert profile_run["returned_profile_count"] == 2
     assert profile_run["returned_dataset_profile_count"] == 1
     assert profile_run["returned_mapped_column_profile_count"] == 1
@@ -404,12 +397,11 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     assert profile_run["row_count_snapshot_basis"] == "full_scan"
 
     draft_action = context["suggested_next_actions"][1]
-    assert draft_action["action_label"] == "Draft review-gated query plan"
-    assert draft_action["arguments"] == {
+    assert draft_action["args"] == {
         "iri": dataset,
         "candidate_selector": candidate_selector,
     }
-    draft = draft_query_plan_tool(db, **draft_action["arguments"])
+    draft = draft_query_plan_tool(db, **draft_action["args"])
     assert draft["handoff_kind"] == "metadata_review_required"
     assert draft["source_context"]["selection_mode"] == "candidate_selector"
     assert draft["source_context"]["selected_candidate_index"] == 0
@@ -523,18 +515,12 @@ def test_record_observation_tool_accepts_profile_type_findings(
     assert profile["observed_physical_type"]["iri"] == RC + "Integer"
     assert profile["observed_value_type"]["iri"] == value_type
     assert [
-        action["tool_name"] for action in profile_run["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in profile_run["suggested_next_actions"]
     ] == ["draft_profile_map_updates"]
-    assert profile_run["suggested_next_actions"][0]["action_label"] == (
-        "Inspect profile map-update status"
-    )
-    assert profile_run["suggested_next_actions"][0]["arguments"] == {
+    assert profile_run["suggested_next_actions"][0]["args"] == {
         "dataset_iri": dataset,
         "evidence_iri": result["evidence_iri"],
     }
-    assert profile_run["suggested_next_calls"] == [
-        action["call"] for action in profile_run["suggested_next_actions"]
-    ]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
@@ -743,15 +729,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         result["dataset_profile"]["observation"]["observation_iri"],
         result["column_profiles"][0]["observation"]["observation_iri"],
     ]
-    assert result["handoff_entrypoints"]["suggested_next_calls"][:2] == [
-        f"describe_dataset('{table}')",
-        f"describe_profile_run('{table}', '{shared_evidence}')",
-    ]
-    assert result["handoff_entrypoints"]["suggested_next_calls"][2] == (
-        f"draft_profile_map_updates('{table}', '{shared_evidence}')"
-    )
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in result["handoff_entrypoints"]["suggested_next_actions"]
     ] == [
         "describe_dataset",
@@ -761,28 +740,23 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         "get_context_graph",
     ]
     assert result["handoff_entrypoints"]["suggested_next_actions"][1][
-        "arguments"
+        "args"
     ] == {
         "dataset_iri": table,
         "evidence_iri": shared_evidence,
     }
     assert result["handoff_entrypoints"]["suggested_next_actions"][2][
-        "arguments"
+        "args"
     ] == {
         "dataset_iri": table,
         "evidence_iri": shared_evidence,
     }
     assert result["handoff_entrypoints"]["suggested_next_actions"][-1][
-        "arguments"
+        "args"
     ] == {
         "seed_iris": result["handoff_entrypoints"]["profile_observation_iris"],
         "profile": "dataset_brief",
     }
-    assert result["handoff_entrypoints"]["suggested_next_calls"][-1] == (
-        "get_context_graph("
-        f"{result['handoff_entrypoints']['profile_observation_iris']!r}, "
-        "profile='dataset_brief')"
-    )
 
     dataset = describe_dataset_tool(db, table)
 
@@ -824,11 +798,11 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         query_context["profile_summary"]["handoff_note"]
     )
     assert [
-        action["tool_name"] for action in query_context["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in query_context["suggested_next_actions"]
     ] == [
         "describe_profile_run",
     ]
-    assert query_context["suggested_next_actions"][0]["arguments"] == {
+    assert query_context["suggested_next_actions"][0]["args"] == {
         "dataset_iri": table,
         "evidence_iri": shared_evidence,
     }
@@ -928,7 +902,7 @@ def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
         "profile_type_review"
     ]
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in result["suggested_next_action_groups"]["profile_type_review"]
     ] == [
         "get_context_graph",
@@ -936,14 +910,6 @@ def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
         "stage_systematisation",
     ]
     grouped_actions = result["suggested_next_action_groups"]["profile_type_review"]
-    assert "semantic_move" not in grouped_actions[0]["source_profile_advisory"]
-    assert (
-        "produces_result_bindings"
-        not in grouped_actions[1]["source_profile_advisory"]
-    )
-    assert [
-        item["semantic_move"] for item in result["advisory_followthrough_plan"]
-    ] == ["caveat_fallback"]
 
 
 def test_stage_query_storage_access_repair_tool_accepts_profile_route_sources(
@@ -983,9 +949,13 @@ def test_stage_query_storage_access_repair_tool_accepts_profile_route_sources(
     )
 
     draft = draft_profile_map_updates_tool(db, table, evidence)
-    query_source = draft["suggested_next_action_groups"]["query_context_review"][
-        0
-    ]["source_query_context"]
+    query_source = next(
+        source
+        for source in db._profile_insight_route_sources(
+            db.draft_profile_map_updates(table, evidence)
+        )
+        if source["review_lane"] == "query_context_review"
+    )
     repair = stage_query_storage_access_repair_tool(
         db,
         dataset_iri=table,

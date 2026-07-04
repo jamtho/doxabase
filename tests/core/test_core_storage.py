@@ -353,23 +353,22 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert check.next_action.action_type == "repair_or_replace"
     assert check.next_action.queue == "repair_or_replace"
     assert check.next_action.tool_name == "stage_map_assertion_change"
-    action_tools = [action.tool_name for action in check.suggested_next_actions]
+    action_tools = [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions]
     assert "stage_map_assertion_change" in action_tools
     assert "restage_staged_revision" not in action_tools
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.action_label == "Stage same-slot replacement"
-    assert action.arguments["subject"] == orders
-    assert action.arguments["predicate"] == RC + "rowSemantics"
-    assert action.arguments["object"] == RC + "SnapshotRow"
-    assert action.arguments["object_kind"] == "iri"
-    assert action.arguments["change_kind"] == "replace"
-    assert action.arguments["graph"] == "map"
-    assert action.arguments["restages_revision"] == source.revision_iri
-    assert action.arguments["validation_scope"] == "all"
+    assert action.args["subject"] == orders
+    assert action.args["predicate"] == RC + "rowSemantics"
+    assert action.args["object"] == RC + "SnapshotRow"
+    assert action.args["object_kind"] == "iri"
+    assert action.args["change_kind"] == "replace"
+    assert action.args["graph"] == "map"
+    assert action.args["restages_revision"] == source.revision_iri
+    assert action.args["validation_scope"] == "all"
     draft = db.draft_staged_revision_rebase(source.revision_iri)
     assert draft.result_kind == "staged_revision_rebase_draft"
     assert draft.mode == "non_executed_review_draft"
@@ -380,12 +379,12 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert draft.reason_codes == ["same_slot_replacement"]
     assert draft.apply_check.routing_decision == "stage_same_slot_replacement"
     assert draft.preferred_action is not None
-    assert draft.preferred_action.arguments == action.arguments
+    assert draft.preferred_action.args == action.args
     assert draft.next_action is not None
     assert draft.next_action.queue == "repair_or_replace"
     assert draft.next_action.tool_name == "stage_map_assertion_change"
     assert [
-        action.tool_name for action in draft.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in draft.suggested_next_actions
     ] == [
         "stage_map_assertion_change",
         "describe_staged_revision",
@@ -413,7 +412,7 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     with pytest.raises(DoxaBaseError, match="same-slot replacement conflict"):
         db.restage_staged_revision(source.revision_iri)
 
-    repair = db.stage_map_assertion_change(**action.arguments)
+    repair = db.stage_map_assertion_change(**action.args)
     assert repair.staged_revision.restaged_from == source.revision_iri
     assert [value.object for value in repair.current_values_before] == [
         RC + "EventRow"
@@ -473,12 +472,12 @@ def test_same_slot_replacement_preserves_applied_alternative_gate(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.arguments["restages_revision"] == stale_alternative.revision_iri
-    assert action.arguments["alternative_to"] == applied_source.revision_iri
+    assert action.args["restages_revision"] == stale_alternative.revision_iri
+    assert action.args["alternative_to"] == applied_source.revision_iri
 
-    repair_arguments = dict(action.arguments)
+    repair_arguments = dict(action.args)
     assert repair_arguments.pop("alternative_to") == applied_source.revision_iri
     repair = db.stage_map_assertion_change(**repair_arguments)
     assert repair.staged_revision.restaged_from == stale_alternative.revision_iri
@@ -582,11 +581,11 @@ def test_stale_authored_replacement_with_target_already_current_routes_to_inspec
     assert check.next_action.queue == "informational"
     assert check.next_action.tool_name == "describe_staged_revision"
     assert not any(
-        action.tool_name == "stage_map_assertion_change"
+        action.tool == "doxabase.stage_map_assertion_change"
         for action in check.suggested_next_actions
     )
     assert not any(
-        action.tool_name == "restage_staged_revision"
+        action.tool == "doxabase.restage_staged_revision"
         for action in check.suggested_next_actions
     )
     by_operation = {patch.operation: patch for patch in check.patch_checks}
@@ -647,12 +646,12 @@ def test_schema_stability_same_slot_drift_suggests_replacement(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.arguments["subject"] == orders
-    assert action.arguments["predicate"] == RC + "schemaStability"
-    assert action.arguments["object"] == RC + "FixedSchema"
-    assert action.arguments["object_kind"] == "iri"
+    assert action.args["subject"] == orders
+    assert action.args["predicate"] == RC + "schemaStability"
+    assert action.args["object"] == RC + "FixedSchema"
+    assert action.args["object_kind"] == "iri"
     assert "schema stability" in action.reason
 
     dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
@@ -694,7 +693,7 @@ def test_stale_removal_with_target_already_absent_routes_to_inspection(
     assert check.next_action.action_type == "inspect_no_effective_change"
     assert check.next_action.queue == "informational"
     assert not any(
-        action.tool_name == "restage_staged_revision"
+        action.tool == "doxabase.restage_staged_revision"
         for action in check.suggested_next_actions
     )
     patch_check = check.patch_checks[0]
@@ -752,14 +751,14 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert check.next_action is not None
     assert check.next_action.queue == "repair_or_replace"
     assert check.next_action.tool_name == "draft_staged_revision_rebase"
-    assert [action.tool_name for action in check.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions] == [
         "draft_staged_revision_rebase",
         "describe_staged_revision",
         "export_staged_revision",
     ]
     assert "read-only repair/rebase plan" in check.suggested_next_actions[0].reason
     assert "stage a repaired" in check.suggested_next_actions[1].reason
-    assert "validation-failed" in check.suggested_next_actions[2].arguments["path"]
+    assert "validation-failed" in check.suggested_next_actions[2].args["path"]
     description = db.describe_staged_revision(
         staged.revision_iri,
         include_current_apply_check=True,
@@ -777,8 +776,8 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
         "iri": staged.revision_iri,
         "validation_scope": "all",
     }
-    assert validation_summary.suggested_next_actions[0].tool_name == (
-        "draft_staged_revision_rebase"
+    assert validation_summary.suggested_next_actions[0].tool == (
+        "doxabase.draft_staged_revision_rebase"
     )
     assert validation_summary.error is None
 

@@ -72,7 +72,7 @@ def main() -> None:
         print(f"Query candidate path: {decision.candidate_path}")
     if query_context.suggested_next_actions:
         action = query_context.suggested_next_actions[0]
-        print(f"Next action: {action.call or action.tool_name}")
+        print(f"Next action: {action.tool} {action.args}")
     if query_context.issues:
         print("Query issues:")
         for issue in query_context.issues[:3]:

@@ -132,9 +132,6 @@ class StagingReviewMixin:
             current_next_action=check.next_action,
             closes_current_staged_work=was_current_staged_work,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
         )
     def _staged_review_decision_targets_mutation(
         self,
@@ -165,52 +162,25 @@ class StagingReviewMixin:
     ) -> list[SuggestedNextAction]:
         actions = [
             SuggestedNextAction(
-                action_label="Inspect review decision",
-                tool_name="describe_graph_revision",
-                mcp_tool_name="doxabase.describe_graph_revision",
-                arguments={"iri": resolution_revision_iri},
-                reason=(
-                    "Inspect the durable history event that recorded the staged "
-                    "review decision."
-                ),
-                call=self._suggested_call_string(
-                    "describe_graph_revision",
-                    {"iri": resolution_revision_iri},
-                ),
+                tool="doxabase.describe_graph_revision",
+                args={"iri": resolution_revision_iri},
+                reason="Inspect the durable history event that recorded the staged "
+                    "review decision.",
             ),
             SuggestedNextAction(
-                action_label="Inspect resolved staged revision",
-                tool_name="describe_staged_revision",
-                mcp_tool_name="doxabase.describe_staged_revision",
-                arguments={
+                tool="doxabase.describe_staged_revision",
+                args={
                     "iri": staged_revision_iri,
                     "include_current_apply_check": True,
                 },
-                reason=(
-                    "Inspect the resolved staged row with its live apply check "
-                    "and review_resolution summary."
-                ),
-                call=self._suggested_call_string(
-                    "describe_staged_revision",
-                    {
-                        "iri": staged_revision_iri,
-                        "include_current_apply_check": True,
-                    },
-                ),
+                reason="Inspect the resolved staged row with its live apply check "
+                    "and review_resolution summary.",
             ),
             SuggestedNextAction(
-                action_label="Replan current staged frontier",
-                tool_name="plan_staged_revision_recovery",
-                mcp_tool_name="doxabase.plan_staged_revision_recovery",
-                arguments={"current_staged_work_only": True},
-                reason=(
-                    "The resolved staged row is no longer current staged work; "
-                    "replan before choosing the next unattended mutation."
-                ),
-                call=self._suggested_call_string(
-                    "plan_staged_revision_recovery",
-                    {"current_staged_work_only": True},
-                ),
+                tool="doxabase.plan_staged_revision_recovery",
+                args={"current_staged_work_only": True},
+                reason="The resolved staged row is no longer current staged work; "
+                    "replan before choosing the next unattended mutation.",
             ),
         ]
         return actions

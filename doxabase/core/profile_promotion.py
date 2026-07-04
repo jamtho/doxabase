@@ -334,28 +334,6 @@ class ProfilePromotionMixin:
                 suggested_next_action_groups
             )
         )
-        suggested_next_call_groups = {
-            group: [action.call for action in actions]
-            for group, actions in suggested_next_action_groups.items()
-        }
-        suggested_next_action_group_summaries = (
-            self._profile_action_route_summary_groups(
-                suggested_next_action_groups
-            )
-        )
-        suggested_next_action_summaries = (
-            self._profile_action_route_summaries_from_groups(
-                suggested_next_action_group_summaries
-            )
-        )
-        advisory_followthrough_plan = self._profile_advisory_followthrough_plan(
-            suggested_next_action_groups,
-            metric_advisories=metric_advisories,
-            type_advisories=type_advisories,
-        )
-        mixed_support_review_groups = self._profile_mixed_support_review_groups(
-            suggested_next_action_groups
-        )
         status = self._profile_map_update_draft_status(
             pending_staged_profile_update_count=(
                 pending_staged_profile_update_count
@@ -399,18 +377,7 @@ class ProfilePromotionMixin:
             ),
             type_advisory_status_counts=type_advisory_status_counts,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
             suggested_next_action_groups=suggested_next_action_groups,
-            suggested_next_call_groups=suggested_next_call_groups,
-            suggested_next_action_summaries=suggested_next_action_summaries,
-            suggested_next_action_group_summaries=(
-                suggested_next_action_group_summaries
-            ),
-            advisory_followthrough_plan=advisory_followthrough_plan,
-            mixed_support_review_groups=mixed_support_review_groups,
-            mixed_support_review_group_count=len(mixed_support_review_groups),
             review_note=(
                 self._profile_map_update_draft_review_note(
                     query_context_review_actions=query_context_review_actions,
@@ -440,14 +407,12 @@ class ProfilePromotionMixin:
         }
         action_resolutions: list[ProfileFollowthroughActionResolution] = []
         binding_resolutions: list[ProfileFollowthroughBindingResolution] = []
-        produced_bindings: list[dict[str, Any]] = []
 
         for group_name, actions in draft.suggested_next_action_groups.items():
             for action_index, action in enumerate(actions):
                 (
                     resolved_action,
                     action_binding_resolutions,
-                    action_produced_bindings,
                 ) = self._profile_followthrough_resolve_action_bindings(
                     action,
                     result_bindings=binding_values,
@@ -455,7 +420,6 @@ class ProfilePromotionMixin:
                     action_index=action_index,
                 )
                 binding_resolutions.extend(action_binding_resolutions)
-                produced_bindings.extend(action_produced_bindings)
                 applied_binding_keys = [
                     resolution.binding_key
                     for resolution in action_binding_resolutions
@@ -470,23 +434,14 @@ class ProfilePromotionMixin:
                     binding_status = "missing_bindings"
                 elif applied_binding_keys:
                     binding_status = "resolved"
-                elif action_produced_bindings:
-                    binding_status = "produces_bindings"
                 else:
                     binding_status = "not_applicable"
-                source = getattr(action, "source_profile_advisory", None)
-                semantic_move = (
-                    source.get("semantic_move")
-                    if isinstance(source, MappingABC)
-                    and isinstance(source.get("semantic_move"), str)
-                    else None
-                )
+                semantic_move = self._profile_action_semantic_move(action)
                 action_resolutions.append(
                     ProfileFollowthroughActionResolution(
                         action_group=group_name,
                         action_index=action_index,
-                        action_label=resolved_action.action_label,
-                        tool_name=resolved_action.tool_name,
+                        tool=resolved_action.tool,
                         semantic_move=semantic_move,
                         binding_status=binding_status,
                         applied_binding_keys=applied_binding_keys,
@@ -506,13 +461,19 @@ class ProfilePromotionMixin:
         ]
         action_resolution_groups = (
             self._profile_followthrough_action_resolution_groups(
-                action_resolutions
+                action_resolutions,
+                pending_map_update_iris=(
+                    draft.pending_staged_profile_update_iris
+                ),
             )
         )
         suggested_next_action_groups = (
             self._profile_followthrough_suggested_next_action_groups(
                 action_resolutions,
                 revision_checks=revision_checks,
+                pending_map_update_iris=(
+                    draft.pending_staged_profile_update_iris
+                ),
             )
         )
         suggested_next_actions = [
@@ -520,24 +481,16 @@ class ProfilePromotionMixin:
             for resolution in action_resolutions
             if resolution.binding_status != "missing_bindings"
             and not self._profile_followthrough_pending_map_update_review(
-                resolution
+                resolution,
+                pending_map_update_iris=(
+                    draft.pending_staged_profile_update_iris
+                ),
             )
         ]
         for check in revision_checks:
             suggested_next_actions.extend(check.suggested_next_actions)
-        suggested_next_calls = [action.call for action in suggested_next_actions]
-        suggested_next_action_group_summaries = (
-            self._profile_action_route_summary_groups(
-                suggested_next_action_groups
-            )
-        )
         profile_type_assertion_batch_plan = (
             self._profile_type_assertion_batch_plan(action_resolutions)
-        )
-        suggested_next_action_summaries = (
-            self._profile_action_route_summaries_from_groups(
-                suggested_next_action_group_summaries
-            )
         )
         missing_binding_keys = sorted(
             {
@@ -569,24 +522,13 @@ class ProfilePromotionMixin:
                 for resolution in action_resolutions
                 if resolution.binding_status == "missing_bindings"
             ),
-            produced_bindings=produced_bindings,
-            produced_binding_count=len(produced_bindings),
             revision_checks=revision_checks,
             revision_check_count=len(revision_checks),
             restage_stale_revisions=restage_stale_revisions,
             restaged_revision_iris=restaged_revision_iris,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=suggested_next_calls,
             suggested_next_action_groups=suggested_next_action_groups,
-            suggested_next_call_groups={
-                group_name: [action.call for action in actions if action.call]
-                for group_name, actions in suggested_next_action_groups.items()
-            },
             profile_type_assertion_batch_plan=profile_type_assertion_batch_plan,
-            suggested_next_action_summaries=suggested_next_action_summaries,
-            suggested_next_action_group_summaries=(
-                suggested_next_action_group_summaries
-            ),
             review_note=(
                 "Rerun draft_profile_map_updates through this coordinator after "
                 "recording profile-support patterns or applying related staged "
@@ -858,9 +800,6 @@ class ProfilePromotionMixin:
             metric_advisory_suggested_next_actions=(
                 metric_advisory_suggested_next_actions
             ),
-            metric_advisory_suggested_next_calls=[
-                action.call for action in metric_advisory_suggested_next_actions
-            ],
             type_advisories=draft.type_advisories,
             type_advisory_count=draft.type_advisory_count,
             type_advisory_status_counts=draft.type_advisory_status_counts,
@@ -868,9 +807,6 @@ class ProfilePromotionMixin:
             type_advisory_suggested_next_actions=(
                 type_advisory_suggested_next_actions
             ),
-            type_advisory_suggested_next_calls=[
-                action.call for action in type_advisory_suggested_next_actions
-            ],
             revision_iri=(
                 staged_revision.revision_iri
                 if staged_revision is not None
@@ -878,9 +814,6 @@ class ProfilePromotionMixin:
             ),
             staged_revision=staged_revision,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
             review_note=self._profile_update_staging_review_note(
                 items,
                 staged_indexes=staged_indexes,
@@ -930,27 +863,6 @@ class ProfilePromotionMixin:
                     pending_staged_profile_update_iris
                 ),
             )
-            source_profile_map_update = self._profile_map_update_route_source(
-                dataset_iri=dataset_iri,
-                evidence_iri=evidence_iri,
-                recommendations=recommendations,
-                recommendation_indexes=default_stageable_representative_indexes,
-                supporting_patterns=supporting_patterns,
-                action=action,
-                pending_staged_profile_update_iris=(
-                    pending_staged_profile_update_iris
-                ),
-            )
-            actions.append(
-                ProfileMapUpdateSuggestedNextAction(
-                    action_label=action.action_label,
-                    tool_name=action.tool_name,
-                    mcp_tool_name=action.mcp_tool_name,
-                    arguments=action.arguments,
-                    reason=action.reason,
-                    call=action.call,
-                    source_profile_map_update=source_profile_map_update,
-                )
-            )
+            actions.append(action)
 
         return actions

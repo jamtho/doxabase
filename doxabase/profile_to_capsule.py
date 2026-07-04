@@ -58,7 +58,6 @@ def apply_manifest_file(
             "profile_observation_count": record.profile_observation_count,
             "query_readiness_counts": record.query_readiness_counts,
             "query_issue_code_counts": record.query_issue_code_counts,
-            "suggested_next_calls": record.suggested_next_calls,
             "validation_scope": validation.scope,
             "validation_conforms": validation.conforms,
             "validation_result_count": validation.result_count,

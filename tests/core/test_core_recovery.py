@@ -54,11 +54,8 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert dry_run.recovery_summary.first_safe_review_or_mutation_action is None
     assert dry_run.recovery_summary.first_safe_review_or_mutation_source is None
     assert dry_run.recovery_summary.first_suggested_next_action is not None
-    assert dry_run.recovery_summary.first_suggested_next_action.tool_name == (
-        "import_handoff_bundle"
-    )
-    assert dry_run.recovery_summary.first_suggested_next_action.action_label == (
-        "Import privacy-gated handoff bundle"
+    assert dry_run.recovery_summary.first_suggested_next_action.tool == (
+        "doxabase.import_handoff_bundle"
     )
     assert "non-mutating manifest privacy gate" in (
         dry_run.recovery_summary.note
@@ -66,7 +63,7 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert "export_preflight" in (
         dry_run.recovery_summary.first_suggested_next_action.reason
     )
-    assert [action.tool_name for action in dry_run.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in dry_run.suggested_next_actions] == [
         "import_handoff_bundle"
     ]
     assert fake_secret not in json.dumps(to_dict(dry_run))
@@ -76,23 +73,18 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert imported.recovery_plan is not None
     assert imported.recovery_plan.processed_revision_iris == [staged.revision_iri]
     assert imported.suggested_next_actions
-    assert [action.tool_name for action in imported.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in imported.suggested_next_actions] == [
         "export_preflight"
     ]
     privacy_action = imported.suggested_next_actions[0]
-    assert privacy_action.mutation_scope == "none"
-    assert privacy_action.mutates_project_graph is False
-    assert privacy_action.writes_history is False
-    assert privacy_action.writes_files is False
-    assert privacy_action.writes_storage is False
-    assert privacy_action.arguments == {
+    assert privacy_action.args == {
         "export_kind": "handoff_bundle",
         "graphs": exported.graph_roles,
         "limit": 20,
         "revision_iris": [staged.revision_iri],
         "snapshot_graph_roles": exported.snapshot_graph_roles,
     }
-    followup = receiver.export_preflight(**privacy_action.arguments)
+    followup = receiver.export_preflight(**privacy_action.args)
     assert followup.sensitive_literal_count == exported.sensitive_literal_count
     assert followup.graph_sensitive_literal_count == (
         exported.graph_sensitive_literal_count
@@ -129,14 +121,9 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
     assert privacy_step.requires_replan_after_completion is True
     assert privacy_step.stop_reason == "rerun_plan_after_handoff_privacy_review"
     assert imported.recovery_plan.first_mutation_action is None
-    assert imported.recovery_plan.first_mutation_call is None
     assert (
         imported.recovery_plan.first_safe_review_or_mutation_action
         == privacy_action
-    )
-    assert (
-        imported.recovery_plan.first_safe_review_or_mutation_call
-        == privacy_action.call
     )
     assert (
         imported.recovery_plan.first_safe_review_or_mutation_source
@@ -157,10 +144,10 @@ def test_import_handoff_bundle_gates_dirty_manifest_recovery_actions(
         for summary in imported.recovery_plan.revision_summaries
     )
     assert "start_staged_revision_recovery_session" not in [
-        action.tool_name for action in imported.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in imported.suggested_next_actions
     ]
     assert "apply_staged_revision" not in [
-        action.tool_name for action in imported.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in imported.suggested_next_actions
     ]
     assert any(
         "potential sensitive terms" in warning
@@ -222,20 +209,15 @@ def test_import_handoff_bundle_gates_invalid_manifest_recovery_actions(
 
     assert imported.recovery_plan is not None
     assert imported.recovery_plan.processed_revision_iris == [staged.revision_iri]
-    assert [action.tool_name for action in imported.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in imported.suggested_next_actions] == [
         "validate_graph"
     ]
     validation_action = imported.suggested_next_actions[0]
-    assert validation_action.mutation_scope == "none"
-    assert validation_action.mutates_project_graph is False
-    assert validation_action.writes_history is False
-    assert validation_action.writes_files is False
-    assert validation_action.writes_storage is False
-    assert validation_action.arguments == {
+    assert validation_action.args == {
         "scope": "all",
         "limit_results": min(max(exported.validation_result_count, 20), 100),
     }
-    followup = receiver.validate_graph(**validation_action.arguments)
+    followup = receiver.validate_graph(**validation_action.args)
     assert followup.conforms is False
     assert followup.result_count == exported.validation_result_count
     assert imported.recovery_summary.recommended_next_step == (
@@ -271,13 +253,9 @@ def test_import_handoff_bundle_gates_invalid_manifest_recovery_actions(
         "rerun_plan_after_handoff_validation_review"
     )
     assert imported.recovery_plan.first_mutation_action is None
-    assert imported.recovery_plan.first_mutation_call is None
     assert (
         imported.recovery_plan.first_safe_review_or_mutation_action
         == validation_action
-    )
-    assert imported.recovery_plan.first_safe_review_or_mutation_call == (
-        validation_action.call
     )
     assert imported.recovery_plan.first_safe_review_or_mutation_source == (
         "handoff_import_validation_review"
@@ -297,7 +275,7 @@ def test_import_handoff_bundle_gates_invalid_manifest_recovery_actions(
         for summary in imported.recovery_plan.revision_summaries
     )
     assert "start_staged_revision_recovery_session" not in [
-        action.tool_name for action in imported.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in imported.suggested_next_actions
     ]
     assert "apply_staged_revision" not in json.dumps(
         to_jsonable(imported.recovery_plan),
@@ -352,21 +330,16 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
         for warning in preflight.warnings
     )
     assert [
-        action.tool_name for action in preflight.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in preflight.suggested_next_actions
     ] == [
         "export_context_slice",
         "export_handoff_bundle",
     ]
     handoff_action = preflight.suggested_next_actions[1]
-    assert handoff_action.arguments["revision_iris"] == [staged.revision_iri]
-    assert handoff_action.arguments["manifest_path"] == "<handoff-manifest.json>"
-    assert handoff_action.arguments["graphs"] == ["project"]
-    assert handoff_action.arguments["fail_on_sensitive"] is True
-    assert handoff_action.placeholder_fields == [
-        "trig_path",
-        "revision_snapshot_path",
-        "manifest_path",
-    ]
+    assert handoff_action.args["revision_iris"] == [staged.revision_iri]
+    assert handoff_action.args["manifest_path"] == "<handoff-manifest.json>"
+    assert handoff_action.args["graphs"] == ["project"]
+    assert handoff_action.args["fail_on_sensitive"] is True
 
     export_path = tmp_path / "revision-context.trig"
     export = db.export_context_slice(
@@ -387,9 +360,9 @@ def test_context_slice_export_warns_history_is_not_recovery_handoff(
         for warning in export.warnings
     )
     assert [
-        action.tool_name for action in export.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in export.suggested_next_actions
     ] == ["export_handoff_bundle"]
-    assert export.suggested_next_actions[0].arguments["revision_iris"] == [
+    assert export.suggested_next_actions[0].args["revision_iris"] == [
         staged.revision_iri
     ]
     export_text = export_path.read_text(encoding="utf-8")
@@ -448,7 +421,7 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
         == "handoff_preflight_required_before_mutation"
     )
     assert [
-        action.tool_name for action in direct_check.blocking_preflight_actions
+        action.tool.removeprefix("doxabase.") for action in direct_check.blocking_preflight_actions
     ] == ["import_revision_snapshots"]
     assert direct_check.first_safe_next_action is not None
     assert direct_check.first_safe_next_action.tool_name == (
@@ -483,30 +456,25 @@ def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     assert lane.next_action.writes_storage is True
     assert lane.current_snapshot_evidence.status == "history_only_count_digest"
     assert lane.current_snapshot_evidence_completeness == "history-only"
-    assert lane.suggested_next_actions[0].tool_name == "import_revision_snapshots"
-    assert lane.suggested_next_actions[0].mutation_scope == "snapshot_storage"
-    assert lane.suggested_next_actions[0].writes_storage is True
-    assert lane.suggested_next_actions[0].arguments == {
+    assert lane.suggested_next_actions[0].tool == (
+        "doxabase.import_revision_snapshots"
+    )
+    assert lane.suggested_next_actions[0].args == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
     assert any(
-        action.tool_name == "apply_staged_revision"
+        action.tool == "doxabase.apply_staged_revision"
         for action in lane.suggested_next_actions[1:]
     )
-    assert plan.suggested_next_actions[0].tool_name == "import_revision_snapshots"
-    assert plan.suggested_next_actions[0].mutation_scope == "snapshot_storage"
-    assert plan.suggested_next_actions[0].writes_storage is True
+    assert plan.suggested_next_actions[0].tool == "doxabase.import_revision_snapshots"
     assert (
         plan.mutation_allowed_after
         == "handoff_preflight_required_before_mutation"
     )
     assert [
-        action.tool_name for action in plan.blocking_preflight_actions
+        action.tool.removeprefix("doxabase.") for action in plan.blocking_preflight_actions
     ] == ["import_revision_snapshots"]
-    assert plan.blocking_preflight_calls == [
-        plan.suggested_next_actions[0].call
-    ]
 
     grouped_export_path = tmp_path / "rdf-only-grouped-review.md"
     grouped_export = imported.export_staged_revisions(
@@ -641,10 +609,10 @@ def test_staged_revision_recovery_session_replans_live_state(
     )
     after_restage_brief = db.project_brief(limit=10)
     assert after_restage_brief.frontier_first_action is not None
-    assert after_restage_brief.frontier_first_action.tool_name == (
-        "describe_staged_revision_recovery_session"
+    assert after_restage_brief.frontier_first_action.tool == (
+        "doxabase.describe_staged_revision_recovery_session"
     )
-    assert after_restage_brief.frontier_first_action.arguments == {
+    assert after_restage_brief.frontier_first_action.args == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
     }
@@ -671,7 +639,7 @@ def test_staged_revision_recovery_session_replans_live_state(
     assert source_state.latest_role == "applied_event"
     assert source_state.next_action_tool_name == "describe_graph_revision"
     assert any(
-        action.tool_name == "describe_applied_revision_diff"
+        action.tool == "doxabase.describe_applied_revision_diff"
         for action in after_apply.suggested_next_actions
     )
     assert db.validate_graph(scope="all").conforms
@@ -835,13 +803,13 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert repair_lane.repair_draft is not None
     assert repair_lane.repair_draft.draft_kind == "same_slot_replacement"
     assert repair_lane.repair_draft.preferred_action is not None
-    assert repair_lane.repair_draft.preferred_action.arguments["restages_revision"] == (
+    assert repair_lane.repair_draft.preferred_action.args["restages_revision"] == (
         repair_source.revision_iri
     )
     assert repair_lane.next_action is not None
     assert repair_lane.next_action.tool_name == "stage_map_assertion_change"
     assert any(
-        action.tool_name == "stage_map_assertion_change"
+        action.tool == "doxabase.stage_map_assertion_change"
         for action in repair_lane.suggested_next_actions
     )
     applied_lane = lanes_by_source[applied_source.revision_iri]
@@ -866,14 +834,11 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         handled_successor.revision_iri,
     ]
     assert [
-        action.tool_name for action in plan.helper_mutation_frontier_actions
+        action.tool.removeprefix("doxabase.") for action in plan.helper_mutation_frontier_actions
     ] == ["stage_map_assertion_change"]
-    assert plan.helper_mutation_frontier_actions[0].arguments[
+    assert plan.helper_mutation_frontier_actions[0].args[
         "restages_revision"
     ] == repair_source.revision_iri
-    assert plan.helper_mutation_frontier_calls == [
-        plan.helper_mutation_frontier_actions[0].call
-    ]
     assert [
         item.item_kind for item in plan.mutation_frontier_items
     ] == [
@@ -907,15 +872,11 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         "apply at most one ready row" in warning for warning in plan.warnings
     )
     batch_dry_run_action = plan.suggested_next_actions[0]
-    assert batch_dry_run_action.tool_name == "restage_staged_revisions"
-    assert batch_dry_run_action.arguments == {
+    assert batch_dry_run_action.tool == "doxabase.restage_staged_revisions"
+    assert batch_dry_run_action.args == {
         "revision_iris": [stale.revision_iri],
         "dry_run": True,
     }
-    assert batch_dry_run_action.mutation_scope == "none"
-    assert batch_dry_run_action.mutates_project_graph is False
-    assert batch_dry_run_action.writes_history is False
-    assert batch_dry_run_action.writes_files is False
     assert [
         step.step_kind for step in plan.recommended_unattended_steps[:3]
     ] == [
@@ -931,8 +892,8 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert dry_step.revision_iris == [stale.revision_iri]
     real_step = plan.recommended_unattended_steps[1]
     assert real_step.action is not None
-    assert real_step.action.tool_name == "restage_staged_revisions"
-    assert real_step.action.arguments == {
+    assert real_step.action.tool == "doxabase.restage_staged_revisions"
+    assert real_step.action.args == {
         "revision_iris": [stale.revision_iri],
         "dry_run": False,
     }
@@ -951,8 +912,8 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     )
     assert helper_step.stop_reason == "mechanical_restage_first"
     assert any(
-        action.tool_name == "restage_staged_revision"
-        and action.arguments == {"iri": stale.revision_iri}
+        action.tool == "doxabase.restage_staged_revision"
+        and action.args == {"iri": stale.revision_iri}
         for action in plan.suggested_next_actions
     )
 
@@ -1042,12 +1003,12 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         handled_successor.revision_iri,
     }
     followup_batch_action = followup_plan.suggested_next_actions[0]
-    assert followup_batch_action.tool_name == "restage_staged_revisions"
-    assert set(followup_batch_action.arguments["revision_iris"]) == {
+    assert followup_batch_action.tool == "doxabase.restage_staged_revisions"
+    assert set(followup_batch_action.args["revision_iris"]) == {
         restaged_stale_iri,
         handled_successor.revision_iri,
     }
-    assert followup_batch_action.arguments["dry_run"] is True
+    assert followup_batch_action.args["dry_run"] is True
     assert set(followup_plan.mutation_frontier_iris) == {
         restaged_stale_iri,
         handled_successor.revision_iri,
@@ -1208,8 +1169,8 @@ def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
     assert patchless_iri in plan.review_revision_iris
     assert patchless_iri in plan.recommended_review_iris
     assert any(
-        action.tool_name == "describe_graph_revision"
-        and action.arguments["iri"] == patchless_iri
+        action.tool == "doxabase.describe_graph_revision"
+        and action.args["iri"] == patchless_iri
         for action in plan.suggested_next_actions
     )
     assert any("without patch payload" in warning for warning in plan.warnings)
@@ -1362,7 +1323,7 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     assert check.next_action is not None
     assert check.next_action.queue == "repair_or_replace"
     assert not any(
-        action.tool_name == "stage_map_assertion_change"
+        action.tool == "doxabase.stage_map_assertion_change"
         for action in check.suggested_next_actions
     )
     draft = db.draft_staged_revision_rebase(source.revision_iri)
@@ -1375,7 +1336,7 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     assert draft.next_action.queue == "repair_or_replace"
     assert draft.next_action.tool_name != "draft_staged_revision_rebase"
     assert all(
-        action.tool_name != "draft_staged_revision_rebase"
+        action.tool != "doxabase.draft_staged_revision_rebase"
         for action in draft.suggested_next_actions
     )
     plan = db.plan_staged_revision_recovery([source.revision_iri])
@@ -1401,15 +1362,14 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     assert lane.next_action.tool_name != "draft_staged_revision_rebase"
     assert lane.suggested_next_actions == lane.repair_draft.suggested_next_actions
     assert all(
-        action.tool_name != "draft_staged_revision_rebase"
+        action.tool != "doxabase.draft_staged_revision_rebase"
         for action in lane.suggested_next_actions
     )
     assert all(
-        action.tool_name != "draft_staged_revision_rebase"
+        action.tool != "doxabase.draft_staged_revision_rebase"
         for action in plan.suggested_next_actions
     )
     assert plan.helper_mutation_frontier_actions == []
-    assert plan.helper_mutation_frontier_calls == []
 
 
 def test_plan_staged_revision_recovery_bounds_embedded_repair_drafts(
@@ -1629,14 +1589,14 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
         "repair_or_replace": 1,
     }
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in stale_plan.helper_mutation_frontier_actions
     ] == ["stage_map_assertion_change"]
     helper_action = stale_plan.helper_mutation_frontier_actions[0]
-    assert helper_action.arguments["restages_revision"] == (
+    assert helper_action.args["restages_revision"] == (
         aggregate_rows.revision_iri
     )
-    assert helper_action.arguments["alternative_to"] == event_rows.revision_iri
+    assert helper_action.args["alternative_to"] == event_rows.revision_iri
     helper_item = stale_plan.mutation_frontier_items[-1]
     assert helper_item.item_kind == "helper_action"
     assert helper_item.action == helper_action
@@ -1659,10 +1619,10 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert "semantic review is required before mutation" in helper_item.reason
     assert "do not mutate unattended" in helper_item.reason
     assert stale_plan.first_mutation_action is None
-    assert stale_plan.first_mutation_call is None
     assert any(
-        item.action.tool_name == "restage_staged_revision"
-        and item.action.arguments == {"iri": independent.revision_iri}
+        action_tool_name(item.action) == "restage_staged_revision"
+        and dict(action_arguments(item.action))
+        == {"iri": independent.revision_iri}
         and item.requires_semantic_review_before_mutation is False
         for item in stale_plan.mutation_frontier_items
     )
@@ -1712,16 +1672,16 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert repair_draft.draft_status == "drafted"
     assert repair_draft.draft_kind == "same_slot_replacement"
     assert repair_draft.preferred_action is not None
-    assert repair_draft.preferred_action.tool_name == "stage_map_assertion_change"
-    assert repair_draft.preferred_action.arguments["restages_revision"] == (
+    assert repair_draft.preferred_action.tool == "doxabase.stage_map_assertion_change"
+    assert repair_draft.preferred_action.args["restages_revision"] == (
         aggregate_rows.revision_iri
     )
-    assert repair_draft.preferred_action.arguments["alternative_to"] == (
+    assert repair_draft.preferred_action.args["alternative_to"] == (
         event_rows.revision_iri
     )
 
     repair = db.stage_map_assertion_change(
-        **repair_draft.preferred_action.arguments,
+        **repair_draft.preferred_action.args,
     )
     assert repair.staged_revision.restaged_from == aggregate_rows.revision_iri
     assert repair.staged_revision.alternative_to == event_rows.revision_iri
@@ -1780,10 +1740,9 @@ def test_semantic_rebase_loop_separates_restage_from_same_slot_repair(
     assert "semantic review is required before mutation" in frontier_item.reason
     assert "do not mutate unattended" in frontier_item.reason
     assert final_plan.first_mutation_action is None
-    assert final_plan.first_mutation_call is None
     assert final_plan.first_safe_review_or_mutation_action is not None
     assert (
-        final_plan.first_safe_review_or_mutation_action.tool_name
+        action_tool_name(final_plan.first_safe_review_or_mutation_action)
         == "describe_staged_revision"
     )
 
@@ -1949,8 +1908,7 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recheck.next_action.action_type == "restage_after_review"
     assert recheck.next_action.tool_name == "restage_staged_revision"
     assert recheck.next_action.arguments == {"iri": second_restaged.revision_iri}
-    assert recheck.suggested_next_actions[-1].tool_name == "restage_staged_revision"
-    assert recheck.suggested_next_calls[-1].startswith("restage_staged_revision(")
+    assert recheck.suggested_next_actions[-1].tool == "doxabase.restage_staged_revision"
     recheck_export_path = tmp_path / "post-apply-recheck.md"
     recheck_export = db.export_staged_revisions(
         result.post_apply_recheck_revision_iris,
@@ -2028,20 +1986,17 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert first_restaged.revision_iri in recovered_second_check.next_action.reason
     assert result.applied_revision_iri in recovered_second_check.next_action.reason
     review_action = recovered_second_check.suggested_next_actions[0]
-    assert review_action.tool_name == "describe_staged_revision"
-    assert review_action.action_label == "Review semantic alternative"
+    assert review_action.tool == "doxabase.describe_staged_revision"
     assert first_restaged.revision_iri in review_action.reason
     assert result.applied_revision_iri in review_action.reason
     export_action = recovered_second_check.suggested_next_actions[1]
-    assert export_action.tool_name == "export_staged_revision"
-    assert export_action.action_label == "Export semantic alternative bundle"
+    assert export_action.tool == "doxabase.export_staged_revision"
     assert "semantic alternative gate" in export_action.reason
     assert "staged-revision-semantic-alternative-review" in (
-        export_action.arguments["path"]
+        export_action.args["path"]
     )
     apply_action = recovered_second_check.suggested_next_actions[-1]
-    assert apply_action.tool_name == "apply_staged_revision"
-    assert apply_action.action_label == "Apply only after semantic review"
+    assert apply_action.tool == "doxabase.apply_staged_revision"
     assert apply_action.reason == recovered_second_check.next_action.reason
     assert first_restaged.revision_iri in apply_action.reason
     assert result.applied_revision_iri in apply_action.reason
@@ -2287,40 +2242,40 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert [
         item.alternative_set_role for item in draft.next_action_queue_items
     ] == ["source", "alternative"]
-    assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
-    assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
-    assert draft.suggested_next_actions[0].arguments["fail_on_sensitive"] is True
-    draft_export_path = draft.suggested_next_actions[0].arguments["path"]
+    assert draft.suggested_next_actions[0].tool == "doxabase.export_staged_revisions"
+    assert draft.suggested_next_actions[0].args["revision_iris"] == revision_iris
+    assert draft.suggested_next_actions[0].args["fail_on_sensitive"] is True
+    draft_export_path = draft.suggested_next_actions[0].args["path"]
     assert draft_export_path.startswith("/tmp/systematisation-review-")
     assert draft_export_path.endswith(".md")
     assert [
-        action.arguments
+        action.args
         for action in draft.suggested_next_actions
-        if action.tool_name == "check_staged_revision_apply"
+        if action.tool == "doxabase.check_staged_revision_apply"
     ] == [{"iri": revision_iri} for revision_iri in revision_iris]
     first_export_action = next(
         action
         for action in db.check_staged_revision_apply(
             revision_iris[0],
         ).suggested_next_actions
-        if action.tool_name == "export_staged_revision"
+        if action.tool == "doxabase.export_staged_revision"
     )
     second_export_action = next(
         action
         for action in db.check_staged_revision_apply(
             revision_iris[1],
         ).suggested_next_actions
-        if action.tool_name == "export_staged_revision"
+        if action.tool == "doxabase.export_staged_revision"
     )
-    first_export_path = first_export_action.arguments["path"]
-    second_export_path = second_export_action.arguments["path"]
+    first_export_path = first_export_action.args["path"]
+    second_export_path = second_export_action.args["path"]
     assert first_export_path.startswith("/tmp/staged-revision-review-")
     assert second_export_path.startswith("/tmp/staged-revision-review-")
     assert first_export_path.endswith(".md")
     assert second_export_path.endswith(".md")
     assert first_export_path != second_export_path
-    assert first_export_action.arguments["fail_on_sensitive"] is True
-    assert second_export_action.arguments["fail_on_sensitive"] is True
+    assert first_export_action.args["fail_on_sensitive"] is True
+    assert second_export_action.args["fail_on_sensitive"] is True
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("patterns") == before_patterns_count
 
@@ -2447,8 +2402,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert export.revision_summaries[1].next_action.tool_name == (
         "apply_staged_revision"
     )
-    assert export.revision_summaries[1].suggested_next_actions[-1].tool_name == (
-        "apply_staged_revision"
+    assert export.revision_summaries[1].suggested_next_actions[-1].tool == (
+        "doxabase.apply_staged_revision"
     )
     assert export.bytes_written == len(exported.encode("utf-8"))
     assert exported.startswith("# Identity ladder alternatives\n")

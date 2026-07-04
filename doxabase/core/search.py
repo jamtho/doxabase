@@ -133,9 +133,6 @@ class SearchMixin:
             next_offset=next_offset,
             scope_hint=scope_hint,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _search_scope_hint(
         self,
@@ -171,7 +168,6 @@ class SearchMixin:
             seed_graphs=seed_graphs,
             suggested_graphs=list(SEARCH_SCOPE_HINT_GRAPHS),
             suggested_next_actions=actions,
-            suggested_next_calls=[action.call for action in actions],
         )
     def _search_scoped_retry_action(
         self,
@@ -187,17 +183,12 @@ class SearchMixin:
             "offset": 0,
         }
         return SuggestedNextAction(
-            action_label=f"Retry search in {graph}",
-            tool_name="search",
-            mcp_tool_name="doxabase.search",
-            arguments=arguments,
-            reason=(
-                "Unscoped search results are seed-heavy; retrying a project graph "
+                   tool="doxabase.search",
+                   args=arguments,
+                   reason="Unscoped search results are seed-heavy; retrying a project graph "
                 "scope can surface current map facts, observations, patterns, or "
-                "evidence without seed ontology noise."
-            ),
-            call=self._suggested_call_string("search", arguments),
-        )
+                "evidence without seed ontology noise.",
+               )
     def _search_no_match_actions(
         self,
         *,
@@ -261,8 +252,8 @@ class SearchMixin:
         action: SuggestedNextAction,
     ) -> None:
         action_key = (
-            action.tool_name,
-            json.dumps(to_jsonable(action.arguments), sort_keys=True),
+            action.tool,
+            json.dumps(to_jsonable(action.args), sort_keys=True),
         )
         if action_key in seen:
             return
@@ -335,17 +326,12 @@ class SearchMixin:
             "offset": 0,
         }
         return SuggestedNextAction(
-            action_label=f"Search {graph} for {query!r}",
-            tool_name="search",
-            mcp_tool_name="doxabase.search",
-            arguments=arguments,
-            reason=(
-                "No lexical matches were found for the full query. Retrying a "
+                   tool="doxabase.search",
+                   args=arguments,
+                   reason="No lexical matches were found for the full query. Retrying a "
                 "shorter distinctive term in a project graph can find resources "
-                "whose stored wording uses different synonyms."
-            ),
-            call=self._suggested_call_string("search", arguments),
-        )
+                "whose stored wording uses different synonyms.",
+               )
     def _search_no_match_entity_browse_action(
         self,
         *,
@@ -360,17 +346,12 @@ class SearchMixin:
             "offset": 0,
         }
         return SuggestedNextAction(
-            action_label=f"Browse {graph} entities for {text!r}",
-            tool_name="list_entities",
-            mcp_tool_name="doxabase.list_entities",
-            arguments=arguments,
-            reason=(
-                "No search match was found; browsing resource labels, IRIs, and "
+                   tool="doxabase.list_entities",
+                   args=arguments,
+                   reason="No search match was found; browsing resource labels, IRIs, and "
                 "literal-bearing subjects by one distinctive term can identify a "
-                "seed for describe_dataset, describe_resource, or a context slice."
-            ),
-            call=self._suggested_call_string("list_entities", arguments),
-        )
+                "seed for describe_dataset, describe_resource, or a context slice.",
+               )
     def _search_no_match_unscoped_retry_action(
         self,
         *,
@@ -384,17 +365,12 @@ class SearchMixin:
             "offset": 0,
         }
         return SuggestedNextAction(
-            action_label="Retry search across all graphs",
-            tool_name="search",
-            mcp_tool_name="doxabase.search",
-            arguments=arguments,
-            reason=(
-                "The scoped search had no matches. An unscoped retry can reveal "
+                   tool="doxabase.search",
+                   args=arguments,
+                   reason="The scoped search had no matches. An unscoped retry can reveal "
                 "observations, patterns, evidence, ontology, or history matches "
-                "outside the requested graph."
-            ),
-            call=self._suggested_call_string("search", arguments),
-        )
+                "outside the requested graph.",
+               )
     def _search_next_page_action(
         self,
         *,
@@ -411,13 +387,10 @@ class SearchMixin:
         if graph is not None:
             arguments["graph"] = graph
         return SuggestedNextAction(
-            action_label="Search next result page",
-            tool_name="search",
-            mcp_tool_name="doxabase.search",
-            arguments=arguments,
-            reason="More search matches exist beyond the returned page.",
-            call=self._suggested_call_string("search", arguments),
-        )
+                   tool="doxabase.search",
+                   args=arguments,
+                   reason="More search matches exist beyond the returned page.",
+               )
     def _co_mentioned_search_rows(
         self,
         tokens: list[str],

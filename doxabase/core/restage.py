@@ -936,9 +936,6 @@ class RestageMixin:
             ),
             export_record=export_record,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _batch_restage_suggested_next_actions(
         self,
@@ -958,21 +955,13 @@ class RestageMixin:
                 arguments["validation_scope"] = validation_scope
             actions.append(
                 SuggestedNextAction(
-                    action_label="Run reviewed batch restage",
-                    tool_name="restage_staged_revisions",
-                    mcp_tool_name="doxabase.restage_staged_revisions",
-                    arguments=arguments,
-                    reason=(
-                        "The dry run identified stale staged revisions that can "
+                    tool="doxabase.restage_staged_revisions",
+                    args=arguments,
+                    reason="The dry run identified stale staged revisions that can "
                         "be mechanically restaged. Run the real batch after "
                         "reviewing classifications and repair-first warnings; "
                         "the action omits the dry-run export path to avoid "
-                        "overwriting the review artifact."
-                    ),
-                    call=self._suggested_call_string(
-                        "restage_staged_revisions",
-                        arguments,
-                    ),
+                        "overwriting the review artifact.",
                 )
             )
         if dry_run and actions:

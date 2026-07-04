@@ -835,69 +835,37 @@ class ProfileRecordsMixin:
 
         suggested_next_actions = [
             SuggestedNextAction(
-                action_label="Describe profiled dataset",
-                tool_name="describe_dataset",
-                mcp_tool_name="doxabase.describe_dataset",
-                arguments={"iri": dataset_value},
-                reason=(
-                    "Inspect the dataset with the recorded domain-network "
-                    "profile observations and map caveats."
-                ),
-                call=self._suggested_call_string(
-                    "describe_dataset",
-                    {"iri": dataset_value},
-                ),
+                tool="doxabase.describe_dataset",
+                args={"iri": dataset_value},
+                reason="Inspect the dataset with the recorded domain-network "
+                    "profile observations and map caveats.",
             ),
             SuggestedNextAction(
-                action_label="Inspect domain-network profile run",
-                tool_name="describe_profile_run",
-                mcp_tool_name="doxabase.describe_profile_run",
-                arguments={
+                tool="doxabase.describe_profile_run",
+                args={
                     "dataset_iri": dataset_value,
                     "evidence_iri": evidence_value,
                 },
-                reason=(
-                    "Review the shared evidence run containing coverage, "
-                    "domain-pair, and domain-frequency aggregates."
-                ),
-                call=self._suggested_call_string(
-                    "describe_profile_run",
-                    {"dataset_iri": dataset_value, "evidence_iri": evidence_value},
-                ),
+                reason="Review the shared evidence run containing coverage, "
+                    "domain-pair, and domain-frequency aggregates.",
             ),
         ]
         if analysis_view_value is not None:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    action_label="Describe domain-network analysis view",
-                    tool_name="describe_analysis_view",
-                    mcp_tool_name="doxabase.describe_analysis_view",
-                    arguments={"iri": analysis_view_value},
-                    reason=(
-                        "Inspect the named population and denominator for the "
-                        "domain-network aggregate profile."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_analysis_view",
-                        {"iri": analysis_view_value},
-                    ),
+                    tool="doxabase.describe_analysis_view",
+                    args={"iri": analysis_view_value},
+                    reason="Inspect the named population and denominator for the "
+                        "domain-network aggregate profile.",
                 )
             )
         if pattern is not None:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    action_label="Describe domain-network coverage pattern",
-                    tool_name="describe_pattern",
-                    mcp_tool_name="doxabase.describe_pattern",
-                    arguments={"iri": pattern.pattern_iri},
-                    reason=(
-                        "Review the synthesis that explains how extraction "
-                        "coverage affects network interpretation."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_pattern",
-                        {"iri": pattern.pattern_iri},
-                    ),
+                    tool="doxabase.describe_pattern",
+                    args={"iri": pattern.pattern_iri},
+                    reason="Review the synthesis that explains how extraction "
+                        "coverage affects network interpretation.",
                 )
             )
         return DomainNetworkProfileRecord(
@@ -912,9 +880,6 @@ class ProfileRecordsMixin:
             pattern=pattern,
             profile_observation_iris=profile_observation_iris,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
         )
     def _domain_network_frequency_values(
         self,
@@ -1089,18 +1054,12 @@ class ProfileRecordsMixin:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
-            *,
-            action_label: str,
-            call: str,
         ) -> None:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    action_label=action_label,
-                    tool_name=tool_name,
-                    mcp_tool_name=f"doxabase.{tool_name}",
-                    arguments=arguments,
+                    tool=f"doxabase.{tool_name}",
+                    args=arguments,
                     reason=reason,
-                    call=call,
                 )
             )
 
@@ -1112,8 +1071,7 @@ class ProfileRecordsMixin:
                     "Inspect the bounded dataset view with current map facts "
                     "and returned profile summaries."
                 ),
-                action_label="Describe dataset",
-                call=f"describe_dataset({dataset_iri!r})",
+
             )
         if profile_run_available:
             add_action(
@@ -1126,12 +1084,7 @@ class ProfileRecordsMixin:
                     "Inspect every returned profile observation linked to the "
                     "shared evidence run."
                 ),
-                action_label="Describe profile run",
-                call=(
-                    "describe_profile_run("
-                    f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
-                    ")"
-                ),
+
             )
         if dataset_describe_available and profile_run_available:
             add_action(
@@ -1145,12 +1098,7 @@ class ProfileRecordsMixin:
                     "profile run before deciding which findings should become "
                     "durable map facts."
                 ),
-                action_label="Draft profile map updates",
-                call=(
-                    "draft_profile_map_updates("
-                    f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
-                    ")"
-                ),
+
             )
         if dataset_describe_available:
             add_action(
@@ -1160,12 +1108,7 @@ class ProfileRecordsMixin:
                     "Load route-explained dataset context before deciding "
                     "which profile findings should become durable map facts."
                 ),
-                action_label="Load dataset context slice",
-                call=(
-                    "get_context_graph("
-                    f"[{dataset_iri!r}], profile='dataset_brief'"
-                    ")"
-                ),
+
             )
         add_action(
             "get_context_graph",
@@ -1174,14 +1117,8 @@ class ProfileRecordsMixin:
                 "Load profile-observation-seeded context when map dataset "
                 "context is unavailable or the profile run needs a direct handoff."
             ),
-            action_label="Load profile context slice",
-            call=(
-                "get_context_graph("
-                f"{profile_observation_iris!r}, profile='dataset_brief'"
-                ")"
-            ),
+
         )
-        suggested_next_calls = [action.call for action in suggested_next_actions]
         if dataset_describe_available and profile_run_available:
             if map_dataset_recorded:
                 handoff_note = (
@@ -1234,7 +1171,6 @@ class ProfileRecordsMixin:
             dataset_describe_available=dataset_describe_available,
             profile_run_available=profile_run_available,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=suggested_next_calls,
             handoff_note=handoff_note,
         )
     def _preflight_profile_bundle_evidence_summaries(
@@ -1658,7 +1594,6 @@ class ProfileRecordsMixin:
             query_readiness=query_context.readiness,
             query_issue_codes=[issue.code for issue in query_context.issues],
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def record_profile_to_capsule_manifest(
         self,
@@ -1800,7 +1735,6 @@ class ProfileRecordsMixin:
             query_readiness_counts=query_readiness_counts,
             query_issue_code_counts=query_issue_code_counts,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def _normalise_profile_to_capsule_manifest(
         self,

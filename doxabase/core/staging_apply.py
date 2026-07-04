@@ -89,9 +89,6 @@ class StagingApplyMixin:
                 for graph_role in graph_roles
             ],
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _applied_revision_graph_snapshot_diff(
         self,
@@ -196,32 +193,16 @@ class StagingApplyMixin:
     ) -> list[SuggestedNextAction]:
         return [
             SuggestedNextAction(
-                action_label="Inspect applied event",
-                tool_name="describe_graph_revision",
-                mcp_tool_name="doxabase.describe_graph_revision",
-                arguments={"iri": revision_iri},
-                reason=(
-                    "Inspect the applied revision event for durable history "
-                    "context."
-                ),
-                call=self._suggested_call_string(
-                    "describe_graph_revision",
-                    {"iri": revision_iri},
-                ),
+                tool="doxabase.describe_graph_revision",
+                args={"iri": revision_iri},
+                reason="Inspect the applied revision event for durable history "
+                    "context.",
             ),
             SuggestedNextAction(
-                action_label="Inspect applied diff",
-                tool_name="describe_applied_revision_diff",
-                mcp_tool_name="doxabase.describe_applied_revision_diff",
-                arguments={"iri": revision_iri},
-                reason=(
-                    "Inspect stored before/after graph snapshot counts and, "
-                    "when needed, exact changed triples for the applied event."
-                ),
-                call=self._suggested_call_string(
-                    "describe_applied_revision_diff",
-                    {"iri": revision_iri},
-                ),
+                tool="doxabase.describe_applied_revision_diff",
+                args={"iri": revision_iri},
+                reason="Inspect stored before/after graph snapshot counts and, "
+                    "when needed, exact changed triples for the applied event.",
             ),
         ]
     def _resource_revision_item_with_apply_check(
@@ -309,7 +290,6 @@ class StagingApplyMixin:
             application_semantic_risk_reasons=application_semantic_risk_reasons,
             next_action=next_action,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
         return replace(item, revision=checked_revision)
     def _resource_applied_revision_diff_summary(
@@ -496,7 +476,7 @@ class StagingApplyMixin:
         ):
             return True
         return any(
-            action.action_label == "Review ambiguous same-slot conflict"
+            action.tool == "doxabase.describe_assertion_support"
             for action in check.suggested_next_actions
         )
     def check_staged_revision_apply(
@@ -579,18 +559,15 @@ class StagingApplyMixin:
             "export_staged_revision",
         ):
             for action in suggested_next_actions:
-                if action.tool_name == tool_name:
+                if action.tool == f"doxabase.{tool_name}":
                     return action
-        return self._effect_annotated_suggested_next_action(
-            action_label="Review semantic alternative",
-            tool_name="describe_staged_revision",
-            arguments={"iri": staged_revision_iri},
-            reason=(
-                "Semantic review is required before mutating this staged "
+        return SuggestedNextAction(
+                   tool="doxabase.describe_staged_revision",
+                   args={"iri": staged_revision_iri},
+                   reason="Semantic review is required before mutating this staged "
                 "revision because it belongs to an unresolved or already-applied "
-                "alternative set."
-            ),
-        )
+                "alternative set.",
+               )
     def _staged_apply_check_ordered_suggested_next_actions(
         self,
         *,
@@ -742,9 +719,6 @@ class StagingApplyMixin:
             post_apply_recheck_is_partial_queue=True,
             warnings=warnings,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions if action.call
-            ],
             patches_applied=len(preview.parsed_patches),
             triples_added=triples_added,
             triples_removed=triples_removed,
@@ -778,19 +752,11 @@ class StagingApplyMixin:
         arguments: dict[str, Any] = {"current_staged_work_only": True}
         actions = [
             SuggestedNextAction(
-                action_label="Replan current staged frontier",
-                tool_name="plan_staged_revision_recovery",
-                mcp_tool_name="doxabase.plan_staged_revision_recovery",
-                arguments=arguments,
-                reason=(
-                    "Post-apply recheck rows are only the affected sibling "
+                tool="doxabase.plan_staged_revision_recovery",
+                args=arguments,
+                reason="Post-apply recheck rows are only the affected sibling "
                     "subset. Replan the current staged frontier before deciding "
-                    "the next mutation so independent staged work is not dropped."
-                ),
-                call=self._suggested_call_string(
-                    "plan_staged_revision_recovery",
-                    arguments,
-                ),
+                    "the next mutation so independent staged work is not dropped.",
             )
         ]
         for recheck in post_apply_recheck_revisions:
@@ -911,7 +877,6 @@ class StagingApplyMixin:
                         blocking_reasons=apply_check.blocking_reasons,
                         next_action=next_action,
                         suggested_next_actions=apply_check.suggested_next_actions,
-                        suggested_next_calls=apply_check.suggested_next_calls,
                     ),
                 )
             )
@@ -1205,7 +1170,7 @@ class StagingApplyMixin:
                 f"'{successor_iri}' instead of restaging the source again."
             )
         if status == "conflict" and any(
-            action.tool_name == "stage_map_assertion_change"
+            action.tool == "doxabase.stage_map_assertion_change"
             for action in suggested_next_actions or []
         ):
             return (
@@ -1215,7 +1180,7 @@ class StagingApplyMixin:
                 "instead of mechanically restaging the stale source patch."
             )
         if status == "conflict" and any(
-            action.action_label == "Review ambiguous same-slot conflict"
+            action.tool == "doxabase.describe_assertion_support"
             for action in suggested_next_actions or []
         ):
             return (
@@ -1226,7 +1191,7 @@ class StagingApplyMixin:
                 "source patch."
             )
         if status == "conflict" and any(
-            action.action_label == "Draft patch repair plan"
+            action.tool == "doxabase.draft_staged_revision_rebase"
             for action in suggested_next_actions or []
         ):
             return (
@@ -1237,7 +1202,8 @@ class StagingApplyMixin:
                 "set."
             )
         if status == "conflict" and any(
-            action.action_label == "Inspect already-effective stale source"
+            action.tool == "doxabase.describe_staged_revision"
+            and "no effective delta" in action.reason
             for action in suggested_next_actions or []
         ):
             return (
@@ -1328,7 +1294,6 @@ class StagingApplyMixin:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
-            action_label: str | None = None,
         ) -> None:
             if tool_name in {"export_staged_revision", "export_staged_revisions"}:
                 arguments = {**arguments, "fail_on_sensitive": True}
@@ -1337,11 +1302,9 @@ class StagingApplyMixin:
                     "content appears before export."
                 )
             actions.append(
-                self._effect_annotated_suggested_next_action(
-                    action_label=action_label
-                    or self._suggested_action_label(tool_name),
-                    tool_name=tool_name,
-                    arguments=arguments,
+                SuggestedNextAction(
+                    tool=f"doxabase.{tool_name}",
+                    args=arguments,
                     reason=reason,
                 )
             )
@@ -1360,8 +1323,7 @@ class StagingApplyMixin:
                 (
                     "The refreshed successor has already been applied; inspect "
                     "the applied event instead of stopping at the staged source."
-                ),
-                action_label="Inspect applied restaged successor",
+                )
             )
             add_action(
                 "describe_applied_revision_diff",
@@ -1369,8 +1331,7 @@ class StagingApplyMixin:
                 (
                     "Inspect the applied diff for the refreshed successor when "
                     "exact before/after graph changes matter."
-                ),
-                action_label="Inspect applied successor diff",
+                )
             )
             return True
 
@@ -1386,8 +1347,7 @@ class StagingApplyMixin:
                     f"{restaged_source_validation_warning} Inspect the "
                     "restaged successor and its source validation diagnostics "
                     "before deciding whether a repaired candidate is needed."
-                ),
-                action_label="Inspect restaged validation history",
+                )
             )
             add_action(
                 "export_staged_revision",
@@ -1401,8 +1361,7 @@ class StagingApplyMixin:
                 (
                     "Write a Markdown review bundle that preserves the current "
                     "ready check alongside the source validation-failure history."
-                ),
-                action_label="Export restaged validation bundle",
+                )
             )
         elif status == "ready":
             alternative_gate = staged.alternative_gate if staged is not None else None
@@ -1420,24 +1379,20 @@ class StagingApplyMixin:
                     "successor payload, validation preview, impacts, support, "
                     "and any judgement panel before deciding to apply."
                 )
-                review_label = "Review repaired successor"
                 export_slug = "staged-revision-repaired-successor"
                 export_reason = (
                     "Write a Markdown review bundle that preserves the source "
                     "validation failure and the current ready repaired successor."
                 )
-                export_label = "Export repaired successor bundle"
             else:
                 review_reason = (
                     "Review patches, validation, impacts, support, and any "
                     "judgement panel before deciding to apply."
                 )
-                review_label = "Review staged revision"
                 export_slug = "staged-revision-review"
                 export_reason = (
                     "Write a Markdown review bundle before applying if review is needed."
                 )
-                export_label = "Export review bundle"
             if (
                 alternative_semantic_review_required
                 and alternative_gate is not None
@@ -1460,9 +1415,7 @@ class StagingApplyMixin:
                     "context in the review bundle."
                 )
                 if restaged_source_validation_warning is None:
-                    review_label = "Review semantic alternative"
                     export_slug = "staged-revision-semantic-alternative-review"
-                    export_label = "Export semantic alternative bundle"
             if (
                 alternative_semantic_review_required
                 and alternative_gate is not None
@@ -1490,16 +1443,10 @@ class StagingApplyMixin:
                     "Apply this staged revision after review confirms the "
                     "proposal is still desired."
                 )
-            apply_label = (
-                "Apply only after semantic review"
-                if semantic_review_required
-                else "Apply after review"
-            )
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
-                review_reason,
-                action_label=review_label,
+                review_reason
             )
             add_action(
                 "export_staged_revision",
@@ -1510,14 +1457,12 @@ class StagingApplyMixin:
                         [staged_revision_iri],
                     ),
                 },
-                export_reason,
-                action_label=export_label,
+                export_reason
             )
             add_action(
                 "apply_staged_revision",
                 {"iri": staged_revision_iri},
-                apply_reason,
-                action_label=apply_label,
+                apply_reason
             )
         elif status == "superseded_by_restage":
             successor_iri = current_restaged_by or restaged_by
@@ -1528,8 +1473,7 @@ class StagingApplyMixin:
                     (
                         "This staged source already has a refreshed successor; "
                         "inspect the current successor instead of applying this row."
-                    ),
-                    action_label="Inspect current refreshed successor",
+                    )
                 )
         elif status == "noop":
             add_action(
@@ -1538,8 +1482,7 @@ class StagingApplyMixin:
                 (
                     "Inspect the staged revision and current graph state; replay "
                     "validates but would not change graph triples."
-                ),
-                action_label="Inspect no-op revision",
+                )
             )
             add_action(
                 "export_staged_revision",
@@ -1550,15 +1493,13 @@ class StagingApplyMixin:
                         [staged_revision_iri],
                     ),
                 },
-                "Write a Markdown review bundle before deciding whether to replace it.",
-                action_label="Export no-op bundle",
+                "Write a Markdown review bundle before deciding whether to replace it."
             )
         elif status == "already_applied" and already_applied_by is not None:
             add_action(
                 "describe_graph_revision",
                 {"iri": already_applied_by},
-                "Inspect the applied revision event instead of applying again.",
-                action_label="Inspect applied event",
+                "Inspect the applied revision event instead of applying again."
             )
             add_action(
                 "describe_applied_revision_diff",
@@ -1566,8 +1507,7 @@ class StagingApplyMixin:
                 (
                     "Inspect stored before/after graph snapshot counts and, when "
                     "needed, exact changed triples for the applied event."
-                ),
-                action_label="Inspect applied diff",
+                )
             )
         elif status == "conflict":
             is_restageable_conflict = (
@@ -1592,67 +1532,56 @@ class StagingApplyMixin:
                     "Inspect this stale source as prior context, then follow the "
                     f"current refreshed successor '{successor_iri}'."
                 )
-                review_label = "Inspect handled stale source"
                 export_slug = "staged-revision-handled-stale"
                 export_reason = (
                     "Write a review bundle that captures the handled stale source "
                     "and points at its refreshed successor."
                 )
-                export_label = "Export handled stale bundle"
             elif already_effective_stale:
                 review_reason = (
                     "Review the stale source and current graph state; the "
                     "stored patch payload already has no effective delta, so "
                     "a mechanical restage would only create a no-op successor."
                 )
-                review_label = "Inspect already-effective stale source"
                 export_slug = "staged-revision-already-effective"
                 export_reason = (
                     "Write a review bundle that captures the stale no-effective "
                     "proposal and current patch-triple presence."
                 )
-                export_label = "Export already-effective stale bundle"
             elif is_restageable_conflict and staged_validation_failed:
                 review_reason = (
                     "Inspect the staged-time validation diagnostics before "
                     "deciding how to repair this stale proposal; a mechanical "
                     "restage may only create another repair candidate."
                 )
-                review_label = "Review staged validation failure"
                 export_slug = "staged-revision-validation-conflict"
                 export_reason = (
                     "Write a review bundle that captures the stale proposal, "
                     "current conflict, and stored validation diagnostics."
                 )
-                export_label = "Export validation conflict bundle"
             elif is_restageable_conflict:
                 review_reason = (
                     "Review the original patch payloads, count previews, "
                     "impacts, and support before deciding whether to restage "
                     "against current graph state."
                 )
-                review_label = "Review stale source"
                 export_slug = "staged-revision-conflict"
                 export_reason = (
                     "Write a review bundle that captures the blocked staged proposal."
                 )
-                export_label = "Export conflict bundle"
             else:
                 review_reason = (
                     "Inspect the stored patch conflict, then stage a repaired "
                     "or alternative candidate instead of restaging this row."
                 )
-                review_label = "Review patch conflict"
                 export_slug = "staged-revision-patch-conflict"
                 export_reason = (
                     "Write a review bundle that captures the blocked staged proposal."
                 )
-                export_label = "Export conflict bundle"
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri, "include_current_apply_check": True},
-                review_reason,
-                action_label=review_label,
+                review_reason
             )
             add_action(
                 "export_staged_revision",
@@ -1663,8 +1592,7 @@ class StagingApplyMixin:
                         [staged_revision_iri],
                     ),
                 },
-                export_reason,
-                action_label=export_label,
+                export_reason
             )
             if is_restageable_conflict and any(
                 not drift.exact_changed_triples_available
@@ -1682,8 +1610,7 @@ class StagingApplyMixin:
                         "handoff, import the companion revision snapshot JSON "
                         "before deciding whether the stale patch should be "
                         "restaged."
-                    ),
-                    action_label="Import snapshot bundle if available",
+                    )
                 )
             same_slot_replacement_action = (
                 self._staged_same_slot_replacement_action(
@@ -1739,8 +1666,7 @@ class StagingApplyMixin:
                     (
                         "Draft a repair/rebase plan from the stored validation "
                         "failure before creating another restaged successor."
-                    ),
-                    action_label="Draft repair plan",
+                    )
                 )
             elif (
                 restaged_by is None
@@ -1756,8 +1682,7 @@ class StagingApplyMixin:
                     (
                         "Create a refreshed staged revision against current graph "
                         "counts if review confirms the patch intent is still desired."
-                    ),
-                    action_label="Restage stale source",
+                    )
                 )
             elif restaged_by is not None:
                 successor_iri = current_restaged_by or restaged_by
@@ -1768,8 +1693,7 @@ class StagingApplyMixin:
                         (
                             "Inspect the current refreshed successor instead of "
                             "restaging this stale source again."
-                        ),
-                        action_label="Inspect current refreshed successor",
+                        )
                     )
         elif status == "validation_failed" and restaged_by is not None:
             successor_iri = current_restaged_by or restaged_by
@@ -1785,8 +1709,7 @@ class StagingApplyMixin:
                         "successor. Preserve this row's validation_results for "
                         "diagnostics, then inspect the current successor instead "
                         "of repairing the old source again."
-                    ),
-                    action_label="Inspect current refreshed successor",
+                    )
                 )
             add_action(
                 "export_staged_revision",
@@ -1800,8 +1723,7 @@ class StagingApplyMixin:
                 (
                     "Write a Markdown diagnostic bundle for this handled failed "
                     "source while preserving the pointer to its current successor."
-                ),
-                action_label="Export handled validation bundle",
+                )
             )
         elif status == "validation_failed":
             draft_arguments: dict[str, Any] = {"iri": staged_revision_iri}
@@ -1814,8 +1736,7 @@ class StagingApplyMixin:
                     "Draft a read-only repair/rebase plan from this validation "
                     "failure before hand-authoring a repaired or alternative "
                     "successor."
-                ),
-                action_label="Draft repair plan",
+                )
             )
             add_action(
                 "describe_staged_revision",
@@ -1826,8 +1747,7 @@ class StagingApplyMixin:
                     "for comparison. For overlapping single-assertion failures, "
                     "repair with removal+addition or stage_map_assertion_change "
                     "replacement instead of restaging the same patch again."
-                ),
-                action_label="Inspect validation failure",
+                )
             )
             add_action(
                 "export_staged_revision",
@@ -1841,15 +1761,13 @@ class StagingApplyMixin:
                 (
                     "Write a review bundle with validation diagnostics before "
                     "staging a repaired candidate from validation_results."
-                ),
-                action_label="Export validation bundle",
+                )
             )
         else:
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
-                "Inspect staged revision details to understand why apply is not ready.",
-                action_label="Inspect staged revision",
+                "Inspect staged revision details to understand why apply is not ready."
             )
         return actions
     @staticmethod
@@ -2173,16 +2091,17 @@ class StagingApplyMixin:
                 )
 
         if check.suggested_next_actions:
-            lines.extend(["", "### Suggested Next Calls", ""])
+            lines.extend(["", "### Suggested Next Actions", ""])
             for action in check.suggested_next_actions[:5]:
                 note = ""
                 if (
                     alternative_to is not None
-                    and action.tool_name == "apply_staged_revision"
+                    and action.tool == "doxabase.apply_staged_revision"
                 ):
                     note = " (only after comparing alternatives)"
                 lines.append(
-                    f"- **{action.action_label}:** `{action.call}`{note}"
+                    f"- **{action.tool}** "
+                    f"`{json.dumps(to_jsonable(action.args), sort_keys=True, default=str)}`{note}"
                 )
                 lines.append(f"  {action.reason}")
         return lines

@@ -424,6 +424,35 @@ STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES = frozenset(
     }
 )
 
+def action_tool_name(action: Any) -> str | None:
+    """Short tool name for a SuggestedNextAction or RevisionNextAction."""
+
+    tool = getattr(action, "tool", None)
+    if isinstance(tool, str):
+        return tool.removeprefix("doxabase.")
+    tool_name = getattr(action, "tool_name", None)
+    return tool_name if isinstance(tool_name, str) else None
+
+
+def action_arguments(action: Any) -> MappingABC[str, Any]:
+    """Arguments mapping for a SuggestedNextAction or RevisionNextAction."""
+
+    for attr in ("args", "arguments"):
+        value = getattr(action, attr, None)
+        if isinstance(value, MappingABC):
+            return value
+    return {}
+
+
+def suggested_action_key(action: Any) -> tuple[str, str]:
+    """Stable identity key for a suggested next action (tool + canonical args)."""
+
+    return (
+        action.tool,
+        json.dumps(to_jsonable(action.args), sort_keys=True, default=str),
+    )
+
+
 def staged_action_effect_metadata(
     tool_name: str | None,
     arguments: MappingABC[str, Any] | None = None,
@@ -691,6 +720,9 @@ __all__ = [
     "STAGED_ACTION_FILE_WRITING_TOOL_NAMES",
     "STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES",
     "staged_action_effect_metadata",
+    "suggested_action_key",
+    "action_tool_name",
+    "action_arguments",
     "to_jsonable",
     "to_dict",
     "CLAIM_RECONSIDERATION_RELATIONS",

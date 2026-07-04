@@ -122,21 +122,12 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
         result["sensitive_literal_count"] - result["returned_match_count"]
     )
     assert result["matches"][0]["match_id"].startswith("redacted-sha256:")
-    assert result["suggested_next_actions"][0]["tool_name"] == "scan_sensitive_literals"
-    assert result["suggested_next_actions"][-1]["tool_name"] == (
-        "preflight_context_slice_export"
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.scan_sensitive_literals"
+    assert result["suggested_next_actions"][-1]["tool"] == (
+        "doxabase.preflight_context_slice_export"
     )
-    assert result["suggested_next_actions"][-1]["arguments"]["seed_iris"] == [
+    assert result["suggested_next_actions"][-1]["args"]["seed_iris"] == [
         "<target-resource-iri>"
-    ]
-    assert result["suggested_next_actions"][-1]["required_extra_arguments"] == [
-        "seed_iris"
-    ]
-    assert result["suggested_next_actions"][-1]["placeholder_fields"] == [
-        "seed_iris"
-    ]
-    assert result["suggested_next_actions"][-1]["reviewed_value_fields"] == [
-        "seed_iris"
     ]
     assert not any(
         "Scanner-clean means" in warning for warning in result["warnings"]
@@ -220,7 +211,7 @@ def test_export_preflight_tool_reports_invalid_graph_gate(
     assert result["validation_conforms"] is False
     assert result["validation_result_count"] > 0
     assert result["validation_results"]
-    assert result["suggested_next_actions"][0]["tool_name"] == "validate_graph"
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.validate_graph"
 
     with pytest.raises(DoxaBaseError, match="fail_on_invalid=True"):
         export_trig_tool(db, str(tmp_path / "blocked-invalid.trig"))
@@ -256,27 +247,13 @@ def test_export_preflight_tool_marks_handoff_path_placeholders(
 
     assert result["decision"] == "clean_by_scanner_only"
     action = result["suggested_next_actions"][0]
-    assert action["tool_name"] == "export_handoff_bundle"
-    assert action["arguments"]["trig_path"] == "<project-handoff.trig>"
-    assert action["arguments"]["revision_snapshot_path"] == (
+    assert action["tool"] == "doxabase.export_handoff_bundle"
+    assert action["args"]["trig_path"] == "<project-handoff.trig>"
+    assert action["args"]["revision_snapshot_path"] == (
         "<revision-snapshots.json>"
     )
-    assert action["arguments"]["manifest_path"] == "<handoff-manifest.json>"
-    assert action["required_extra_arguments"] == [
-        "trig_path",
-        "revision_snapshot_path",
-        "manifest_path",
-    ]
-    assert action["placeholder_fields"] == [
-        "trig_path",
-        "revision_snapshot_path",
-        "manifest_path",
-    ]
-    assert action["reviewed_value_fields"] == [
-        "trig_path",
-        "revision_snapshot_path",
-        "manifest_path",
-    ]
+    assert action["args"]["manifest_path"] == "<handoff-manifest.json>"
+    assert "placeholders" in action["reason"]
 
 
 def test_mcp_export_tools_block_sensitive_predicate_iris(
@@ -540,7 +517,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "revision_snapshot_bundle"
     )
     assert [
-        step["tool_name"] for step in manifest["recommended_import_sequence"]
+        step["tool"].removeprefix("doxabase.") for step in manifest["recommended_import_sequence"]
     ] == ["import_trig", "import_revision_snapshots"]
     assert [
         step["expected_snapshot_evidence_status"]
@@ -579,20 +556,19 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         dry_run["recovery_summary"].get("first_safe_review_or_mutation_action")
         is None
     )
-    assert dry_run["recovery_summary"].get("first_safe_review_or_mutation_call") is None
     assert dry_run["recovery_summary"].get("first_safe_review_or_mutation_source") is None
     assert dry_run["recovery_summary"]["recommended_next_step"] == (
         "run_import_handoff_bundle"
     )
     assert dry_run["recovery_summary"]["first_suggested_next_action"][
-        "tool_name"
-    ] == "import_handoff_bundle"
+        "tool"
+    ] == "doxabase.import_handoff_bundle"
     assert {
         item["revision_iri"]: item["status"]
         for item in dry_run["pre_import_snapshot_evidence"]
     } == {staged["revision_iri"]: "history_missing"}
-    assert dry_run["suggested_next_actions"][0]["tool_name"] == (
-        "import_handoff_bundle"
+    assert dry_run["suggested_next_actions"][0]["tool"] == (
+        "doxabase.import_handoff_bundle"
     )
     assert any(
         "shareability review is still required" in warning
@@ -647,47 +623,15 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"].get("first_mutation_action") is None
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool_name"] == "describe_staged_revision_recovery_session"
+    ]["tool"] == "doxabase.describe_staged_revision_recovery_session"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["mutation_scope"] == "none"
-    assert (
-        manifest_import["recovery_summary"][
-            "first_safe_review_or_mutation_action"
-        ]["mutates_project_graph"]
-        is False
-    )
-    assert (
-        manifest_import["recovery_summary"][
-            "first_safe_review_or_mutation_action"
-        ]["writes_history"]
-        is False
-    )
-    assert (
-        manifest_import["recovery_summary"][
-            "first_safe_review_or_mutation_action"
-        ]["writes_files"]
-        is False
-    )
-    assert (
-        manifest_import["recovery_summary"][
-            "first_safe_review_or_mutation_action"
-        ]["writes_storage"]
-        is False
-    )
-    assert manifest_import["recovery_summary"][
-        "first_safe_review_or_mutation_action"
-    ]["arguments"]["session_iri"] == manifest_import[
+    ]["args"]["session_iri"] == manifest_import[
         "matching_recovery_session_iris"
     ][0]
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["arguments"]["drift_detail"] == "exact"
-    assert manifest_import["recovery_summary"][
-        "first_safe_review_or_mutation_call"
-    ] == manifest_import["recovery_summary"][
-        "first_safe_review_or_mutation_action"
-    ]["call"]
+    ]["args"]["drift_detail"] == "exact"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_source"
     ] == "imported_recovery_session"
@@ -704,8 +648,8 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "continue_imported_recovery_session"
     )
     assert manifest_import["recovery_summary"]["first_suggested_next_action"][
-        "tool_name"
-    ] == "describe_staged_revision_recovery_session"
+        "tool"
+    ] == "doxabase.describe_staged_revision_recovery_session"
     assert "Continue the imported source recovery session" in (
         manifest_import["recovery_summary"]["note"]
     )
@@ -718,18 +662,10 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["matching_recovery_session_iris"] == [
         session.session_iri
     ]
-    assert manifest_import["suggested_next_actions"][0]["tool_name"] == (
-        "describe_staged_revision_recovery_session"
+    assert manifest_import["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_staged_revision_recovery_session"
     )
-    assert manifest_import["suggested_next_actions"][0]["mutation_scope"] == "none"
-    assert (
-        manifest_import["suggested_next_actions"][0]["mutates_project_graph"]
-        is False
-    )
-    assert manifest_import["suggested_next_actions"][0]["writes_history"] is False
-    assert manifest_import["suggested_next_actions"][0]["writes_files"] is False
-    assert manifest_import["suggested_next_actions"][0]["writes_storage"] is False
-    assert manifest_import["suggested_next_actions"][0]["arguments"] == {
+    assert manifest_import["suggested_next_actions"][0]["args"] == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
     }
@@ -843,46 +779,16 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     assert imported["recovery_summary"].get("first_mutation_frontier_item") is None
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool_name"] == "start_staged_revision_recovery_session"
+    ]["tool"] == "doxabase.start_staged_revision_recovery_session"
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["mutation_scope"] == "history"
-    assert (
-        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
-            "mutates_project_graph"
-        ]
-        is False
-    )
-    assert (
-        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
-            "writes_history"
-        ]
-        is True
-    )
-    assert (
-        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
-            "writes_files"
-        ]
-        is False
-    )
-    assert (
-        imported["recovery_summary"]["first_safe_review_or_mutation_action"][
-            "writes_storage"
-        ]
-        is False
-    )
-    assert imported["recovery_summary"][
-        "first_safe_review_or_mutation_action"
-    ]["arguments"]["revision_iris"] == [staged["revision_iri"]]
+    ]["args"]["revision_iris"] == [staged["revision_iri"]]
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_source"
     ] == "receiver_local_recovery_session"
     assert imported["recovery_summary"]["first_suggested_next_action"][
-        "tool_name"
-    ] == "start_staged_revision_recovery_session"
-    assert imported["recovery_summary"]["first_safe_review_or_mutation_call"] == (
-        imported["suggested_next_calls"][0]
-    )
+        "tool"
+    ] == "doxabase.start_staged_revision_recovery_session"
     assert "Start a receiver-local recovery session" in (
         imported["recovery_summary"]["note"]
     )
@@ -890,15 +796,10 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
         staged["revision_iri"]
     ]
     action = imported["suggested_next_actions"][0]
-    assert action["tool_name"] == "start_staged_revision_recovery_session"
-    assert action["mutation_scope"] == "history"
-    assert action["mutates_project_graph"] is False
-    assert action["writes_history"] is True
-    assert action["writes_files"] is False
-    assert action["writes_storage"] is False
-    assert action["arguments"]["revision_iris"] == [staged["revision_iri"]]
-    assert action["arguments"]["handoff_manifest_path"] == str(manifest_path)
-    assert action["arguments"]["current_staged_work_only"] is False
+    assert action["tool"] == "doxabase.start_staged_revision_recovery_session"
+    assert action["args"]["revision_iris"] == [staged["revision_iri"]]
+    assert action["args"]["handoff_manifest_path"] == str(manifest_path)
+    assert action["args"]["current_staged_work_only"] is False
 
 
 def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
@@ -944,9 +845,8 @@ def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(
     assert imported["recovery_summary"]["recommended_next_step"] == (
         "resume_project_frontier"
     )
-    assert imported["suggested_next_actions"][0]["tool_name"] == "project_brief"
+    assert imported["suggested_next_actions"][0]["tool"] == "doxabase.project_brief"
     assert imported["suggested_next_actions"][0].get("arguments", {}) == {}
-    assert imported["suggested_next_calls"] == ["project_brief()"]
     assert receiver.describe_dataset(
         "https://example.test/project#Customers",
     ).label == "Customers"
@@ -1047,8 +947,8 @@ def test_get_context_graph_tool_reports_sensitive_selected_triples(
     assert fake_secret in result["trig"]
 
     privacy_action = result["suggested_next_actions"][0]
-    assert privacy_action["tool_name"] == "preflight_context_slice_export"
-    assert privacy_action["arguments"] == {
+    assert privacy_action["tool"] == "doxabase.preflight_context_slice_export"
+    assert privacy_action["args"] == {
         "seed_iris": [dataset],
         "profile": "dataset_brief",
         "max_triples": 100,
@@ -1071,7 +971,7 @@ def test_get_context_graph_tool_reports_sensitive_selected_triples(
     assert preflight["would_block_sensitive_export"] is True
     assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert all(
-        action["tool_name"] != "export_context_slice"
+        action["tool"] != "doxabase.export_context_slice"
         for action in preflight["suggested_next_actions"]
     )
     assert fake_secret not in json.dumps(preflight["matches"])
@@ -1136,15 +1036,14 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight["recovery_complete"] is False
     assert preflight["scanner_note"] in preflight["warnings"]
     assert [
-        action["tool_name"] for action in preflight["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in preflight["suggested_next_actions"]
     ] == ["export_context_slice"]
     action = preflight["suggested_next_actions"][0]
-    assert action["mcp_tool_name"] == "doxabase.export_context_slice"
-    assert action["arguments"]["seed_iris"] == [dataset]
-    assert action["arguments"]["fail_on_sensitive"] is True
-    assert action["arguments"]["fail_on_invalid"] is True
-    assert action["arguments"]["validation_scope"] == "map"
-    assert preflight["suggested_next_calls"] == [action["call"]]
+    assert action["tool"] == "doxabase.export_context_slice"
+    assert action["args"]["seed_iris"] == [dataset]
+    assert action["args"]["fail_on_sensitive"] is True
+    assert action["args"]["fail_on_invalid"] is True
+    assert action["args"]["validation_scope"] == "map"
 
     export_path = tmp_path / "orders-context-slice.trig"
     export = export_context_slice_tool(
@@ -1241,12 +1140,16 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
     assert broad_preflight["would_block_sensitive_export"] is True
     assert broad_preflight["sensitive_literal_count"] >= 1
     assert all(
-        action["tool_name"]
-        not in {"export_graph", "export_trig", "export_handoff_bundle"}
+        action["tool"]
+        not in {
+            "doxabase.export_graph",
+            "doxabase.export_trig",
+            "doxabase.export_handoff_bundle",
+        }
         for action in broad_preflight["suggested_next_actions"]
     )
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in broad_preflight["suggested_next_actions"]
     ] == ["scan_sensitive_literals", "preflight_context_slice_export"]
 
@@ -1284,7 +1187,7 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
         "evidence",
     }
     assert [
-        action["tool_name"]
+        action["tool"].removeprefix("doxabase.")
         for action in scoped_preflight["suggested_next_actions"]
     ] == ["export_context_slice"]
     assert fake_secret not in json.dumps(scoped_preflight)

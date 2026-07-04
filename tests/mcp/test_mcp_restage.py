@@ -58,11 +58,11 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert "subject_display" in added_drift_triple
     assert "predicate_display" in added_drift_triple
     assert "object_display" in added_drift_triple
-    assert stale_check["suggested_next_actions"][0]["tool_name"] == (
-        "describe_staged_revision"
+    assert stale_check["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_staged_revision"
     )
-    assert stale_check["suggested_next_actions"][-1]["tool_name"] == (
-        "restage_staged_revision"
+    assert stale_check["suggested_next_actions"][-1]["tool"] == (
+        "doxabase.restage_staged_revision"
     )
     assert stale_check["next_action"]["action_type"] == "restage_after_review"
     assert stale_check["routing_decision"] == "restage_after_review"
@@ -94,8 +94,8 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert restaged["next_action_queue_item_after"]["resolved_target_iri"] == (
         restaged["revision_iri"]
     )
-    assert restaged["suggested_next_actions_after"][-1]["tool_name"] == (
-        "apply_staged_revision"
+    assert restaged["suggested_next_actions_after"][-1]["tool"] == (
+        "doxabase.apply_staged_revision"
     )
     with pytest.raises(DoxaBaseError, match=restaged["revision_iri"]):
         restage_staged_revision_tool(db, iri=staged["revision_iri"])
@@ -115,7 +115,7 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         "iri": restaged["revision_iri"]
     }
     assert not any(
-        action["tool_name"] == "restage_staged_revision"
+        action["tool"] == "doxabase.restage_staged_revision"
         for action in stale_check_after["suggested_next_actions"]
     )
     description = describe_staged_revision_tool(db, restaged["revision_iri"])
@@ -153,9 +153,9 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         "iri": applied["applied_revision_iri"]
     }
     assert stale_check_after_apply["suggested_next_actions"][0][
-        "tool_name"
-    ] == "describe_graph_revision"
-    assert stale_check_after_apply["suggested_next_actions"][0]["arguments"] == {
+        "tool"
+    ] == "doxabase.describe_graph_revision"
+    assert stale_check_after_apply["suggested_next_actions"][0]["args"] == {
         "iri": applied["applied_revision_iri"]
     }
 
@@ -325,8 +325,8 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert result["items"][1]["next_action_queue_item_after"][
         "resolved_target_iri"
     ] == restaged_second
-    assert result["items"][1]["suggested_next_actions_after"][-1]["tool_name"] == (
-        "apply_staged_revision"
+    assert result["items"][1]["suggested_next_actions_after"][-1]["tool"] == (
+        "doxabase.apply_staged_revision"
     )
     assert result["current_revision_by_source"] == {
         first["revision_iri"]: already_restaged["revision_iri"],
@@ -377,9 +377,6 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         == "stale_resolution_redirect"
     )
     assert stale_summary["active_recommendation_field"] == "summary_recommendation"
-    assert stale_summary["suggested_next_actions"][-1]["action_label"] == (
-        "Inspect current refreshed successor"
-    )
     assert expected_path.exists()
     export_text = expected_path.read_text(encoding="utf-8")
     assert "## Bundle Warnings" in export_text
@@ -392,7 +389,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert "- Apply/restage review: " in export_text
     assert "- Sequential apply recheck candidates: " in export_text
     assert "## Restage Context" in export_text
-    assert "**Inspect current refreshed successor:**" in export_text
+    assert "**doxabase.describe_staged_revision**" in export_text
 
 
 def test_restage_staged_revisions_tool_can_dry_run(
@@ -487,19 +484,16 @@ def test_restage_staged_revisions_tool_can_dry_run(
         None,
         "ready",
     ]
-    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "restage_staged_revisions"
     ]
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["args"] == {
         "revision_iris": [
             first["revision_iri"],
             second["revision_iri"],
         ],
         "dry_run": False,
     }
-    assert result["suggested_next_calls"] == [
-        action["call"] for action in result["suggested_next_actions"]
-    ]
     assert list_graph_revisions_tool(
         db,
         revision_type="rc:StagedRevision",
@@ -580,11 +574,11 @@ def test_restage_staged_revisions_tool_serializes_repair_first_warning(
     assert item["source_staged_validation_status"] == "failed"
     assert item["routing_decision_after"] == "repair_or_replace"
     assert any(
-        action["tool_name"] == "draft_staged_revision_rebase"
+        action["tool"] == "doxabase.draft_staged_revision_rebase"
         for action in item["suggested_next_actions_after"]
     )
     assert not any(
-        action["tool_name"] == "restage_staged_revision"
+        action["tool"] == "doxabase.restage_staged_revision"
         for action in item["suggested_next_actions_after"]
     )
     assert item["repair_first_warning"] is not None

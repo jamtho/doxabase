@@ -73,23 +73,6 @@ class StagingMixin:
             evidence_count=len(source.evidence),
             revision_anchor_count=len(source.revision_anchors),
         )
-    def _effect_annotated_suggested_next_action(
-        self,
-        *,
-        action_label: str,
-        tool_name: str,
-        arguments: dict[str, Any],
-        reason: str,
-    ) -> EffectAnnotatedSuggestedNextAction:
-        return EffectAnnotatedSuggestedNextAction(
-            action_label=action_label,
-            tool_name=tool_name,
-            mcp_tool_name=f"doxabase.{tool_name}",
-            arguments=arguments,
-            reason=reason,
-            call=self._suggested_call_string(tool_name, arguments),
-            **staged_action_effect_metadata(tool_name, arguments),
-        )
     @staticmethod
     def _resource_lineage_current_staged_iri(
         selected: ResourceRevisionListItem,
@@ -418,7 +401,6 @@ class StagingMixin:
                 snapshot_drifts=[],
                 next_action=None,
                 suggested_next_actions=[],
-                suggested_next_calls=[],
                 error=str(exc),
             )
         return StagedRevisionApplySummary(
@@ -451,7 +433,6 @@ class StagingMixin:
             snapshot_drifts=self._summary_snapshot_drifts(check.snapshot_drifts),
             next_action=check.next_action,
             suggested_next_actions=check.suggested_next_actions,
-            suggested_next_calls=check.suggested_next_calls,
             error=None,
         )
     def search_staged_patch_payloads(
@@ -545,8 +526,8 @@ class StagingMixin:
         for match in sliced:
             for action in match.suggested_next_actions:
                 action_key = (
-                    action.tool_name,
-                    json.dumps(to_jsonable(action.arguments), sort_keys=True),
+                    action.tool,
+                    json.dumps(to_jsonable(action.args), sort_keys=True),
                 )
                 if action_key in seen_action_keys:
                     continue
@@ -563,9 +544,6 @@ class StagingMixin:
             limit=limit,
             offset=offset,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def _staged_patch_payload_search_match(
         self,
@@ -587,77 +565,40 @@ class StagingMixin:
         )
         actions = [
             SuggestedNextAction(
-                action_label="Inspect owning staged revision",
-                tool_name="describe_staged_revision",
-                mcp_tool_name="doxabase.describe_staged_revision",
-                arguments={
+                tool="doxabase.describe_staged_revision",
+                args={
                     "iri": staged.iri,
                     "include_current_apply_check": True,
                 },
-                reason=(
-                    "Inspect the staged revision that owns this matching "
-                    "patch payload before treating the hit as live graph fact."
-                ),
-                call=self._suggested_call_string(
-                    "describe_staged_revision",
-                    {
-                        "iri": staged.iri,
-                        "include_current_apply_check": True,
-                    },
-                ),
+                reason="Inspect the staged revision that owns this matching "
+                    "patch payload before treating the hit as live graph fact.",
             ),
             SuggestedNextAction(
-                action_label="Review staged payload bundle",
-                tool_name="export_staged_revisions",
-                mcp_tool_name="doxabase.export_staged_revisions",
-                arguments={
+                tool="doxabase.export_staged_revisions",
+                args={
                     "revision_iris": [staged.iri],
                     "path": self._staged_patch_payload_search_export_path(
                         staged.iri
                     ),
                     "fail_on_sensitive": True,
                 },
-                reason=(
-                    "Export the owning staged revision as a review artifact "
+                reason="Export the owning staged revision as a review artifact "
                     "with full Turtle payload and current apply routing. The "
                     "suggested call blocks if scanner-matching content appears "
-                    "before export."
-                ),
-                call=self._suggested_call_string(
-                    "export_staged_revisions",
-                    {
-                        "revision_iris": [staged.iri],
-                        "path": self._staged_patch_payload_search_export_path(
-                            staged.iri
-                        ),
-                        "fail_on_sensitive": True,
-                    },
-                ),
+                    "before export.",
             ),
         ]
         if patch_subject_iris:
             actions.append(
                 SuggestedNextAction(
-                    action_label="Find staged work for first proposed resource",
-                    tool_name="list_resource_revisions",
-                    mcp_tool_name="doxabase.list_resource_revisions",
-                    arguments={
+                    tool="doxabase.list_resource_revisions",
+                    args={
                         "resource_iri": patch_subject_iris[0],
                         "current_staged_work_only": True,
                         "include_patch_mentions": True,
                     },
-                    reason=(
-                        "Use resource-centric patch mention discovery for the "
-                        "first proposed subject in this staged payload."
-                    ),
-                    call=self._suggested_call_string(
-                        "list_resource_revisions",
-                        {
-                            "resource_iri": patch_subject_iris[0],
-                            "current_staged_work_only": True,
-                            "include_patch_mentions": True,
-                        },
-                    ),
+                    reason="Use resource-centric patch mention discovery for the "
+                        "first proposed subject in this staged payload.",
                 )
             )
         return StagedPatchPayloadSearchMatch(
@@ -690,7 +631,6 @@ class StagingMixin:
             parsed_resource_count=len(parsed_resource_iris),
             parse_error=parse_error,
             suggested_next_actions=actions,
-            suggested_next_calls=[action.call for action in actions],
         )
     def _staged_patch_payload_parsed_terms(
         self,
@@ -755,20 +695,12 @@ class StagingMixin:
             "offset": 0,
         }
         return SuggestedNextAction(
-            action_label="Search current staged patch payloads",
-            tool_name="search_staged_patch_payloads",
-            mcp_tool_name="doxabase.search_staged_patch_payloads",
-            arguments=arguments,
-            reason=(
-                "The term may exist only inside a current staged proposal. "
+                   tool="doxabase.search_staged_patch_payloads",
+                   args=arguments,
+                   reason="The term may exist only inside a current staged proposal. "
                 "Search patch payloads before treating proposed ontology, shape, "
-                "or map resources as absent."
-            ),
-            call=self._suggested_call_string(
-                "search_staged_patch_payloads",
-                arguments,
-            ),
-        )
+                "or map resources as absent.",
+               )
     def _current_staged_query_repair_patch_rows(
         self,
         dataset: DatasetDescription,
@@ -1624,21 +1556,13 @@ class StagingMixin:
         if object_lang is not None:
             arguments["object_lang"] = object_lang
         action = SuggestedNextAction(
-            action_label="Stage same-slot replacement",
-            tool_name="stage_map_assertion_change",
-            mcp_tool_name="doxabase.stage_map_assertion_change",
-            arguments=arguments,
-            reason=(
-                f"Validation failed because {replacement_label} is "
+                     tool="doxabase.stage_map_assertion_change",
+                     args=arguments,
+                     reason=f"Validation failed because {replacement_label} is "
                 "single-valued and the current graph has a different value. "
                 "Stage a reviewed replacement successor instead of replaying "
-                "the same addition patch."
-            ),
-            call=self._suggested_call_string(
-                "stage_map_assertion_change",
-                arguments,
-            ),
-        )
+                "the same addition patch.",
+                 )
         return StagedRevisionRebaseCandidate(
             candidate_kind="same_slot_replacement",
             candidate_status="ready_to_stage",
@@ -2533,17 +2457,14 @@ class StagingMixin:
             arguments["object_datatype"] = datatype
         if lang is not None:
             arguments["object_lang"] = lang
-        action = self._effect_annotated_suggested_next_action(
-            action_label="Stage same-slot subpatch replacement",
-            tool_name="stage_map_assertion_change",
-            arguments=arguments,
-            reason=(
-                "Patch-level repair planning found a guarded single-valued "
+        action = SuggestedNextAction(
+                     tool="doxabase.stage_map_assertion_change",
+                     args=arguments,
+                     reason="Patch-level repair planning found a guarded single-valued "
                 f"{replacement_label} subpatch inside a larger staged row. "
                 "Stage this replacement only after deciding how to preserve, "
-                "drop, or separately restage the other patches."
-            ),
-        )
+                "drop, or separately restage the other patches.",
+                 )
         return (
             action,
             current_same_slot_triples,
@@ -2566,17 +2487,14 @@ class StagingMixin:
         arguments: dict[str, Any] = {"iri": staged_revision_iri}
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
-        return self._effect_annotated_suggested_next_action(
-            action_label="Draft patch repair plan",
-            tool_name="draft_staged_revision_rebase",
-            arguments=arguments,
-            reason=(
-                "Patch-level repair planning found at least one semantic "
+        return SuggestedNextAction(
+                   tool="doxabase.draft_staged_revision_rebase",
+                   args=arguments,
+                   reason="Patch-level repair planning found at least one semantic "
                 "same-slot subpatch inside a larger stale revision. Inspect the "
                 "read-only patch_repair_plan before choosing which subpatches "
-                "to replace, drop, or restage."
-            ),
-        )
+                "to replace, drop, or restage.",
+               )
     def _staged_same_slot_replacement_action(
         self,
         staged: StagedGraphRevisionDescription | None,
@@ -2734,12 +2652,11 @@ class StagingMixin:
             "successor instead of a raw restage that would add a competing "
             f"{replacement_label} value."
         )
-        return self._effect_annotated_suggested_next_action(
-            action_label="Stage same-slot replacement",
-            tool_name="stage_map_assertion_change",
-            arguments=arguments,
-            reason=reason,
-        )
+        return SuggestedNextAction(
+                   tool="doxabase.stage_map_assertion_change",
+                   args=arguments,
+                   reason=reason,
+               )
     def _staged_ambiguous_same_slot_review_action(
         self,
         staged: StagedGraphRevisionDescription | None,
@@ -2877,12 +2794,11 @@ class StagingMixin:
             "stage an explicit repair or replacement instead of mechanically "
             "restaging the stale patch."
         )
-        return self._effect_annotated_suggested_next_action(
-            action_label="Review ambiguous same-slot conflict",
-            tool_name="describe_assertion_support",
-            arguments=arguments,
-            reason=reason,
-        )
+        return SuggestedNextAction(
+                   tool="doxabase.describe_assertion_support",
+                   args=arguments,
+                   reason=reason,
+               )
     def _staged_same_slot_replacement_label(
         self,
         subject: str,
@@ -3322,11 +3238,6 @@ class StagingMixin:
                     profile_route_groups=description.profile_route_groups,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
-                    suggested_next_calls=(
-                        apply_check.suggested_next_calls
-                        if apply_check is not None
-                        else []
-                    ),
                 )
             )
         return summaries
@@ -4142,7 +4053,6 @@ class StagingMixin:
                     ),
                     note=evidence.note,
                     suggested_next_actions=evidence.suggested_next_actions,
-                    suggested_next_calls=evidence.suggested_next_calls,
                 )
             )
         return StagedGraphRevisionSnapshotEvidenceSummary(
@@ -4241,7 +4151,11 @@ class StagingMixin:
                             )
                         ),
                         self._markdown_table_cell(
-                            "; ".join(row.suggested_next_calls) or "(none)"
+                            "; ".join(
+                                action.tool
+                                for action in row.suggested_next_actions
+                            )
+                            or "(none)"
                         ),
                     ]
                 )

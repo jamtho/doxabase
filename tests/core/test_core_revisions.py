@@ -246,8 +246,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.changed_resources[0].removed_triple_count == 1
     assert drift.changed_resources[0].matched_by == ["changed_subject"]
     assert drift.changed_resources[0].predicate_displays == ["rdfs:label"]
-    assert drift.changed_resource_suggested_next_actions[0].tool_name == (
-        "list_resource_revisions"
+    assert drift.changed_resource_suggested_next_actions[0].tool == (
+        "doxabase.list_resource_revisions"
     )
     assert "Predicate overlap is reported separately, even when empty" in drift.note
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
@@ -286,7 +286,7 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert "| Seed dataset renamed | 2 | 1 | 1 | changed_subject | rdfs:label |" in (
         export_text
     )
-    assert "list_resource_revisions(resource_iri=" in export_text
+    assert "**doxabase.list_resource_revisions**" in export_text
     assert "#### Snapshot Drift Triples: map" in export_text
     assert "exact raw RDF terms remain available" in export_text
     assert "SeedDataset" in export_text
@@ -320,8 +320,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert summary_drift.changed_resources[0].resource.iri == (
         "https://example.test/project#SeedDataset"
     )
-    assert summary_drift.changed_resource_suggested_next_actions[0].tool_name == (
-        "list_resource_revisions"
+    assert summary_drift.changed_resource_suggested_next_actions[0].tool == (
+        "doxabase.list_resource_revisions"
     )
     assert "omitted from this summary response" in summary_drift.note
     assert "are included" not in summary_drift.note
@@ -461,8 +461,8 @@ def test_apply_check_reports_object_and_anchor_snapshot_drift_overlap(
         "patch_object",
         "changed_subject",
     ]
-    assert drift.changed_resource_suggested_next_actions[0].tool_name == (
-        "describe_resource_revision_lineage"
+    assert drift.changed_resource_suggested_next_actions[0].tool == (
+        "doxabase.describe_resource_revision_lineage"
     )
     assert "patch objects and revision anchors" in drift.note
 
@@ -514,10 +514,10 @@ def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
     assert source_row.next_action.queue == "inspect_already_applied"
     assert source_row.next_action.tool_name == "describe_graph_revision"
     assert source_row.next_action.arguments == {"iri": applied.applied_revision_iri}
-    assert source_row.suggested_next_actions[0].tool_name == (
-        "describe_graph_revision"
+    assert source_row.suggested_next_actions[0].tool == (
+        "doxabase.describe_graph_revision"
     )
-    assert source_row.suggested_next_actions[0].arguments == {
+    assert source_row.suggested_next_actions[0].args == {
         "iri": applied.applied_revision_iri
     }
     assert listing.next_action_queue["inspect_already_applied"].count(
@@ -565,11 +565,6 @@ def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
         event.revision_iri: event for event in resource_listing.timeline
     }
     source_event = timeline_by_iri[source.revision_iri]
-    assert source_event.next_action_call == (
-        "describe_graph_revision("
-        f"iri='{applied.applied_revision_iri}'"
-        ")"
-    )
     assert source_event.resolved_target_iri == applied.applied_revision_iri
     assert source_event.resolved_target_record_kind == "applied_event"
     assert source_event.row_is_target is False
@@ -738,8 +733,8 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.stale_resolution_state == "stale_handled_by_restage"
     assert stale_item.is_current_staged_work is False
     assert stale_item.not_current_staged_work_reason == "superseded_by_restage"
-    assert stale_item.suggested_next_actions[-1].tool_name == "describe_staged_revision"
-    assert stale_item.suggested_next_actions[-1].arguments == {
+    assert stale_item.suggested_next_actions[-1].tool == "doxabase.describe_staged_revision"
+    assert stale_item.suggested_next_actions[-1].args == {
         "iri": restaged.revision_iri
     }
     assert drift_by_iri[restaged.revision_iri].restaged_from == stale.revision_iri
@@ -1053,19 +1048,19 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert staged_row.count_basis == "stored_snapshot_rows"
     assert staged_row.exact_snapshot_available is True
     assert staged_row.snapshot_evidence_status == "history_plus_snapshot_rows"
-    assert staged_row.suggested_next_actions[0].tool_name == (
-        "describe_revision_graph_snapshot"
+    assert staged_row.suggested_next_actions[0].tool == (
+        "doxabase.describe_revision_graph_snapshot"
     )
-    assert staged_row.suggested_next_actions[1].tool_name == (
-        "describe_revision_lineage"
+    assert staged_row.suggested_next_actions[1].tool == (
+        "doxabase.describe_revision_lineage"
     )
-    assert staged_row.suggested_next_actions[1].arguments == {
+    assert staged_row.suggested_next_actions[1].args == {
         "iri": staged.revision_iri
     }
-    assert staged_row.suggested_next_actions[2].tool_name == (
-        "describe_graph_version_diff"
+    assert staged_row.suggested_next_actions[2].tool == (
+        "doxabase.describe_graph_version_diff"
     )
-    assert staged_row.suggested_next_actions[2].arguments == {
+    assert staged_row.suggested_next_actions[2].args == {
         "graph_role": "map",
         "before_revision_iri": staged.revision_iri,
         "compare_to_current": True,
@@ -1081,13 +1076,13 @@ def test_list_graph_versions_lists_stored_graph_timeline(
     assert applied_row.triple_count == db.triple_count("map")
     assert applied_row.exact_snapshot_available is True
     assert [
-        action.tool_name for action in applied_row.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in applied_row.suggested_next_actions
     ] == [
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",
         "describe_graph_version_diff",
     ]
-    assert applied_row.suggested_next_actions[1].arguments == {
+    assert applied_row.suggested_next_actions[1].args == {
         "iri": applied.applied_revision_iri
     }
 
@@ -1225,14 +1220,14 @@ def test_describe_graph_version_diff_compares_versions_and_current(
         "changed_object",
     ]
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in stored_diff.changed_resource_suggested_next_actions
     ] == [
         "describe_resource_revision_lineage",
         "describe_resource_revision_lineage",
     ]
     assert [
-        action.arguments
+        action.args
         for action in stored_diff.changed_resource_suggested_next_actions
     ] == [
         {
@@ -1244,7 +1239,7 @@ def test_describe_graph_version_diff_compares_versions_and_current(
             "revision_iri": first_staged.revision_iri,
         },
     ]
-    assert [action.tool_name for action in stored_diff.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in stored_diff.suggested_next_actions] == [
         "describe_revision_graph_snapshot",
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",
@@ -1252,10 +1247,10 @@ def test_describe_graph_version_diff_compares_versions_and_current(
         "describe_applied_revision_diff",
         "describe_graph_version_diff",
     ]
-    assert stored_diff.suggested_next_actions[2].arguments == {
+    assert stored_diff.suggested_next_actions[2].args == {
         "iri": first_staged.revision_iri,
     }
-    assert stored_diff.suggested_next_actions[4].arguments == {
+    assert stored_diff.suggested_next_actions[4].args == {
         "iri": first_applied.applied_revision_iri,
     }
 
@@ -1295,7 +1290,7 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert current_diff.changed_resources[1].matched_by == ["changed_subject"]
     assert current_diff.changed_resources[2].matched_by == ["changed_object"]
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in current_diff.changed_resource_suggested_next_actions
     ] == [
         "list_resource_revisions",
@@ -1317,7 +1312,7 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert same_current_diff.triples_added_count == 0
     assert same_current_diff.triples_removed_count == 0
     assert [
-        action.tool_name for action in same_current_diff.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in same_current_diff.suggested_next_actions
     ] == [
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",
@@ -1355,7 +1350,7 @@ def test_describe_graph_version_diff_compares_versions_and_current(
     assert staged_to_current.before_revision_context.is_current_staged_work is True
     assert staged_to_current.before_revision_context.related_revision_iris == []
     assert [
-        action.tool_name for action in staged_to_current.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in staged_to_current.suggested_next_actions
     ] == [
         "describe_revision_graph_snapshot",
         "describe_revision_lineage",

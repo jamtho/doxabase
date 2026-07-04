@@ -78,17 +78,13 @@ def test_project_brief_surfaces_singleton_profile_draft(
         if task.task_type == "profile_review"
     )
     assert profile_task.suggested_next_action is not None
-    assert profile_task.suggested_next_action.tool_name == "stage_profile_map_updates"
+    assert profile_task.suggested_next_action.tool == "doxabase.stage_profile_map_updates"
     assert profile_task.inspection_next_action is not None
-    assert profile_task.inspection_next_action.tool_name == "draft_profile_map_updates"
-    assert profile_task.inspection_next_action.arguments == {
+    assert profile_task.inspection_next_action.tool == "doxabase.draft_profile_map_updates"
+    assert profile_task.inspection_next_action.args == {
         "dataset_iri": dataset,
         "evidence_iri": evidence,
     }
-    assert profile_task.inspection_next_call == (
-        f"draft_profile_map_updates(dataset_iri='{dataset}', "
-        f"evidence_iri='{evidence}')"
-    )
 
 
 def test_project_brief_marks_completed_profile_draft(
@@ -254,21 +250,16 @@ def test_project_brief_uses_profile_inspection_for_unattended_route(
         if task.task_type == "profile_review"
     )
     assert profile_task.suggested_next_action is not None
-    assert profile_task.suggested_next_action.tool_name == "stage_profile_map_updates"
+    assert profile_task.suggested_next_action.tool == "doxabase.stage_profile_map_updates"
     assert profile_task.inspection_next_action is not None
-    assert profile_task.inspection_next_action.tool_name == "draft_profile_map_updates"
+    assert profile_task.inspection_next_action.tool == "doxabase.draft_profile_map_updates"
     assert (
         brief.frontier_first_source
         == "recommended_next_tasks:profile_review:inspection"
     )
     assert brief.frontier_first_action == profile_task.inspection_next_action
-    assert brief.frontier_first_call == profile_task.inspection_next_call
     assert brief.first_unattended_source == brief.frontier_first_source
     assert brief.first_unattended_action == profile_task.inspection_next_action
-    assert brief.first_unattended_call == profile_task.inspection_next_call
-    assert brief.frontier_status.first_unattended_call == (
-        profile_task.inspection_next_call
-    )
     assert (
         brief.frontier_status.mutation_allowed_after
         == "current_frontier_task_available"
@@ -329,8 +320,8 @@ def test_project_brief_reports_profile_candidates_hidden_by_limit(
     assert health_task.suggested_profile_candidate_limit == 3
     assert health_task.queue_types == ["profile_review"]
     assert health_task.suggested_next_action is not None
-    assert health_task.suggested_next_action.tool_name == "project_brief"
-    assert health_task.suggested_next_action.arguments == {
+    assert health_task.suggested_next_action.tool == "doxabase.project_brief"
+    assert health_task.suggested_next_action.args == {
         "limit": brief.limit,
         "profile_candidate_limit": 3,
     }
@@ -383,7 +374,7 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert brief.next_best_expansion is not None
     assert brief.next_best_expansion.task_type == "expand_project_brief"
     assert brief.next_best_expansion.suggested_next_action is not None
-    assert brief.next_best_expansion.suggested_next_action.arguments == {
+    assert brief.next_best_expansion.suggested_next_action.args == {
         "limit": 4,
         "profile_candidate_limit": 1,
     }
@@ -395,32 +386,27 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert full_expansion.suggested_profile_candidate_limit == 4
     assert full_expansion.profile_candidate_omitted_count == 3
     assert full_expansion.suggested_next_action is not None
-    assert full_expansion.suggested_next_action.arguments == {
+    assert full_expansion.suggested_next_action.args == {
         "limit": 11,
         "profile_candidate_limit": 4,
     }
     assert brief.frontier_first_source == "full_frontier_expansion"
     assert brief.frontier_first_action == full_expansion.suggested_next_action
-    assert brief.frontier_first_call == full_expansion.suggested_next_call
     assert brief.first_unattended_source == "full_frontier_expansion"
     assert brief.first_unattended_action == brief.frontier_first_action
-    assert brief.first_unattended_call == brief.frontier_first_call
     assert brief.frontier_status.is_complete is False
     assert brief.frontier_status.hidden_task_count == sum(
         brief.omitted_queue_counts.values()
     )
     assert brief.frontier_status.hidden_profile_candidate_count == 3
     assert "profile_review" in brief.frontier_status.hidden_queue_types
-    assert brief.frontier_status.must_rerun_call == full_expansion.suggested_next_call
-    assert brief.frontier_status.safety_first_call is None
-    assert brief.frontier_status.first_unattended_call == brief.frontier_first_call
     assert brief.frontier_status.first_unattended_source == "full_frontier_expansion"
     assert (
         brief.frontier_status.mutation_allowed_after
         == "frontier_expansion_required_before_mutation"
     )
 
-    rerun = db.project_brief(**full_expansion.suggested_next_action.arguments)
+    rerun = db.project_brief(**full_expansion.suggested_next_action.args)
 
     assert rerun.omitted_queue_counts == {}
     assert rerun.profile_queue_counts["profile_candidate_omitted"] == 0
@@ -428,7 +414,6 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert rerun.frontier_status.is_complete is True
     assert rerun.frontier_status.hidden_task_count == 0
     assert rerun.frontier_status.hidden_profile_candidate_count == 0
-    assert rerun.frontier_status.must_rerun_call is None
     assert rerun.frontier_first_action is not None
     assert rerun.frontier_first_source is not None
     assert rerun.first_unattended_action == rerun.frontier_first_action
@@ -476,14 +461,14 @@ def test_project_brief_packet_review_participates_in_frontier_expansion(
     assert tight.omitted_queue_counts == {"analysis_packet_review": 1}
     assert tight.full_frontier_expansion is not None
     assert tight.full_frontier_expansion.suggested_next_action is not None
-    assert tight.full_frontier_expansion.suggested_next_action.arguments == {
+    assert tight.full_frontier_expansion.suggested_next_action.args == {
         "limit": 2,
         "profile_candidate_limit": 0,
     }
     assert tight.frontier_first_source == "full_frontier_expansion"
 
     expanded = db.project_brief(
-        **tight.full_frontier_expansion.suggested_next_action.arguments
+        **tight.full_frontier_expansion.suggested_next_action.args
     )
 
     assert expanded.omitted_queue_counts == {}
@@ -497,8 +482,8 @@ def test_project_brief_packet_review_participates_in_frontier_expansion(
     assert packet_task.resource is not None
     assert packet_task.resource.iri == packet
     assert packet_task.suggested_next_action is not None
-    assert packet_task.suggested_next_action.tool_name == "get_context_graph"
-    assert packet_task.suggested_next_action.arguments == {
+    assert packet_task.suggested_next_action.tool == "doxabase.get_context_graph"
+    assert packet_task.suggested_next_action.args == {
         "seed_iris": [packet],
         "profile": "resource_brief",
     }
@@ -566,8 +551,8 @@ def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
 
     assert tight.frontier_first_source == "full_frontier_expansion"
     assert tight.frontier_first_action is not None
-    assert tight.frontier_first_action.tool_name == "project_brief"
-    assert tight.frontier_first_action.arguments == {
+    assert tight.frontier_first_action.tool == "doxabase.project_brief"
+    assert tight.frontier_first_action.args == {
         "limit": 4,
         "profile_candidate_limit": 1,
     }
@@ -586,7 +571,7 @@ def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
         == "frontier_expansion_required_before_mutation"
     )
 
-    expanded = db.project_brief(**tight.frontier_first_action.arguments)
+    expanded = db.project_brief(**tight.frontier_first_action.args)
 
     assert expanded.omitted_queue_counts == {}
     assert expanded.profile_queue_counts["profile_candidate_omitted"] == 0
@@ -597,7 +582,7 @@ def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
         "query_plan_handoff": 1,
     }
     assert [
-        (task.task_type, task.suggested_next_action.tool_name)
+        (task.task_type, task.suggested_next_action.tool.removeprefix("doxabase."))
         for task in expanded.recommended_next_tasks
         if task.suggested_next_action is not None
     ] == [
@@ -611,7 +596,7 @@ def test_project_brief_expanded_mixed_frontier_routes_staged_recovery_first(
         == "recommended_next_tasks:staged_frontier_review"
     )
     assert expanded.frontier_first_action is not None
-    assert expanded.frontier_first_action.tool_name == "plan_staged_revision_recovery"
+    assert expanded.frontier_first_action.tool == "doxabase.plan_staged_revision_recovery"
     assert expanded.first_unattended_source == expanded.frontier_first_source
     assert expanded.first_unattended_action == expanded.frontier_first_action
 
@@ -669,8 +654,8 @@ def test_project_brief_expanded_mixed_repair_frontier_routes_staged_first(
 
     assert tight.frontier_first_source == "full_frontier_expansion"
     assert tight.frontier_first_action is not None
-    assert tight.frontier_first_action.tool_name == "project_brief"
-    assert tight.frontier_first_action.arguments == {
+    assert tight.frontier_first_action.tool == "doxabase.project_brief"
+    assert tight.frontier_first_action.args == {
         "limit": 4,
         "profile_candidate_limit": 1,
     }
@@ -685,7 +670,7 @@ def test_project_brief_expanded_mixed_repair_frontier_routes_staged_first(
     }
     assert tight.profile_queue_counts["profile_candidate_omitted"] == 1
 
-    expanded = db.project_brief(**tight.frontier_first_action.arguments)
+    expanded = db.project_brief(**tight.frontier_first_action.args)
 
     assert expanded.omitted_queue_counts == {}
     assert expanded.profile_queue_counts["profile_candidate_omitted"] == 0
@@ -696,7 +681,7 @@ def test_project_brief_expanded_mixed_repair_frontier_routes_staged_first(
         "profile_review": 1,
     }
     assert [
-        (task.task_type, task.suggested_next_action.tool_name)
+        (task.task_type, task.suggested_next_action.tool.removeprefix("doxabase."))
         for task in expanded.recommended_next_tasks
         if task.suggested_next_action is not None
     ] == [
@@ -711,15 +696,15 @@ def test_project_brief_expanded_mixed_repair_frontier_routes_staged_first(
         if task.task_type == "profile_review"
     )
     assert profile_task.inspection_next_action is not None
-    assert profile_task.inspection_next_action.tool_name == (
-        "draft_profile_map_updates"
+    assert profile_task.inspection_next_action.tool == (
+        "doxabase.draft_profile_map_updates"
     )
     assert (
         expanded.frontier_first_source
         == "recommended_next_tasks:staged_frontier_review"
     )
     assert expanded.frontier_first_action is not None
-    assert expanded.frontier_first_action.tool_name == "plan_staged_revision_recovery"
+    assert expanded.frontier_first_action.tool == "doxabase.plan_staged_revision_recovery"
     assert expanded.first_unattended_source == expanded.frontier_first_source
     assert expanded.first_unattended_action == expanded.frontier_first_action
 
@@ -815,40 +800,23 @@ def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     assert {task.profile_evidence_iri for task in profile_tasks} == set(
         evidence_iris
     )
-    assert {
-        task.suggested_next_call for task in profile_tasks
-    } == {f"describe_query_context(iri='{dataset}')"}
     assert all(
         task.suggested_next_action is not None
-        and task.suggested_next_action.tool_name == "describe_query_context"
+        and task.suggested_next_action.tool == "doxabase.describe_query_context"
         for task in profile_tasks
     )
     assert all(
         task.inspection_next_action is not None
-        and task.inspection_next_action.tool_name == "draft_profile_map_updates"
+        and task.inspection_next_action.tool == "doxabase.draft_profile_map_updates"
         for task in profile_tasks
     )
-    assert {
-        task.inspection_next_call for task in profile_tasks
-    } == {
-        (
-            f"draft_profile_map_updates(dataset_iri='{dataset}', "
-            f"evidence_iri='{evidence_iri}')"
-        )
-        for evidence_iri in evidence_iris
-    }
-    query_context_route_keys = []
     for evidence_iri in evidence_iris:
         draft = db.draft_profile_map_updates(dataset, evidence_iri)
         query_action = draft.suggested_next_action_groups[
             "query_context_review"
         ][0]
-        source = query_action.source_query_context
-        assert source["evidence_iri"] == evidence_iri
-        assert source["profile_evidence_iri"] == evidence_iri
-        assert source["route_anchor_iris"] == [dataset]
-        query_context_route_keys.append(source["route_group_key"])
-    assert len(set(query_context_route_keys)) == len(evidence_iris)
+        assert query_action.tool == "doxabase.describe_query_context"
+        assert query_action.args == {"iri": dataset}
     query_tasks = [
         task
         for task in brief.recommended_next_tasks
@@ -888,7 +856,7 @@ def test_project_brief_reuses_staged_review_for_profile_pending_detection(
 
     draft = db.draft_profile_map_updates(dataset, evidence_a)
     staged = db.stage_profile_map_updates(
-        **draft.suggested_next_actions[0].arguments
+        **draft.suggested_next_actions[0].args
     )
     assert staged.staged_revision is not None
 
@@ -952,7 +920,7 @@ def test_project_brief_routes_blocked_context_tasks_to_context_review(
     context = db.describe_query_context(dataset)
     assert context.readiness == "insufficient_metadata"
     assert context.suggested_repair_action_group_count == 0
-    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
+    assert context.suggested_next_actions[0].tool == "doxabase.draft_query_plan"
 
     brief = db.project_brief(limit=5)
 
@@ -965,14 +933,10 @@ def test_project_brief_routes_blocked_context_tasks_to_context_review(
     assert query_task.source == "describe_query_context"
     assert "insufficient_metadata" in query_task.reason
     assert query_task.suggested_next_action is not None
-    assert query_task.suggested_next_action.tool_name == "describe_query_context"
-    assert query_task.suggested_next_action.arguments == {"iri": dataset}
-    assert query_task.suggested_next_call == (
-        "describe_query_context(iri='https://example.test/project#"
-        "LocationBlockedEvents')"
-    )
-    assert brief.datasets[0].query.suggested_next_actions[0].tool_name == (
-        "draft_query_plan"
+    assert query_task.suggested_next_action.tool == "doxabase.describe_query_context"
+    assert query_task.suggested_next_action.args == {"iri": dataset}
+    assert brief.datasets[0].query.suggested_next_actions[0].tool == (
+        "doxabase.draft_query_plan"
     )
 
 
@@ -1013,15 +977,11 @@ def test_project_brief_routes_ready_query_handoffs_to_draft_plan(
     assert task.task_type == "query_plan_handoff"
     assert task.source == "draft_query_plan"
     assert task.suggested_next_action is not None
-    assert task.suggested_next_action.tool_name == "draft_query_plan"
-    assert task.suggested_next_action.arguments["iri"] == dataset
-    task_selector = task.suggested_next_action.arguments["candidate_selector"]
+    assert task.suggested_next_action.tool == "doxabase.draft_query_plan"
+    assert task.suggested_next_action.args["iri"] == dataset
+    task_selector = task.suggested_next_action.args["candidate_selector"]
     assert isinstance(task_selector, str)
     assert task_selector.startswith("query-target:")
-    assert task.suggested_next_call == (
-        "draft_query_plan(iri='https://example.test/project#Orders', "
-        f"candidate_selector={task_selector!r})"
-    )
     assert task.query_plan_handoff_summary is not None
     assert task.query_plan_handoff_summary.handoff_kind == "execution_attempt_ready"
     assert task.query_plan_handoff_summary.selected_candidate_index == 0
@@ -1093,7 +1053,7 @@ def test_project_brief_ready_query_handoff_uses_full_query_actions(
 
     assert context.readiness == "ready_for_query_planning"
     assert [
-        action.tool_name for action in context.suggested_next_actions[:4]
+        action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions[:4]
     ] == [
         "describe_profile_run",
         "describe_profile_run",
@@ -1113,7 +1073,7 @@ def test_project_brief_ready_query_handoff_uses_full_query_actions(
     brief = db.project_brief(limit=20, profile_candidate_limit=3)
 
     assert [
-        action.tool_name for action in brief.datasets[0].query.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in brief.datasets[0].query.suggested_next_actions
     ] == [
         "describe_profile_run",
         "describe_profile_run",
@@ -1126,9 +1086,9 @@ def test_project_brief_ready_query_handoff_uses_full_query_actions(
     )
     assert handoff_task.source == "draft_query_plan"
     assert handoff_task.suggested_next_action is not None
-    assert handoff_task.suggested_next_action.tool_name == "draft_query_plan"
-    assert handoff_task.suggested_next_action.arguments["iri"] == dataset
-    handoff_selector = handoff_task.suggested_next_action.arguments[
+    assert handoff_task.suggested_next_action.tool == "doxabase.draft_query_plan"
+    assert handoff_task.suggested_next_action.args["iri"] == dataset
+    handoff_selector = handoff_task.suggested_next_action.args[
         "candidate_selector"
     ]
     assert isinstance(handoff_selector, str)
@@ -1175,8 +1135,8 @@ def test_project_brief_query_handoff_summary_surfaces_relation_choice(
     task = brief.recommended_next_tasks[0]
     assert task.task_type == "query_plan_handoff"
     assert task.suggested_next_action is not None
-    assert task.suggested_next_action.arguments["iri"] == dataset
-    task_selector = task.suggested_next_action.arguments["candidate_selector"]
+    assert task.suggested_next_action.args["iri"] == dataset
+    task_selector = task.suggested_next_action.args["candidate_selector"]
     assert isinstance(task_selector, str)
     assert task_selector.startswith("query-target:")
     assert task.query_plan_handoff_summary is not None
@@ -1240,8 +1200,8 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     staged_task = brief.recommended_next_tasks[1]
     assert staged_task.priority == 8
     assert staged_task.suggested_next_action is not None
-    assert staged_task.suggested_next_action.tool_name == (
-        "describe_staged_revision"
+    assert staged_task.suggested_next_action.tool == (
+        "doxabase.describe_staged_revision"
     )
     assert brief.active_queue_type_count == 3
     assert brief.returned_queue_type_count == 2
@@ -1253,8 +1213,8 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert health_task.suggested_limit is not None
     assert health_task.suggested_limit > brief.limit
     assert health_task.suggested_next_action is not None
-    assert health_task.suggested_next_action.tool_name == "project_brief"
-    assert health_task.suggested_next_action.arguments == {
+    assert health_task.suggested_next_action.tool == "doxabase.project_brief"
+    assert health_task.suggested_next_action.args == {
         "limit": health_task.suggested_limit,
         "profile_candidate_limit": brief.profile_candidate_limit,
     }
@@ -1277,7 +1237,6 @@ def test_project_brief_selects_pending_staged_representative_per_queue() -> None
             resource=None,
             reason=label,
             suggested_next_action=None,
-            suggested_next_call=None,
             pending_staged_repair_iris=(
                 [f"https://example.test/project#{label}Repair"]
                 if pending_repair
@@ -1388,7 +1347,7 @@ def test_project_brief_detects_hidden_pending_query_repairs(
     repair_group = db.describe_query_context(
         dataset,
     ).suggested_repair_action_groups[0]
-    remove_arguments = dict(repair_group.actions[0]["arguments"])
+    remove_arguments = dict(repair_group.actions[0]["args"])
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
     )
@@ -1521,8 +1480,8 @@ def test_project_brief_detects_hidden_pending_profile_updates(
     assert profile_task.priority == 55
     assert "Pending staged profile update(s)" in profile_task.reason
     assert profile_task.suggested_next_action is not None
-    assert profile_task.suggested_next_action.tool_name == (
-        "draft_profile_map_updates"
+    assert profile_task.suggested_next_action.tool == (
+        "doxabase.draft_profile_map_updates"
     )
 
 
@@ -1618,34 +1577,22 @@ def test_project_brief_reports_limit_crowded_queue_types(
     ] == ["expand_project_brief", "privacy_export_review"]
     assert brief.safety_first_action is not None
     assert brief.safety_first_action == privacy_task.suggested_next_action
-    assert brief.safety_first_call == privacy_task.suggested_next_call
     assert brief.safety_first_source == "health_tasks:privacy_export_review"
     assert brief.first_unattended_action == privacy_task.suggested_next_action
-    assert brief.first_unattended_call == privacy_task.suggested_next_call
     assert brief.first_unattended_source == "health_tasks:privacy_export_review"
     assert (
         brief.frontier_first_action
         == brief.full_frontier_expansion.suggested_next_action
     )
     assert brief.frontier_status.is_complete is False
-    assert brief.frontier_status.safety_first_call == privacy_task.suggested_next_call
-    assert (
-        brief.frontier_status.first_unattended_call
-        == privacy_task.suggested_next_call
-    )
     assert (
         brief.frontier_status.mutation_allowed_after
         == "safety_review_required_before_frontier_or_mutation"
     )
-    assert (
-        brief.frontier_status.must_rerun_call
-        == brief.full_frontier_expansion.suggested_next_call
-    )
     expanded = db.project_brief(
-        **brief.full_frontier_expansion.suggested_next_action.arguments
+        **brief.full_frontier_expansion.suggested_next_action.args
     )
     assert expanded.frontier_status.is_complete is True
-    assert expanded.frontier_status.must_rerun_call is None
     assert expanded.safety_first_action is not None
     assert expanded.safety_first_source == "health_tasks:privacy_export_review"
     assert expanded.first_unattended_action == expanded.safety_first_action
@@ -1661,7 +1608,7 @@ def test_project_brief_reports_limit_crowded_queue_types(
         handoff_preflight.sensitive_literal_count
     )
     assert privacy_task.suggested_next_action is not None
-    assert privacy_task.suggested_next_action.tool_name == "export_preflight"
+    assert privacy_task.suggested_next_action.tool == "doxabase.export_preflight"
     assert "FAKE_SECRET" not in json.dumps(to_jsonable(brief.health_tasks))
 
 
@@ -1684,8 +1631,8 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
     assert privacy_task.sensitive_literal_count == 1
     assert "FAKE_SECRET" not in privacy_task.reason
     assert privacy_task.suggested_next_action is not None
-    assert privacy_task.suggested_next_action.tool_name == "export_preflight"
-    assert privacy_task.suggested_next_action.arguments == {
+    assert privacy_task.suggested_next_action.tool == "doxabase.export_preflight"
+    assert privacy_task.suggested_next_action.args == {
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
@@ -1722,7 +1669,7 @@ def test_project_brief_surfaces_invalid_export_health_task(
     )
     assert preflight.scanner_clean is True
     assert preflight.would_block_invalid_export is True
-    assert preflight.suggested_next_actions[0].tool_name == "validate_graph"
+    assert preflight.suggested_next_actions[0].tool == "doxabase.validate_graph"
 
     brief = db.project_brief(limit=5)
 
@@ -1737,8 +1684,8 @@ def test_project_brief_surfaces_invalid_export_health_task(
     assert validation_task.validation_conforms is False
     assert validation_task.validation_result_count == preflight.validation_result_count
     assert validation_task.suggested_next_action is not None
-    assert validation_task.suggested_next_action.tool_name == "validate_graph"
-    assert validation_task.suggested_next_action.arguments == {
+    assert validation_task.suggested_next_action.tool == "doxabase.validate_graph"
+    assert validation_task.suggested_next_action.args == {
         "scope": "all",
         "limit_results": 20,
     }
@@ -1789,7 +1736,7 @@ def test_project_brief_privacy_precedes_overlapping_export_validation_gate(
         "export_validation_review",
     ]
     assert validation_task.suggested_next_action is not None
-    assert validation_task.suggested_next_action.tool_name == "validate_graph"
+    assert validation_task.suggested_next_action.tool == "doxabase.validate_graph"
     assert "scanner-clean" not in validation_task.reason
     assert brief.safety_first_action == privacy_task.suggested_next_action
     assert brief.safety_first_source == "health_tasks:privacy_export_review"
@@ -1852,7 +1799,7 @@ def test_project_brief_redacts_nested_query_and_staged_payloads(
     assert "FAKE_SECRET" not in payload
     assert "[REDACTED:fake_secret_marker]" in payload
     query_action = brief.datasets[0].query.suggested_next_actions[0]
-    assert query_action.tool_name == "draft_query_plan"
+    assert query_action.tool == "doxabase.draft_query_plan"
     assert fake_secret not in json.dumps(to_jsonable(query_action), sort_keys=True)
     assert brief.staged_review.items[0].summary == "[REDACTED:fake_secret_marker]"
     assert brief.recommended_next_tasks[1].resource is not None
@@ -1933,8 +1880,8 @@ def test_project_brief_surfaces_fixture_storage_health_task(
     assert fixture_task.storage_access_count == 0
     assert dataset in fixture_task.known_fixture_table_iris
     assert fixture_task.suggested_next_action is not None
-    assert fixture_task.suggested_next_action.tool_name == "describe_query_context"
-    assert fixture_task.suggested_next_action.arguments == {"iri": dataset}
+    assert fixture_task.suggested_next_action.tool == "doxabase.describe_query_context"
+    assert fixture_task.suggested_next_action.args == {"iri": dataset}
     assert "zero rc:StorageAccess" in fixture_task.reason
     assert brief.safety_first_action is not fixture_task.suggested_next_action
     repair_task = next(
@@ -2090,8 +2037,8 @@ def test_project_brief_surfaces_stale_seed_health_task(
         seed_task.reason
     )
     assert seed_task.suggested_next_action is not None
-    assert seed_task.suggested_next_action.tool_name == "export_preflight"
-    assert seed_task.suggested_next_action.arguments == {
+    assert seed_task.suggested_next_action.tool == "doxabase.export_preflight"
+    assert seed_task.suggested_next_action.args == {
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
@@ -2099,15 +2046,9 @@ def test_project_brief_surfaces_stale_seed_health_task(
     }
     assert seed_task.current_staged_revision_count == 0
     assert brief.safety_first_action == seed_task.suggested_next_action
-    assert brief.safety_first_call == seed_task.suggested_next_call
     assert brief.safety_first_source == "health_tasks:seed_recovery_review"
     assert brief.first_unattended_action == seed_task.suggested_next_action
-    assert brief.first_unattended_call == seed_task.suggested_next_call
     assert brief.first_unattended_source == "health_tasks:seed_recovery_review"
-    assert brief.frontier_status.safety_first_call == seed_task.suggested_next_call
-    assert brief.frontier_status.first_unattended_call == (
-        seed_task.suggested_next_call
-    )
     assert brief.frontier_status.first_unattended_source == (
         "health_tasks:seed_recovery_review"
     )
@@ -2150,18 +2091,16 @@ def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
     assert "revision snapshot JSON" in seed_task.reason
     assert "import_handoff_bundle()" in seed_task.reason
     assert seed_task.suggested_next_action is not None
-    assert seed_task.suggested_next_action.tool_name == "export_preflight"
-    assert seed_task.suggested_next_action.arguments == {
+    assert seed_task.suggested_next_action.tool == "doxabase.export_preflight"
+    assert seed_task.suggested_next_action.args == {
         "export_kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
         "validation_scope": "map",
     }
     assert brief.safety_first_action == seed_task.suggested_next_action
-    assert brief.safety_first_call == seed_task.suggested_next_call
     assert brief.safety_first_source == "health_tasks:seed_recovery_review"
     assert brief.first_unattended_action == seed_task.suggested_next_action
-    assert brief.first_unattended_call == seed_task.suggested_next_call
     assert brief.first_unattended_source == "health_tasks:seed_recovery_review"
 
 
@@ -2245,8 +2184,8 @@ def test_project_brief_routes_non_tabular_assets_to_context_review(
     api_task = tasks[api]
     assert api_task.task_type == "non_tabular_asset_review"
     assert api_task.suggested_next_action is not None
-    assert api_task.suggested_next_action.tool_name == "get_context_graph"
-    assert api_task.suggested_next_action.arguments == {
+    assert api_task.suggested_next_action.tool == "doxabase.get_context_graph"
+    assert api_task.suggested_next_action.args == {
         "seed_iris": [api],
         "profile": "deep_lore",
     }
@@ -2328,13 +2267,10 @@ def test_recovery_first_safe_action_prefers_semantic_frontier_over_informational
     )
     assert plan.first_mutation_action is None
     assert plan.first_safe_review_or_mutation_action is not None
-    assert plan.first_safe_review_or_mutation_action.tool_name == (
-        "describe_staged_revision"
+    assert plan.first_safe_review_or_mutation_action.tool == (
+        "doxabase.describe_staged_revision"
     )
-    assert plan.first_safe_review_or_mutation_action.action_label == (
-        "Review semantic alternative"
-    )
-    assert plan.first_safe_review_or_mutation_action.arguments == {
+    assert plan.first_safe_review_or_mutation_action.args == {
         "iri": semantic_iri
     }
     assert plan.first_safe_review_or_mutation_source == "semantic_frontier_review"
@@ -2392,7 +2328,7 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     context = db.describe_query_context(dataset)
     repair_group = context.suggested_repair_action_groups[0]
     remove_action = repair_group.actions[0]
-    remove_arguments = dict(remove_action["arguments"])
+    remove_arguments = dict(remove_action["args"])
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
     )
@@ -2410,18 +2346,18 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     ]
     frontier_task, staged_task, query_task = brief.recommended_next_tasks
     assert frontier_task.suggested_next_action is not None
-    assert frontier_task.suggested_next_action.tool_name == (
-        "plan_staged_revision_recovery"
+    assert frontier_task.suggested_next_action.tool == (
+        "doxabase.plan_staged_revision_recovery"
     )
     assert staged_task.suggested_next_action is not None
-    assert staged_task.suggested_next_action.tool_name == "describe_staged_revision"
+    assert staged_task.suggested_next_action.tool == "doxabase.describe_staged_revision"
     assert staged_task.resource is not None
     assert staged_task.resource.iri == staged.revision_iri
     assert query_task.priority == 45
     assert query_task.pending_staged_repair_iris == [staged.revision_iri]
     assert "Pending staged repair(s)" in query_task.reason
     assert query_task.suggested_next_action is not None
-    assert query_task.suggested_next_action.tool_name == "describe_query_context"
+    assert query_task.suggested_next_action.tool == "doxabase.describe_query_context"
     assert to_dict(query_task)["pending_staged_repair_iris"] == [staged.revision_iri]
     assert brief.staged_review.items[0].queue == "apply_after_review"
     assert brief.staged_review.items[0].revision_anchor_iris == [dataset]
@@ -2517,8 +2453,8 @@ def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifa
     assert result.artifact_iris[-1] not in outgoing_iris
     assert {view, recipe, task}.issubset(outgoing_iris)
     assert any(
-        action["tool_name"] == "describe_analysis_view"
-        and action["arguments"]["iri"] == view
+        action["tool"] == "doxabase.describe_analysis_view"
+        and action["args"]["iri"] == view
         for action in context["suggested_next_actions"]
     )
     assert any(
@@ -2775,10 +2711,11 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     outgoing_action = next(
         action
         for action in hub_slice.suggested_next_actions
-        if action.action_label == "Page outgoing resource references"
+        if action.tool == "doxabase.describe_resource"
+        and action.args.get("include_incoming") is False
     )
-    assert outgoing_action.tool_name == "describe_resource"
-    assert outgoing_action.arguments == {
+    assert outgoing_action.tool == "doxabase.describe_resource"
+    assert outgoing_action.args == {
         "iri": hub,
         "include_incoming": False,
         "limit": 25,
@@ -2801,11 +2738,11 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     predicate_action = next(
         action
         for action in predicate_slice.suggested_next_actions
-        if action.action_label == "Export project graph for predicate scan"
+        if action.tool == "doxabase.export_graph"
     )
-    assert predicate_action.tool_name == "export_graph"
-    assert predicate_action.arguments["graphs"] == "project"
-    assert "predicate-usage" in predicate_action.arguments["path"]
+    assert predicate_action.tool == "doxabase.export_graph"
+    assert predicate_action.args["graphs"] == "project"
+    assert "predicate-usage" in predicate_action.args["path"]
 
 
 def test_resource_brief_incoming_cap_prioritizes_lore_rich_references(
@@ -2909,10 +2846,11 @@ def test_resource_brief_context_slice_suggests_blank_node_closure_on_route_cap(
     closure_action = next(
         action
         for action in context_slice.suggested_next_actions
-        if action.action_label == "Inspect blank-node closure"
+        if action.tool == "doxabase.describe_resource"
+        and action.args.get("include_blank_node_closure") is True
     )
-    assert closure_action.tool_name == "describe_resource"
-    assert closure_action.arguments == {
+    assert closure_action.tool == "doxabase.describe_resource"
+    assert closure_action.args == {
         "iri": shape,
         "include_blank_node_closure": True,
         "blank_node_depth": 4,
@@ -2946,10 +2884,11 @@ def test_resource_brief_context_slice_warns_for_pattern_seed(
     pattern_action = next(
         action
         for action in context_slice.suggested_next_actions
-        if action.action_label == "Rerun as pattern brief"
+        if action.tool == "doxabase.get_context_graph"
+        and action.args.get("profile") == "pattern_brief"
     )
-    assert pattern_action.tool_name == "get_context_graph"
-    assert pattern_action.arguments == {
+    assert pattern_action.tool == "doxabase.get_context_graph"
+    assert pattern_action.args == {
         "seed_iris": [pattern.pattern_iri],
         "profile": "pattern_brief",
         "max_triples": 100,
@@ -3044,12 +2983,12 @@ def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
     query_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     ]
     assert len(query_actions) == 1
-    assert query_actions[0].arguments == {"iri": dataset}
+    assert query_actions[0].args == {"iri": dataset}
     assert "missing_physical_layout" in query_actions[0].reason
-    query_context = db.describe_query_context(**query_actions[0].arguments)
+    query_context = db.describe_query_context(**query_actions[0].args)
     assert query_context.suggested_repair_action_groups[0].issue_code == (
         "missing_physical_layout"
     )
@@ -3097,12 +3036,12 @@ def test_resource_brief_storage_seed_suggests_clean_owner_query_context(
     query_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     ]
     assert len(query_actions) == 1
-    assert query_actions[0].arguments == {"iri": dataset}
+    assert query_actions[0].args == {"iri": dataset}
     assert "single queryable owner table" in query_actions[0].reason
-    query_context = db.describe_query_context(**query_actions[0].arguments)
+    query_context = db.describe_query_context(**query_actions[0].args)
     assert query_context.readiness == "ready_for_query_planning"
     assert query_context.suggested_repair_action_groups == []
 
@@ -3152,9 +3091,9 @@ def test_resource_brief_storage_seed_suggests_multiple_clean_owner_query_context
     query_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     ]
-    assert [action.arguments for action in query_actions] == [
+    assert [action.args for action in query_actions] == [
         {"iri": dataset} for dataset, _ in owners
     ]
     assert all(
@@ -3162,7 +3101,7 @@ def test_resource_brief_storage_seed_suggests_multiple_clean_owner_query_context
         for action in query_actions
     )
     assert [
-        db.describe_query_context(**action.arguments).readiness
+        db.describe_query_context(**action.args).readiness
         for action in query_actions
     ] == [
         "ready_for_query_planning",
@@ -3196,7 +3135,7 @@ def test_resource_brief_query_context_action_separates_repairs_from_warnings(
     query_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     ]
     assert len(query_actions) == 1
     reason = query_actions[0].reason
@@ -3206,7 +3145,7 @@ def test_resource_brief_query_context_action_separates_repairs_from_warnings(
         "layout_needs_verification, missing_path_template"
     ) in reason
     assert "repair group(s): layout_needs_verification" not in reason
-    query_context = db.describe_query_context(**query_actions[0].arguments)
+    query_context = db.describe_query_context(**query_actions[0].args)
     assert [group.issue_code for group in query_context.suggested_repair_action_groups] == [
         "missing_storage_access"
     ]
@@ -3248,23 +3187,24 @@ def test_deep_lore_storage_seed_suggests_resource_brief_retry(
     retry_action = next(
         action
         for action in deep_slice.suggested_next_actions
-        if action.action_label == "Retry with resource brief"
+        if action.tool == "doxabase.get_context_graph"
+        and action.args.get("profile") == "resource_brief"
     )
-    assert retry_action.tool_name == "get_context_graph"
-    assert retry_action.arguments == {
+    assert retry_action.tool == "doxabase.get_context_graph"
+    assert retry_action.args == {
         "seed_iris": [storage.iri],
         "profile": "resource_brief",
         "max_triples": 75,
     }
 
-    resource_slice = db.get_context_graph(**retry_action.arguments)
+    resource_slice = db.get_context_graph(**retry_action.args)
     assert any(resource.iri == dataset for resource in resource_slice.resources)
     query_action = next(
         action
         for action in resource_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     )
-    assert query_action.arguments == {"iri": dataset}
+    assert query_action.args == {"iri": dataset}
     assert "missing_physical_layout" in query_action.reason
 
 
@@ -3390,10 +3330,10 @@ def test_resource_brief_evidence_seed_routes_observed_asset_to_query_context(
     query_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_query_context"
+        if action.tool == "doxabase.describe_query_context"
     ]
     assert len(query_actions) == 1
-    assert query_actions[0].arguments == {"iri": dataset}
+    assert query_actions[0].args == {"iri": dataset}
     assert "missing_physical_layout" in query_actions[0].reason
 
 
@@ -3423,16 +3363,13 @@ def test_resource_brief_profile_evidence_seed_suggests_profile_run(
     profile_run_actions = [
         action
         for action in context_slice.suggested_next_actions
-        if action.tool_name == "describe_profile_run"
+        if action.tool == "doxabase.describe_profile_run"
     ]
     assert len(profile_run_actions) == 1
-    assert profile_run_actions[0].arguments == {
+    assert profile_run_actions[0].args == {
         "dataset_iri": dataset,
         "evidence_iri": profile.observation.evidence_iri,
     }
-    assert context_slice.suggested_next_calls == [
-        action.call for action in context_slice.suggested_next_actions
-    ]
 
 
 def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
@@ -3461,10 +3398,10 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         in warning
         for warning in context_slice.warnings
     )
-    assert context_slice.suggested_next_actions[0].tool_name == (
-        "get_context_graph"
+    assert context_slice.suggested_next_actions[0].tool == (
+        "doxabase.get_context_graph"
     )
-    assert context_slice.suggested_next_actions[0].arguments == {
+    assert context_slice.suggested_next_actions[0].args == {
         "seed_iris": [profile.observation.evidence_iri],
         "profile": "resource_brief",
         "max_triples": 500,
@@ -3475,10 +3412,10 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         profile="dataset_brief",
     )
 
-    assert preflight.suggested_next_actions[0].tool_name == (
-        "preflight_context_slice_export"
+    assert preflight.suggested_next_actions[0].tool == (
+        "doxabase.preflight_context_slice_export"
     )
-    assert preflight.suggested_next_actions[0].arguments == {
+    assert preflight.suggested_next_actions[0].args == {
         "seed_iris": [profile.observation.evidence_iri],
         "profile": "resource_brief",
         "max_triples": 500,
@@ -3486,7 +3423,7 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         "limit": 20,
     }
     assert any(
-        action.tool_name == "export_context_slice"
+        action.tool == "doxabase.export_context_slice"
         for action in preflight.suggested_next_actions[1:]
     )
 
@@ -3545,7 +3482,7 @@ def test_project_brief_suppresses_defined_metric_context_only_profile_review(
     assert profile_draft.metric_advisory_status_counts == {
         "project_metric_defined": 1,
     }
-    assert [action.tool_name for action in profile_draft.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in profile_draft.suggested_next_actions] == [
         "get_context_graph",
         "describe_resource",
     ]

@@ -134,9 +134,7 @@ def _assert_repair_action_option(
     *,
     action_index: int,
     action_type: str,
-    tool_name: str,
-    mcp_tool_name: str,
-    action_label: str,
+    tool: str,
     required_extra_arguments: list[str],
     placeholder_fields: list[str],
     reviewed_value_fields: list[str],
@@ -144,9 +142,7 @@ def _assert_repair_action_option(
 ) -> None:
     assert option["action_index"] == action_index
     assert option["action_type"] == action_type
-    assert option["tool_name"] == tool_name
-    assert option["mcp_tool_name"] == mcp_tool_name
-    assert option["action_label"] == action_label
+    assert option["tool"] == tool
     assert option["action_status"] == action_status
     assert option.get("required_extra_arguments", []) == required_extra_arguments
     assert option.get("placeholder_fields", []) == placeholder_fields

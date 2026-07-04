@@ -104,15 +104,15 @@ def test_column_physical_type_same_slot_drift_suggests_replacement(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.arguments["subject"] == column
-    assert action.arguments["predicate"] == RC + "physicalType"
-    assert action.arguments["object"] == RC + "Double"
-    assert action.arguments["object_kind"] == "iri"
+    assert action.args["subject"] == column
+    assert action.args["predicate"] == RC + "physicalType"
+    assert action.args["object"] == RC + "Double"
+    assert action.args["object_kind"] == "iri"
     assert "physical type" in action.reason
 
-    repair = db.stage_map_assertion_change(**action.arguments)
+    repair = db.stage_map_assertion_change(**action.args)
     assert db.check_staged_revision_apply(
         repair.staged_revision.revision_iri
     ).status == "ready"
@@ -150,15 +150,15 @@ def test_column_nullable_same_slot_drift_preserves_boolean_payload(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool_name == "stage_map_assertion_change"
+        if action.tool == "doxabase.stage_map_assertion_change"
     )
-    assert action.arguments["predicate"] == RC + "nullable"
-    assert action.arguments["object"] == "true"
-    assert action.arguments["object_kind"] == "literal"
-    assert action.arguments["object_datatype"] == str(XSD.boolean)
+    assert action.args["predicate"] == RC + "nullable"
+    assert action.args["object"] == "true"
+    assert action.args["object_kind"] == "literal"
+    assert action.args["object_datatype"] == str(XSD.boolean)
     assert "nullable" in action.reason
 
-    repair = db.stage_map_assertion_change(**action.arguments)
+    repair = db.stage_map_assertion_change(**action.args)
     assert db.check_staged_revision_apply(
         repair.staged_revision.revision_iri
     ).status == "ready"
@@ -200,8 +200,8 @@ def test_list_entities_reports_pagination_metadata(tmp_path: Path) -> None:
     assert page.omitted_count == 1
     assert page.has_more is True
     assert page.next_offset == 2
-    assert page.suggested_next_actions[0].tool_name == "list_entities"
-    assert page.suggested_next_actions[0].arguments == {
+    assert page.suggested_next_actions[0].tool == "doxabase.list_entities"
+    assert page.suggested_next_actions[0].args == {
         "limit": 2,
         "offset": 2,
         "type": "rc:Dataset",
@@ -242,8 +242,8 @@ def test_search_reports_pagination_metadata(tmp_path: Path) -> None:
     assert page.omitted_count == 1
     assert page.has_more is True
     assert page.next_offset == 2
-    assert page.suggested_next_actions[0].tool_name == "search"
-    assert page.suggested_next_actions[0].arguments == {
+    assert page.suggested_next_actions[0].tool == "doxabase.search"
+    assert page.suggested_next_actions[0].args == {
         "query": "SearchPageProbe",
         "limit": 2,
         "offset": 2,
@@ -724,14 +724,13 @@ def test_unscoped_seed_heavy_search_suggests_project_graph_retries(
         "evidence",
     ]
     assert [
-        action.arguments for action in unscoped.scope_hint.suggested_next_actions
+        action.args for action in unscoped.scope_hint.suggested_next_actions
     ] == [
         {"query": "storage", "graph": "map", "limit": 5, "offset": 0},
         {"query": "storage", "graph": "observations", "limit": 5, "offset": 0},
         {"query": "storage", "graph": "patterns", "limit": 5, "offset": 0},
         {"query": "storage", "graph": "evidence", "limit": 5, "offset": 0},
     ]
-    assert unscoped.suggested_next_calls == unscoped.scope_hint.suggested_next_calls
 
     scoped = db.search("storage", graph="map", limit=5)
     assert scoped.scope_hint is None
@@ -759,28 +758,25 @@ def test_zero_match_search_suggests_bounded_retrieval_fallbacks(
 
     assert result.matches == []
     assert result.scope_hint is None
-    assert result.suggested_next_calls == [
-        action.call for action in result.suggested_next_actions
-    ]
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "search",
         "search",
         "search",
         "list_entities",
         "search_staged_patch_payloads",
     ]
-    assert [action.arguments for action in result.suggested_next_actions[:3]] == [
+    assert [action.args for action in result.suggested_next_actions[:3]] == [
         {"query": "derived", "graph": "map", "limit": 5, "offset": 0},
         {"query": "harbor", "graph": "map", "limit": 5, "offset": 0},
         {"query": "qa", "graph": "map", "limit": 5, "offset": 0},
     ]
-    assert result.suggested_next_actions[3].arguments == {
+    assert result.suggested_next_actions[3].args == {
         "graph": "map",
         "text": "derived",
         "limit": 5,
         "offset": 0,
     }
-    assert result.suggested_next_actions[4].arguments == {
+    assert result.suggested_next_actions[4].args == {
         "query": query,
         "graph": "history",
         "current_staged_work_only": True,
@@ -1038,39 +1034,3 @@ def test_search_rejects_invalid_queries(tmp_path: Path) -> None:
         db.search("   ")
     with pytest.raises(DoxaBaseError, match="searchable token"):
         db.search("...")
-
-
-def test_mixed_support_review_group_counts_route_steps_when_calls_repeat() -> None:
-    group = DoxaBase._profile_mixed_support_review_group(
-        group_index=0,
-        item={
-            "pattern_iris": ["https://example.test/project#shared_pattern"],
-            "review_lanes": ["metric_vocabulary_review", "profile_type_review"],
-            "semantic_moves": ["define_metric", "define_value_type"],
-            "route_group_keys": ["metric:one", "type:one"],
-            "route_step_keys": ["step:metric-context", "step:type-context"],
-            "route_anchor_iris": [],
-            "route_pattern_iris": [],
-            "tool_names": ["get_context_graph"],
-            "action_labels": [
-                "Inspect metric context",
-                "Inspect type context",
-            ],
-            "suggested_next_calls": [
-                "get_context_graph("
-                "seed_iris=['https://example.test/project#col'])"
-            ],
-            "metric_advisory_indexes": [0],
-            "type_advisory_indexes": [0],
-            "duplicate_group_keys": [],
-            "duplicate_advisory_indexes": [],
-            "duplicate_profile_observation_iris": [],
-            "source_profile_advisories": [],
-        },
-    )
-
-    assert group.action_count == 2
-    assert len(group.suggested_next_calls) == 1
-    assert group.action_count == len(group.route_step_keys)
-    assert group.action_count == len(group.action_labels)
-

@@ -34,34 +34,22 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["scanned_source_handles"] == ["warehouse/orders.csv"]
     assert result.get("scanned_source_span_iris", []) == []
     assert result["source_span_triples"] > 0
-    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "describe_profile_run",
         "get_context_graph",
         "describe_query_context",
     ]
-    assert result["suggested_next_actions"][0]["arguments"] == {
+    assert result["suggested_next_actions"][0]["args"] == {
         "dataset_iri": "https://example.test/project#Orders",
         "evidence_iri": result["evidence_iri"],
     }
-    assert result["suggested_next_actions"][1]["arguments"] == {
+    assert result["suggested_next_actions"][1]["args"] == {
         "seed_iris": [result["evidence_iri"]],
         "profile": "resource_brief",
     }
-    assert result["suggested_next_actions"][2]["arguments"] == {
+    assert result["suggested_next_actions"][2]["args"] == {
         "iri": "https://example.test/project#Orders"
     }
-    assert result["suggested_next_calls"] == [
-        (
-            "describe_profile_run("
-            "dataset_iri='https://example.test/project#Orders', "
-            f"evidence_iri='{result['evidence_iri']}')"
-        ),
-        (
-            "get_context_graph("
-            f"seed_iris=['{result['evidence_iri']}'], profile='resource_brief')"
-        ),
-        "describe_query_context(iri='https://example.test/project#Orders')",
-    ]
 
 
 def test_describe_query_context_tool_routes_singleton_query_result_evidence(
@@ -117,36 +105,19 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     assert context["profile_summary"]["evidence_iris"] == [result["evidence_iri"]]
     assert context["profile_summary"].get("profile_run_candidates", []) == []
     assert [
-        action["tool_name"] for action in context["suggested_next_actions"][:2]
+        action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"][:2]
     ] == [
         "describe_profile_run",
         "draft_query_plan",
     ]
     assert context["safe_inspection_action_indexes"] == [0]
     assert context["first_safe_inspection_action_index"] == 0
-    assert context["unattended_recommended_action_indexes"] == [1]
-    assert context["first_unattended_action_index"] == 1
     profile_action = context["suggested_next_actions"][0]
-    assert profile_action["action_label"] == "Inspect singleton profile evidence"
-    assert profile_action["arguments"] == {
+    assert profile_action["args"] == {
         "dataset_iri": dataset,
         "evidence_iri": result["evidence_iri"],
     }
-    source_profile_evidence = profile_action["source_profile_evidence"]
-    assert source_profile_evidence["execution_status"] == "succeeded"
-    assert source_profile_evidence["engine"] == "python-csv"
-    assert source_profile_evidence["query_hash"] == "sha256:abc123"
-    assert source_profile_evidence["query_source_paths"] == [
-        "queries/orders_paid_aggregate.sql"
-    ]
-    assert source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
-    assert source_profile_evidence["scanned_source_handles"] == [str(csv_path)]
-    assert source_profile_evidence["result_sources"] == [str(result_path)]
-    assert source_profile_evidence["profile_summaries"][0]["summary"] == (
-        "Orders paid aggregate scanned the scratch CSV."
-    )
-
-    profile_run = describe_profile_run_tool(db, **profile_action["arguments"])
+    profile_run = describe_profile_run_tool(db, **profile_action["args"])
     assert profile_run["returned_profile_count"] == 1
     assert profile_run["evidence"]["summary"] == (
         "Reviewed Python CSV aggregate over scratch Orders."
@@ -235,26 +206,7 @@ def test_describe_query_context_tool_returns_planning_projection(
     draft_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-    )
-    route_card = draft_action["route_card"]
-    assert route_card["candidate_index"] == 0
-    assert route_card["candidate_selector"] == (
-        result["query_target_candidates"][0]["candidate_selector"]
-    )
-    assert route_card["storage_label"] == "AIS local object-store access profile"
-    assert route_card["access_mode"]["iri"] == RC + "ReadOnlyAccess"
-    assert route_card["storage_root"] == "s3://ais-noaa/"
-    assert route_card["endpoint_profile"] == "local-minio"
-    assert route_card["bucket_name"] == "ais-noaa"
-    assert route_card["region"] == "local"
-    assert route_card["credential_reference"] == "profile:ais-readonly"
-    assert route_card["path_style_access"] is True
-    assert route_card["requires_endpoint_profile"] is True
-    assert route_card["required_bindings"] == ["year", "date"]
-    assert route_card["binding_example"] == (
-        "year='2026', date='2026-06-30' -> "
-        "s3://ais-noaa/broadcasts/2026/ais-2026-06-30.parquet"
+        if action["tool"] == "doxabase.draft_query_plan"
     )
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert result["storage_accesses"][0]["access_mode"]["iri"] == (
@@ -299,8 +251,8 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
     assert context["readiness"] == "not_applicable_non_tabular_asset"
     assert context.get("query_target_candidates", []) == []
     assert context["issues"][0]["code"] == "non_tabular_asset_query_not_applicable"
-    assert context["suggested_next_actions"][0]["tool_name"] == (
-        "get_context_graph"
+    assert context["suggested_next_actions"][0]["tool"] == (
+        "doxabase.get_context_graph"
     )
 
     plan = draft_query_plan_tool(db, iri=asset)
@@ -528,8 +480,8 @@ def test_describe_query_context_tool_avoids_database_mismatch_for_clean_object_r
     peer_actions = [
         action
         for action in result["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-        and action["arguments"].get("candidate_selector")
+        if action["tool"] == "doxabase.draft_query_plan"
+        and action["args"].get("candidate_selector")
         == object_candidate["candidate_selector"]
     ]
     assert peer_actions
@@ -600,31 +552,21 @@ def test_describe_query_context_tool_flags_unselected_route_intent(
     selected_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-        and action["route_card"]["candidate_index"] == selected_index
+        if action["tool"] == "doxabase.draft_query_plan"
+        and action["args"].get("candidate_selector")
+        == result["query_target_candidates"][selected_index][
+            "candidate_selector"
+        ]
     )
     production_action = next(
         action
         for action in result["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-        and action["route_card"]["candidate_index"] == production_index
+        if action["tool"] == "doxabase.draft_query_plan"
+        and action["args"].get("candidate_selector")
+        == result["query_target_candidates"][production_index][
+            "candidate_selector"
+        ]
     )
-    assert selected_action["unattended_recommended"] is False
-    assert selected_action["unattended_caution"] == (
-        result["query_target_decision"]["route_intent_caution"]
-    )
-    assert selected_action["unattended_review_reason_codes"] == [
-        "route_intent_review_candidates_present"
-    ]
-    assert production_action["unattended_recommended"] is True
-    assert production_action["unattended_caution"] == (
-        result["query_target_decision"]["route_intent_caution"]
-    )
-    assert production_action["unattended_review_reason_codes"] == [
-        "route_intent_review_candidates_present"
-    ]
-    assert result["unattended_recommended_action_indexes"] == [1]
-    assert result["first_unattended_action_index"] == 1
 
 
 def test_describe_query_context_tool_flags_review_gated_route_intent(
@@ -700,20 +642,6 @@ def test_describe_query_context_tool_flags_review_gated_route_intent(
     )
     assert "route_intent_review_candidates_present" in (
         result["query_target_decision"]["selection_reason_codes"]
-    )
-    recommended_indexes = result["unattended_recommended_action_indexes"]
-    assert recommended_indexes
-    assert result["first_unattended_action_index"] == recommended_indexes[0]
-    for action_index in recommended_indexes:
-        action = result["suggested_next_actions"][action_index]
-        assert action["tool_name"] == "draft_query_plan"
-        assert action["route_card"]["candidate_index"] == production_index
-        assert action["unattended_recommended"] is True
-    assert all(
-        action.get("unattended_recommended") is False
-        for action in result["suggested_next_actions"]
-        if action["tool_name"] == "draft_query_plan"
-        and action["route_card"]["candidate_index"] != production_index
     )
 
 
@@ -882,9 +810,6 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
         "predicate": "rc:pathTemplate",
         "required_template_source": "storage_access",
     }
-    assert repair_hint["actions"][0]["action_label"] == (
-        "Add reviewed relation template"
-    )
     assert repair_hint["actions"][0]["arguments_template"] == {
         "subject": storage["iri"],
         "predicate": "rc:pathTemplate",
@@ -900,9 +825,6 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     assert repair_hint["actions"][0]["placeholder_fields"] == ["object"]
     assert repair_hint["actions"][0]["reviewed_value_fields"] == ["object"]
     repair_group = context["suggested_repair_action_groups"][0]
-    assert repair_group["pending_action_options"][0]["action_label"] == (
-        "Add reviewed relation template"
-    )
     target = context["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"
     assert target["composition"] == "database_connection_as_candidate"
@@ -969,12 +891,6 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
         "record_file_object_path_template_or_exact_root"
     )
     assert repair_group["choice_mode"] == "choose_one"
-    assert [
-        action["action_label"] for action in repair_group["pending_action_options"]
-    ] == [
-        "Add reviewed path template",
-        "Mark root as exact object location",
-    ]
     details = result["issues"][0]["details"]
     repair_hint = details["repair_hint"]
     assert repair_hint["source"] == {
@@ -995,7 +911,7 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
         "change_kind": "add",
         "graph": "map",
     }
-    assert repair_hint["actions"][1]["arguments"] == {
+    assert repair_hint["actions"][1]["args"] == {
         "subject": storage["iri"],
         "predicate": "rc:locationKind",
         "object": "object",

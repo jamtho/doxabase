@@ -39,19 +39,11 @@ class AnalysisViewsMixin:
         )
         suggested_next_actions = [
             SuggestedNextAction(
-                action_label="Inspect logical view query context",
-                tool_name="describe_query_context",
-                mcp_tool_name="doxabase.describe_query_context",
-                arguments={"iri": view_iri},
-                reason=(
-                    "Inspect this analysis view as a logical query context. "
+                tool="doxabase.describe_query_context",
+                args={"iri": view_iri},
+                reason="Inspect this analysis view as a logical query context. "
                     "DoxaBase will not treat the view itself as a physical "
-                    "storage route."
-                ),
-                call=self._suggested_call_string(
-                    "describe_query_context",
-                    {"iri": view_iri},
-                ),
+                    "storage route.",
             )
         ]
         return AnalysisViewDescription(
@@ -99,7 +91,6 @@ class AnalysisViewsMixin:
                 "rc:rowCountSnapshot",
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def _analysis_view_source_caveat_iris(
         self,
@@ -147,20 +138,12 @@ class AnalysisViewsMixin:
             },
         )
         describe_view_action = SuggestedNextAction(
-            action_label="Describe analysis view",
-            tool_name="describe_analysis_view",
-            mcp_tool_name="doxabase.describe_analysis_view",
-            arguments={"iri": dataset.iri},
-            reason=(
-                "Read the logical view denominator, source datasets, caveats, "
+                                   tool="doxabase.describe_analysis_view",
+                                   args={"iri": dataset.iri},
+                                   reason="Read the logical view denominator, source datasets, caveats, "
                 "and query snippet metadata before deciding whether to query "
-                "the source datasets or materialize a new physical route."
-            ),
-            call=self._suggested_call_string(
-                "describe_analysis_view",
-                {"iri": dataset.iri},
-            ),
-        )
+                "the source datasets or materialize a new physical route.",
+                               )
         suggested_next_actions = [
             describe_view_action,
             self._project_brief_get_context_graph_action(dataset.iri),
@@ -222,11 +205,6 @@ class AnalysisViewsMixin:
             suggested_next_actions=suggested_next_actions,
             safe_inspection_action_indexes=[0, 1],
             first_safe_inspection_action_index=0,
-            unattended_recommended_action_indexes=[],
-            first_unattended_action_index=None,
-            suggested_next_calls=[
-                action.call for action in suggested_next_actions
-            ],
         )
     def record_map_analysis_view(
         self,
@@ -540,7 +518,6 @@ class AnalysisViewsMixin:
                 len(analysis_view.query_snippets) for analysis_view in analysis_views
             ),
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def record_analysis_packet(
         self,
@@ -643,25 +620,14 @@ class AnalysisViewsMixin:
         suggested_next_actions = self._dedupe_suggested_next_actions(
             [
                 SuggestedNextAction(
-                    action_label="Inspect analysis packet context",
-                    tool_name="get_context_graph",
-                    mcp_tool_name="doxabase.get_context_graph",
-                    arguments={
+                    tool="doxabase.get_context_graph",
+                    args={
                         "seed_iris": [spec["iri"]],
                         "profile": "resource_brief",
                     },
-                    reason=(
-                        "Inspect the packet, linked analysis views, artifacts, "
+                    reason="Inspect the packet, linked analysis views, artifacts, "
                         "query recipes, follow-up tasks, and supporting "
-                        "evidence as a bounded resource handoff."
-                    ),
-                    call=self._suggested_call_string(
-                        "get_context_graph",
-                        {
-                            "seed_iris": [spec["iri"]],
-                            "profile": "resource_brief",
-                        },
-                    ),
+                        "evidence as a bounded resource handoff.",
                 ),
                 *(
                     analysis_view_bundle.suggested_next_actions
@@ -686,7 +652,6 @@ class AnalysisViewsMixin:
             pattern=pattern,
             pattern_iri=pattern.pattern_iri if pattern is not None else None,
             suggested_next_actions=suggested_next_actions,
-            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
     def _normalise_analysis_view_query_snippets(
         self,

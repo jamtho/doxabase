@@ -44,7 +44,6 @@ class ProjectBriefDatasetQuerySummary:
     ready_candidate_indexes: list[int]
     direct_clean_candidate_indexes: list[int]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -63,10 +62,8 @@ class ProjectBriefProfileDraftSummary:
     pending_staged_profile_advisory_iris: list[str]
     pending_staged_profile_advisory_count: int
     pending_staged_profile_advisory_actions: list[SuggestedNextAction]
-    pending_staged_profile_advisory_calls: list[str]
     task_advisories: list[dict[str, Any]]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -128,9 +125,7 @@ class ProjectBriefRecommendedTask:
     resource: ResourceSummary | None
     reason: str
     suggested_next_action: SuggestedNextAction | None
-    suggested_next_call: str | None
     inspection_next_action: SuggestedNextAction | None = None
-    inspection_next_call: str | None = None
     profile_evidence_iri: str | None = None
     pending_staged_repair_iris: list[str] = field(default_factory=list)
     pending_staged_profile_update_iris: list[str] = field(default_factory=list)
@@ -146,7 +141,6 @@ class ProjectBriefHealthTask:
     source: str
     reason: str
     suggested_next_action: SuggestedNextAction | None
-    suggested_next_call: str | None
     queue_types: list[str] = field(default_factory=list)
     omitted_queue_counts: dict[str, int] = field(default_factory=dict)
     suggested_limit: int | None = None
@@ -173,10 +167,6 @@ class ProjectBriefFrontierStatus:
     hidden_queue_types: list[str]
     active_queue_types: list[str]
     returned_queue_types: list[str]
-    must_rerun_call: str | None
-    safety_first_call: str | None
-    frontier_first_call: str | None
-    first_unattended_call: str | None
     first_unattended_source: str | None
     mutation_allowed_after: str
     note: str
@@ -200,13 +190,10 @@ class ProjectBrief:
     next_best_expansion: ProjectBriefHealthTask | None
     full_frontier_expansion: ProjectBriefHealthTask | None
     safety_first_action: SuggestedNextAction | None
-    safety_first_call: str | None
     safety_first_source: str | None
     frontier_first_action: SuggestedNextAction | None
-    frontier_first_call: str | None
     frontier_first_source: str | None
     first_unattended_action: SuggestedNextAction | None
-    first_unattended_call: str | None
     first_unattended_source: str | None
     frontier_status: ProjectBriefFrontierStatus
     datasets: list[ProjectBriefDatasetSummary]
@@ -295,7 +282,6 @@ class ExportPreflightRecord:
     warnings: list[str]
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     validation_scope: str | None = None
     validation_conforms: bool | None = None
     validation_result_count: int = 0
@@ -375,7 +361,6 @@ class ContextSliceExportRecord:
     warnings: list[str]
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     validation_scope: str | None = None
     validation_conforms: bool | None = None
     validation_result_count: int = 0
@@ -448,7 +433,6 @@ class StagedRevisionReviewDecisionRecord:
     current_next_action: RevisionNextAction | None
     closes_current_staged_work: bool
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -559,7 +543,6 @@ class HandoffBundleRecoverySummary:
     matching_recovery_session_count: int
     matching_recovery_session_iris: list[str]
     resume_recovery_session_iri: str | None
-    resume_recovery_session_call: str | None
     recovery_plan_available: bool
     recovery_lane_counts: dict[str, int]
     recovery_next_action_queue_item_counts: dict[str, int]
@@ -570,7 +553,6 @@ class HandoffBundleRecoverySummary:
     first_safe_review_or_mutation_action: (
         SuggestedNextAction | RevisionNextAction | None
     )
-    first_safe_review_or_mutation_call: str | None
     first_safe_review_or_mutation_source: str | None
     profile_route_revision_count: int
     profile_route_group_count: int
@@ -602,7 +584,6 @@ class HandoffBundleImportRecord:
     matching_recovery_session_iris: list[str]
     recovery_summary: HandoffBundleRecoverySummary
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     warnings: list[str]
     artifact_kind: str = "handoff_bundle_import"
     recovery_complete: bool = True
@@ -877,7 +858,6 @@ class AppliedRevisionDiffDescription:
     max_triples: int
     graph_diffs: list[AppliedRevisionGraphSnapshotDiff]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -916,16 +896,13 @@ class StagedRevisionApplyCheck:
     effective_delta_summary: StagedRevisionEffectiveDeltaSummary
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     snapshot_evidence: RevisionSnapshotEvidenceStatus | None = None
     snapshot_evidence_completeness: str = "unknown"
     blocking_preflight_actions: list[SuggestedNextAction] = field(
         default_factory=list
     )
-    blocking_preflight_calls: list[str] = field(default_factory=list)
     mutation_allowed_after: str = "direct_check_no_preflight"
     first_safe_next_action: RevisionNextAction | None = None
-    first_safe_next_call: str | None = None
 
 
 @dataclass(frozen=True)
@@ -959,7 +936,6 @@ class StagedRevisionApplySummary:
     snapshot_drifts: list[StagedGraphSnapshotDrift]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     error: str | None
 
 
@@ -1019,7 +995,6 @@ class StagedRevisionRebaseDraft:
     next_action: RevisionNextAction | None
     next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     note: str
 
 
@@ -1097,7 +1072,6 @@ class SystematisationDraftRecord:
     choose_one_group_count: int
     semantic_review_required_queue_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1123,7 +1097,6 @@ class SystematisationSharedContextRerunDraft:
     framings: list[SystematisationSharedContextRerunFraming]
     stage_systematisation_arguments: dict[str, Any]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     warnings: list[str]
     note: str
 
@@ -1140,7 +1113,6 @@ class PostApplyRecheckRevision:
     blocking_reasons: list[str]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1155,7 +1127,6 @@ class AppliedStagedRevisionRecord:
     post_apply_recheck_is_partial_queue: bool
     warnings: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     patches_applied: int
     triples_added: int
     triples_removed: int
@@ -1235,7 +1206,6 @@ class StagedGraphRevisionExportSummary:
     profile_route_groups: list[dict[str, Any]]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1252,7 +1222,6 @@ class StagedGraphRevisionSnapshotEvidenceRow:
     orphan_snapshot_row_graph_roles: list[str]
     note: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1416,11 +1385,8 @@ class ProfileInsightOpenReviewAction:
     route_group_key: str
     route_step_key: str
     semantic_move: str | None
-    tool_name: str | None
-    mcp_tool_name: str | None
-    action_label: str | None
-    arguments: dict[str, Any]
-    suggested_next_call: str | None
+    tool: str | None
+    args: dict[str, Any]
     source_origin: str | None
     source_summary: dict[str, Any]
     target_detail: str | None
@@ -1557,7 +1523,6 @@ class StagedGraphRevisionBatchRestageRecord:
     sequential_apply_recheck_candidate_iris: list[str]
     export_record: StagedGraphRevisionsExportRecord | None
     suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
-    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -1610,7 +1575,6 @@ class StagedRevisionRecoveryLane:
     repair_draft_error: str | None
     repair_draft_deferred_reason: str | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     batch_item: StagedGraphRevisionBatchRestageItem
     note: str
 
@@ -1653,7 +1617,6 @@ class StagedRevisionMutationFrontierItem:
     source_revision_iris: list[str]
     row_iris: list[str]
     action: SuggestedNextAction | RevisionNextAction | None
-    call: str | None
     semantic_risk_level: str | None
     semantic_risk_reasons: list[str]
     alternative_set_iris: list[str]
@@ -1671,7 +1634,6 @@ class StagedRevisionRecoveryUnattendedStep:
     step_kind: str
     label: str
     action: SuggestedNextAction | RevisionNextAction | None
-    call: str | None
     can_run_now: bool
     prerequisite: str | None
     mutates: bool
@@ -1714,17 +1676,13 @@ class StagedRevisionRecoveryPlan:
     mutation_frontier_iris: list[str]
     mutation_frontier_items: list[StagedRevisionMutationFrontierItem]
     helper_mutation_frontier_actions: list[SuggestedNextAction]
-    helper_mutation_frontier_calls: list[str]
     mutation_allowed_after: str
     first_mutation_action: SuggestedNextAction | RevisionNextAction | None
-    first_mutation_call: str | None
     first_safe_review_or_mutation_action: (
         SuggestedNextAction | RevisionNextAction | None
     )
-    first_safe_review_or_mutation_call: str | None
     first_safe_review_or_mutation_source: str | None
     blocking_preflight_actions: list[SuggestedNextAction]
-    blocking_preflight_calls: list[str]
     recommended_unattended_steps: list[StagedRevisionRecoveryUnattendedStep]
     requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
@@ -1743,7 +1701,6 @@ class StagedRevisionRecoveryPlan:
     revision_summaries: list[StagedGraphRevisionExportSummary]
     bundle_summary: StagedGraphRevisionBundleSummary | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     warnings: list[str]
     note: str
 
@@ -1795,9 +1752,7 @@ class StagedRevisionRecoverySessionDescription:
     applied_event_iris: list[str]
     current_revision_by_source: dict[str, str]
     mutation_frontier_iris: list[str]
-    helper_mutation_frontier_calls: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     warnings: list[str]
     note: str
     created_triples: int | None = None
@@ -1848,7 +1803,6 @@ class RevisionSnapshotEvidenceStatus:
     missing_current_graph_roles: list[str]
     note: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -1867,7 +1821,6 @@ class RevisionGraphSnapshotDescription:
     max_triples: int
     triples: list[GraphTripleDescription]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     note: str
 
 
@@ -2022,7 +1975,6 @@ class GraphRevisionDescription:
     revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -2077,7 +2029,6 @@ class GraphRevisionListItem:
     snapshot_evidence: RevisionSnapshotEvidenceStatus
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -2146,7 +2097,6 @@ class GraphVersionListItem:
     next_action: RevisionNextAction | None
     next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -2230,7 +2180,6 @@ class GraphVersionDiffDescription:
     triples_added: list[GraphTripleDescription]
     triples_removed: list[GraphTripleDescription]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     note: str
 
 
@@ -2256,7 +2205,6 @@ class RevisionLineageDescription:
     next_action: RevisionNextAction | None
     next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     warnings: list[str]
     include_apply_checks: bool
     drift_detail: str
@@ -2332,7 +2280,6 @@ class ResourceRevisionTimelineEvent:
     resolved_target_iri: str | None
     resolved_target_record_kind: str | None
     row_is_target: bool | None
-    next_action_call: str | None
 
 
 @dataclass(frozen=True)
@@ -2415,7 +2362,6 @@ class ResourceRevisionLineageDescription:
     next_action: RevisionNextAction | None
     next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     applied_diff_status: str
     applied_diff_note: str | None
     applied_diff: ResourceAppliedRevisionDiffSummary | None
@@ -2486,7 +2432,6 @@ class EntityList:
     has_more: bool
     next_offset: int | None
     suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
-    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -2711,9 +2656,6 @@ class QueryPlanningContext:
     suggested_next_actions: list[SuggestedNextAction]
     safe_inspection_action_indexes: list[int]
     first_safe_inspection_action_index: int | None
-    unattended_recommended_action_indexes: list[int]
-    first_unattended_action_index: int | None
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -2883,8 +2825,7 @@ class DraftQueryPlanHandoffSummary:
     primary_repair_action_index: int | None = None
     primary_repair_action_type: str | None = None
     primary_repair_action_label: str | None = None
-    primary_repair_tool_name: str | None = None
-    primary_repair_mcp_tool_name: str | None = None
+    primary_repair_tool: str | None = None
     primary_repair_required_extra_arguments: list[str] = field(default_factory=list)
 
 
@@ -3053,7 +2994,6 @@ class AnalysisViewDescription:
     source_caveats: list[CaveatDescription]
     row_count_snapshot: int | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3064,7 +3004,6 @@ class AnalysisViewBundleRecord:
     view_count: int
     query_snippet_count: int
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3105,7 +3044,6 @@ class AnalysisPacketRecord:
     pattern: PatternRecord | None
     pattern_iri: str | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3267,7 +3205,6 @@ class ProfileRunDescription:
     unmapped_column_profile_observations: list[ProfileObservationSummary]
     retrieval_note: str
     suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
-    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -3321,7 +3258,6 @@ class ProfileScalarConflictOption:
     duplicate_profile_observation_iris: list[str]
     recommendation_contexts: list[ProfileScalarConflictRecommendationContext]
     suggested_next_action: SuggestedNextAction
-    suggested_next_call: str
 
 
 @dataclass(frozen=True)
@@ -3363,7 +3299,6 @@ class ProfileMetricVocabularyAdvisory:
     recommendation: str
     rationale: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     duplicate_group_key: str = ""
     duplicate_count: int = 1
     duplicate_advisory_indexes: list[int] = field(default_factory=list)
@@ -3394,7 +3329,6 @@ class ProfileTypeFindingAdvisory:
     related_recommendation_indexes: list[int]
     related_recommendation_kinds: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     pending_staged_promotion_iris: list[str] = field(default_factory=list)
     pending_staged_promotion_count: int = 0
     pending_staged_assertion_iris: list[str] = field(default_factory=list)
@@ -3403,86 +3337,6 @@ class ProfileTypeFindingAdvisory:
     duplicate_count: int = 1
     duplicate_advisory_indexes: list[int] = field(default_factory=list)
     duplicate_profile_observation_iris: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class ProfileAdvisoryFollowthroughPlanItem:
-    semantic_move: str
-    review_lane: str
-    route_group_key: str
-    action_count: int
-    tool_names: list[str]
-    action_labels: list[str]
-    suggested_next_calls: list[str]
-    primary_tool_name: str | None
-    primary_action_kind: str | None
-    primary_action_writes_graph: bool
-    primary_next_call: str | None
-    metric_advisory_indexes: list[int]
-    type_advisory_indexes: list[int]
-    duplicate_group_keys: list[str]
-    duplicate_advisory_indexes: list[int]
-    duplicate_profile_observation_iris: list[str]
-    advisory_status_counts: dict[str, int]
-    route_step_keys: list[str]
-    route_anchor_iris: list[str]
-    route_pattern_iris: list[str]
-    source_profile_advisories: list[dict[str, Any]]
-    note: str
-
-
-@dataclass(frozen=True)
-class ProfileActionRouteSummary:
-    action_group: str
-    action_index: int
-    tool_name: str
-    mcp_tool_name: str
-    action_label: str
-    action_kind: str | None
-    writes_graph: bool
-    review_lane: str | None
-    semantic_move: str | None
-    route_group_key: str | None
-    route_step_key: str | None
-    source_kind: str | None
-    advisory_indexes: list[int]
-    recommendation_indexes: list[int]
-    duplicate_group_keys: list[str]
-    route_anchor_iris: list[str]
-    route_pattern_iris: list[str]
-    consumes_binding_keys: list[str]
-    produces_binding_keys: list[str]
-    requires_result_bindings: bool
-    produces_result_bindings: bool
-    unattended_choice_role: str | None
-    unattended_recommended: bool
-    argument_keys: list[str]
-    has_arguments: bool
-    has_call: bool
-
-
-@dataclass(frozen=True)
-class ProfileMixedSupportReviewGroup:
-    group_index: int
-    pattern_iris: list[str]
-    pattern_count: int
-    review_lanes: list[str]
-    semantic_moves: list[str]
-    route_group_keys: list[str]
-    route_step_keys: list[str]
-    route_anchor_iris: list[str]
-    route_pattern_iris: list[str]
-    action_count: int
-    tool_names: list[str]
-    action_labels: list[str]
-    suggested_next_calls: list[str]
-    metric_advisory_indexes: list[int]
-    type_advisory_indexes: list[int]
-    duplicate_group_keys: list[str]
-    duplicate_advisory_indexes: list[int]
-    duplicate_profile_observation_iris: list[str]
-    source_profile_advisories: list[dict[str, Any]]
-    note: str
 
 
 @dataclass(frozen=True)
@@ -3499,7 +3353,6 @@ class ProfileFollowthroughBindingResolution:
     route_group_key: str | None
     action_group: str
     action_index: int
-    action_label: str
     note: str
 
 
@@ -3507,8 +3360,7 @@ class ProfileFollowthroughBindingResolution:
 class ProfileFollowthroughActionResolution:
     action_group: str
     action_index: int
-    action_label: str
-    tool_name: str
+    tool: str
     semantic_move: str | None
     binding_status: str
     applied_binding_keys: list[str]
@@ -3531,7 +3383,6 @@ class ProfileFollowthroughRevisionCheck:
     routing_decision_after: str | None
     next_action_after: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     note: str
 
 
@@ -3551,22 +3402,13 @@ class ProfileFollowthroughPlan:
     resolved_action_count: int
     missing_binding_keys: list[str]
     missing_binding_action_count: int
-    produced_bindings: list[dict[str, Any]]
-    produced_binding_count: int
     revision_checks: list[ProfileFollowthroughRevisionCheck]
     revision_check_count: int
     restage_stale_revisions: bool
     restaged_revision_iris: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
-    suggested_next_call_groups: dict[str, list[str]]
     profile_type_assertion_batch_plan: dict[str, Any]
-    suggested_next_action_summaries: list[ProfileActionRouteSummary]
-    suggested_next_action_group_summaries: dict[
-        str,
-        list[ProfileActionRouteSummary],
-    ]
     review_note: str
 
 
@@ -3596,17 +3438,7 @@ class ProfileMapUpdateDraft:
     representative_type_advisory_indexes: list[int]
     type_advisory_status_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
-    suggested_next_call_groups: dict[str, list[str]]
-    suggested_next_action_summaries: list[ProfileActionRouteSummary]
-    suggested_next_action_group_summaries: dict[
-        str,
-        list[ProfileActionRouteSummary],
-    ]
-    advisory_followthrough_plan: list[ProfileAdvisoryFollowthroughPlanItem]
-    mixed_support_review_groups: list[ProfileMixedSupportReviewGroup]
-    mixed_support_review_group_count: int
     review_note: str
 
 
@@ -3646,17 +3478,14 @@ class ProfileMapUpdateStagingRecord:
     metric_advisory_status_counts: dict[str, int]
     metric_vocabulary_review_required: bool
     metric_advisory_suggested_next_actions: list[SuggestedNextAction]
-    metric_advisory_suggested_next_calls: list[str]
     type_advisories: list[ProfileTypeFindingAdvisory]
     type_advisory_count: int
     type_advisory_status_counts: dict[str, int]
     type_review_required: bool
     type_advisory_suggested_next_actions: list[SuggestedNextAction]
-    type_advisory_suggested_next_calls: list[str]
     revision_iri: str | None
     staged_revision: StagedGraphRevisionRecord | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     review_note: str
 
 
@@ -3723,7 +3552,6 @@ class QueryResultRecord:
     evidence_triples: int
     source_span_triples: int
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3758,7 +3586,6 @@ class QueryEvidenceStorageOverlayDraft:
     review_recommendation: str
     stage_arguments: dict[str, Any]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3781,7 +3608,6 @@ class QueryEvidenceStorageOverlayBlocker:
     mutation_allowed_after: str
     note: str
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3834,7 +3660,6 @@ class ProfileBundleHandoffEntryPoints:
     dataset_describe_available: bool
     profile_run_available: bool
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     handoff_note: str
 
 
@@ -3860,7 +3685,6 @@ class DomainNetworkProfileRecord:
     pattern: PatternRecord | None
     profile_observation_iris: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3973,7 +3797,6 @@ class MapTableBundleRecord:
     columns: list[MapResourceRecord]
     column_iris: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3987,7 +3810,6 @@ class ProfiledParquetTableRecord:
     query_readiness: str
     query_issue_codes: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4012,7 +3834,6 @@ class ProfileToCapsuleManifestRecord:
     query_readiness_counts: dict[str, int]
     query_issue_code_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4110,86 +3931,9 @@ class AssertionPredicateHint:
 
 @dataclass(frozen=True)
 class SuggestedNextAction:
-    action_label: str
-    tool_name: str
-    mcp_tool_name: str
-    arguments: dict[str, Any]
+    tool: str
+    args: dict[str, Any]
     reason: str
-    call: str
-
-
-@dataclass(frozen=True)
-class TemplatedSuggestedNextAction(SuggestedNextAction):
-    required_extra_arguments: list[str]
-    placeholder_fields: list[str]
-    reviewed_value_fields: list[str]
-
-
-@dataclass(frozen=True)
-class EffectAnnotatedSuggestedNextAction(SuggestedNextAction):
-    mutation_scope: str
-    mutates_project_graph: bool
-    writes_history: bool
-    writes_files: bool
-    writes_storage: bool = False
-
-
-@dataclass(frozen=True)
-class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
-    source_profile_advisory: dict[str, Any]
-    review_lane: str | None = None
-    route_group_key: str | None = None
-    route_step_key: str | None = None
-    semantic_move: str | None = None
-    unattended_choice_role: str | None = None
-    unattended_recommended: bool = False
-
-
-@dataclass(frozen=True)
-class ProfileMapUpdateSuggestedNextAction(SuggestedNextAction):
-    source_profile_map_update: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class ProfileScalarConflictSuggestedNextAction(SuggestedNextAction):
-    source_scalar_conflict: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class ProfileEvidenceSuggestedNextAction(SuggestedNextAction):
-    source_profile_evidence: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class QueryEvidenceOverlaySuggestedNextAction(SuggestedNextAction):
-    source_profile_evidence: dict[str, Any]
-    source_query_evidence: dict[str, Any]
-    evidence_storage_route_candidates: list[dict[str, Any]]
-    evidence_storage_route_candidate_count: int
-    evidence_storage_route_candidate_total_count: int
-    evidence_storage_route_candidates_truncated: bool
-    required_extra_arguments: list[str]
-    placeholder_fields: list[str]
-    reviewed_value_fields: list[str]
-    template_note: str
-
-
-@dataclass(frozen=True)
-class QueryPlanSuggestedNextAction(SuggestedNextAction):
-    route_card: dict[str, Any]
-    unattended_recommended: bool = True
-    unattended_caution: str | None = None
-    unattended_review_reason_codes: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
-    source_query_context: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class ProfileMapUpdateRerunSuggestedNextAction(SuggestedNextAction):
-    preconditions: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -4281,7 +4025,6 @@ class AssertionSupportDescription:
     support_scope_note: str
     absence_note: str | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4411,7 +4154,6 @@ class DraftMapAssertionChangeRecord:
     review_recommendation: str | None
     stage_arguments: dict[str, Any]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4503,7 +4245,6 @@ class ContextSlice:
     pattern_contexts: list[PatternDescription] = field(metadata={"doxabase_internal": True})
     warnings: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
     shareability_hints: list[str] = field(default_factory=list)
     shareability_hint_count: int = 0
     returned_shareability_hint_count: int = 0
@@ -4536,7 +4277,6 @@ class SearchScopeHint:
     seed_graphs: list[str]
     suggested_graphs: list[str]
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4553,7 +4293,6 @@ class SearchResults:
     next_offset: int | None
     scope_hint: SearchScopeHint | None = None
     suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
-    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -4579,7 +4318,6 @@ class StagedPatchPayloadSearchMatch:
     parsed_resource_count: int
     parse_error: str | None
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4594,7 +4332,6 @@ class StagedPatchPayloadSearchResults:
     limit: int
     offset: int
     suggested_next_actions: list[SuggestedNextAction]
-    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -4794,9 +4531,6 @@ __all__ = [
     "ProfileScalarConflictGroup",
     "ProfileMetricVocabularyAdvisory",
     "ProfileTypeFindingAdvisory",
-    "ProfileAdvisoryFollowthroughPlanItem",
-    "ProfileActionRouteSummary",
-    "ProfileMixedSupportReviewGroup",
     "ProfileFollowthroughBindingResolution",
     "ProfileFollowthroughActionResolution",
     "ProfileFollowthroughRevisionCheck",
@@ -4833,16 +4567,6 @@ __all__ = [
     "AssertionSupportRouteSummary",
     "AssertionPredicateHint",
     "SuggestedNextAction",
-    "TemplatedSuggestedNextAction",
-    "EffectAnnotatedSuggestedNextAction",
-    "ProfileAdvisorySuggestedNextAction",
-    "ProfileMapUpdateSuggestedNextAction",
-    "ProfileScalarConflictSuggestedNextAction",
-    "ProfileEvidenceSuggestedNextAction",
-    "QueryEvidenceOverlaySuggestedNextAction",
-    "QueryPlanSuggestedNextAction",
-    "ProfileQueryContextSuggestedNextAction",
-    "ProfileMapUpdateRerunSuggestedNextAction",
     "RevisionNextAction",
     "RevisionNextActionQueueItem",
     "AssertionSupportDescription",

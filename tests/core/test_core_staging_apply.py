@@ -46,14 +46,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.triples_to_remove == 0
     assert check.patch_checks[0].current_triple_count == 0
     assert check.patch_checks[0].preview_triple_count == 3
-    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
-    assert check.suggested_next_actions[0].action_label == "Review staged revision"
-    assert check.suggested_next_actions[0].mcp_tool_name == (
+    assert check.suggested_next_actions[0].tool == "doxabase.describe_staged_revision"
+    assert check.suggested_next_actions[0].tool == (
         "doxabase.describe_staged_revision"
     )
-    assert check.suggested_next_actions[0].arguments == {"iri": staged.revision_iri}
-    assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
-    assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
+    assert check.suggested_next_actions[0].args == {"iri": staged.revision_iri}
+    assert check.suggested_next_actions[-1].tool == "doxabase.apply_staged_revision"
     assert check.next_action is not None
     assert check.next_action.action_type == "apply_after_review"
     assert check.next_action.queue == "apply_after_review"
@@ -89,15 +87,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert result.post_apply_recheck_revisions == []
     assert result.post_apply_recheck_revision_iris == []
     assert result.post_apply_recheck_is_partial_queue is True
-    assert [action.tool_name for action in result.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in result.suggested_next_actions] == [
         "plan_staged_revision_recovery"
     ]
-    assert result.suggested_next_actions[0].arguments == {
+    assert result.suggested_next_actions[0].args == {
         "current_staged_work_only": True
     }
-    assert result.suggested_next_calls == [
-        "plan_staged_revision_recovery(current_staged_work_only=True)"
-    ]
     assert result.patches_applied == 1
     assert result.triples_added == 3
     assert result.triples_removed == 0
@@ -131,11 +126,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.graph_snapshots[0].triple_count == 3
     assert applied.graph_snapshots[0].content_digest is not None
     assert applied.graph_snapshots[0].content_digest.startswith("sha256:")
-    assert [action.tool_name for action in applied.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in applied.suggested_next_actions] == [
         "describe_graph_revision",
         "describe_applied_revision_diff",
     ]
-    assert applied.suggested_next_actions[1].arguments == {
+    assert applied.suggested_next_actions[1].args == {
         "iri": result.applied_revision_iri
     }
     diff = db.describe_applied_revision_diff(result.applied_revision_iri)
@@ -294,7 +289,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert imported_lineage_before_snapshots.suggested_next_actions[
         0
-    ].tool_name == "import_revision_snapshots"
+    ].tool == "doxabase.import_revision_snapshots"
     assert imported_lineage_before_snapshots.paired_revision is not None
     assert (
         imported_lineage_before_snapshots.paired_revision.revision.iri
@@ -316,11 +311,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert imported_status_before_snapshots.rdf_snapshot_graph_roles == ["map"]
     assert imported_status_before_snapshots.stored_snapshot_graph_roles == []
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in imported_status_before_snapshots.suggested_next_actions
     ] == ["import_revision_snapshots"]
     snapshot_action = imported_status_before_snapshots.suggested_next_actions[0]
-    assert snapshot_action.arguments == {
+    assert snapshot_action.args == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
@@ -329,7 +324,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         result.applied_revision_iri
     )
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in imported_graph_detail_before_snapshots.suggested_next_actions[
             :2
         ]
@@ -354,7 +349,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert imported_graph_lineage_before_snapshots.suggested_next_actions[
         0
-    ].tool_name == "import_revision_snapshots"
+    ].tool == "doxabase.import_revision_snapshots"
     assert [
         item.snapshot_evidence.status
         for item in [
@@ -381,13 +376,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         == "history_only_count_digest"
     )
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in (
             imported_diff_before_snapshots.snapshot_evidence.suggested_next_actions
         )
     ] == ["import_revision_snapshots"]
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in imported_diff_before_snapshots.suggested_next_actions
     ] == ["import_revision_snapshots"]
     assert (
@@ -410,7 +405,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert rdf_only_snapshot.triples_included is False
     assert rdf_only_snapshot.triples == []
     assert [
-        action.tool_name for action in rdf_only_snapshot.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in rdf_only_snapshot.suggested_next_actions
     ] == ["import_revision_snapshots"]
     assert "Import a companion revision snapshot JSON bundle" in (
         rdf_only_snapshot.note
@@ -422,7 +417,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert rdf_only_version_diff.exact_changed_triples_available is False
     assert [
-        action.tool_name for action in rdf_only_version_diff.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in rdf_only_version_diff.suggested_next_actions
     ][:1] == ["import_revision_snapshots"]
 
     snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
@@ -541,7 +536,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         staged.revision_iri: "snapshot_rows_without_history",
     }
     assert [
-        action.tool_name
+        action.tool.removeprefix("doxabase.")
         for action in orphan_import.post_import_snapshot_evidence[
             0
         ].suggested_next_actions
@@ -551,10 +546,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert orphan_status.status == "snapshot_rows_without_history"
     assert orphan_status.orphan_snapshot_row_graph_roles == ["map"]
-    assert [action.tool_name for action in orphan_status.suggested_next_actions] == [
+    assert [action.tool.removeprefix("doxabase.") for action in orphan_status.suggested_next_actions] == [
         "import_trig"
     ]
-    assert orphan_status.suggested_next_actions[0].arguments == {
+    assert orphan_status.suggested_next_actions[0].args == {
         "path": "/tmp/project.trig",
         "path_is_placeholder": True,
     }
@@ -595,13 +590,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         f"Already applied by {result.applied_revision_iri}."
     )
     assert applied_check.already_applied_by == result.applied_revision_iri
-    assert applied_check.suggested_next_actions[0].tool_name == (
-        "describe_graph_revision"
+    assert applied_check.suggested_next_actions[0].tool == (
+        "doxabase.describe_graph_revision"
     )
-    assert applied_check.suggested_next_actions[1].tool_name == (
-        "describe_applied_revision_diff"
+    assert applied_check.suggested_next_actions[1].tool == (
+        "doxabase.describe_applied_revision_diff"
     )
-    assert applied_check.suggested_next_actions[1].arguments == {
+    assert applied_check.suggested_next_actions[1].args == {
         "iri": result.applied_revision_iri
     }
     applied_description = db.describe_staged_revision(staged.revision_iri)
@@ -636,8 +631,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     applied_export_path = tmp_path / "applied-single-review.md"
     db.export_staged_revision(staged.revision_iri, applied_export_path)
     applied_export_text = applied_export_path.read_text(encoding="utf-8")
-    assert "**Inspect applied diff:**" in applied_export_text
-    assert "describe_applied_revision_diff" in applied_export_text
+    assert "**doxabase.describe_applied_revision_diff**" in applied_export_text
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
@@ -689,11 +683,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         result.applied_revision_iri
     )
     assert [
-        action.tool_name for action in applied_event_lane.suggested_next_actions
+        action.tool.removeprefix("doxabase.") for action in applied_event_lane.suggested_next_actions
     ] == ["describe_graph_revision", "describe_applied_revision_diff"]
     assert any(
-        action.tool_name == "describe_applied_revision_diff"
-        and action.arguments == {"iri": result.applied_revision_iri}
+        action.tool == "doxabase.describe_applied_revision_diff"
+        and action.args == {"iri": result.applied_revision_iri}
         for action in recovery_event_plan.suggested_next_actions
     )
 
@@ -903,21 +897,17 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "| map | 0 |" in export_text
     assert f"| 0 | {db.triple_count('map')} |" in export_text
     assert "all_patch_triples_absent" in export_text
-    assert "### Suggested Next Calls" in export_text
-    assert "**Restage stale source:**" in export_text
+    assert "### Suggested Next Actions" in export_text
+    assert "**doxabase.restage_staged_revision**" in export_text
     assert "Create a refreshed staged revision" in export_text
-    assert "restage_staged_revision" in export_text
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
-    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
-    assert check.suggested_next_actions[0].action_label == "Review stale source"
-    assert check.suggested_next_actions[0].arguments == {
+    assert check.suggested_next_actions[0].tool == "doxabase.describe_staged_revision"
+    assert check.suggested_next_actions[0].args == {
         "iri": staged.revision_iri,
         "include_current_apply_check": True,
     }
-    assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
-    assert check.suggested_next_actions[-1].tool_name == "restage_staged_revision"
-    assert check.suggested_next_actions[-1].action_label == "Restage stale source"
+    assert check.suggested_next_actions[-1].tool == "doxabase.restage_staged_revision"
     assert check.next_action is not None
     assert check.next_action.action_type == "restage_after_review"
     assert check.next_action.queue == "restage_after_review"
@@ -1338,8 +1328,8 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.items[1].next_action_queue_item_after.resolved_target_iri == (
         restaged_second
     )
-    assert batch.items[1].suggested_next_actions_after[-1].tool_name == (
-        "apply_staged_revision"
+    assert batch.items[1].suggested_next_actions_after[-1].tool == (
+        "doxabase.apply_staged_revision"
     )
     assert batch.items[2].not_restageable_reason == "ready"
     assert batch.items[2].next_action_after is not None
@@ -1490,18 +1480,18 @@ def test_post_apply_recheck_subset_does_not_replace_current_work_plan(
         applied.post_apply_recheck_revision_iris
     )
     assert applied.post_apply_recheck_is_partial_queue is True
-    assert applied.suggested_next_actions[0].tool_name == (
-        "plan_staged_revision_recovery"
+    assert applied.suggested_next_actions[0].tool == (
+        "doxabase.plan_staged_revision_recovery"
     )
-    assert applied.suggested_next_actions[0].arguments == {
+    assert applied.suggested_next_actions[0].args == {
         "current_staged_work_only": True
     }
     assert applied.suggested_next_actions[0].reason.startswith(
         "Post-apply recheck rows are only the affected sibling subset."
     )
     assert any(
-        action.tool_name == "restage_staged_revision"
-        and action.arguments == {"iri": second_map.revision_iri}
+        action.tool == "doxabase.restage_staged_revision"
+        and action.args == {"iri": second_map.revision_iri}
         for action in applied.suggested_next_actions
     )
 
@@ -1603,13 +1593,16 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     query_context_action = draft.suggested_next_action_groups[
         "query_context_review"
     ][0]
-    query_route_key = query_context_action.source_query_context["route_group_key"]
-    assert query_context_action.source_query_context["route_anchor_iris"] == [
-        dataset
-    ]
-    profile_map_route_key = draft.suggested_next_action_groups[
-        "profile_map_updates"
-    ][0].source_profile_map_update["route_group_key"]
+    query_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(draft)
+        if source["review_lane"] == "query_context_review"
+    )
+    profile_map_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(draft)
+        if source["review_lane"] == "profile_map_updates"
+    )
     staged_map = db.stage_profile_map_updates(
         dataset,
         evidence,
@@ -1619,13 +1612,12 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     promotion_action = next(
         action
         for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
-        if action.tool_name == "stage_pattern_promotion"
+        if action.tool == "doxabase.stage_pattern_promotion"
     )
-    metric_route_key = promotion_action.source_profile_advisory["route_group_key"]
-    assert promotion_action.arguments["profile_route_sources"] == [
-        promotion_action.source_profile_advisory
+    metric_route_key = promotion_action.args["profile_route_sources"][0][
+        "route_group_key"
     ]
-    metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
+    metric_promotion = db.stage_pattern_promotion(**promotion_action.args)
     assert metric_promotion.profile_route_source_count == 1
     storage_access = "https://example.test/profile-review#SupportEventsStorage"
     query_repair_draft = db.stage_systematisation(
@@ -1636,7 +1628,13 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
             "using profile-derived map updates as query-planning context."
         ),
         anchors=[dataset, storage_access],
-        profile_route_sources=[query_context_action.source_query_context],
+        profile_route_sources=[
+            next(
+                source
+                for source in db._profile_insight_route_sources(draft)
+                if source["review_lane"] == "query_context_review"
+            )
+        ],
         framings=[
             {
                 "label": "Map storage access",
@@ -1999,9 +1997,11 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
         update_map_snapshot=False,
     )
     draft = db.draft_profile_map_updates(dataset, evidence)
-    profile_map_route_key = draft.suggested_next_action_groups[
-        "profile_map_updates"
-    ][0].source_profile_map_update["route_group_key"]
+    profile_map_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(draft)
+        if source["review_lane"] == "profile_map_updates"
+    )
     staged_map = db.stage_profile_map_updates(
         dataset,
         evidence,
@@ -2135,9 +2135,11 @@ def test_profile_review_bundle_keeps_live_followup_routes_supportive(
         ],
     )
     initial_draft = db.draft_profile_map_updates(dataset, evidence)
-    initial_route_key = initial_draft.suggested_next_action_groups[
-        "profile_map_updates"
-    ][0].source_profile_map_update["route_group_key"]
+    initial_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(initial_draft)
+        if source["review_lane"] == "profile_map_updates"
+    )
     staged = db.stage_profile_map_updates(
         dataset,
         evidence,
@@ -2148,9 +2150,11 @@ def test_profile_review_bundle_keeps_live_followup_routes_supportive(
     db.apply_staged_revision(applied_source_iri)
 
     followup_draft = db.draft_profile_map_updates(dataset, evidence)
-    followup_route_key = followup_draft.suggested_next_action_groups[
-        "profile_map_updates"
-    ][0].source_profile_map_update["route_group_key"]
+    followup_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(followup_draft)
+        if source["review_lane"] == "profile_map_updates"
+    )
     assert followup_route_key != initial_route_key
     assert followup_draft.recommendations[0].kind == "column_nullable"
 
@@ -2222,9 +2226,11 @@ def test_export_profile_insight_review_bundle_recovers_applied_query_repair_rout
     )
 
     draft = db.draft_profile_map_updates(dataset, evidence)
-    query_route_key = draft.suggested_next_action_groups["query_context_review"][
-        0
-    ].source_query_context["route_group_key"]
+    query_route_key = next(
+        source["route_group_key"]
+        for source in db._profile_insight_route_sources(draft)
+        if source["review_lane"] == "query_context_review"
+    )
     assert query_route_key.startswith("query_context_review:")
     context = db.describe_query_context(dataset)
     missing_storage = next(

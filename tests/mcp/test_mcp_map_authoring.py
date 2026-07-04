@@ -36,13 +36,13 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
         for impact in result["impacts"]
     )
     assert [
-        action["tool_name"] for action in result["suggested_next_actions"]
+        action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
     ] == ["describe_assertion_support", "stage_map_assertion_change"]
-    assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+    assert result["suggested_next_actions"][0]["tool"] == (
         "doxabase.describe_assertion_support"
     )
     assert "high-risk" in result["suggested_next_actions"][0]["reason"]
-    assert result["suggested_next_actions"][1]["mcp_tool_name"] == (
+    assert result["suggested_next_actions"][1]["tool"] == (
         "doxabase.stage_map_assertion_change"
     )
     assert result["stage_arguments"]["summary"] == (
@@ -152,11 +152,8 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert check["status"] == "ready"
     assert check["semantic_risk_level"] == "high"
     assert check["semantic_risk_reasons"]
-    assert check["suggested_next_actions"][-1]["tool_name"] == (
-        "apply_staged_revision"
-    )
-    assert check["suggested_next_actions"][-1]["action_label"] == (
-        "Apply only after semantic review"
+    assert check["suggested_next_actions"][-1]["tool"] == (
+        "doxabase.apply_staged_revision"
     )
 
     ais_result = stage_map_assertion_change_tool(
@@ -276,8 +273,8 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert description["query_snippets"][0]["query_language"] == "DuckDB SQL"
     assert description["query_snippets"][0]["query_engine"] == "duckdb"
     assert description["caveats"][0]["iri"] == caveat
-    assert description["suggested_next_actions"][0]["tool_name"] == (
-        "describe_query_context"
+    assert description["suggested_next_actions"][0]["tool"] == (
+        "doxabase.describe_query_context"
     )
 
     context = describe_query_context_tool(db, iri=view)
@@ -286,7 +283,7 @@ def test_analysis_view_tools_return_logical_context(tmp_path: Path) -> None:
     assert context["suggested_repair_action_group_count"] == 0
     assert context.get("query_target_candidates", []) == []
     assert context["query_target_decision"]["status"] == "logical_analysis_view"
-    assert context["suggested_next_actions"][0]["tool_name"] == "describe_analysis_view"
+    assert context["suggested_next_actions"][0]["tool"] == "doxabase.describe_analysis_view"
 
 
 def test_analysis_view_tool_accepts_multiple_query_snippets(tmp_path: Path) -> None:
@@ -386,7 +383,7 @@ def test_analysis_view_bundle_tool_returns_json_like_payload(tmp_path: Path) -> 
     assert result["view_iris"] == [plausible_view, message_like_view]
     assert result["query_snippet_count"] == 2
     assert result["analysis_views"][0]["query_snippets"][0]["query_engine"] == "duckdb"
-    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+    assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "describe_query_context",
         "describe_query_context",
     ]
@@ -462,8 +459,8 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     assert result["query_recipe_records"][0]["iri"] == recipe
     assert len(result["followup_task_iris"]) == 1
     assert result["analysis_view_bundle"]["view_count"] == 1
-    assert result["suggested_next_actions"][0]["tool_name"] == (
-        "get_context_graph"
+    assert result["suggested_next_actions"][0]["tool"] == (
+        "doxabase.get_context_graph"
     )
     assert (
         describe_query_context_tool(db, iri=view)["readiness"]
@@ -478,9 +475,9 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     analysis_view_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool_name"] == "describe_analysis_view"
+        if action["tool"] == "doxabase.describe_analysis_view"
     ]
-    assert [action["arguments"]["iri"] for action in analysis_view_actions] == [
+    assert [action["args"]["iri"] for action in analysis_view_actions] == [
         view
     ]
     assert "parent_doc_id" in json.dumps(context)
@@ -544,7 +541,7 @@ def test_record_map_table_bundle_tool_returns_json_like_records(
         RC + "Column",
         RC + "Column",
     ]
-    assert result["suggested_next_actions"][0]["tool_name"] == "describe_dataset"
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.describe_dataset"
 
     description = describe_dataset_tool(db, iri=table)
     assert description["row_count_snapshot"] == 12
