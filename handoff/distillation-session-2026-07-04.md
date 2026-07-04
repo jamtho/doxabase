@@ -8,6 +8,16 @@ re-deriving them. James wants fairly regular pushes to
 `origin/codex/distillation-program` so he can follow, and welcomes longer
 commit-message bodies.
 
+## PROGRAM COMPLETE (2026-07-05)
+
+All seven phases executed; `v0.2.0` tagged. Read
+`doxabase_design_docs/09-distillation-retrospective.md` — it contains the
+before/after scoreboard, the LATITUDE register, the honest worse-list, and
+**six open items awaiting James's decisions**. Per doc 07 §7.4, feature
+development resumes only after James reviews it. The Permanent Loop Rules
+in AGENTS.md remain in force permanently. The step-by-step sections below
+are historical record of how the program was executed.
+
 ## What this session is
 
 James adopted the fresh-eyes review (`doxabase_design_docs/06-...md`) and the
