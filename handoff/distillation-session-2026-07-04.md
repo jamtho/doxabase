@@ -1,8 +1,12 @@
 # Distillation Session Handoff — 2026-07-04
 
 **Author**: Claude (Fable), executing the Distillation Program at James's
-request. **Audience**: whichever agent continues this work (assume a smaller
-model: this document tries to leave no judgement calls unstated).
+request. **Audience**: whichever agent continues this work. James plans
+Opus-4.8-max / GPT-5.5-xhigh-class implementers, so assume capability —
+but the judgement calls are still written out so nothing rests on
+re-deriving them. James wants fairly regular pushes to
+`origin/codex/distillation-program` so he can follow, and welcomes longer
+commit-message bodies.
 
 ## What this session is
 
@@ -152,7 +156,11 @@ Permanent Loop Rules are in `AGENTS.md`; progress log is
   payloads), log char counts per call, charge the tool-registry JSON as a
   constant. Sonnet sub-agents, one per task, forbidden to read the repo.
 - **Enron external material** (for Phase 7): `/tmp/enron-doxabase-handoff`
-  (durable copy `/home/codex/enron-doxabase-handoff`).
+  (durable copy `/home/codex/enron-doxabase-handoff`). James's read on the
+  original Enron session: the *client agent's* quality contributed as much
+  as DoxaBase did — so run the Phase 7 case study with a strong client
+  agent, and treat "how much does agent quality mask product friction?" as
+  a question the study should answer, not noise.
 - **Commits**: authored as James, rationale-focused subject+body, no AI
   attribution, on `codex/distillation-program`. Do not push without James.
 - **The original core.py** (pre-split) is recoverable from git history at
