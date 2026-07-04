@@ -1,0 +1,164 @@
+@prefix ais:     <https://richcanopy.org/example/manifest/ais#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rc:      <https://richcanopy.org/ns/rc#> .
+@prefix rcg:     <https://richcanopy.org/graph/> .
+@prefix session: <https://richcanopy.org/example/session/2026-05-31#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+rcg:observations {
+    ais:obs_minio_index_coverage_20260531 a rc:ProfileObservation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:rowCount 14638201 ;
+        rc:summary "The local MinIO AIS daily index covers 14,638,201 MMSI/day rows from 2024-01-01 through 2025-12-31 at s3://ais-noaa/index/*/*.parquet." ;
+        rc:evidence ais:evidence_minio_index_duckdb_introspection_20260531 .
+
+    ais:obs_minio_index_schema_verified_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "DuckDB DESCRIBE verified that the AIS daily index includes list-valued identity columns such as vessel_names, imos, call_signs, vessel_types, cargos, dimensions, transceiver_classes, and status_codes, plus movement and coverage statistics." ;
+        rc:evidence ais:evidence_minio_index_duckdb_introspection_20260531 .
+
+    ais:obs_broadcast_schema_contains_vessel_name_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyBroadcasts ;
+        rc:summary "The real AIS broadcast Parquet schema includes vessel_name, imo, call_sign, vessel_type, status, vessel dimensions, cargo, transceiver, course, and heading columns in addition to the reduced DoxyBase fixture columns." ;
+        rc:evidence ais:evidence_real_ais_docs_schema_20260531 .
+
+    ais:obs_mmsi_with_any_name_count_20260531 a rc:ProfileObservation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:distinctCount 99106 ;
+        rc:summary "Across the 2024-2025 AIS daily index scan, 99,106 MMSIs had at least one non-empty vessel name." ;
+        rc:evidence ais:evidence_duckdb_name_distribution_20260531 .
+
+    ais:obs_mmsi_name_distribution_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "Name variation distribution: 96,364 MMSIs had one normalized name, 2,742 had two normalized names, 2,700 had two punctuation-insensitive canonical names, and 42 were formatting-only multi-name cases." ;
+        rc:evidence ais:evidence_duckdb_name_distribution_20260531 .
+
+    ais:obs_mmsi_name_maximum_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "No MMSI in the scanned 2024-2025 AIS daily index had more than two punctuation-insensitive canonical vessel names." ;
+        rc:evidence ais:evidence_duckdb_name_distribution_20260531 .
+
+    ais:obs_mmsi_name_formatting_noise_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "A small set of MMSIs had multiple exact or whitespace-normalized names that collapse to one punctuation-insensitive canonical name; examples include quote escaping, punctuation spacing, and spelling variants such as MR.GOLDIE versus MR. GOLDIE." ;
+        rc:evidence ais:evidence_duckdb_name_distribution_20260531 .
+
+    ais:obs_top_name_variation_examples_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "High-message MMSIs with two canonical names often have clean year-bound splits, e.g. 360000000 changed from INGRAM DUPO to SOMMELIER, 367615990 from JACOB BRENT to PERCIVAL, and 367705210 from MS ALLIE to EVERLEY JAYNE." ;
+        rc:evidence ais:evidence_duckdb_top_name_examples_20260531 .
+
+    ais:obs_name_variation_is_not_rename_proof_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "The vessel-name variation query should be interpreted as names broadcast under an MMSI, not as confirmed vessel rename histories, because MMSI can be reused, shared, malformed, or spoofed." ;
+        rc:evidence ais:evidence_real_ais_docs_schema_20260531 .
+
+    ais:obs_daily_index_right_surface_for_name_query_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "The AIS daily index is the preferred query surface for MMSI-to-name variation because vessel_names is already a daily distinct list, avoiding a full scan of raw broadcast events for this class of question." ;
+        rc:evidence ais:evidence_real_ais_docs_schema_20260531 .
+
+    ais:obs_duckdb_minio_access_pattern_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "DuckDB successfully queried the local MinIO bucket through httpfs using path-style S3 access, s3_use_ssl=false, endpoint localhost:9000, and the ais-noaa bucket." ;
+        rc:evidence ais:evidence_minio_index_duckdb_introspection_20260531 .
+
+    ais:obs_generated_manifest_index_path_mismatch_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "The generated AIS Manifest description lists the DailyIndex path template as broadcasts/{year}/ais-{date}.parquet, but the actual ais-noaa-fetch README and MinIO layout use index/{year}/ais-YYYY-MM-DD.parquet." ;
+        rc:evidence ais:evidence_real_ais_docs_schema_20260531 .
+
+    ais:obs_doxybase_fixture_state_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "After loading both example fixtures, the DoxyBase capsule held 542 map triples, 177 ontology triples, 30 observation triples, 17 evidence triples, 7 datasets/tables, and 42 columns; SHACL validation conformed." ;
+        rc:evidence ais:evidence_doxybase_mcp_session_state_20260531 .
+
+    ais:obs_fixture_replace_import_footgun_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "Calling load_example_fixtures with replace=true imports AIS and then Polymarket with replacement enabled for each fixture, so shared mutable graph roles can end up containing only the later fixture unless the earlier fixture is re-imported without replacement." ;
+        rc:evidence ais:evidence_doxybase_mcp_session_state_20260531 .
+
+    ais:obs_mcp_describe_dataset_gap_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "The current MCP surface lacks a describe_dataset or bounded context tool that returns a table's columns, physical types, value types, path templates, derivations, caveats, provenance, and related aggregate datasets in one structured response." ;
+        rc:evidence ais:evidence_doxybase_handoff_note_20260531 .
+
+    ais:obs_observation_write_tool_gap_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "DoxyBase has no first-class MCP observation-writing tool yet; observations were recorded by manually authoring TriG files and importing them with doxybase.import_trig." ;
+        rc:evidence ais:evidence_session_observation_imports_20260531 .
+
+    ais:obs_executable_catalog_gap_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "DoxyBase is currently useful as semantic memory, but not yet sufficient as an executable data catalog because storage endpoint, bucket, key prefix, path-style S3 setting, and credential-reference facts are absent from the graph." ;
+        rc:evidence ais:evidence_doxybase_handoff_note_20260531 .
+
+    ais:obs_duckdb_as_execution_backend_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:summary "DuckDB is a strong execution backend candidate for DoxyBase-described datasets: DoxyBase can supply semantic context and caveats, while DuckDB can execute direct Parquet/S3 analytical queries." ;
+        rc:evidence ais:evidence_doxybase_handoff_note_20260531 .
+}
+
+rcg:evidence {
+    ais:evidence_minio_index_duckdb_introspection_20260531 a rc:Evidence ;
+        rc:summary "DuckDB httpfs introspection over s3://ais-noaa/index/*/*.parquet reported the daily index schema and coverage. The scan returned 14,638,201 rows with date range 2024-01-01 to 2025-12-31." ;
+        dcterms:source "s3://ais-noaa/index/*/*.parquet" ;
+        dcterms:source "/home/james/github.com/jamtho/ais-noaa-fetch/README.md" .
+
+    ais:evidence_real_ais_docs_schema_20260531 a rc:Evidence ;
+        rc:summary "Local AIS project documentation describes the full broadcast and index schemas, including vessel_name in broadcast files and vessel_names in daily index files." ;
+        dcterms:source "/home/james/github.com/jamtho/ais-noaa-fetch/README.md" ;
+        dcterms:source "/home/james/github.com/jamtho/manifest-prototype/descriptions/generated/ais_description.md" ;
+        dcterms:source "examples/manifest-prototype-rc/ais.trig" .
+
+    ais:evidence_duckdb_name_distribution_20260531 a rc:Evidence ;
+        rc:summary "DuckDB query unnested daily index vessel_names, trimmed names, normalized whitespace and case, canonicalized names by removing non-alphanumeric characters, and counted distinct names per MMSI." ;
+        dcterms:source "s3://ais-noaa/index/*/*.parquet" .
+
+    ais:evidence_duckdb_top_name_examples_20260531 a rc:Evidence ;
+        rc:summary "Top-name examples came from the same DuckDB aggregation ordered by canonical name count, exact name count, and total message count." ;
+        dcterms:source "s3://ais-noaa/index/*/*.parquet" .
+
+    ais:evidence_doxybase_mcp_session_state_20260531 a rc:Evidence ;
+        rc:summary "MCP graph_overview and validate_graph outputs from the session recorded graph counts, key counts, and conforming SHACL validation after fixture and observation imports." ;
+        dcterms:source ".doxybase.sqlite" .
+
+    ais:evidence_doxybase_handoff_note_20260531 a rc:Evidence ;
+        rc:summary "Handoff note records problems, deficiencies, and useful observations from the AIS DuckDB and DoxyBase workflow session." ;
+        dcterms:source "docs/agent/ais-duckdb-doxybase-observations.md" .
+
+    ais:evidence_session_observation_imports_20260531 a rc:Evidence ;
+        rc:summary "Session observations were stored as TriG bundles under examples/session-observations and imported with doxybase.import_trig." ;
+        dcterms:source "examples/session-observations/ais-duckdb-2026-05-31.trig" ;
+        dcterms:source "examples/session-observations/ais-duckdb-2026-05-31-additional.trig" .
+}

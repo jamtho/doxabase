@@ -1,0 +1,47 @@
+@prefix ais:     <https://richcanopy.org/example/manifest/ais#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rc:      <https://richcanopy.org/ns/rc#> .
+@prefix rcg:     <https://richcanopy.org/graph/> .
+@prefix session: <https://richcanopy.org/example/session/2026-05-31#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+rcg:observations {
+    ais:obs_duckdb_mmsi_vessel_name_variation_20260531 a rc:ProfileObservation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:rowCount 14638201 ;
+        rc:distinctCount 99106 ;
+        rc:summary "DuckDB scan of the AIS daily index found 99,106 MMSIs with at least one vessel name across 14,638,201 MMSI/day summaries from 2024-01-01 through 2025-12-31. No MMSI had more than two punctuation-insensitive canonical vessel names; 2,700 MMSIs had two." ;
+        rc:evidence ais:evidence_duckdb_mmsi_vessel_name_variation_20260531 .
+
+    ais:obs_doxybase_ais_schema_gap_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "The current DoxyBase AIS fixture is too reduced to directly support the vessel-name variation query. The real AIS index has a vessel_names list column and the real broadcast data has vessel_name, but those columns are absent from the DoxyBase fixture." ;
+        rc:evidence ais:evidence_doxybase_ais_schema_gap_20260531 .
+
+    ais:obs_duckdb_query_not_doxybase_driven_20260531 a rc:Observation ;
+        rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+        rc:observedBy session:codex_agent ;
+        rc:observedAsset ais:DailyIndex ;
+        rc:summary "The vessel-name variation result was computed with DuckDB using local MinIO and AIS project documentation, not generated from DoxyBase graph facts. DoxyBase supplied high-level AIS semantics and caveats, but not executable storage metadata or the full physical schema." ;
+        rc:evidence ais:evidence_duckdb_query_not_doxybase_driven_20260531 .
+}
+
+rcg:evidence {
+    ais:evidence_duckdb_mmsi_vessel_name_variation_20260531 a rc:Evidence ;
+        rc:summary "DuckDB query over s3://ais-noaa/index/*/*.parquet using local MinIO. The query unnested vessel_names, normalized whitespace and case, canonicalized names by removing non-alphanumeric characters, then counted distinct canonical names per MMSI." ;
+        dcterms:source "s3://ais-noaa/index/*/*.parquet" .
+
+    ais:evidence_doxybase_ais_schema_gap_20260531 a rc:Evidence ;
+        rc:summary "Comparison of the reduced DoxyBase AIS fixture with the richer local AIS documentation showed missing vessel-name and daily-index list columns." ;
+        dcterms:source "examples/manifest-prototype-rc/ais.trig" ;
+        dcterms:source "/home/james/github.com/jamtho/ais-noaa-fetch/README.md" ;
+        dcterms:source "/home/james/github.com/jamtho/manifest-prototype/descriptions/generated/ais_description.md" .
+
+    ais:evidence_duckdb_query_not_doxybase_driven_20260531 a rc:Evidence ;
+        rc:summary "Session handoff note documents the DoxyBase workflow gap and the manual external-docs route used for the DuckDB query." ;
+        dcterms:source "docs/agent/ais-duckdb-doxybase-observations.md" .
+}
