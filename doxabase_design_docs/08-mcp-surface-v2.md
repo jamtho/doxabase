@@ -127,8 +127,20 @@ gate green each wave:
    (`doxabase.import_bundle(kind="trig")` …) and handoff-manifest
    `recommended_import_sequence` steps carry a `kind` field so the
    which-kind information the old tool names carried survives.
-6. Sweep (27 → 25 with rows 4/5): row 8 fold, removals, docstring budget pass, schema-char budget
-   pass, scoreboard ceilings to ≤ 25 tools / ≤ 25,000 chars; battery rerun.
+6. **DONE (2026-07-05)** Sweep (27 → 25): `draft_query_plan` folded into
+   `describe_query_context(plan_candidate=...)` ("auto" | selector | index;
+   planning params valid only alongside it — plan suggestions are
+   recognizable by `plan_candidate` in args); `replace_graph_triples` left
+   the MCP surface (Python method survives). Tool-count ceiling ratcheted
+   to 25. **Open item — schema chars**: 35,136 vs the 25,000 end-state.
+   Tool descriptions are lean and load-bearing (7.1k total); the remainder
+   is anyOf inflation from flat optional params, chiefly on
+   `record_observation` / `record_pattern` / `record_graph_revision` /
+   `record_claim_reconsideration`. Closing the last ~10k requires a
+   structural decision — migrate those tools' long-tail optional params
+   into spec objects while keeping the common flat core — escalated to
+   James rather than decided unilaterally. Battery rerun follows the
+   Phase 3.6 response diets.
 
 Each wave updates: `mcp_tools.py`, `mcp_server.py`, `tests/mcp/`, examples,
 and every doc reference to a renamed tool.
