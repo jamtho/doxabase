@@ -2841,7 +2841,7 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
     }
 
     with pytest.raises(DoxaBaseError) as exc_info:
-        db.describe_context_slice(term, profile="resource_brief")
+        db.get_context_graph(term, profile="resource_brief")
     missing_seed_message = str(exc_info.value)
     assert "staged patch payloads" in missing_seed_message
     assert "list_resource_revisions" in missing_seed_message

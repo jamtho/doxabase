@@ -109,7 +109,7 @@ When arriving cold, use this route before reading every reference doc.
    database-backed storage, prefer candidate or draft-plan
    `relation_identifier` plus `connection_reference` over treating
    `candidate_path` as a file URI.
-11. Call `doxabase.describe_context_slice` when you need a route-explained slice
+11. Call `doxabase.get_context_graph` when you need a route-explained slice
    around a dataset, pattern, or lore thread. Use `profile="dataset_brief"` for
    dataset/table/profile/metric handoffs, `profile="pattern_brief"` for pattern
    handoffs, and `profile="deep_lore"` when revision/history links or broader
@@ -127,7 +127,7 @@ In lazy or deferred tool environments, a documented MCP tool may be available
 only after exact discovery; search for the exact name such as
 `doxabase.project_brief`, `doxabase.export_preflight`, `doxabase.get_doc`,
 `doxabase.describe_dataset`, `doxabase.list_entities`,
-`doxabase.describe_context_slice`, or `doxabase.graph_overview` before assuming
+`doxabase.get_context_graph`, or `doxabase.graph_overview` before assuming
 it is missing. Bare underscore searches such as `export_preflight` may miss a
 tool that exact dotted-name discovery can find. `doxabase.search` searches RDF
 literals in the capsule, not these agent docs; use `list_docs`/`get_doc` or
@@ -161,7 +161,7 @@ Recover the thread of work before making new graph changes.
 1. Re-read the user's latest request and `AGENTS.md`.
 2. Check `git status` so you know what is already changed locally.
 3. Read this doc, then use `project_brief`, `graph_overview`, `search`,
-   `describe_dataset`, `describe_query_context`, and `describe_context_slice`
+   `describe_dataset`, `describe_query_context`, and `get_context_graph`
    to reload only the relevant graph context.
 4. If a previous agent or sub-agent left a report under `/tmp`, read that report
    before rerunning the same trial.

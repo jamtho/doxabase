@@ -1154,7 +1154,7 @@ class ProfileRecordsMixin:
             )
         if dataset_describe_available:
             add_action(
-                "describe_context_slice",
+                "get_context_graph",
                 {"seed_iris": [dataset_iri], "profile": "dataset_brief"},
                 (
                     "Load route-explained dataset context before deciding "
@@ -1162,13 +1162,13 @@ class ProfileRecordsMixin:
                 ),
                 action_label="Load dataset context slice",
                 call=(
-                    "describe_context_slice("
+                    "get_context_graph("
                     f"[{dataset_iri!r}], profile='dataset_brief'"
                     ")"
                 ),
             )
         add_action(
-            "describe_context_slice",
+            "get_context_graph",
             {"seed_iris": profile_observation_iris, "profile": "dataset_brief"},
             (
                 "Load profile-observation-seeded context when map dataset "
@@ -1176,7 +1176,7 @@ class ProfileRecordsMixin:
             ),
             action_label="Load profile context slice",
             call=(
-                "describe_context_slice("
+                "get_context_graph("
                 f"{profile_observation_iris!r}, profile='dataset_brief'"
                 ")"
             ),
@@ -1213,7 +1213,7 @@ class ProfileRecordsMixin:
         elif profile_run_available:
             handoff_note = (
                 "No map dataset subject is currently available; use "
-                "describe_profile_run or seed describe_context_slice from the "
+                "describe_profile_run or seed get_context_graph from the "
                 "profile observation IRIs."
             )
         else:

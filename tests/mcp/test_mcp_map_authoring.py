@@ -463,13 +463,13 @@ def test_record_analysis_packet_tool_returns_json_like_payload(
     assert len(result["followup_task_iris"]) == 1
     assert result["analysis_view_bundle"]["view_count"] == 1
     assert result["suggested_next_actions"][0]["tool_name"] == (
-        "describe_context_slice"
+        "get_context_graph"
     )
     assert (
         describe_query_context_tool(db, iri=view)["readiness"]
         == "logical_analysis_view"
     )
-    context = describe_context_slice_tool(
+    context = get_context_graph_tool(
         db,
         seed_iris=[packet],
         profile="resource_brief",

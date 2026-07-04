@@ -497,7 +497,7 @@ def test_project_brief_packet_review_participates_in_frontier_expansion(
     assert packet_task.resource is not None
     assert packet_task.resource.iri == packet
     assert packet_task.suggested_next_action is not None
-    assert packet_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert packet_task.suggested_next_action.tool_name == "get_context_graph"
     assert packet_task.suggested_next_action.arguments == {
         "seed_iris": [packet],
         "profile": "resource_brief",
@@ -2245,7 +2245,7 @@ def test_project_brief_routes_non_tabular_assets_to_context_review(
     api_task = tasks[api]
     assert api_task.task_type == "non_tabular_asset_review"
     assert api_task.suggested_next_action is not None
-    assert api_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert api_task.suggested_next_action.tool_name == "get_context_graph"
     assert api_task.suggested_next_action.arguments == {
         "seed_iris": [api],
         "profile": "deep_lore",
@@ -2441,7 +2441,7 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     assert post_apply_brief.recommended_next_tasks[0].task_type == (
         "query_plan_handoff"
     )
-    post_apply_slice = db.describe_context_slice(dataset, profile="dataset_brief")
+    post_apply_slice = db.get_context_graph(dataset, profile="dataset_brief")
     assert post_apply_slice.suggested_next_actions == []
     assert post_apply_slice.warnings == []
 
@@ -2502,7 +2502,7 @@ def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifa
         ],
     )
 
-    context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
+    context = to_dict(db.get_context_graph([packet], profile="resource_brief"))
     outgoing_iris = {
         resource["iri"]
         for resource in context["resources"]
@@ -2527,7 +2527,7 @@ def test_resource_brief_packet_outgoing_refs_prioritize_action_links_over_artifa
     )
 
 
-def test_describe_context_slice_returns_route_explained_dataset_brief(
+def test_get_context_graph_returns_route_explained_dataset_brief(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -2569,7 +2569,7 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
         supporting_claims=[claim_result.claim_iri],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [messages],
         profile="dataset_brief",
         include_trig=True,
@@ -2690,7 +2690,7 @@ def test_resource_brief_context_slice_expands_shape_and_predicate_routes(
         graph="map",
     )
 
-    shape_slice = db.describe_context_slice(
+    shape_slice = db.get_context_graph(
         shape,
         profile="resource_brief",
         max_triples=50,
@@ -2713,7 +2713,7 @@ def test_resource_brief_context_slice_expands_shape_and_predicate_routes(
         for triple in shape_slice.triples
     )
 
-    score_slice = db.describe_context_slice(
+    score_slice = db.get_context_graph(
         score,
         profile="resource_brief",
         max_triples=50,
@@ -2760,7 +2760,7 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     )
 
     hub = "https://example.test/project#Hub"
-    hub_slice = db.describe_context_slice(
+    hub_slice = db.get_context_graph(
         hub,
         profile="resource_brief",
         max_triples=1000,
@@ -2786,7 +2786,7 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     }
 
     predicate = "https://example.test/project#stressPredicate"
-    predicate_slice = db.describe_context_slice(
+    predicate_slice = db.get_context_graph(
         predicate,
         profile="resource_brief",
         max_triples=1000,
@@ -2851,7 +2851,7 @@ def test_resource_brief_incoming_cap_prioritizes_lore_rich_references(
         graph="observations",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         value_type,
         profile="resource_brief",
         max_triples=1000,
@@ -2894,7 +2894,7 @@ def test_resource_brief_context_slice_suggests_blank_node_closure_on_route_cap(
     )
 
     shape = "https://example.test/project#WideShape"
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         shape,
         profile="resource_brief",
         max_triples=1000,
@@ -2932,7 +2932,7 @@ def test_resource_brief_context_slice_warns_for_pattern_seed(
         evidence_sources=["test://pattern"],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         pattern.pattern_iri,
         profile="resource_brief",
         max_triples=100,
@@ -2948,7 +2948,7 @@ def test_resource_brief_context_slice_warns_for_pattern_seed(
         for action in context_slice.suggested_next_actions
         if action.action_label == "Rerun as pattern brief"
     )
-    assert pattern_action.tool_name == "describe_context_slice"
+    assert pattern_action.tool_name == "get_context_graph"
     assert pattern_action.arguments == {
         "seed_iris": [pattern.pattern_iri],
         "profile": "pattern_brief",
@@ -2989,7 +2989,7 @@ def test_resource_brief_context_slice_finds_owner_for_blank_node_seed(
         if match.types == []
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         blank_node_seed,
         profile="resource_brief",
         max_triples=50,
@@ -3029,7 +3029,7 @@ def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         storage.iri,
         profile="resource_brief",
     )
@@ -3082,7 +3082,7 @@ def test_resource_brief_storage_seed_suggests_clean_owner_query_context(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         storage.iri,
         profile="resource_brief",
     )
@@ -3139,7 +3139,7 @@ def test_resource_brief_storage_seed_suggests_multiple_clean_owner_query_context
             layout_verification_status="rc:VerifiedByQueryLayout",
         )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         storage.iri,
         profile="resource_brief",
     )
@@ -3188,7 +3188,7 @@ def test_resource_brief_query_context_action_separates_repairs_from_warnings(
         layout_verification_status="rc:CandidateLayout",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         layout.iri,
         profile="resource_brief",
     )
@@ -3234,7 +3234,7 @@ def test_deep_lore_storage_seed_suggests_resource_brief_retry(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    deep_slice = db.describe_context_slice(
+    deep_slice = db.get_context_graph(
         storage.iri,
         profile="deep_lore",
         max_triples=75,
@@ -3250,14 +3250,14 @@ def test_deep_lore_storage_seed_suggests_resource_brief_retry(
         for action in deep_slice.suggested_next_actions
         if action.action_label == "Retry with resource brief"
     )
-    assert retry_action.tool_name == "describe_context_slice"
+    assert retry_action.tool_name == "get_context_graph"
     assert retry_action.arguments == {
         "seed_iris": [storage.iri],
         "profile": "resource_brief",
         "max_triples": 75,
     }
 
-    resource_slice = db.describe_context_slice(**retry_action.arguments)
+    resource_slice = db.get_context_graph(**retry_action.arguments)
     assert any(resource.iri == dataset for resource in resource_slice.resources)
     query_action = next(
         action
@@ -3295,7 +3295,7 @@ def test_resource_brief_context_slice_finds_owner_for_nested_predicate_seed(
         graph="shapes",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         inner_path,
         profile="resource_brief",
         max_triples=50,
@@ -3326,7 +3326,7 @@ def test_resource_brief_context_slice_expands_evidence_handoff(
         source_kind="rc:DocumentationSource",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         claim_record.evidence_iri,
         profile="resource_brief",
     )
@@ -3374,7 +3374,7 @@ def test_resource_brief_evidence_seed_routes_observed_asset_to_query_context(
         evidence_sources=["test://warehouse-orders-source"],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         observation.evidence_iri,
         profile="resource_brief",
     )
@@ -3412,7 +3412,7 @@ def test_resource_brief_profile_evidence_seed_suggests_profile_run(
         update_map_snapshot=False,
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         profile.observation.evidence_iri,
         profile="resource_brief",
     )
@@ -3450,7 +3450,7 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         update_map_snapshot=False,
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         profile.observation.evidence_iri,
         profile="dataset_brief",
     )
@@ -3462,7 +3462,7 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         for warning in context_slice.warnings
     )
     assert context_slice.suggested_next_actions[0].tool_name == (
-        "describe_context_slice"
+        "get_context_graph"
     )
     assert context_slice.suggested_next_actions[0].arguments == {
         "seed_iris": [profile.observation.evidence_iri],
@@ -3546,7 +3546,7 @@ def test_project_brief_suppresses_defined_metric_context_only_profile_review(
         "project_metric_defined": 1,
     }
     assert [action.tool_name for action in profile_draft.suggested_next_actions] == [
-        "describe_context_slice",
+        "get_context_graph",
         "describe_resource",
     ]
     assert brief.profile_queue_counts["profile_metric_advisories"] == 1

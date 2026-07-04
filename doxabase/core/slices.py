@@ -10,7 +10,7 @@ from doxabase.core._types import *  # noqa: F401,F403
 
 
 class SlicesMixin:
-    def describe_context_slice(
+    def get_context_graph(
         self,
         seed_iris: Iterable[str] | str,
         *,
@@ -21,7 +21,7 @@ class SlicesMixin:
             "resource_brief",
         ] = "dataset_brief",
         max_triples: int = 500,
-        include_trig: bool = False,
+        include_trig: bool = True,
         graph_iri_prefix: str = RCG_PREFIX,
         privacy_scan_limit: int = 20,
     ) -> ContextSlice:
@@ -1500,7 +1500,7 @@ class SlicesMixin:
                     add_resource_brief_recovery_action(
                         ("pattern_profile", seed),
                         action_label="Rerun as pattern brief",
-                        tool_name="describe_context_slice",
+                        tool_name="get_context_graph",
                         arguments={
                             "seed_iris": [seed],
                             "profile": "pattern_brief",
@@ -1671,8 +1671,6 @@ class SlicesMixin:
                         "profile": "resource_brief",
                         "max_triples": max_triples,
                     }
-                    if include_trig:
-                        arguments["include_trig"] = True
                     if self.expand_iri("rc:Evidence") in seed_types:
                         action_label = "Retry evidence resource brief"
                         reason = (
@@ -1695,7 +1693,7 @@ class SlicesMixin:
                     add_resource_brief_recovery_action(
                         ("resource_brief_retry", seed),
                         action_label=action_label,
-                        tool_name="describe_context_slice",
+                        tool_name="get_context_graph",
                         arguments=arguments,
                         reason=reason,
                     )
@@ -1740,7 +1738,7 @@ class SlicesMixin:
         )
         scanner_note = (
             "Context-slice privacy scan covers only the returned raw triples. "
-            "This describe_context_slice payload may still contain unredacted "
+            "This get_context_graph payload may still contain unredacted "
             "raw triples, TriG, labels, summaries, and project facts; use "
             "preflight_context_slice_export or export_preflight before sharing "
             "or writing handoff artifacts."
@@ -1921,12 +1919,12 @@ class SlicesMixin:
             actions.append(
                 SuggestedNextAction(
                     action_label=action_label,
-                    tool_name="describe_context_slice",
-                    mcp_tool_name="doxabase.describe_context_slice",
+                    tool_name="get_context_graph",
+                    mcp_tool_name="doxabase.get_context_graph",
                     arguments=arguments,
                     reason=reason,
                     call=self._suggested_call_string(
-                        "describe_context_slice",
+                        "get_context_graph",
                         arguments,
                     ),
                 )
@@ -2152,8 +2150,6 @@ class SlicesMixin:
                 "profile": "pattern_brief",
                 "max_triples": max_triples,
             }
-            if include_trig:
-                arguments["include_trig"] = True
             add_slice_action(
                 arguments,
                 (
@@ -2173,8 +2169,6 @@ class SlicesMixin:
             "profile": profile,
             "max_triples": full_triple_cap,
         }
-        if include_trig:
-            arguments["include_trig"] = True
         add_slice_action(
             arguments,
             (

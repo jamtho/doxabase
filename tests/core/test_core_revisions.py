@@ -2367,7 +2367,7 @@ def test_deep_lore_context_slice_finds_revision_anchor_matches(
     )
     applied = db.apply_staged_revision(staged.revision_iri)
 
-    context_slice = db.describe_context_slice([dataset], profile="deep_lore")
+    context_slice = db.get_context_graph([dataset], profile="deep_lore")
 
     assert not any("found no claims" in warning for warning in context_slice.warnings)
     resources = {resource.iri: resource for resource in context_slice.resources}
@@ -2448,7 +2448,7 @@ def test_deep_lore_context_slice_expands_revision_seeds(
     )
     applied = db.apply_staged_revision(staged.revision_iri)
 
-    staged_slice = db.describe_context_slice(
+    staged_slice = db.get_context_graph(
         [staged.revision_iri],
         profile="deep_lore",
         include_trig=True,
@@ -2474,7 +2474,7 @@ def test_deep_lore_context_slice_expands_revision_seeds(
     assert staged_slice.route_counts["revision_evidence"] >= 1
     assert staged_slice.route_counts["applied_revision"] == 1
 
-    applied_slice = db.describe_context_slice(
+    applied_slice = db.get_context_graph(
         [applied.applied_revision_iri],
         profile="deep_lore",
     )

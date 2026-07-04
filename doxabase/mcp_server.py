@@ -14,7 +14,7 @@ from doxabase.mcp_tools import (
     describe_assertion_support_tool,
     describe_analysis_view_tool,
     describe_dataset_tool,
-    describe_context_slice_tool,
+    get_context_graph_tool,
     describe_graph_revision_tool,
     describe_graph_version_diff_tool,
     describe_pattern_tool,
@@ -101,7 +101,7 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_analysis_view, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
+Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_analysis_view, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.get_context_graph, and doxabase.describe_pattern before asking for broader graph context.
 Current V1 tools support inspection, profile-to-map update drafting/staging and profile advisory follow-through planning, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, no-I/O profiled Parquet table recording, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
@@ -512,17 +512,17 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_scope=validation_scope,
         )
 
-    @server.tool(name="doxabase.describe_context_slice")
-    def describe_context_slice(
+    @server.tool(name="doxabase.get_context_graph")
+    def get_context_graph(
         seed_iris: list[str],
         profile: str = "dataset_brief",
         max_triples: int = 500,
-        include_trig: bool = False,
+        include_trig: bool = True,
         privacy_scan_limit: int = 20,
     ) -> dict[str, Any]:
         """Return a route-explained graph slice around datasets, patterns, or lore."""
 
-        return describe_context_slice_tool(
+        return get_context_graph_tool(
             db,
             seed_iris=seed_iris,
             profile=profile,

@@ -28,7 +28,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.stage_query_physical_layout_repair" in tool_names
     assert "doxabase.stage_query_storage_access_repair" in tool_names
-    assert "doxabase.describe_context_slice" in tool_names
+    assert "doxabase.get_context_graph" in tool_names
     assert "doxabase.preflight_context_slice_export" in tool_names
     assert "doxabase.export_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names

@@ -237,7 +237,7 @@ query, profile, and non-tabular work after explicit frontier expansion instead
 of getting stuck on one visible queue. `record_map_asset_transform` carried a
 realistic non-tabular image/label/pose transform with ordered endpoints,
 conditions, per-output formulas/functions, and dataset/expression tuple-grain
-components through `describe_dataset`, `describe_context_slice`, export, and
+components through `describe_dataset`, `get_context_graph`, export, and
 reimport without fake columns. Treat those surfaces as recently validated; run
 new trials there only when the workflow shape changes or a concrete failure
 appears.

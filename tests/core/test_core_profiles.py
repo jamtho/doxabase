@@ -893,7 +893,7 @@ def test_record_domain_network_profile_preflights_private_values(
     assert _mutable_graph_counts(db) == before_counts
 
 
-def test_describe_context_slice_warns_when_seed_profile_mismatches(
+def test_get_context_graph_warns_when_seed_profile_mismatches(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -908,7 +908,7 @@ def test_describe_context_slice_warns_when_seed_profile_mismatches(
         source_kind="rc:DocumentationSource",
     )
 
-    dataset_slice = db.describe_context_slice(
+    dataset_slice = db.get_context_graph(
         pattern.pattern_iri,
         profile="dataset_brief",
     )
@@ -920,7 +920,7 @@ def test_describe_context_slice_warns_when_seed_profile_mismatches(
         for warning in dataset_slice.warnings
     )
 
-    pattern_slice = db.describe_context_slice(
+    pattern_slice = db.get_context_graph(
         pattern.pattern_iri,
         profile="pattern_brief",
     )
@@ -930,7 +930,7 @@ def test_describe_context_slice_warns_when_seed_profile_mismatches(
     assert pattern_slice.warnings == []
 
 
-def test_describe_context_slice_invalid_profile_points_to_route_fields(
+def test_get_context_graph_invalid_profile_points_to_route_fields(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -938,7 +938,7 @@ def test_describe_context_slice_invalid_profile_points_to_route_fields(
     db.record_map_dataset(dataset, label="Messages", is_table=True)
 
     with pytest.raises(DoxaBaseError) as exc:
-        db.describe_context_slice(dataset, profile="route_explained")  # type: ignore[arg-type]
+        db.get_context_graph(dataset, profile="route_explained")  # type: ignore[arg-type]
 
     error_message = str(exc.value)
     assert (
@@ -949,7 +949,7 @@ def test_describe_context_slice_invalid_profile_points_to_route_fields(
     assert "'route_explained' profile" in error_message
 
 
-def test_describe_context_slice_includes_profile_observations_and_metrics(
+def test_get_context_graph_includes_profile_observations_and_metrics(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -996,7 +996,7 @@ def test_describe_context_slice_includes_profile_observations_and_metrics(
         "rc:observedValueFrequency",
     )[0]
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         dataset,
         profile="dataset_brief",
         max_triples=300,
@@ -1045,7 +1045,7 @@ def test_context_slice_structures_seed_profile_outside_bounded_dataset_profiles(
             update_map_snapshot=False,
         )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         old_profile.observation.observation_iri,
         profile="dataset_brief",
         max_triples=300,
@@ -1079,7 +1079,7 @@ def test_context_slice_structures_seed_profile_outside_bounded_dataset_profiles(
     assert old_profile.observation.evidence_iri in resources
 
 
-def test_describe_context_slice_expands_profile_metric_kind_seed(
+def test_get_context_graph_expands_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -1102,7 +1102,7 @@ def test_describe_context_slice_expands_profile_metric_kind_seed(
         "rc:observedProfileMetric",
     )[0]
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         metric_kind,
         profile="dataset_brief",
         max_triples=200,
@@ -1122,7 +1122,7 @@ def test_describe_context_slice_expands_profile_metric_kind_seed(
         context_slice.warnings
     )
 
-    metric_context = db.describe_context_slice(
+    metric_context = db.get_context_graph(
         metric_iri,
         profile="dataset_brief",
         max_triples=200,
@@ -1134,7 +1134,7 @@ def test_describe_context_slice_expands_profile_metric_kind_seed(
     assert metric_context.route_counts["observed_profile_metric"] >= 1
     assert metric_context.route_counts["profile_metric_observation"] == 1
 
-    observation_context = db.describe_context_slice(
+    observation_context = db.get_context_graph(
         profile.observation.observation_iri,
         profile="dataset_brief",
         max_triples=200,
@@ -1149,7 +1149,7 @@ def test_describe_context_slice_expands_profile_metric_kind_seed(
     assert observation_context.route_counts["observed_profile_metric"] >= 1
 
 
-def test_describe_context_slice_caps_broad_profile_metric_kind_seed(
+def test_get_context_graph_caps_broad_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -1169,7 +1169,7 @@ def test_describe_context_slice_caps_broad_profile_metric_kind_seed(
             update_map_snapshot=False,
         )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         metric_kind,
         profile="dataset_brief",
         max_triples=1000,
@@ -1248,7 +1248,7 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
 
     assert aggregate.observation_type == "observation"
     assert [action.tool_name for action in aggregate.suggested_next_actions] == [
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context"
     ]
     assert aggregate.suggested_next_actions[0].arguments == {
@@ -1277,7 +1277,7 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
         action.tool_name for action in sampled_aggregate.suggested_next_actions
     ] == [
         "describe_profile_run",
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
     assert db.validate_graph(scope="all").conforms
@@ -1761,7 +1761,7 @@ def test_profile_summary_reports_bounded_profile_omissions(
         description.profile_summary.handoff_note
     )
 
-    context_slice = db.describe_context_slice([table], profile="deep_lore")
+    context_slice = db.get_context_graph([table], profile="deep_lore")
 
     assert context_slice.dataset_contexts[0].profile_summary.omitted_profile_count == 2
 
@@ -1867,8 +1867,8 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         "describe_dataset",
         "describe_profile_run",
         "draft_profile_map_updates",
-        "describe_context_slice",
-        "describe_context_slice",
+        "get_context_graph",
+        "get_context_graph",
     ]
     assert result.handoff_entrypoints.suggested_next_actions[0].arguments == {
         "iri": dataset
@@ -1895,7 +1895,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         f"draft_profile_map_updates('{dataset}', '{shared_evidence}')"
     )
     assert result.handoff_entrypoints.suggested_next_calls[-1] == (
-        f"describe_context_slice({profile_observation_iris!r}, "
+        f"get_context_graph({profile_observation_iris!r}, "
         "profile='dataset_brief')"
     )
 
@@ -2522,7 +2522,7 @@ def test_describe_profile_run_works_for_observation_only_dataset(
         action.tool_name for action in bundle.handoff_entrypoints.suggested_next_actions
     ] == [
         "describe_profile_run",
-        "describe_context_slice",
+        "get_context_graph",
     ]
     assert bundle.handoff_entrypoints.suggested_next_actions[0].arguments == {
         "dataset_iri": dataset,
@@ -2533,7 +2533,7 @@ def test_describe_profile_run_works_for_observation_only_dataset(
         "profile": "dataset_brief",
     }
     assert bundle.handoff_entrypoints.suggested_next_calls[-1] == (
-        "describe_context_slice("
+        "get_context_graph("
         f"{bundle.handoff_entrypoints.profile_observation_iris!r}, "
         "profile='dataset_brief')"
     )
@@ -2549,7 +2549,7 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert "profile observation(s) reference this dataset" in error_message
     assert "describe_profile_run" in error_message
     assert shared_evidence in error_message
-    assert "seed describe_context_slice" in error_message
+    assert "seed get_context_graph" in error_message
     assert "record_map_dataset" in error_message
 
     profile_run = db.describe_profile_run(dataset, shared_evidence)
@@ -2618,7 +2618,7 @@ def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snaps
         bundle.handoff_entrypoints.profile_observation_iris
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         bundle.handoff_entrypoints.profile_observation_iris,
         profile="dataset_brief",
     )
@@ -2648,8 +2648,8 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
                 db.describe_profile_run(**action.arguments)
             elif action.tool_name == "draft_profile_map_updates":
                 db.draft_profile_map_updates(**action.arguments)
-            elif action.tool_name == "describe_context_slice":
-                db.describe_context_slice(**action.arguments)
+            elif action.tool_name == "get_context_graph":
+                db.get_context_graph(**action.arguments)
             else:
                 raise AssertionError(f"Unexpected action {action.tool_name!r}")
 
@@ -2745,7 +2745,7 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
     assert [
         action.tool_name
         for action in shadow_bundle.handoff_entrypoints.suggested_next_actions
-    ] == ["describe_profile_run", "describe_context_slice"]
+    ] == ["describe_profile_run", "get_context_graph"]
 
     all_actions = [
         *run_a_bundle.handoff_entrypoints.suggested_next_actions,
@@ -2968,7 +2968,7 @@ def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
     assert [
         action.tool_name for action in advisory.suggested_next_actions
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
     ]
@@ -2977,7 +2977,7 @@ def test_profile_type_review_stays_open_for_direct_map_undefined_value_type(
         action.tool_name
         for action in draft.suggested_next_action_groups["profile_type_review"]
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
     ]
@@ -3042,13 +3042,13 @@ def test_profile_type_context_action_omits_undefined_value_type_seed(
         and action.arguments["predicate"] == "rc:valueType"
     ][0]
 
-    assert context_action.tool_name == "describe_context_slice"
+    assert context_action.tool_name == "get_context_graph"
     assert context_action.arguments == {
         "seed_iris": [advisory.profile_observation_iri, status_column, RC + "Integer"],
         "profile": "dataset_brief",
     }
     assert status_value_type not in context_action.arguments["seed_iris"]
-    context_slice = db.describe_context_slice(**context_action.arguments)
+    context_slice = db.get_context_graph(**context_action.arguments)
     assert status_column in {resource.iri for resource in context_slice.resources}
 
     assert status_value_type in pattern_action.arguments["map_implications"]
@@ -3253,7 +3253,7 @@ def test_profile_type_review_lane_is_representative_action_queue(
             assert [
                 action.tool_name for action in advisory.suggested_next_actions
             ] == [
-                "describe_context_slice",
+                "get_context_graph",
                 "record_pattern",
                 "stage_systematisation",
                 "stage_map_assertion_change",
@@ -3276,11 +3276,11 @@ def test_profile_type_review_lane_is_representative_action_queue(
     assert [
         action.tool_name for action in profile_type_actions
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
         "stage_map_assertion_change",
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
         "stage_map_assertion_change",

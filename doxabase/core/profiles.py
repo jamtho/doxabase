@@ -1926,7 +1926,7 @@ class ProfilesMixin:
             hint += "For a profile-only handoff, "
         return (
             hint
-            + "seed describe_context_slice from the profile observation IRIs. "
+            + "seed get_context_graph from the profile observation IRIs. "
             "Record map dataset context with record_map_dataset before using "
             "describe_dataset."
         )

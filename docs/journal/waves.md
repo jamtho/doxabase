@@ -104,3 +104,19 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Session continuation doc: handoff/distillation-session-2026-07-04.md
   (includes the ProjectBrief v2 spec for the 3.3+5.1 rebuild).
 - Gate green (764 passed + wheel smoke). Next: 3.2 RDF-first context graph.
+
+## Wave 6 — 2026-07-04 — Phase 3.2: RDF-first context graph
+
+- `describe_context_slice` → `get_context_graph` (design doc 02's name),
+  renamed across code, tests, docs, examples. TriG on by default.
+- Graph content no longer ships as JSON: ContextSlice.triples,
+  dataset_contexts, pattern_contexts are marked `doxabase_internal` (a new
+  field-metadata convention in to_jsonable) — Python callers (export path)
+  keep them; MCP envelopes don't. Measured: same graph content = 86KB as
+  JSON triples vs 13.6KB as TriG.
+- Redundant include_trig suggestion-template args removed.
+- Scoreboard: context_slice 140,116 → 44,366 chars (baseline was 168,598;
+  3.8x down, end-state 32,000 within reach once routes shrink in 3.4).
+  Ceiling ratcheted to 46,500. Gate green (764 passed + smoke).
+- Next: 3.3+5.1 project_brief rebuild per spec in
+  handoff/distillation-session-2026-07-04.md, then 3.4 collapse.

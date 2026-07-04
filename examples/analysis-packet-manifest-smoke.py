@@ -48,7 +48,7 @@ def main() -> None:
 
     with DoxaBase.open_readonly(CAPSULE) as db:
         validation = db.validate_graph(scope="all")
-        packet_slice = db.describe_context_slice(
+        packet_slice = db.get_context_graph(
             [f"{BASE}paid_orders_packet"],
             profile="resource_brief",
         )

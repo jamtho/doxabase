@@ -102,7 +102,7 @@ class ProfileAdvisoriesMixin:
             return "define_value_type"
         if action.tool_name == "stage_map_assertion_change":
             return "assert_map_type"
-        if action.tool_name == "describe_context_slice":
+        if action.tool_name == "get_context_graph":
             if current_map_undefined_value_type_only:
                 return None
             return "assert_map_type"
@@ -964,7 +964,7 @@ class ProfileAdvisoriesMixin:
         updated_actions: list[SuggestedNextAction] = []
         for action in actions:
             arguments = dict(action.arguments)
-            if action.tool_name == "describe_context_slice":
+            if action.tool_name == "get_context_graph":
                 seed_iris = list(arguments.get("seed_iris") or [])
                 arguments["seed_iris"] = list(
                     dict.fromkeys(
@@ -1153,7 +1153,7 @@ class ProfileAdvisoriesMixin:
                 "a current map assertion."
             )
         add_action(
-            "describe_context_slice",
+            "get_context_graph",
             {
                 "seed_iris": list(dict.fromkeys(seed_iris)),
                 "profile": "dataset_brief",
@@ -2368,7 +2368,7 @@ class ProfileAdvisoriesMixin:
             )
 
         add_action(
-            "describe_context_slice",
+            "get_context_graph",
             {"seed_iris": [focused_seed_iri], "profile": "dataset_brief"},
             (
                 "Load bounded lore around this observed profile metric before "

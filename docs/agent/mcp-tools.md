@@ -64,7 +64,7 @@ profile value previews, and context-slice export `seeds[]` labels/descriptions.
 This protects response summaries from common copy-paste leaks; RDF and Markdown
 exports remain faithful and should still use `fail_on_sensitive` when shareable
 output must block.
-`describe_context_slice` now includes redacted scanner metadata for the returned
+`get_context_graph` now includes redacted scanner metadata for the returned
 raw triples, but its inspection payload remains faithful: raw `triples`, `trig`,
 labels, summaries, and revision/evidence context can still contain project
 terms. Report `sensitive_literal_count`, `privacy_warnings`, and redacted
@@ -244,7 +244,7 @@ Tasks labelled `analysis_view_review` point to `describe_analysis_view` for an
 `rc:AnalysisView` with `readiness="logical_analysis_view"`. These are logical
 population/query-recipe reviews, not physical query-repair work.
 Tasks labelled `analysis_packet_review` point to
-`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")` for
+`get_context_graph(seed_iris=[packet_iri], profile="resource_brief")` for
 an `rc:AnalysisPacket` in the evidence graph. Use this queue to recover
 packet-level query recipes, artifact locators, and follow-up tasks that are not
 visible from the logical-view review queue alone. `key_counts` also includes
@@ -602,7 +602,7 @@ When mixed profile history means no evidence is shared by all returned profiles,
 `profile_run_candidates` lists evidence IRIs that support more than one returned
 profile, sorted by returned profile count. Each candidate includes
 `profile_observation_iris`, the returned profile observations linked to that
-evidence IRI, so a handoff can seed `describe_context_slice` or inspect the run
+evidence IRI, so a handoff can seed `get_context_graph` or inspect the run
 without reconstructing membership from nested profile lists.
 Its `handoff_note` is a compact reading cue for profile-only handoffs: profile
 lore is observed evidence, while storage/path/layout warnings remain physical
@@ -690,13 +690,13 @@ same route group, fallback mutation actions route to inspect/export the pending
 staged fallback and carry `source_profile_advisory.pending_staged_fallback_iris`
 instead of proposing another `record_pattern` or `stage_systematisation`
 fallback.
-The first metric context action seeds `describe_context_slice` with
+The first metric context action seeds `get_context_graph` with
 `observed_metric_iri` so the initial handoff stays on the profiled dataset; use
 nearby metric-vocabulary actions when you intentionally want broader same-metric
 usage.
 When a metric reruns as `project_metric_defined` after a promotion, do not
 stage duplicate vocabulary; use the observed-metric context action for the
-dataset handoff and `describe_context_slice(..., profile="deep_lore")` from the
+dataset handoff and `get_context_graph(..., profile="deep_lore")` from the
 metric, promotion pattern, or revision when you need to rediscover the
 supporting promotion trail. `project_brief` preserves the defined metric in
 profile draft summaries and `profile_queue_counts`, but does not create a
@@ -712,7 +712,7 @@ calculation, and comparison semantics before applying it unchanged.
 Same-evidence prose patterns that mention the metric but do not name it
 structurally appear as `context_patterns` with `describe_pattern` actions only;
 do not treat them as automatic promotion support.
-Do not infer metric vocabulary status from `describe_context_slice` alone:
+Do not infer metric vocabulary status from `get_context_graph` alone:
 metric-kind resources that are only profile-metric objects can appear as
 `referenced_only`. Use `metric_advisories[].advisory_status` and
 `definition_found` for the authoritative review cue.
@@ -723,7 +723,7 @@ facts, the draft returns `type_advisories` with context, pattern, and focused
 `stage_map_assertion_change` suggested actions for review. Unmapped-column type
 advisories also name related `unmapped_profiled_column` recommendation indexes
 so agents can stage the column shell before reviewing type assertions.
-Type-context actions seed `describe_context_slice` with the profile observation,
+Type-context actions seed `get_context_graph` with the profile observation,
 column, and observed type resources that already exist in the graph. If an
 observed project value type has not been defined yet, it is omitted from the
 context-slice seed list so the suggested action remains runnable, but it still
@@ -1499,7 +1499,7 @@ layout will not create ambiguous query target candidates. It also accepts
 `profile_route_sources` for profile `query_context_review` lanes, matching
 `stage_query_storage_access_repair`.
 
-`doxabase.describe_context_slice`
+`doxabase.get_context_graph`
 
 Returns a bounded, route-explained subgraph around one or more seed IRIs. Use
 `profile="dataset_brief"` for table handoff context, `profile="pattern_brief"`
@@ -1558,7 +1558,7 @@ the response suggests `describe_profile_run(dataset_iri, evidence_iri)`.
 
 Dry-runs an importable context-slice TriG export without writing a file. Use it
 when a handoff should include only the selected resource neighborhood rather
-than every resource in a graph role. It reuses `describe_context_slice`
+than every resource in a graph role. It reuses `get_context_graph`
 selection, omits immutable seed graphs by default, scans only the selected
 export triples for credential-like graph terms, and returns the same
 `decision`, `scanner_clean`, `shareability_review_required`,
@@ -1605,7 +1605,7 @@ deliberately reviewed invalid diagnostic slice. Keep
 `include_seed_graphs=false` unless you deliberately want a bundle that may
 require `import_trig(..., allow_immutable=True)`: fresh DoxaBase capsules
 already contain the standard base ontology and shape seed graphs. Prefer this
-helper over `describe_context_slice(include_trig=true)` when the artifact must
+helper over `get_context_graph(include_trig=true)` when the artifact must
 round-trip into a fresh capsule or avoid unrelated graph siblings. A written
 slice with `history` graph triples still has `recovery_complete=false` and
 returns an `export_handoff_bundle` action for recovery-complete handoff needs,
@@ -1656,7 +1656,7 @@ evidence summary just to recover the failure text.
 When `observed_asset` is supplied, the returned payload includes
 `suggested_next_actions`: profile-shaped results start with
 `describe_profile_run(observed_asset, evidence_iri)`, every result includes
-`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+`get_context_graph(seed_iris=[evidence_iri], profile="resource_brief")`
 for the newly written evidence, and observed-asset results include
 `describe_query_context(iri=observed_asset)`. Inspect the evidence action when
 source handles, result artifacts, or source spans need to travel with the next
@@ -1736,7 +1736,7 @@ availability flags, structured `suggested_next_actions`, and compatibility
 `suggested_next_calls` for the next agent. When both map dataset context and a
 shared evidence run are available, handoff actions include
 `draft_profile_map_updates` before context-slice routes. Map-present bundles may
-include two `describe_context_slice` actions: one dataset-seeded map-context
+include two `get_context_graph` actions: one dataset-seeded map-context
 slice and one profile-observation-seeded run handoff. Read `action_label` and
 `arguments` rather than treating repeated `tool_name` values as duplicates.
 In `handoff_entrypoints`, prefer `updated_map_column_iris` for columns whose map
@@ -1842,7 +1842,7 @@ hunch remains useful context. The helper writes an `rc:ClaimReconsideration`,
 adds a direct relation such as `rc:weakens`, optionally writes evidence/source
 span context, and marks the older claim as `rc:Weakened`, `rc:Contradicted`, or
 `rc:Superseded` when that follows from the relation. `describe_pattern` and
-`describe_context_slice` surface incoming and outgoing reconsiderations around
+`get_context_graph` surface incoming and outgoing reconsiderations around
 claims, and claim descriptions include a compact `lifecycle_summary`.
 
 `doxabase.record_map_dataset`
@@ -1862,7 +1862,7 @@ Layout verification status accepts `rc:UnverifiedLayout`,
 `rc:ContradictedLayout`.
 For API endpoints, document collections, message streams, model artifacts, and
 other non-tabular assets, pass `is_table=False` plus project `extra_types` where
-useful. Use `describe_context_slice(profile="deep_lore")` or
+useful. Use `get_context_graph(profile="deep_lore")` or
 `describe_resource` for handoff context; `describe_query_context` should report
 `not_applicable_non_tabular_asset` unless a separate queryable table route is
 modeled.
@@ -1958,7 +1958,7 @@ named populations and denominators; use `query_recipes` for starter SQL,
 registration snippets, joins, or cookbook steps that should not be modeled as
 views. The helper does not read files, parse Markdown or JSON, store raw
 artifact content, or execute queries. Follow the returned
-`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
+`get_context_graph(seed_iris=[packet_iri], profile="resource_brief")`
 action to inspect the bounded handoff. That packet slice suggests
 `describe_analysis_view` for linked logical views, so continue there for
 denominators, source datasets, caveats, and view-level query snippets.

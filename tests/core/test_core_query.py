@@ -36,7 +36,7 @@ def test_context_slice_skips_query_context_action_for_non_tabular_seed(
     )
 
     context = db.describe_query_context(api)
-    slice_context = db.describe_context_slice([api], profile="deep_lore")
+    slice_context = db.get_context_graph([api], profile="deep_lore")
     brief = db.project_brief(limit=5)
 
     assert context.readiness == "not_applicable_non_tabular_asset"
@@ -555,7 +555,7 @@ def test_describe_query_context_marks_non_tabular_asset_not_applicable(
     assert context.issues[0].severity == "info"
     assert context.storage_accesses[0].iri == storage.iri
     assert context.suggested_repair_action_group_count == 0
-    assert context.suggested_next_actions[0].tool_name == "describe_context_slice"
+    assert context.suggested_next_actions[0].tool_name == "get_context_graph"
 
     plan = db.draft_query_plan(asset)
 
@@ -3378,7 +3378,7 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.evidence_triples > result.source_span_triples > 0
     assert [action.tool_name for action in result.suggested_next_actions] == [
         "describe_profile_run",
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
     assert result.suggested_next_actions[0].arguments == {
@@ -3396,7 +3396,7 @@ def test_record_query_result_writes_query_source_evidence(
             f"evidence_iri='{result.evidence_iri}')"
         ),
         (
-            "describe_context_slice("
+            "get_context_graph("
             f"seed_iris=['{result.evidence_iri}'], profile='resource_brief')"
         ),
         f"describe_query_context(iri='{dataset}')",
@@ -3495,7 +3495,7 @@ def test_record_query_result_preserves_database_relation_source_handle(
     assert result.scanned_source_handles == [relation_handle]
     assert result.scanned_source_span_iris == []
     assert [action.tool_name for action in result.suggested_next_actions] == [
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
     assert result.suggested_next_actions[0].arguments == {
@@ -3507,7 +3507,7 @@ def test_record_query_result_preserves_database_relation_source_handle(
         (triple.predicate, triple.object) for triple in evidence.outgoing
     }
     assert (RC + "scannedSourceHandle", relation_handle) in evidence_outgoing
-    evidence_slice = db.describe_context_slice(
+    evidence_slice = db.get_context_graph(
         **result.suggested_next_actions[0].arguments,
         max_triples=80,
     )
@@ -3625,7 +3625,7 @@ def test_context_slice_suggests_query_context_for_seed_operational_warnings(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    context_slice = db.describe_context_slice(dataset, profile="dataset_brief")
+    context_slice = db.get_context_graph(dataset, profile="dataset_brief")
 
     assert context_slice.truncated is False
     assert context_slice.warnings == []

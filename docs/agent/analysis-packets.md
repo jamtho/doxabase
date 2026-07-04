@@ -174,7 +174,7 @@ starter SQL or setup snippets that are not denominators. Use
 `record_query_result` for a single executed query attempt or failure.
 
 After recording a packet, follow the returned
-`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")`
+`get_context_graph(seed_iris=[packet_iri], profile="resource_brief")`
 action to review the packet, linked views, artifacts, tasks, and optional
 query recipes, pattern, and other bounded handoff context. The packet slice
 also suggests `describe_analysis_view` for linked logical views so agents can

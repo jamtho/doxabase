@@ -1010,7 +1010,7 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["handoff_kind"] == "database_relation_handoff"
 
 
-def test_describe_context_slice_tool_reports_sensitive_selected_triples(
+def test_get_context_graph_tool_reports_sensitive_selected_triples(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -1024,7 +1024,7 @@ def test_describe_context_slice_tool_reports_sensitive_selected_triples(
         is_table=True,
     )
 
-    result = describe_context_slice_tool(
+    result = get_context_graph_tool(
         db,
         seed_iris=[dataset],
         profile="dataset_brief",
@@ -1044,7 +1044,6 @@ def test_describe_context_slice_tool_reports_sensitive_selected_triples(
     assert fake_secret not in json.dumps(result["matches"])
     assert fake_secret not in " ".join(result["privacy_warnings"])
     assert fake_secret not in result["scanner_note"]
-    assert fake_secret in json.dumps(result["triples"])
     assert fake_secret in result["trig"]
 
     privacy_action = result["suggested_next_actions"][0]

@@ -36,7 +36,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "describe_profile_run",
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
     assert result["suggested_next_actions"][0]["arguments"] == {
@@ -57,7 +57,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
             f"evidence_iri='{result['evidence_iri']}')"
         ),
         (
-            "describe_context_slice("
+            "get_context_graph("
             f"seed_iris=['{result['evidence_iri']}'], profile='resource_brief')"
         ),
         "describe_query_context(iri='https://example.test/project#Orders')",
@@ -300,7 +300,7 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
     assert context.get("query_target_candidates", []) == []
     assert context["issues"][0]["code"] == "non_tabular_asset_query_not_applicable"
     assert context["suggested_next_actions"][0]["tool_name"] == (
-        "describe_context_slice"
+        "get_context_graph"
     )
 
     plan = draft_query_plan_tool(db, iri=asset)

@@ -460,18 +460,18 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert [triple.object for triple in column_support.same_subject_predicate_triples] == [
         RC + "Varchar"
     ]
-    assert "describe_context_slice" in column_support.suggested_next_calls[0]
+    assert "get_context_graph" in column_support.suggested_next_calls[0]
     assert "https://example.test/project#PriceSnapshots" in (
         column_support.suggested_next_calls[0]
     )
     assert column_support.suggested_next_actions[0].tool_name == (
-        "describe_context_slice"
+        "get_context_graph"
     )
     assert column_support.suggested_next_actions[0].action_label == (
         "Load context slice"
     )
     assert column_support.suggested_next_actions[0].mcp_tool_name == (
-        "doxabase.describe_context_slice"
+        "doxabase.get_context_graph"
     )
     assert column_support.suggested_next_actions[0].arguments["seed_iris"][0] == (
         "https://example.test/project#PriceSnapshots"
@@ -2373,7 +2373,7 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert len(result.followup_task_iris) == 1
     assert result.pattern_iri is not None
     assert {action.tool_name for action in result.suggested_next_actions} >= {
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     }
     overview = db.graph_overview()
@@ -2400,7 +2400,7 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
         parent_caveat
     ]
     assert db.describe_query_context(parent_view).readiness == "logical_analysis_view"
-    context = to_dict(db.describe_context_slice([packet], profile="resource_brief"))
+    context = to_dict(db.get_context_graph([packet], profile="resource_brief"))
     assert packet in {resource["iri"] for resource in context["resources"]}
     assert register_tables_recipe in {
         resource["iri"] for resource in context["resources"]
@@ -2426,7 +2426,7 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert packet_task.resource is not None
     assert packet_task.resource.iri == packet
     assert packet_task.suggested_next_action is not None
-    assert packet_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert packet_task.suggested_next_action.tool_name == "get_context_graph"
     assert packet_task.suggested_next_action.arguments == {
         "seed_iris": [packet],
         "profile": "resource_brief",

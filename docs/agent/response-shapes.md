@@ -382,7 +382,7 @@ analysis handoff counts: `analysis_views`, `analysis_packets`,
 `analysis_artifacts`, `analysis_followup_tasks`, and
 `executable_query_snippets`. `queue_counts["analysis_packet_review"]` appears
 for `rc:AnalysisPacket` evidence resources and points to
-`describe_context_slice(seed_iris=[packet_iri], profile="resource_brief")` so
+`get_context_graph(seed_iris=[packet_iri], profile="resource_brief")` so
 cold-start agents can find packet-level query recipes, artifact locators, and
 follow-up tasks even when the linked logical views are already visible through
 `analysis_view_review`.
@@ -524,7 +524,7 @@ target.
 Non-table `rc:Dataset` resources stay visible in `datasets` with
 `is_table=false`, but their query readiness is
 `not_applicable_non_tabular_asset`; project brief routes them to
-`non_tabular_asset_review` with a `describe_context_slice` action instead of
+`non_tabular_asset_review` with a `get_context_graph` action instead of
 query repair queues.
 
 `db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
@@ -1111,7 +1111,7 @@ normal `StagedGraphRevisionRecord` and can be inspected with
 
 ## Context Slices
 
-`db.describe_context_slice(seed_iris, ...)` returns a `ContextSlice`:
+`db.get_context_graph(seed_iris, ...)` returns a `ContextSlice`:
 
 ```python
 context.profile
@@ -1217,7 +1217,7 @@ and `bytes_written` is `0`. It includes a suggested `export_context_slice`
 action only when the selected triples are scanner-clean and validation-conformant;
 if `decision="block"`, the suggested actions stay read-only, for example
 running `validate_graph`, inspecting the selected slice with
-`describe_context_slice`, or running project-level `export_preflight`; resolve
+`get_context_graph`, or running project-level `export_preflight`; resolve
 validation/privacy review before writing rather than blindly following a doomed
 export. `decision` is `block` when selected export triples have
 sensitive-looking terms or the live graph validation scope implied by the
@@ -1343,7 +1343,7 @@ query-metadata repairs even when the revision has no supporting claim,
 observation, or pattern.
 When `truncated=true`,
 the remaining actions first offer narrower
-`describe_context_slice(..., profile="pattern_brief")` calls for linked pattern
+`get_context_graph(..., profile="pattern_brief")` calls for linked pattern
 contexts, then a same-seed retry with `max_triples` raised to
 `candidate_triple_count` for cases that truly need complete raw RDF. Use the
 pattern action before raising the cap when the structured pattern summary is
@@ -1452,7 +1452,7 @@ The response echoes `failure_summary` when supplied. Use that immediate field
 for failed-attempt routing; the longer evidence summary remains available in
 the evidence resource slice.
 When `observed_asset` is supplied, the response now includes a
-`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+`get_context_graph(seed_iris=[evidence_iri], profile="resource_brief")`
 action so an agent can inspect the exact evidence it just wrote, plus a
 `describe_query_context` next action for that asset. Profile-shaped query
 results also include a leading `describe_profile_run` action using the returned
@@ -1746,7 +1746,7 @@ bundle.handoff_entrypoints.handoff_note
 
 When `dataset_describe_available` is false, do not start a handoff by calling
 `describe_dataset`; use `describe_profile_run(dataset_iri, shared_evidence_iri)`
-when `profile_run_available` is true, or seed `describe_context_slice` from
+when `profile_run_available` is true, or seed `get_context_graph` from
 `profile_observation_iris`. This commonly happens when
 `update_map_snapshot=False` keeps a brand-new dataset observation-only.
 `map_dataset_recorded` means this bundle call wrote dataset map facts. It can be
@@ -1762,8 +1762,8 @@ same `SuggestedNextAction` shape used elsewhere, usually starting with
 `describe_dataset` when map context exists, `describe_profile_run` when shared
 evidence is available, `draft_profile_map_updates` when both map context and a
 profile run are available, and profile-observation-seeded
-`describe_context_slice`.
-Map-present bundles can include two `describe_context_slice` actions. They are
+`get_context_graph`.
+Map-present bundles can include two `get_context_graph` actions. They are
 not duplicates: the dataset-seeded action loads current map/dataset context,
 while the profile-observation-seeded action is the direct profile-run handoff.
 Distinguish them by `action_label` and `arguments`, not just by repeated
@@ -2021,7 +2021,7 @@ matching map snapshot when there is one; it can be `mixed` when the matching
 count has more than one basis. A match can still be sampled or unknown-scope
 evidence.
 Use
-`profile_observation_iris` to seed `describe_context_slice` or inspect the
+`profile_observation_iris` to seed `get_context_graph` or inspect the
 returned observations that make up the candidate run. It is a bounded response
 convenience, not a separate persisted profile-run node. `handoff_note` is a
 compact reading cue for profile-only handoffs: profile lore is observed
@@ -2344,7 +2344,7 @@ advisory.duplicate_profile_observation_iris
 `advisory_status` is `project_metric_undefined`,
 `project_metric_defined`, or `project_metric_definition_ambiguous`.
 Undefined metrics point suggested actions at observed-metric context loading and
-nearby ontology metric lookup. The first `describe_context_slice` action seeds
+nearby ontology metric lookup. The first `get_context_graph` action seeds
 `observed_metric_iri`, not the broad metric-kind IRI, so the handoff stays on
 the profiled dataset before reviewing wider same-metric usage. Ambiguous metrics
 add existing-definition inspection before any repair path. If an undefined or
@@ -2435,7 +2435,7 @@ advisory.duplicate_profile_observation_iris
 
 `advisory_status` is `type_finding_unmapped_column`,
 `type_finding_conflicts_current_map`, `type_finding_missing_map_type`, or
-`type_finding_needs_review`. The `describe_context_slice` suggested action
+`type_finding_needs_review`. The `get_context_graph` suggested action
 omits observed type IRIs that do not yet exist as graph resources, so the action
 can be followed directly; undefined project value types still remain in the
 `record_pattern` map implications and focused `stage_map_assertion_change`

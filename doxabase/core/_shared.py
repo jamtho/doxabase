@@ -494,6 +494,10 @@ def to_jsonable(value: Any) -> Any:
     if is_dataclass(value) and not isinstance(value, type):
         result = {}
         for f in fields(value):
+            if f.metadata.get("doxabase_internal"):
+                # Python-API-only field (e.g. ContextSlice.triples feeds the
+                # export path); graph content travels to MCP clients as TriG.
+                continue
             item = to_jsonable(getattr(value, f.name))
             if item is None or item == [] or item == {}:
                 continue

@@ -427,7 +427,7 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     )
 
 
-def test_describe_context_slice_tool_preserves_profile_routes(
+def test_get_context_graph_tool_preserves_profile_routes(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -446,7 +446,7 @@ def test_describe_context_slice_tool_preserves_profile_routes(
         update_map_snapshot=False,
     )
 
-    result = describe_context_slice_tool(
+    result = get_context_graph_tool(
         db,
         seed_iris=[metric_kind],
         profile="dataset_brief",
@@ -457,7 +457,7 @@ def test_describe_context_slice_tool_preserves_profile_routes(
     assert metric_kind in resource_iris
     assert profile["observation"]["observation_iri"] in resource_iris
     assert dataset in resource_iris
-    assert result["dataset_contexts"][0]["iri"] == dataset
+    assert dataset in result["trig"]
     assert [
         profile_summary["iri"]
         for profile_summary in result["seed_profile_observations"]
@@ -757,8 +757,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         "describe_dataset",
         "describe_profile_run",
         "draft_profile_map_updates",
-        "describe_context_slice",
-        "describe_context_slice",
+        "get_context_graph",
+        "get_context_graph",
     ]
     assert result["handoff_entrypoints"]["suggested_next_actions"][1][
         "arguments"
@@ -779,7 +779,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         "profile": "dataset_brief",
     }
     assert result["handoff_entrypoints"]["suggested_next_calls"][-1] == (
-        "describe_context_slice("
+        "get_context_graph("
         f"{result['handoff_entrypoints']['profile_observation_iris']!r}, "
         "profile='dataset_brief')"
     )
@@ -931,7 +931,7 @@ def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
     ]

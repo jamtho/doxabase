@@ -848,16 +848,16 @@ def stage_query_storage_access_repair_tool(
     return to_dict(result)
 
 
-def describe_context_slice_tool(
+def get_context_graph_tool(
     db: DoxaBase,
     seed_iris: list[str],
     profile: str = "dataset_brief",
     max_triples: int = 500,
-    include_trig: bool = False,
+    include_trig: bool = True,
     privacy_scan_limit: int = 20,
 ) -> dict[str, Any]:
     return to_dict(
-        db.describe_context_slice(
+        db.get_context_graph(
             seed_iris,
             profile=profile,  # type: ignore[arg-type]
             max_triples=max_triples,

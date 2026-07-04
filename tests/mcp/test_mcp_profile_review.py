@@ -203,12 +203,12 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         for action in result["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-    ] == ["describe_context_slice", "list_entities", "stage_systematisation"]
+    ] == ["get_context_graph", "list_entities", "stage_systematisation"]
     metric_route_summaries = result["suggested_next_action_group_summaries"][
         "metric_vocabulary_review"
     ]
     assert [summary["tool_name"] for summary in metric_route_summaries] == [
-        "describe_context_slice",
+        "get_context_graph",
         "list_entities",
         "stage_systematisation",
     ]
@@ -255,7 +255,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
         "stage_map_assertion_change",
@@ -388,7 +388,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ]
     assert result["metric_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
-    ] == "describe_context_slice"
+    ] == "get_context_graph"
     assert result["type_advisory_count"] == 1
     assert result["representative_type_advisory_indexes"] == [0]
     assert result["type_advisory_status_counts"] == {
@@ -407,7 +407,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     )
     assert result["type_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
-    ] == "describe_context_slice"
+    ] == "get_context_graph"
 
 
 def test_draft_profile_map_updates_tool_rejects_missing_evidence(
@@ -915,14 +915,14 @@ def test_draft_profile_map_updates_tool_omits_undefined_value_type_seed(
         and action["arguments"]["predicate"] == "rc:valueType"
     ][0]
 
-    assert context_action["tool_name"] == "describe_context_slice"
+    assert context_action["tool_name"] == "get_context_graph"
     assert value_type not in context_action["arguments"]["seed_iris"]
     assert context_action["arguments"]["seed_iris"] == [
         advisory["profile_observation_iri"],
         status_column,
         RC + "Integer",
     ]
-    context = describe_context_slice_tool(db, **context_action["arguments"])
+    context = get_context_graph_tool(db, **context_action["arguments"])
     assert status_column in {resource["iri"] for resource in context["resources"]}
     assert value_type_action["arguments"]["object"] == value_type
 
@@ -991,7 +991,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert advisory["context_pattern_count"] == 0
     assert advisory.get("context_patterns", []) == []
     assert [action["tool_name"] for action in advisory["suggested_next_actions"]] == [
-        "describe_context_slice",
+        "get_context_graph",
         "list_entities",
         "stage_systematisation",
         "describe_pattern",
@@ -1030,7 +1030,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert [
         action["tool_name"] for action in rerun_advisory["suggested_next_actions"]
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "list_entities",
         "stage_systematisation",
         "describe_pattern",
@@ -1311,7 +1311,7 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         action["tool_name"]
         for action in result["type_advisory_suggested_next_actions"]
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "record_pattern",
         "stage_systematisation",
         "stage_map_assertion_change",

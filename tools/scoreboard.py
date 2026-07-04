@@ -47,7 +47,7 @@ BUDGETS: dict[str, int] = {
     "project_brief_chars": 80_000,
     "describe_dataset_chars": 24_000,
     "describe_query_context_chars": 25_500,
-    "context_slice_chars": 147_000,
+    "context_slice_chars": 46_500,
     "graph_overview_chars": 14_700,
     "search_chars": 6_500,
     "list_entities_chars": 16_000,
@@ -143,7 +143,7 @@ def measure_responses(capsule_path: Path) -> dict[str, Any]:
                 mt.describe_query_context_tool(db, iri=DATASET_IRI)
             ),
             "context_slice_chars": size(
-                mt.describe_context_slice_tool(db, seed_iris=[DATASET_IRI])
+                mt.get_context_graph_tool(db, seed_iris=[DATASET_IRI])
             ),
             "graph_overview_chars": size(mt.graph_overview_tool(db)),
             "search_chars": size(mt.search_tool(db, query=SEARCH_QUERY)),

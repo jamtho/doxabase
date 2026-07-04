@@ -795,7 +795,7 @@ but it is not direct staged-revision evidence unless passed explicitly or linked
 directly on a supporting pattern.
 Proposed ontology or SHACL resources inside staged patch Turtle are previewed
 for validation, but they are not materialized as normal graph resources until
-the staged revision is applied. `describe_context_slice(profile="resource_brief")`
+the staged revision is applied. `get_context_graph(profile="resource_brief")`
 and `describe_resource(include_blank_node_closure=True)` can inspect durable
 shapes; they cannot yet produce a route-explained resource card for a proposed
 NodeShape inside a staged patch. Use `describe_staged_revision()` or

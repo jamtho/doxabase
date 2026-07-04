@@ -36,7 +36,7 @@ compaction, read `start_here` first.
    route binding so the next staged assertion or value-type promotion comes
    from a fresh draft with structured arguments.
 9. Call `doxabase.describe_query_context` when the task is physical query planning and you need storage/layout/path/caveat readiness without the full handoff.
-10. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
+10. Call `doxabase.get_context_graph` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
    Use `profile="dataset_brief"` for dataset/table/profile/metric handoffs,
    `profile="pattern_brief"` for pattern handoffs, and `profile="deep_lore"`
    when revision/history links or broader lore may matter. Use

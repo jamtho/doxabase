@@ -142,7 +142,7 @@ def main() -> None:
     )
 
     staged = [db.describe_staged_revision(rev.revision_iri) for rev in draft.staged_revisions]
-    deep_lore = db.describe_context_slice(
+    deep_lore = db.get_context_graph(
         [table.iri],
         profile="deep_lore",
         max_triples=160,

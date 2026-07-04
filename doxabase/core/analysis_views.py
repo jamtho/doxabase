@@ -163,7 +163,7 @@ class AnalysisViewsMixin:
         )
         suggested_next_actions = [
             describe_view_action,
-            self._project_brief_describe_context_slice_action(dataset.iri),
+            self._project_brief_get_context_graph_action(dataset.iri),
         ]
         return QueryPlanningContext(
             dataset=dataset_summary,
@@ -644,8 +644,8 @@ class AnalysisViewsMixin:
             [
                 SuggestedNextAction(
                     action_label="Inspect analysis packet context",
-                    tool_name="describe_context_slice",
-                    mcp_tool_name="doxabase.describe_context_slice",
+                    tool_name="get_context_graph",
+                    mcp_tool_name="doxabase.get_context_graph",
                     arguments={
                         "seed_iris": [spec["iri"]],
                         "profile": "resource_brief",
@@ -656,7 +656,7 @@ class AnalysisViewsMixin:
                         "evidence as a bounded resource handoff."
                     ),
                     call=self._suggested_call_string(
-                        "describe_context_slice",
+                        "get_context_graph",
                         {
                             "seed_iris": [spec["iri"]],
                             "profile": "resource_brief",

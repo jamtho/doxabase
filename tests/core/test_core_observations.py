@@ -123,7 +123,7 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     assert description.path_templates == ["data/messages.parquet"]
 
 
-def test_describe_context_slice_expands_unmapped_observed_column_seed(
+def test_get_context_graph_expands_unmapped_observed_column_seed(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -151,7 +151,7 @@ def test_describe_context_slice_expands_unmapped_observed_column_seed(
         ],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [promo_column],
         profile="dataset_brief",
         max_triples=300,
@@ -178,7 +178,7 @@ def test_describe_context_slice_expands_unmapped_observed_column_seed(
     assert "Seed resource" not in " ".join(context_slice.warnings)
 
 
-def test_describe_context_slice_expands_unmapped_observed_column_after_workflow_import(
+def test_get_context_graph_expands_unmapped_observed_column_after_workflow_import(
     tmp_path: Path,
 ) -> None:
     source = DoxaBase.create(tmp_path / "source.sqlite")
@@ -210,7 +210,7 @@ def test_describe_context_slice_expands_unmapped_observed_column_after_workflow_
     export_result = source.export_trig(export_path, graphs="workflow")
     imported = DoxaBase.create(tmp_path / "workflow-import.sqlite")
     import_counts = imported.import_trig(export_path)
-    context_slice = imported.describe_context_slice(
+    context_slice = imported.get_context_graph(
         [promo_column],
         profile="dataset_brief",
         max_triples=300,
@@ -237,7 +237,7 @@ def test_describe_context_slice_expands_unmapped_observed_column_after_workflow_
     assert "Seed resource" not in " ".join(context_slice.warnings)
 
 
-def test_describe_context_slice_expands_observed_value_type_seed(
+def test_get_context_graph_expands_observed_value_type_seed(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -262,7 +262,7 @@ def test_describe_context_slice_expands_observed_value_type_seed(
         ],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [status_value_type],
         profile="dataset_brief",
         max_triples=300,
@@ -351,7 +351,7 @@ def test_deep_lore_context_slice_expands_plain_observation_seed(
         ],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         claim.observation_iri,
         profile="deep_lore",
         max_triples=400,
@@ -599,7 +599,7 @@ def test_dataset_context_slice_includes_query_result_observation_evidence(
         failure_summary="The reviewed Parquet path was absent from this capsule.",
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         dataset,
         profile="deep_lore",
         max_triples=250,
@@ -648,7 +648,7 @@ def test_record_query_result_records_failures_as_observations(
     assert result.failure_summary == "ModuleNotFoundError: duckdb"
     assert result.source_span_iri is not None
     assert [action.tool_name for action in result.suggested_next_actions] == [
-        "describe_context_slice"
+        "get_context_graph"
     ]
     assert result.suggested_next_actions[0].arguments == {
         "seed_iris": [result.evidence_iri],
@@ -749,14 +749,14 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     assert incoming[0].newer_claim.iri == newer.claim_iri
     assert incoming[0].relation_label == "weakening"
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [older.claim_iri],
         profile="deep_lore",
     )
     assert context_slice.route_counts["incoming_claim_reconsideration"] == 1
     assert context_slice.route_counts["reconsidering_claim"] == 1
 
-    pattern_context_slice = db.describe_context_slice(
+    pattern_context_slice = db.get_context_graph(
         [pattern.pattern_iri],
         profile="pattern_brief",
     )
@@ -898,7 +898,7 @@ def test_context_slice_column_seed_expands_claim_reconsideration_lore(
         supporting_claims=[older.claim_iri, newer.claim_iri],
     )
 
-    context_slice = db.describe_context_slice([column], profile="deep_lore")
+    context_slice = db.get_context_graph([column], profile="deep_lore")
 
     assert not context_slice.warnings
     assert context_slice.dataset_contexts[0].iri == dataset
@@ -948,7 +948,7 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
         supporting_claims=[claim.claim_iri],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [column],
         profile="deep_lore",
         max_triples=5,
@@ -1058,7 +1058,7 @@ def test_context_slice_truncation_ranks_linked_patterns_before_filler(
         evidence_sources=["test://rare-delta-failure-pattern"],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         dataset,
         profile="deep_lore",
         max_triples=8,
@@ -1096,7 +1096,7 @@ def test_truncated_pattern_context_slice_does_not_suggest_self_narrowing(
         evidence_sources=["test://wide-pattern"],
     )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [pattern.pattern_iri],
         profile="pattern_brief",
         max_triples=5,

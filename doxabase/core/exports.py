@@ -301,7 +301,7 @@ class ExportsMixin:
     ) -> ContextSliceExportRecord:
         if limit < 1:
             raise DoxaBaseError("limit must be at least 1")
-        context = self.describe_context_slice(
+        context = self.get_context_graph(
             seed_iris,
             profile=profile,
             max_triples=max_triples,
@@ -614,7 +614,7 @@ class ExportsMixin:
         resource_brief_retry_keys: set[tuple[tuple[str, ...], int]] = set()
         if not write:
             for context_action in context_suggested_next_actions:
-                if context_action.tool_name != "describe_context_slice":
+                if context_action.tool_name != "get_context_graph":
                     continue
                 retry_profile = context_action.arguments.get("profile")
                 if retry_profile != "resource_brief":
@@ -717,8 +717,8 @@ class ExportsMixin:
             actions.append(
                 SuggestedNextAction(
                     action_label="Inspect blocked context slice",
-                    tool_name="describe_context_slice",
-                    mcp_tool_name="doxabase.describe_context_slice",
+                    tool_name="get_context_graph",
+                    mcp_tool_name="doxabase.get_context_graph",
                     arguments=inspect_arguments,
                     reason=(
                         "The context-slice export preflight found redacted "
@@ -727,7 +727,7 @@ class ExportsMixin:
                         "project content before writing an artifact."
                     ),
                     call=self._suggested_call_string(
-                        "describe_context_slice",
+                        "get_context_graph",
                         inspect_arguments,
                     ),
                 )

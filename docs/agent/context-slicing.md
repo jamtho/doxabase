@@ -1,6 +1,6 @@
 # Context Slicing
 
-`doxabase.describe_context_slice` builds a bounded, route-explained subgraph
+`doxabase.get_context_graph` builds a bounded, route-explained subgraph
 around one or more seed resources. Use it when `describe_dataset` or
 `describe_pattern` has identified the right entry point, but you need a richer
 conversation brief with the surrounding RDF.
@@ -53,7 +53,7 @@ patterns, observations, and revision history.
 For arbitrary project RDF, such as ontology terms, SHACL shapes, evidence
 resources, source spans, or non-dataset map resources, start with
 `list_entities()` or `search()`, then use
-`describe_context_slice(..., profile="resource_brief")` when you need a
+`get_context_graph(..., profile="resource_brief")` when you need a
 route-explained handoff across graph roles. Use `describe_resource()` when you
 need paged direct triples or exact blank-node closure controls. For SHACL node
 shapes or other resources whose details sit behind blank-node objects, call
@@ -65,7 +65,7 @@ raise `blank_node_limit`. Use `export_graph()` or `export_trig()` when
 reviewers need complete Turtle for a graph role.
 When lexical search lands on an opaque blank-node shape fragment, do not treat
 that blank node as the main handoff. Seed it with
-`describe_context_slice(..., profile="resource_brief")`, find the
+`get_context_graph(..., profile="resource_brief")`, find the
 `blank_node_seed_owner` route, then inspect the named owner shape with
 `describe_resource(graph="shapes", include_blank_node_closure=True)`.
 For predicate seeds, read `predicate_usage_subject` and
@@ -232,18 +232,18 @@ Useful fields:
   contexts still describe the full selected slice.
 - `sensitive_literal_count`, `matches`, `privacy_warnings`, and `scanner_note`:
   a conservative scan of the returned raw triples. Match rows are redacted, but
-  this does not redact the rest of the `describe_context_slice` payload.
+  this does not redact the rest of the `get_context_graph` payload.
   Do not paste full slice JSON, raw `triples`, or `trig` into reports before
   reviewing the privacy warning and using an export preflight when the content
   may travel outside the local project.
 
 Use `preflight_context_slice_export()` and `export_context_slice()` when the
 handoff needs an importable, resource-scoped TriG artifact. These helpers reuse
-the selected `describe_context_slice` triples, scan only those selected triples
+the selected `get_context_graph` triples, scan only those selected triples
 for credential-like terms, and omit immutable seed graphs by default so a fresh
 DoxaBase capsule can import the bundle without `allow_immutable=True`. This is
 the safer route when the target resource shares a graph role with unrelated
-private or noisy resources. By contrast, `describe_context_slice(include_trig=True)`
+private or noisy resources. By contrast, `get_context_graph(include_trig=True)`
 is an inspection surface; it may include base ontology or base shape triples
 selected for route context and should not be assumed to be a recovery or
 shareable handoff bundle.
@@ -262,7 +262,7 @@ path.
 When `decision="block"`, the preflight does not suggest a direct
 `export_context_slice` write. Follow the read-only suggested actions first:
 run `validate_graph` when validation blocks, inspect the selected slice locally
-with `describe_context_slice` when privacy blocks, narrow to clean seeds when
+with `get_context_graph` when privacy blocks, narrow to clean seeds when
 possible, or run the broader redacted
 `export_preflight(export_kind="handoff_bundle", graphs=["project"])` route
 before deciding whether to scrub, narrow, or defer sharing. History-bearing
@@ -284,14 +284,14 @@ the grouped staged/profile export with `fail_on_sensitive=True` rather than
 treating a clean slice as whole-capsule privacy clearance.
 When a broad handoff blocks on unrelated graph content but the intended artifact
 is a recorded query result or query failure, first inspect the dataset with
-`describe_context_slice(profile="deep_lore")`; dataset slices include a bounded
+`get_context_graph(profile="deep_lore")`; dataset slices include a bounded
 set of recent ordinary observations that name the dataset as `rc:observedAsset`,
 including blocked or failed `record_query_result` attempts. For the narrowest
 export, seed `preflight_context_slice_export` / `export_context_slice` with the
 `evidence_iri` returned by `record_query_result` and use
 `profile="resource_brief"`. That slice carries query status and source-span
 evidence without importing unrelated dirty map siblings.
-If `describe_context_slice` itself reports scanner matches, follow its
+If `get_context_graph` itself reports scanner matches, follow its
 `Preflight context-slice privacy` action. That action keeps match rows redacted
 and, for truncated slices, raises `max_triples` to the full candidate triple cap
 before asking an agent to share or write a bundle.

@@ -274,7 +274,7 @@ overview = db.graph_overview(limit=100)
 brief = db.project_brief(limit=20, profile_candidate_limit=2)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
-context_slice = db.describe_context_slice(
+context_slice = db.get_context_graph(
     [dataset.iri],
     profile="dataset_brief",
     include_trig=True,
@@ -955,7 +955,7 @@ Pass `fail_on_sensitive=True` when unattended or shareable profile review
 exports should raise before writing if the generated Markdown contains
 credential-like or secret-looking literals.
 
-`describe_context_slice()` returns a bounded, route-explained graph slice around
+`get_context_graph()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked
 lore, `pattern_brief` starts from pattern support, and `deep_lore` also
@@ -1026,7 +1026,7 @@ When `observed_asset` is supplied, the returned record includes
 `describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset
 results include `describe_query_context(iri=observed_asset)`. Use those actions
 before drafting another query plan or promoting profile-derived facts.
-Dataset-seeded `describe_context_slice(profile="dataset_brief"|"deep_lore")`
+Dataset-seeded `get_context_graph(profile="dataset_brief"|"deep_lore")`
 also includes a bounded set of recent ordinary observations that name the
 dataset as `rc:observedAsset`, so blocked or failed query-result attempts remain
 discoverable from the dataset handoff. Seed the returned observation or
@@ -1336,7 +1336,7 @@ those reviewed specs and returns described views plus query-context follow-up
 actions. It does not parse Markdown or execute SQL.
 If those views are part of a broader analysis handoff with artifact locators,
 visual metadata, or follow-up tasks, use `record_analysis_packet()` so future
-agents have one bounded `describe_context_slice` seed for the whole packet.
+agents have one bounded `get_context_graph` seed for the whole packet.
 `describe_analysis_view()` reads that logical definition, while
 `describe_query_context()` reports `readiness="logical_analysis_view"` and does
 not offer missing-storage repair groups for the view itself.

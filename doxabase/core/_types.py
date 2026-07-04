@@ -4482,7 +4482,7 @@ class ContextSlice:
     route_legend: list[ContextSliceRouteLegend]
     route_counts: dict[str, int]
     graph_counts: dict[str, int]
-    triples: list[ResourceTriple]
+    triples: list[ResourceTriple] = field(metadata={"doxabase_internal": True})
     triple_count: int
     returned_triple_count: int
     candidate_triple_count: int
@@ -4499,8 +4499,8 @@ class ContextSlice:
     privacy_warnings: list[str]
     scanner_note: str | None
     seed_profile_observations: list[ProfileObservationSummary]
-    dataset_contexts: list[DatasetDescription]
-    pattern_contexts: list[PatternDescription]
+    dataset_contexts: list[DatasetDescription] = field(metadata={"doxabase_internal": True})
+    pattern_contexts: list[PatternDescription] = field(metadata={"doxabase_internal": True})
     warnings: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]

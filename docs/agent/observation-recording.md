@@ -252,7 +252,7 @@ bundle's dataset map label/type/snapshot write. If a receiver should start from
 find the dataset until map context is recorded. Use
 `record_profile_bundle(...).handoff_entrypoints`, call
 `describe_profile_run(dataset_iri, shared_evidence_iri)`, or seed
-`describe_context_slice` from profile observation IRIs for observation-only
+`get_context_graph` from profile observation IRIs for observation-only
 handoffs.
 When a column profile uses `update_map_column=false` and the column is not yet a
 map column, `describe_dataset` surfaces it under
@@ -410,7 +410,7 @@ db.stage_pattern_promotion(
 ```
 
 Because this example keeps the profile observation-only, a metric-seeded
-`describe_context_slice(..., profile="dataset_brief")` preserves the profile row
+`get_context_graph(..., profile="dataset_brief")` preserves the profile row
 in `seed_profile_observations` but may not include `dataset_contexts`. Call
 `record_map_dataset()` first when a receiving agent should start from a dataset
 entrypoint, and use `describe_pattern(pattern.pattern_iri)` for the pattern

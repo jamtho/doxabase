@@ -959,7 +959,7 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert [
         action.tool_name for action in dirty_preflight.suggested_next_actions
     ] == [
-        "describe_context_slice",
+        "get_context_graph",
         "export_preflight",
     ]
     assert dirty_preflight.suggested_next_actions[0].arguments == {
@@ -1191,7 +1191,7 @@ def test_context_slice_export_preserves_relationship_endpoint_bodies(
     )
     assert db.validate_graph(scope="all").conforms
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         [review_packet],
         profile="dataset_brief",
         max_triples=300,
@@ -1413,7 +1413,7 @@ def test_shareability_hints_flag_scanner_clean_local_home_paths(
     )
     assert graph_export.git_safe is False
 
-    context = db.describe_context_slice(dataset, profile="resource_brief")
+    context = db.get_context_graph(dataset, profile="resource_brief")
     assert context.sensitive_literal_count == 0
     assert context.shareability_hints == ["absolute_local_home_path"]
     assert context.shareability_hint_matches[0].export_part == "context_slice"
@@ -2153,7 +2153,7 @@ def test_local_csv_directory_wildcard_handoff_records_generic_result(
     assert result.execution_status == "succeeded"
     assert result.scanned_source_paths == scanned_paths
     assert [action.tool_name for action in result.suggested_next_actions] == [
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
     assert result.suggested_next_actions[0].arguments == {
@@ -2161,7 +2161,7 @@ def test_local_csv_directory_wildcard_handoff_records_generic_result(
         "profile": "resource_brief",
     }
 
-    result_slice = db.describe_context_slice(
+    result_slice = db.get_context_graph(
         result.observation_iri,
         profile="deep_lore",
         max_triples=200,
@@ -2601,7 +2601,7 @@ def test_query_result_context_preflight_flags_scanner_clean_local_runtime_paths(
         sample_method="External read-only aggregate query.",
     )
 
-    context = db.describe_context_slice(
+    context = db.get_context_graph(
         [result.evidence_iri],
         profile="resource_brief",
     )

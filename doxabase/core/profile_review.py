@@ -534,7 +534,7 @@ class ProfileReviewMixin:
             return "export_artifact"
         if primary_tool_name in {
             "describe_assertion_support",
-            "describe_context_slice",
+            "get_context_graph",
             "describe_dataset",
             "describe_graph_revision",
             "describe_pattern",
@@ -561,7 +561,7 @@ class ProfileReviewMixin:
             "describe_pattern": 6,
             "describe_resource": 7,
             "list_entities": 8,
-            "describe_context_slice": 9,
+            "get_context_graph": 9,
         }
         if not tool_names or not suggested_next_calls:
             return None, None

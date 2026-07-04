@@ -255,7 +255,7 @@ db.record_map_dataset(
 dataset = db.describe_dataset(table)
 query = db.describe_query_context(table)
 plan = db.draft_query_plan(table)
-slice_ = db.describe_context_slice([table], profile="dataset_brief")
+slice_ = db.get_context_graph([table], profile="dataset_brief")
 validation = db.validate_graph(scope="all")
 
 print(

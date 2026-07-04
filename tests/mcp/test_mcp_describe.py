@@ -314,7 +314,7 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     )
 
 
-def test_describe_context_slice_tool_returns_json_like_payload(
+def test_get_context_graph_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -330,7 +330,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         source_kind="rc:DocumentationSource",
     )
 
-    result = describe_context_slice_tool(
+    result = get_context_graph_tool(
         db,
         seed_iris=[seed_iri],
         profile="dataset_brief",
@@ -339,8 +339,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
 
     assert result["profile"] == "dataset_brief"
     assert result["seeds"][0]["label"] == "Gamma Market Snapshots"
-    assert result["dataset_contexts"][0]["iri"] == seed_iri
-    assert result["pattern_contexts"]
+    assert seed_iri in result["trig"]
     assert result["resource_count"] == len(result["resources"])
     assert result["route_counts"]["dataset_column"] >= 1
     assert result["route_counts"]["linked_pattern"] >= 1
@@ -381,8 +380,8 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert result["suggested_next_calls"] == [
         action["call"] for action in result["suggested_next_actions"]
     ]
-    assert result["triples"][0]["subject"] == seed_iri
-    assert result.get("trig") is None
+    assert result.get("triples") is None
+    assert seed_iri in result["trig"]
     preflight = preflight_context_slice_export_tool(
         db,
         seed_iris=[seed_iri],
@@ -450,16 +449,13 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         physical_layouts=[warning_layout["iri"]],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
-    warning_result = describe_context_slice_tool(
+    warning_result = get_context_graph_tool(
         warning_db,
         seed_iris=[warning_dataset],
         profile="dataset_brief",
     )
     assert warning_result["truncated"] is False
     assert warning_result.get("warnings", []) == []
-    assert warning_result["dataset_contexts"][0]["operational_warnings"][0][
-        "code"
-    ] == "missing_storage_access"
     assert [
         action["tool_name"] for action in warning_result["suggested_next_actions"]
     ] == ["describe_query_context"]
@@ -497,13 +493,12 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         physical_layouts=[repair_layout["iri"]],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
-    repair_result = describe_context_slice_tool(
+    repair_result = get_context_graph_tool(
         repair_db,
         seed_iris=[repair_dataset],
         profile="dataset_brief",
     )
     assert repair_result["truncated"] is False
-    assert repair_result["dataset_contexts"][0].get("operational_warnings", []) == []
     assert [
         action["tool_name"] for action in repair_result["suggested_next_actions"]
     ] == ["describe_query_context"]
@@ -518,13 +513,12 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     )
     assert repair_result["suggested_next_calls"] == [repair_action["call"]]
 
-    mismatch = describe_context_slice_tool(
+    mismatch = get_context_graph_tool(
         db,
         seed_iris=[pattern["pattern_iri"]],
         profile="dataset_brief",
         max_triples=120,
     )
-    assert mismatch.get("pattern_contexts", []) == []
     assert any(
         "Seed is an rc:Pattern; rerun with profile='pattern_brief' or 'deep_lore'."
         in warning
@@ -540,7 +534,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         source_path="tests/test_mcp_tools.py",
         source_kind="rc:DocumentationSource",
     )
-    claim_mismatch = describe_context_slice_tool(
+    claim_mismatch = get_context_graph_tool(
         db,
         seed_iris=[claim["claim_iri"]],
         profile="dataset_brief",
@@ -593,10 +587,10 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result.get("related_routes", []) == []
     assert result.get("related_route_summaries", []) == []
     assert result["suggested_next_actions"][0]["tool_name"] == (
-        "describe_context_slice"
+        "get_context_graph"
     )
     assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
-        "doxabase.describe_context_slice"
+        "doxabase.get_context_graph"
     )
     assert result["suggested_next_actions"][0]["arguments"]["seed_iris"] == [
         "https://example.test/project#Messages",

@@ -669,7 +669,7 @@ def test_deep_lore_context_slice_reports_absent_lore_layer(
         path_templates=["data/plain.parquet"],
     )
 
-    context_slice = db.describe_context_slice([dataset], profile="deep_lore")
+    context_slice = db.get_context_graph([dataset], profile="deep_lore")
 
     assert context_slice.pattern_contexts == []
     assert context_slice.route_counts["seed_dataset"] == 1
@@ -988,7 +988,7 @@ def test_describe_resource_can_include_bounded_blank_node_closure(
         db.describe_resource(shape, include_blank_node_closure=True, blank_node_limit=0)
 
 
-def test_describe_context_slice_warns_on_large_structured_context(
+def test_get_context_graph_warns_on_large_structured_context(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -1002,7 +1002,7 @@ def test_describe_context_slice_warns_on_large_structured_context(
             physical_type="rc:Varchar",
         )
 
-    context_slice = db.describe_context_slice(
+    context_slice = db.get_context_graph(
         dataset,
         profile="dataset_brief",
         max_triples=5,
@@ -1051,13 +1051,13 @@ def test_mixed_support_review_group_counts_route_steps_when_calls_repeat() -> No
             "route_step_keys": ["step:metric-context", "step:type-context"],
             "route_anchor_iris": [],
             "route_pattern_iris": [],
-            "tool_names": ["describe_context_slice"],
+            "tool_names": ["get_context_graph"],
             "action_labels": [
                 "Inspect metric context",
                 "Inspect type context",
             ],
             "suggested_next_calls": [
-                "describe_context_slice("
+                "get_context_graph("
                 "seed_iris=['https://example.test/project#col'])"
             ],
             "metric_advisory_indexes": [0],

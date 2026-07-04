@@ -43,7 +43,7 @@ def test_start_here_names_exact_discovery_tools() -> None:
     assert "exact discovery" in content
     assert "doxabase.get_doc" in content
     assert "doxabase.list_entities" in content
-    assert "doxabase.describe_context_slice" in content
+    assert "doxabase.get_context_graph" in content
     assert "profiling" in content
     assert "systematisation" in content
     assert "Staged Handoff Recovery Cookbook" in content

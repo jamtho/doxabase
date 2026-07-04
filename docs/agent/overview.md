@@ -30,7 +30,7 @@ Current implementation status:
 - `describe_query_context()` for compact non-secret query-planning context,
   physical-metadata readiness, info/warning/error issues, and separate
   analytical caveat warnings.
-- `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.
+- `get_context_graph()` for route-explained dataset, pattern, and deep-lore graph slices.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_dataset_profile()` for profile observations that may also update map
   row-count snapshots and linked profile patterns.

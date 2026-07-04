@@ -1557,14 +1557,14 @@ class BriefMixin:
     ) -> list[ProjectBriefRecommendedTask]:
         tasks: list[ProjectBriefRecommendedTask] = []
         if not dataset.is_table:
-            action = self._project_brief_describe_context_slice_action(
+            action = self._project_brief_get_context_graph_action(
                 dataset.dataset.iri,
             )
             tasks.append(
                 ProjectBriefRecommendedTask(
                     priority=25,
                     task_type="non_tabular_asset_review",
-                    source="describe_context_slice",
+                    source="get_context_graph",
                     resource=dataset.dataset,
                     reason=(
                         "Dataset is not typed as rc:Table; inspect map context, "
@@ -1814,7 +1814,7 @@ class BriefMixin:
             0,
         )
         return max(0, draft.metric_advisory_count - context_only_count)
-    def _project_brief_describe_context_slice_action(
+    def _project_brief_get_context_graph_action(
         self,
         dataset_iri: str,
     ) -> SuggestedNextAction:
@@ -1824,8 +1824,8 @@ class BriefMixin:
         }
         return SuggestedNextAction(
             action_label="Inspect non-tabular asset context",
-            tool_name="describe_context_slice",
-            mcp_tool_name="doxabase.describe_context_slice",
+            tool_name="get_context_graph",
+            mcp_tool_name="doxabase.get_context_graph",
             arguments=arguments,
             reason=(
                 "Inspect the non-tabular asset's map context, caveats, "
@@ -1833,7 +1833,7 @@ class BriefMixin:
                 "table query target."
             ),
             call=self._suggested_call_string(
-                "describe_context_slice",
+                "get_context_graph",
                 arguments,
             ),
         )
@@ -1882,7 +1882,7 @@ class BriefMixin:
                 ProjectBriefRecommendedTask(
                     priority=70,
                     task_type="analysis_packet_review",
-                    source="describe_context_slice",
+                    source="get_context_graph",
                     resource=ResourceSummary(
                         iri=packet.iri,
                         label=packet.label,
@@ -1913,8 +1913,8 @@ class BriefMixin:
         }
         return SuggestedNextAction(
             action_label="Inspect analysis packet context",
-            tool_name="describe_context_slice",
-            mcp_tool_name="doxabase.describe_context_slice",
+            tool_name="get_context_graph",
+            mcp_tool_name="doxabase.get_context_graph",
             arguments=arguments,
             reason=(
                 "Inspect the packet, linked analysis views, artifact locators, "
@@ -1922,7 +1922,7 @@ class BriefMixin:
                 "bounded handoff context."
             ),
             call=self._suggested_call_string(
-                "describe_context_slice",
+                "get_context_graph",
                 arguments,
             ),
         )

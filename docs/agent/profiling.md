@@ -231,7 +231,7 @@ work. `profile_queue_counts["profile_drafts"]` is the total returned draft
 summary count and can include completed or context-only profile evidence whose
 status says no map recommendations remain.
 
-For route-explained handoffs, use `describe_context_slice` with
+For route-explained handoffs, use `get_context_graph` with
 `profile="dataset_brief"` for table/profile summaries or seed the slice with a
 specific profile observation, metric node, or project-specific metric-kind IRI.
 

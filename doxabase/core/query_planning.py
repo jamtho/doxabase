@@ -183,7 +183,7 @@ class QueryPlanningMixin:
             },
         )
         suggested_next_actions = [
-            self._project_brief_describe_context_slice_action(dataset.iri)
+            self._project_brief_get_context_graph_action(dataset.iri)
         ]
         return QueryPlanningContext(
             dataset=dataset_summary,
@@ -203,7 +203,7 @@ class QueryPlanningMixin:
                     "that are not typed as rc:Table."
                 ),
                 (
-                    "Use describe_context_slice or describe_resource to inspect "
+                    "Use get_context_graph or describe_resource to inspect "
                     "non-tabular map context, caveats, observations, patterns, "
                     "and evidence."
                 ),
@@ -261,7 +261,7 @@ class QueryPlanningMixin:
         actions: Iterable[SuggestedNextAction],
     ) -> list[int]:
         safe_inspection_tools = {
-            "describe_context_slice",
+            "get_context_graph",
             "describe_profile_run",
         }
         return [

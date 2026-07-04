@@ -646,7 +646,7 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
     assert profile_task.get("pending_staged_profile_update_iris", []) == []
     assert "Pending staged profile update(s)" not in profile_task["reason"]
     assert profile_task["suggested_next_action"]["tool_name"] == (
-        "describe_context_slice"
+        "get_context_graph"
     )
     assert profile_task["suggested_next_action"]["source_profile_advisory"][
         "review_lane"
@@ -719,7 +719,7 @@ def test_query_storage_frontier_tool_route_regression(
     )
     assert non_table_task["task_type"] == "non_tabular_asset_review"
     assert non_table_task["suggested_next_action"]["tool_name"] == (
-        "describe_context_slice"
+        "get_context_graph"
     )
 
     orphan_context = describe_query_context_tool(db, iri=orphan)

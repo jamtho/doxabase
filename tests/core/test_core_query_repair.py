@@ -2055,7 +2055,7 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     assert len(result.scanned_source_span_iris) == 1
     assert [action.tool_name for action in result.suggested_next_actions] == [
         "describe_profile_run",
-        "describe_context_slice",
+        "get_context_graph",
         "describe_query_context",
     ]
 
@@ -2090,7 +2090,7 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     assert (RC + "sourcePath", str(csv_path)) in scanned_span_outgoing
     assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
 
-    evidence_slice = db.describe_context_slice(
+    evidence_slice = db.get_context_graph(
         **result.suggested_next_actions[1].arguments,
         max_triples=120,
     )
@@ -2341,7 +2341,7 @@ def test_context_slice_column_seed_suggests_query_context_for_owner_repairs(
     )
 
     for profile in ("dataset_brief", "deep_lore"):
-        context_slice = db.describe_context_slice(column, profile=profile)
+        context_slice = db.get_context_graph(column, profile=profile)
 
         assert context_slice.dataset_contexts[0].iri == dataset
         assert context_slice.route_counts["seed_column"] == 1

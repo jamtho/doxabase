@@ -131,7 +131,7 @@ Touchpoints:
 - `draft_query_plan`
 - `record_query_result`
 - `export_preflight`
-- `describe_context_slice`
+- `get_context_graph`
 
 Done signals:
 

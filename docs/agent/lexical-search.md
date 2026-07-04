@@ -61,7 +61,7 @@ stored wording says "inspection events" and "permit_number" in a different
 shape, while a shorter query such as "inspection events permit_number" can find
 it. If you know the resource type, pair search with `list_entities` and then
 inspect candidates through `describe_resource`, `describe_pattern`, or
-`describe_context_slice`.
+`get_context_graph`.
 When a search returns no matches, read `suggested_next_actions` before
 inventing a fallback. The actions propose bounded shorter-term project searches,
 map entity browsing, and current staged-payload search so you can find a seed or

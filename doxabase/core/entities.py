@@ -1158,7 +1158,7 @@ class EntitiesMixin:
             )
 
         add_action(
-            "describe_context_slice",
+            "get_context_graph",
             {
                 "seed_iris": seeds,
                 "profile": "deep_lore",

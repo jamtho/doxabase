@@ -10,7 +10,7 @@ Direct query helpers are table-oriented. For map datasets recorded with
 and `draft_query_plan` returns
 `handoff_kind="not_applicable_non_tabular_asset"` rather than a file/database
 scan. Candidate layout or storage warnings on those assets are context for
-handoff review, not query-repair work. Use `describe_context_slice` or
+handoff review, not query-repair work. Use `get_context_graph` or
 `describe_resource` for those assets unless a separate queryable table route has
 been modeled.
 
@@ -27,7 +27,7 @@ without entering a physical-route repair loop.
 
 When starting from a query metadata resource instead of a dataset, such as a
 storage access, physical layout, partition scheme, or mapped column, call
-`describe_context_slice(seed, profile="resource_brief")` first. If the slice
+`get_context_graph(seed, profile="resource_brief")` first. If the slice
 finds directly owning table(s), `suggested_next_actions` can point to
 `describe_query_context(table_iri)` for each bounded owner. Follow those actions
 when the owner has repair groups or operational warnings, and also when a
@@ -90,7 +90,7 @@ Known exact gap:
   `vessel_name`, `imo`, `call_sign`, `vessel_type`, `status`, `length`,
   `width`, `draft`, `cargo`, `transceiver`, `cog`, and `heading`.
 - Importing the AIS session-observation bundles makes this lore rediscoverable
-  through `describe_context_slice(profile="dataset_brief")`, but it does not
+  through `get_context_graph(profile="dataset_brief")`, but it does not
   turn observation/evidence facts into current map facts. `describe_query_context`
   will still plan from the stale inherited broadcast partition until reviewed
   map metadata is added.
@@ -642,13 +642,13 @@ handoffs. When the result evidence is later retrieved as an
 `sources` field; the source-span fields keep query source and scanned source
 metadata separate.
 After recording the result, follow the returned
-`describe_context_slice(seed_iris=[evidence_iri], profile="resource_brief")`
+`get_context_graph(seed_iris=[evidence_iri], profile="resource_brief")`
 action when you need the exact result evidence, relation handle, source span, or
 scanned path/handle trail. The returned `describe_query_context` action is for
 the refreshed dataset handoff; it is not a substitute for evidence inspection.
 Directory storage with a reviewed wildcard CSV path template can also reach
 `handoff_kind="execution_attempt_ready"`; after an external aggregate, seed
-`describe_context_slice(profile="deep_lore")` from the dataset, returned
+`get_context_graph(profile="deep_lore")` from the dataset, returned
 observation, or evidence IRI when the result artifact and scanned source paths
 need to travel with the handoff. Dataset-seeded slices include a bounded set of
 recent ordinary `rc:observedAsset` observations, including blocked or failed

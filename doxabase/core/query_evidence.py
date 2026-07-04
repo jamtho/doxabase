@@ -1140,8 +1140,8 @@ class QueryEvidenceMixin:
         actions.append(
             SuggestedNextAction(
                 action_label="Inspect recorded query evidence",
-                tool_name="describe_context_slice",
-                mcp_tool_name="doxabase.describe_context_slice",
+                tool_name="get_context_graph",
+                mcp_tool_name="doxabase.get_context_graph",
                 arguments=evidence_arguments,
                 reason=(
                     "Inspect the evidence resource just written by "
@@ -1150,7 +1150,7 @@ class QueryEvidenceMixin:
                     "metadata before continuing query planning."
                 ),
                 call=self._suggested_call_string(
-                    "describe_context_slice",
+                    "get_context_graph",
                     evidence_arguments,
                 ),
             )

@@ -1902,7 +1902,7 @@ class StagingApplyMixin:
         labels = {
             "apply_staged_revision": "Apply staged revision",
             "describe_assertion_support": "Inspect assertion support",
-            "describe_context_slice": "Load context slice",
+            "get_context_graph": "Load context slice",
             "describe_dataset": "Inspect dataset",
             "describe_graph_revision": "Inspect graph revision",
             "describe_resource": "Inspect resource",

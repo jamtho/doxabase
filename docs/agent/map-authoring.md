@@ -80,7 +80,7 @@ message stream, model artifact, or other non-tabular asset, call
 types when useful, then attach caveats, storage or access metadata, evidence,
 claims, observations, and patterns as usual. Use `record_map_column` only for
 real table-like fields. For non-tabular handoffs, prefer
-`describe_resource()` or `describe_context_slice(profile="deep_lore")`; direct
+`describe_resource()` or `get_context_graph(profile="deep_lore")`; direct
 query-planning helpers return `not_applicable_non_tabular_asset` unless a
 separate queryable table route has been modeled.
 

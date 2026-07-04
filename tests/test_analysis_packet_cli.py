@@ -135,7 +135,7 @@ def test_analysis_packet_cli_applies_manifest_file(tmp_path: Path) -> None:
 
     with DoxaBase.open_readonly(capsule_path) as db:
         assert db.describe_query_context(view).readiness == "logical_analysis_view"
-        context = db.describe_context_slice([packet], profile="resource_brief")
+        context = db.get_context_graph([packet], profile="resource_brief")
         assert view in {resource.iri for resource in context.resources}
         assert recipe in {resource.iri for resource in context.resources}
 
