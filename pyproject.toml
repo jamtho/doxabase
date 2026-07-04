@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "doxabase"
-version = "0.2.0.dev0"
+version = "0.2.0"
 description = "A small local RDF memory capsule for data projects: agents supply judgement, DoxaBase supplies graph mechanics."
 readme = "README.md"
 license = { file = "LICENSE" }

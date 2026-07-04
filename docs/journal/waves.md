@@ -393,3 +393,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Five product seeds recorded in trials/2026-07-gates-5-6.md.
 - Next: Phase 7 — retrospective (doc 09), Enron case study from installed
   wheel, tag v0.2.0.
+
+## Wave 20 — 2026-07-05 — Phase 7: case study, retrospective, v0.2.0
+
+- Enron case study (trials/2026-07-enron-case-study.md): the pre-program
+  31MB capsule works untouched under the installed wheel; a cold client
+  agent inherited it with stale notes, achieved all four session goals,
+  and produced a six-gate query handoff whose gates trace to recorded
+  caveats/patterns. ~20% friction, all stale-notes translation; zero
+  data contradictions.
+- doxabase_design_docs/09-distillation-retrospective.md written:
+  scoreboard before/after, battery deltas, LATITUDE register, the honest
+  worse-list, and six open items for James (schema-char structural
+  decision, response end-state remainders, staging.py vs 3k target,
+  SPARQL spike deferral, product seeds, permanent loop rules).
+- Version 0.2.0; tag v0.2.0. Feature development resumes only after James
+  reviews the retrospective (doc 07 §7.4). The Permanent Loop Rules stay
+  in force.
