@@ -190,7 +190,10 @@ def list_agent_docs() -> list[dict[str, Any]]:
                 "title": doc.title,
                 "description": doc.description,
                 "size_chars": len(text),
-                "sections": _doc_sections(text),
+                # Section anchors only; fetch a doc to get exact offsets.
+                "sections": [
+                    section["anchor"] for section in _doc_sections(text)
+                ],
             }
         )
     return docs

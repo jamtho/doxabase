@@ -329,3 +329,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   representation consolidation), slice ~1k, list_entities 337 chars (would
   require dropping types from listings — declined).
 - Next: Gate-3/4 battery rerun vs docs/journal/trials/2026-07-baseline.md.
+
+## Wave 16 — 2026-07-05 — Gate 3/4 battery rerun + doc-list diet
+
+- Battery rerun on the 25-tool surface: 3/3 success (quality up — T1 traced
+  evidence provenance; T3 zero wasted calls, used plan_candidate exactly as
+  designed; T2 full ladder with correctly-scoped promotion). Costs −17%/
+  −41%/−45% vs baseline. Report: docs/journal/trials/2026-07-gate3.md.
+- Gate verdict: success criterion met; the ≥60% cost expectation is not yet
+  met and is fully attributed to the docs (stale mega-docs describing the
+  dead surface + a 31k-char doc list). Battery reruns again after Phase 6.
+- Doc list dieted in-wave: per-section byte-offset tables replaced by
+  anchors (31,000 → 9,439 chars).
+- Next: Phase 6 docs distillation (now the top-value work), with the
+  trial reports as its inventory.

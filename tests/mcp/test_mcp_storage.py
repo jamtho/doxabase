@@ -157,7 +157,7 @@ def test_doc_tools_return_json_like_payloads() -> None:
     assert "systematisation" in doc_ids
     assert response_shapes_doc["size_chars"] > 0
     assert {
-        section["anchor"]
+        section
         for section in response_shapes_doc["sections"]
     } >= {
         "profile-helper-records",
