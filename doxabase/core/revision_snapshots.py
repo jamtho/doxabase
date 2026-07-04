@@ -268,10 +268,13 @@ class RevisionSnapshotsMixin:
 
         if status == "history_only_count_digest" or missing_snapshot_row_graph_roles:
             add_action(
-                "import_revision_snapshots",
+                "import_bundle",
                 {
-                    "path": "/tmp/revision-snapshots.json",
-                    "path_is_placeholder": True,
+                    "kind": "revision_snapshots",
+                    "spec": {
+                        "path": "/tmp/revision-snapshots.json",
+                        "path_is_placeholder": True,
+                    },
                 },
                 (
                     "RDF history metadata is present for "
@@ -280,16 +283,22 @@ class RevisionSnapshotsMixin:
                     "bundle at its real handoff path before relying on exact "
                     "applied-diff or stale-drift triple inspection. If the "
                     "snapshot JSON is not available, request a "
-                    "recovery-complete export_handoff_bundle from the source "
-                    "capsule."
+                    "recovery-complete export_bundle(kind='handoff') from "
+                    "the source capsule."
                 )
             )
         if status == "snapshot_rows_without_history" or (
             orphan_snapshot_row_graph_roles and status != "history_plus_snapshot_rows"
         ):
             add_action(
-                "import_trig",
-                {"path": "/tmp/project.trig", "path_is_placeholder": True},
+                "import_bundle",
+                {
+                    "kind": "trig",
+                    "spec": {
+                        "path": "/tmp/project.trig",
+                        "path_is_placeholder": True,
+                    },
+                },
                 (
                     "Snapshot rows exist for this revision, but the RDF history "
                     "record is missing. Import the project/history RDF bundle at "
@@ -298,8 +307,14 @@ class RevisionSnapshotsMixin:
             )
         if missing_current_graph_roles:
             add_action(
-                "import_trig",
-                {"path": "/tmp/project.trig", "path_is_placeholder": True},
+                "import_bundle",
+                {
+                    "kind": "trig",
+                    "spec": {
+                        "path": "/tmp/project.trig",
+                        "path_is_placeholder": True,
+                    },
+                },
                 (
                     "RDF history metadata and exact snapshot rows are present "
                     f"for '{revision_iri}', but current project graph role(s) "
@@ -336,9 +351,9 @@ class RevisionSnapshotsMixin:
         actions: Iterable[SuggestedNextAction],
     ) -> RevisionNextAction | None:
         for action in actions:
-            if action.tool not in {
-                "doxabase.import_revision_snapshots",
-                "doxabase.import_trig",
+            if import_bundle_action_kind(action) not in {
+                "revision_snapshots",
+                "trig",
             }:
                 continue
             return RevisionNextAction(
@@ -377,7 +392,8 @@ class RevisionSnapshotsMixin:
             note += (
                 " If this capsule was populated from an RDF project/history "
                 "handoff, import the companion JSON bundle with "
-                "import_revision_snapshots(...) after import_trig(...)."
+                "import_bundle(kind='revision_snapshots') after "
+                "import_bundle(kind='trig')."
             )
         return note
     def _graph_version_snapshot_for_revision(
@@ -399,9 +415,10 @@ class RevisionSnapshotsMixin:
             return None
         suggested_next_actions = [
             SuggestedNextAction(
-                tool="doxabase.describe_revision_graph_snapshot",
+                tool="doxabase.describe_revision",
                 args={
                     "iri": revision.iri,
+                    "aspect": "graph_snapshot",
                     "graph_role": graph_role,
                 },
                 reason="Inspect this stored graph snapshot; pass "
@@ -421,8 +438,8 @@ class RevisionSnapshotsMixin:
         ):
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_revision_lineage",
-                    args={"iri": revision.iri},
+                    tool="doxabase.describe_revision",
+                    args={"iri": revision.iri, "aspect": "lineage"},
                     reason="Inspect this row's staged/apply/restage lineage "
                         "before deciding whether the version row is current "
                         "work, superseded, or already applied.",
@@ -431,10 +448,11 @@ class RevisionSnapshotsMixin:
         if snapshot.exact_snapshot_available:
             suggested_next_actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_graph_version_diff",
+                    tool="doxabase.describe_revision",
                     args={
+                        "iri": revision.iri,
+                        "aspect": "version_diff",
                         "graph_role": graph_role,
-                        "before_revision_iri": revision.iri,
                         "compare_to_current": True,
                     },
                     reason="Compare this stored graph version with the current "
@@ -570,7 +588,7 @@ class RevisionSnapshotsMixin:
                     "staged. Exact changed triples are available but omitted "
                     "from this summary response; call "
                     "apply_staged_revision(dry_run=true) or "
-                    "list_graph_revisions(drift_detail='exact') for them."
+                    "list_revisions(drift_detail='exact') for them."
                 )
             else:
                 note = drift.note

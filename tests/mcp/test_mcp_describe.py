@@ -393,12 +393,17 @@ def test_get_context_graph_tool_returns_json_like_payload(
     )
     assert "pattern_synthesis" in role_loss_warning
     assert [
-        action["tool"].removeprefix("doxabase.") for action in preflight["suggested_next_actions"][:2]
+        (
+            action["tool"].removeprefix("doxabase."),
+            action["args"].get("kind"),
+        )
+        for action in preflight["suggested_next_actions"][:2]
     ] == [
-        "preflight_context_slice_export",
-        "export_context_slice",
+        ("export_preflight", "context_slice"),
+        ("export_bundle", "context_slice"),
     ]
     assert preflight["suggested_next_actions"][0]["args"] == {
+        "kind": "context_slice",
         "seed_iris": [seed_iri],
         "profile": "dataset_brief",
         "max_triples": preflight["candidate_triple_count"],

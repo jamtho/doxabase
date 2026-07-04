@@ -84,7 +84,7 @@ def test_project_brief_tool_serializes_gates_without_secrets(
     preflight_action = result["suggested_next_actions"][0]
     assert preflight_action["tool"] == "doxabase.export_preflight"
     assert preflight_action["args"] == {
-        "export_kind": "handoff_bundle",
+        "kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
     }

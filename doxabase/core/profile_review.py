@@ -541,10 +541,19 @@ class ProfileReviewMixin:
             return "other"
         if primary_tool_name.startswith("stage_"):
             return "stage_reviewable_change"
+        if primary_tool_name == "import_bundle":
+            kind = (
+                action_arguments(action).get("kind")
+                if action is not None
+                else None
+            )
+            return (
+                "direct_graph_write"
+                if kind in {"trig", "revision_snapshots"}
+                else "other"
+            )
         if primary_tool_name.startswith("record_") or primary_tool_name in {
             "apply_staged_revision",
-            "import_revision_snapshots",
-            "import_trig",
             "replace_graph_triples",
             "restage_staged_revision",
         }:
@@ -552,14 +561,11 @@ class ProfileReviewMixin:
         if primary_tool_name.startswith("export_"):
             return "export_artifact"
         if primary_tool_name in {
-            "describe_assertion_support",
             "get_context_graph",
             "describe_dataset",
-            "describe_graph_revision",
-            "describe_pattern",
-            "describe_profile_run",
             "describe_query_context",
             "describe_resource",
+            "describe_revision",
             "list_entities",
             "search",
         }:

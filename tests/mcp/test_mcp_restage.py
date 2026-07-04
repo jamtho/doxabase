@@ -59,7 +59,7 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert "predicate_display" in added_drift_triple
     assert "object_display" in added_drift_triple
     assert stale_check["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert stale_check["suggested_next_actions"][-1]["tool"] == (
         "doxabase.restage_staged_revision"
@@ -153,14 +153,14 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         "inspect_already_applied"
     )
     assert stale_check_after_apply["next_action"]["tool_name"] == (
-        "describe_graph_revision"
+        "describe_revision"
     )
     assert stale_check_after_apply["next_action"]["arguments"] == {
         "iri": applied["applied_revision_iri"]
     }
     assert stale_check_after_apply["suggested_next_actions"][0][
         "tool"
-    ] == "doxabase.describe_graph_revision"
+    ] == "doxabase.describe_revision"
     assert stale_check_after_apply["suggested_next_actions"][0]["args"] == {
         "iri": applied["applied_revision_iri"]
     }
@@ -395,7 +395,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert "- Apply/restage review: " in export_text
     assert "- Sequential apply recheck candidates: " in export_text
     assert "## Restage Context" in export_text
-    assert "**doxabase.describe_staged_revision**" in export_text
+    assert "**doxabase.describe_revision**" in export_text
 
 
 def test_restage_staged_revisions_tool_can_dry_run(

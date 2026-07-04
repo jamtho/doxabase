@@ -197,7 +197,7 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
         "alternative_to_applied_source"
     )
     assert result["apply_check"]["first_safe_next_action"]["tool_name"] == (
-        "describe_staged_revision"
+        "describe_revision"
     )
     assert result["apply_check"]["first_safe_next_action"]["queue"] == (
         "semantic_review_required"
@@ -294,7 +294,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     )
     assert result["first_mutation_action"] == lane["next_action"]
     review_action = result["suggested_next_actions"][0]
-    assert review_action["tool"] == "doxabase.describe_staged_revision"
+    assert review_action["tool"] == "doxabase.describe_revision"
     assert result["first_safe_review_or_mutation_action"] == review_action
     assert (
         result["first_safe_review_or_mutation_source"]
@@ -725,13 +725,16 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
     }
     assert result["bundle_summary"]["snapshot_evidence"]["complete"] is False
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
+    )
+    assert result["suggested_next_actions"][0]["args"]["kind"] == (
+        "revision_snapshots"
     )
     assert result["mutation_allowed_after"] == (
         "handoff_preflight_required_before_mutation"
     )
     assert result["blocking_preflight_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
     assert result.get("first_mutation_action") is None
     assert (
@@ -741,10 +744,10 @@ def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
     assert result["first_safe_review_or_mutation_source"] == "blocking_preflight"
     assert result["lanes"][0]["lane"] == "complete_handoff_import"
     assert result["lanes"][0]["next_action"]["tool_name"] == (
-        "import_revision_snapshots"
+        "import_bundle"
     )
     assert result["lanes"][0]["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
     assert any(
         action["tool"] == "doxabase.apply_staged_revision"
@@ -821,7 +824,13 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     assert [
         action["tool"].removeprefix("doxabase.")
         for action in summary["changed_resource_suggested_next_actions"]
-    ] == ["describe_resource_revision_lineage", "list_resource_revisions"]
+    ] == ["describe_revision", "list_revisions"]
+    assert summary["changed_resource_suggested_next_actions"][0]["args"][
+        "aspect"
+    ] == "resource_lineage"
+    assert summary["changed_resource_suggested_next_actions"][1]["args"][
+        "kind"
+    ] == "resource"
     assert summary["note"] == (
         "Count drift summarizes patch-level count checks for this graph. "
         "Snapshot drift summarizes graph-level count/digest drift; raw "
@@ -1099,19 +1108,21 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         item["alternative_set_role"] for item in result["next_action_queue_items"]
     ] == ["source", "alternative"]
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.export_staged_revisions"
+        "doxabase.export_bundle"
     )
-    assert result["suggested_next_actions"][0]["args"]["revision_iris"] == (
-        revision_iris
-    )
+    assert result["suggested_next_actions"][0]["args"]["spec"][
+        "revision_iris"
+    ] == revision_iris
     assert (
-        result["suggested_next_actions"][0]["args"]["fail_on_sensitive"]
+        result["suggested_next_actions"][0]["args"]["spec"]["fail_on_sensitive"]
         is True
     )
-    assert result["suggested_next_actions"][0]["args"]["path"].startswith(
-        "/tmp/systematisation-review-"
-    )
-    assert result["suggested_next_actions"][0]["args"]["path"].endswith(".md")
+    assert result["suggested_next_actions"][0]["args"]["spec"][
+        "path"
+    ].startswith("/tmp/systematisation-review-")
+    assert result["suggested_next_actions"][0]["args"]["spec"][
+        "path"
+    ].endswith(".md")
     assert [
         action["args"]
         for action in result["suggested_next_actions"]
@@ -1383,7 +1394,10 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     ]
     assert "link_alternatives=False" in rerun_action["reason"]
     assert result["suggested_next_actions"][1]["tool"] == (
-        "doxabase.export_staged_revisions"
+        "doxabase.export_bundle"
+    )
+    assert result["suggested_next_actions"][1]["args"]["kind"] == (
+        "staged_revisions"
     )
     export_path = tmp_path / "invalid-first-review.md"
     export = export_staged_revisions_tool(
@@ -1587,13 +1601,16 @@ def test_context_slice_export_tool_warns_history_not_recovery_handoff(
     assert [
         action["tool"].removeprefix("doxabase.") for action in preflight["suggested_next_actions"]
     ] == [
-        "export_context_slice",
-        "export_handoff_bundle",
+        "export_bundle",
+        "export_bundle",
     ]
     handoff_action = preflight["suggested_next_actions"][1]
-    assert handoff_action["tool"] == "doxabase.export_handoff_bundle"
-    assert handoff_action["args"]["revision_iris"] == [staged["revision_iri"]]
-    assert handoff_action["args"]["manifest_path"] == (
+    assert handoff_action["tool"] == "doxabase.export_bundle"
+    assert handoff_action["args"]["kind"] == "handoff"
+    assert handoff_action["args"]["spec"]["revision_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert handoff_action["args"]["spec"]["manifest_path"] == (
         "<handoff-manifest.json>"
     )
     assert "placeholders" in handoff_action["reason"]
@@ -1612,11 +1629,11 @@ def test_context_slice_export_tool_warns_history_not_recovery_handoff(
     assert "history" in export["graphs"]
     assert [
         action["tool"].removeprefix("doxabase.") for action in export["suggested_next_actions"]
-    ] == ["export_handoff_bundle"]
-    assert export["suggested_next_actions"][0]["args"]["revision_iris"] == [
-        staged["revision_iri"]
-    ]
-    assert export["suggested_next_actions"][0]["args"]["manifest_path"] == (
-        "<handoff-manifest.json>"
-    )
+    ] == ["export_bundle"]
+    assert export["suggested_next_actions"][0]["args"]["spec"][
+        "revision_iris"
+    ] == [staged["revision_iri"]]
+    assert export["suggested_next_actions"][0]["args"]["spec"][
+        "manifest_path"
+    ] == "<handoff-manifest.json>"
 

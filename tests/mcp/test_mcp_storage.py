@@ -13,7 +13,6 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.export_preflight" in server.instructions
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names
-    assert "doxabase.scan_sensitive_literals" in tool_names
     assert "doxabase.export_preflight" in tool_names
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
@@ -21,20 +20,25 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.get_context_graph" in tool_names
-    assert "doxabase.preflight_context_slice_export" in tool_names
-    assert "doxabase.export_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
-    assert "doxabase.describe_graph_revision" in tool_names
-    assert "doxabase.describe_revision_snapshot_evidence" in tool_names
-    assert "doxabase.describe_revision_graph_snapshot" in tool_names
-    assert "doxabase.describe_applied_revision_diff" in tool_names
-    assert "doxabase.describe_graph_version_diff" in tool_names
-    assert "doxabase.list_graph_revisions" in tool_names
-    assert "doxabase.list_graph_versions" in tool_names
-    assert "doxabase.describe_revision_lineage" in tool_names
-    assert "doxabase.list_resource_revisions" in tool_names
-    assert "doxabase.describe_resource_revision_lineage" in tool_names
-    assert "doxabase.describe_staged_revision" in tool_names
+    assert "doxabase.describe_revision" in tool_names
+    assert "doxabase.list_revisions" in tool_names
+    assert not any(
+        name in tool_names
+        for name in (
+            "doxabase.describe_graph_revision",
+            "doxabase.describe_revision_snapshot_evidence",
+            "doxabase.describe_revision_graph_snapshot",
+            "doxabase.describe_applied_revision_diff",
+            "doxabase.describe_graph_version_diff",
+            "doxabase.list_graph_revisions",
+            "doxabase.list_graph_versions",
+            "doxabase.describe_revision_lineage",
+            "doxabase.list_resource_revisions",
+            "doxabase.describe_resource_revision_lineage",
+            "doxabase.describe_staged_revision",
+        )
+    )
     assert "doxabase.plan_staged_revision_recovery" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_profile" in tool_names
@@ -42,21 +46,33 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_claim_reconsideration" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.search" in tool_names
-    assert "doxabase.export_graph" in tool_names
-    assert "doxabase.export_handoff_bundle" in tool_names
-    assert "doxabase.export_profile_insight_review_bundle" in tool_names
-    assert "doxabase.export_revision_snapshots" in tool_names
-    assert "doxabase.import_handoff_bundle" in tool_names
-    assert "doxabase.import_revision_snapshots" in tool_names
+    assert "doxabase.export_bundle" in tool_names
+    assert "doxabase.import_bundle" in tool_names
     assert "doxabase.replace_graph_triples" in tool_names
-    assert "doxabase.export_staged_revision" in tool_names
-    assert "doxabase.export_staged_revisions" in tool_names
-    assert "doxabase.export_trig" in tool_names
+    assert not any(
+        name in tool_names
+        for name in (
+            "doxabase.scan_sensitive_literals",
+            "doxabase.preflight_context_slice_export",
+            "doxabase.export_context_slice",
+            "doxabase.export_graph",
+            "doxabase.export_trig",
+            "doxabase.export_handoff_bundle",
+            "doxabase.export_profile_insight_review_bundle",
+            "doxabase.export_revision_snapshots",
+            "doxabase.export_staged_revision",
+            "doxabase.export_staged_revisions",
+            "doxabase.import_trig",
+            "doxabase.import_revision_snapshots",
+            "doxabase.import_handoff_bundle",
+            "doxabase.load_example_fixtures",
+        )
+    )
+    assert len(tool_names) == 27
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_revision" in tool_names
     assert "doxabase.restage_staged_revision" in tool_names
     assert "doxabase.apply_staged_revision" in tool_names
-    assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
     tool_by_name = {tool.name: tool for tool in tools}

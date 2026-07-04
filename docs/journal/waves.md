@@ -252,3 +252,42 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   revision_iris so restage targets keep resolving. Suite 726 passed;
   gate green; schema 50,543 chars (≤ 86,000 ceiling, untouched).
 - Next: R4 revisions reads (rows 20–21), then R5 export/import, then sweep.
+
+## Wave 14 — 2026-07-04 — Phase 4 wave R4: revisions reads (48 → 39 tools)
+
+- Doc 08 rows 20–21. New `list_revisions` (kind=graph/versions/resource;
+  union params, kind-invalid params fail with targeted errors naming the
+  kind's valid fields; include_apply_checks defaults True only for
+  kind=resource, matching the old doors) and `describe_revision`
+  (aspect=auto detects staged patch rows via record kind — explicit
+  include_current_apply_check forces the staged door; aspects
+  applied_diff/version_diff/lineage/resource_lineage/snapshot_evidence/
+  graph_snapshot; version_diff reads iri as the before version and takes
+  graph_role/after_revision_iri/compare_to_current; resource_lineage takes
+  resource_iri; max_triples defaults 500 except resource_lineage's 100).
+  Eleven registrations deleted same-wave; count 39; schema 45,849 chars.
+- Matchers migrated aspect-aware: find_exact_action normalizes omitted
+  aspect to 'auto'; new describe_revision_action_aspect helper; brief's
+  two review_tool_order maps became one _staged_review_action_rank (the
+  old staged-vs-graph describe rank distinction collapses to aspect=auto).
+- Suite 729 passed (3 added targeted-error/auto-detect tests), gate green.
+
+## Wave 15 — 2026-07-04 — Phase 4 wave R5: export/import (39 → 27 tools)
+
+- Doc 08 rows 22–24. `export_preflight` gained kind= (renamed from
+  export_kind on the MCP door only; scan_only absorbs the standalone
+  scanner, context_slice the slice preflight; kind-invalid params fail
+  with targeted errors). New `export_bundle(kind, spec)` (trig/graph/
+  context_slice/staged_revisions — str|list revision_iris, grouped-only
+  title/executive_summary — profile_insight_review/revision_snapshots/
+  handoff) and `import_bundle(kind, spec)` (trig/revision_snapshots/
+  handoff/example_fixtures with its scratch-capsule guard) dispatch
+  through _dispatch_kind. Fourteen registrations deleted same-wave;
+  count 27; schema 36,322 chars.
+- Effect classification is now kind-aware (export_bundle writes files;
+  import_bundle kinds mutate graph/history/storage; handoff dry_run is
+  none); action_staging_arguments covers all kind/spec doors;
+  recommended_import_tool strings became call-shaped and manifest
+  import-sequence steps carry kind. Suite 732 passed (6 tests added
+  across R4/R5), gate + wheel smoke green. Next: Phase 4 sweep (row 8
+  fold, replace_graph_triples removal, docstring/schema budget pass).

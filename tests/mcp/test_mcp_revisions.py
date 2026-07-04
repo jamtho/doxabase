@@ -55,7 +55,7 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
-def test_list_graph_revisions_tool_returns_json_like_payload(
+def test_list_revisions_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -76,7 +76,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
         ],
         created_at="2026-06-01T10:00:00Z",
     )
-    result = list_graph_revisions_tool(
+    result = list_revisions_tool(
         db,
         revision_type="rc:StagedRevision",
         include_apply_checks=True,
@@ -140,8 +140,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     )
     assert result["revisions"][0]["suggested_next_actions"]
 
-    ready_result = list_graph_revisions_tool(
+    ready_result = list_revisions_tool(
         db,
+        kind="graph",
         revision_type="rc:StagedRevision",
         application_status="ready",
     )
@@ -154,7 +155,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert ready_result["total_count"] == 1
     assert ready_result["revisions"][0]["iri"] == staged["revision_iri"]
 
-    staged_patch_result = list_graph_revisions_tool(
+    staged_patch_result = list_revisions_tool(
         db,
         record_kind="staged_patch",
         current_staged_work_only=True,
@@ -168,7 +169,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert staged_patch_result["total_count"] == 1
     assert staged_patch_result["revisions"][0]["iri"] == staged["revision_iri"]
 
-    stored_conforms_result = list_graph_revisions_tool(
+    stored_conforms_result = list_revisions_tool(
         db,
         revision_type="rc:StagedRevision",
         staged_validation_status="conforms",
@@ -207,7 +208,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
         iri=staged["revision_iri"],
         created_at="2026-06-01T10:01:00Z",
     )
-    mixed_page = list_graph_revisions_tool(
+    mixed_page = list_revisions_tool(
         db,
         include_apply_checks=True,
         limit=1,
@@ -230,7 +231,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert mixed_page["next_action_queue"] == {
         "restage_after_review": [sibling["revision_iri"]]
     }
-    second_page = list_graph_revisions_tool(
+    second_page = list_revisions_tool(
         db,
         include_apply_checks=True,
         limit=1,
@@ -257,19 +258,26 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert second_queue_item["row_is_target"] is True
     assert second_queue_item["record_kind"] == "applied_event"
     applied_row = second_page["revisions"][0]
-    assert applied_row["next_action"]["tool_name"] == "describe_graph_revision"
+    assert applied_row["next_action"]["tool_name"] == "describe_revision"
+    assert applied_row["next_action"]["arguments"] == {
+        "iri": applied["applied_revision_iri"]
+    }
     assert [
         action["tool"].removeprefix("doxabase.") for action in applied_row["suggested_next_actions"]
     ] == [
-        "describe_graph_revision",
-        "describe_applied_revision_diff",
+        "describe_revision",
+        "describe_revision",
     ]
-    assert applied_row["suggested_next_actions"][1]["args"] == {
+    assert applied_row["suggested_next_actions"][0]["args"] == {
         "iri": applied["applied_revision_iri"]
+    }
+    assert applied_row["suggested_next_actions"][1]["args"] == {
+        "iri": applied["applied_revision_iri"],
+        "aspect": "applied_diff",
     }
 
 
-def test_list_graph_versions_tool_returns_timeline_payload(
+def test_list_revisions_versions_kind_returns_timeline_payload(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -296,7 +304,7 @@ def test_list_graph_versions_tool_returns_timeline_payload(
         created_at="2026-06-01T10:01:00Z",
     )
 
-    result = list_graph_versions_tool(db, graph_role="map")
+    result = list_revisions_tool(db, kind="versions", graph_role="map")
 
     assert result["graph_role"] == "map"
     assert result["graph"] == "history"
@@ -334,16 +342,23 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert staged_row["exact_snapshot_available"] is True
     assert staged_row["snapshot_evidence_status"] == "history_plus_snapshot_rows"
     assert staged_row["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_revision_graph_snapshot"
+        "doxabase.describe_revision"
+    )
+    assert staged_row["suggested_next_actions"][0]["args"]["aspect"] == (
+        "graph_snapshot"
     )
     assert staged_row["suggested_next_actions"][1]["tool"] == (
-        "doxabase.describe_revision_lineage"
+        "doxabase.describe_revision"
     )
     assert staged_row["suggested_next_actions"][1]["args"] == {
-        "iri": staged["revision_iri"]
+        "iri": staged["revision_iri"],
+        "aspect": "lineage",
     }
     assert staged_row["suggested_next_actions"][2]["tool"] == (
-        "doxabase.describe_graph_version_diff"
+        "doxabase.describe_revision"
+    )
+    assert staged_row["suggested_next_actions"][2]["args"]["aspect"] == (
+        "version_diff"
     )
 
     assert applied_row["record_kind"] == "applied_event"
@@ -355,18 +370,24 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     assert applied_row["triple_count"] == db.triple_count("map")
     assert applied_row["exact_snapshot_available"] is True
     assert [
-        action["tool"].removeprefix("doxabase.") for action in applied_row["suggested_next_actions"]
+        (
+            action["tool"].removeprefix("doxabase."),
+            action["args"].get("aspect"),
+        )
+        for action in applied_row["suggested_next_actions"]
     ] == [
-        "describe_revision_graph_snapshot",
-        "describe_revision_lineage",
-        "describe_graph_version_diff",
+        ("describe_revision", "graph_snapshot"),
+        ("describe_revision", "lineage"),
+        ("describe_revision", "version_diff"),
     ]
     assert applied_row["suggested_next_actions"][1]["args"] == {
-        "iri": applied["applied_revision_iri"]
+        "iri": applied["applied_revision_iri"],
+        "aspect": "lineage",
     }
 
-    exact_staged = list_graph_versions_tool(
+    exact_staged = list_revisions_tool(
         db,
+        kind="versions",
         graph_role="map",
         exact_only=True,
         include_current=False,
@@ -381,7 +402,7 @@ def test_list_graph_versions_tool_returns_timeline_payload(
     ]
 
 
-def test_describe_graph_version_diff_tool_returns_json_payload(
+def test_describe_revision_version_diff_returns_json_payload(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -430,10 +451,11 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
         created_at="2026-06-01T10:03:00Z",
     )
 
-    stored_diff = describe_graph_version_diff_tool(
+    stored_diff = describe_revision_tool(
         db,
+        iri=first_staged["revision_iri"],
+        aspect="version_diff",
         graph_role="map",
-        before_revision_iri=first_staged["revision_iri"],
         after_revision_iri=first_applied["applied_revision_iri"],
     )
 
@@ -453,20 +475,22 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
         action["tool"].removeprefix("doxabase.")
         for action in stored_diff["changed_resource_suggested_next_actions"]
     ] == [
-        "describe_resource_revision_lineage",
-        "describe_resource_revision_lineage",
+        "describe_revision",
+        "describe_revision",
     ]
     assert stored_diff["changed_resource_suggested_next_actions"][0][
         "args"
     ] == {
+        "iri": first_staged["revision_iri"],
+        "aspect": "resource_lineage",
         "resource_iri": "https://example.test/project#Messages",
-        "revision_iri": first_staged["revision_iri"],
     }
 
-    current_diff = describe_graph_version_diff_tool(
+    current_diff = describe_revision_tool(
         db,
+        iri=first_applied["applied_revision_iri"],
+        aspect="version_diff",
         graph_role="map",
-        before_revision_iri=first_applied["applied_revision_iri"],
         include_triples=True,
     )
 
@@ -480,11 +504,14 @@ def test_describe_graph_version_diff_tool_returns_json_payload(
     assert current_diff["triples_added_count"] == 1
     assert len(current_diff["triples_added"]) == 1
     assert current_diff["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_revision_graph_snapshot"
+        "doxabase.describe_revision"
+    )
+    assert current_diff["suggested_next_actions"][0]["args"]["aspect"] == (
+        "graph_snapshot"
     )
 
 
-def test_list_resource_revisions_tool_returns_json_like_payload(
+def test_list_revisions_resource_kind_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -513,7 +540,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         created_at="2026-06-01T10:01:00Z",
     )
 
-    result = list_resource_revisions_tool(db, resource_iri=orders)
+    result = list_revisions_tool(db, kind="resource", resource_iri=orders)
 
     assert result["resource"]["iri"] == orders
     assert "items" not in result
@@ -566,8 +593,9 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert by_iri[applied["applied_revision_iri"]][
         "applied_source_patch_mentions_incomplete"
     ] is False
-    live_only = list_resource_revisions_tool(
+    live_only = list_revisions_tool(
         db,
+        kind="resource",
         resource_iri=orders,
         current_staged_work_only=True,
         include_apply_checks=False,
@@ -577,10 +605,11 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert live_only["count"] == 0
     assert live_only["returned_count"] == 0
     assert live_only["total_count"] == 0
-    lineage = describe_resource_revision_lineage_tool(
+    lineage = describe_revision_tool(
         db,
+        iri=applied["applied_revision_iri"],
+        aspect="resource_lineage",
         resource_iri=orders,
-        revision_iri=applied["applied_revision_iri"],
         include_triples=True,
     )
     assert lineage["selected_role"] == "applied_event"
@@ -608,9 +637,10 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert lineage["applied_diff"]["graph_diffs"][0]["resource_triples_added"][0][
         "subject"
     ] == orders
-    generic_lineage = describe_revision_lineage_tool(
+    generic_lineage = describe_revision_tool(
         db,
         iri=applied["applied_revision_iri"],
+        aspect="lineage",
     )
     assert generic_lineage["selected_role"] == "applied_event"
     assert generic_lineage["selected_revision_iri"] == (
@@ -639,3 +669,145 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert generic_lineage["next_action"]["queue"] == "inspect_already_applied"
     assert generic_lineage.get("warnings", []) == []
 
+
+
+def test_list_revisions_kind_validation_names_kind_fields(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="kind must be one of"):
+        list_revisions_tool(db, kind="timeline")
+    with pytest.raises(DoxaBaseError, match="requires graph_role"):
+        list_revisions_tool(db, kind="versions")
+    with pytest.raises(DoxaBaseError, match="requires resource_iri"):
+        list_revisions_tool(db, kind="resource")
+    with pytest.raises(DoxaBaseError) as versions_error:
+        list_revisions_tool(
+            db,
+            kind="versions",
+            graph_role="map",
+            resource_iri="https://example.test/project#Orders",
+        )
+    assert "does not take ['resource_iri']" in str(versions_error.value)
+    assert "graph_role" in str(versions_error.value)
+    with pytest.raises(DoxaBaseError) as graph_error:
+        list_revisions_tool(db, kind="graph", exact_only=True, graph_role="map")
+    assert "does not take ['exact_only', 'graph_role']" in str(graph_error.value)
+    with pytest.raises(DoxaBaseError) as resource_error:
+        list_revisions_tool(
+            db,
+            kind="resource",
+            resource_iri="https://example.test/project#Orders",
+            application_status="ready",
+        )
+    assert "does not take ['application_status']" in str(resource_error.value)
+    assert "include_patch_mentions" in str(resource_error.value)
+
+
+def test_describe_revision_auto_detects_staged_rows(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+
+    staged_view = describe_revision_tool(db, iri=staged["revision_iri"])
+    assert staged_view["iri"] == staged["revision_iri"]
+    assert staged_view["patches"][0]["triple_count"] == 1
+    assert staged_view["patches"][0]["operation"].endswith("AdditionPatch")
+    checked_view = describe_revision_tool(
+        db,
+        iri=staged["revision_iri"],
+        include_current_apply_check=True,
+    )
+    assert checked_view["current_apply_check"]["status"] == "ready"
+
+    applied = apply_staged_revision_tool(
+        db,
+        staged["revision_iri"],
+        created_at="2026-06-01T10:01:00Z",
+    )
+    applied_view = describe_revision_tool(db, iri=applied["applied_revision_iri"])
+    assert applied_view["record_kind"] == "applied_event"
+    assert applied_view["applies_staged_revision"] == staged["revision_iri"]
+    # An applied event has no staged review shape; the explicit apply-check
+    # request routes to the staged door's targeted error.
+    with pytest.raises(DoxaBaseError, match="applied revision event"):
+        describe_revision_tool(
+            db,
+            iri=applied["applied_revision_iri"],
+            include_current_apply_check=True,
+        )
+
+    evidence_view = describe_revision_tool(
+        db,
+        iri=applied["applied_revision_iri"],
+        aspect="snapshot_evidence",
+    )
+    assert evidence_view["status"] == "history_plus_snapshot_rows"
+    snapshot_view = describe_revision_tool(
+        db,
+        iri=applied["applied_revision_iri"],
+        aspect="graph_snapshot",
+        graph_role="map",
+        include_triples=True,
+    )
+    assert snapshot_view["triple_count"] == 1
+    assert len(snapshot_view["triples"]) == 1
+    applied_diff = describe_revision_tool(
+        db,
+        iri=applied["applied_revision_iri"],
+        aspect="applied_diff",
+    )
+    assert applied_diff["graph_diffs"][0]["triples_added_count"] == 1
+    assert applied_diff["graph_diffs"][0]["exact_changed_triples_available"] is True
+
+
+def test_describe_revision_aspect_validation_names_aspect_fields(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    iri = "https://example.test/revision/1"
+
+    with pytest.raises(DoxaBaseError, match="aspect must be one of"):
+        describe_revision_tool(db, iri=iri, aspect="diff")
+    with pytest.raises(DoxaBaseError, match="requires graph_role"):
+        describe_revision_tool(db, iri=iri, aspect="version_diff")
+    with pytest.raises(DoxaBaseError, match="requires graph_role"):
+        describe_revision_tool(db, iri=iri, aspect="graph_snapshot")
+    with pytest.raises(DoxaBaseError, match="requires resource_iri"):
+        describe_revision_tool(db, iri=iri, aspect="resource_lineage")
+    with pytest.raises(DoxaBaseError) as evidence_error:
+        describe_revision_tool(
+            db,
+            iri=iri,
+            aspect="snapshot_evidence",
+            include_triples=True,
+        )
+    assert "does not take ['include_triples']" in str(evidence_error.value)
+    with pytest.raises(DoxaBaseError) as auto_error:
+        describe_revision_tool(db, iri=iri, graph_role="map")
+    assert "does not take ['graph_role']" in str(auto_error.value)
+    assert "include_current_apply_check" in str(auto_error.value)
+    with pytest.raises(DoxaBaseError) as lineage_error:
+        describe_revision_tool(
+            db,
+            iri=iri,
+            aspect="lineage",
+            include_current_apply_check=True,
+        )
+    assert "does not take ['include_current_apply_check']" in str(
+        lineage_error.value
+    )

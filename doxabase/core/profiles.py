@@ -937,8 +937,8 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.export_profile_insight_review_bundle",
-                args=export_arguments,
+                tool="doxabase.export_bundle",
+                args={"kind": "profile_insight_review", "spec": export_arguments},
                 reason="Export a grouped review bundle for staged revisions tied "
                     "to this profile run. Re-run this export after staging any "
                     "related metric vocabulary, type-review, or caveat "
@@ -2086,12 +2086,12 @@ class ProfilesMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_staged_revision",
+                    tool="doxabase.describe_revision",
                     args=arguments,
                     reason=inspect_reason,
                 )
             )
-        arguments = {
+        spec = {
             "revision_iris": list(pending_staged_iris),
             "path": self._suggested_review_export_path(
                 export_slug,
@@ -2101,8 +2101,8 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.export_staged_revisions",
-                args=arguments,
+                tool="doxabase.export_bundle",
+                args={"kind": "staged_revisions", "spec": spec},
                 reason=export_reason,
             )
         )
@@ -2119,14 +2119,14 @@ class ProfilesMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_staged_revision",
+                    tool="doxabase.describe_revision",
                     args=arguments,
                     reason="A current staged profile fallback already covers this "
                         "route. Inspect it before drafting another fallback for "
                         "the same advisory.",
                 )
             )
-        arguments = {
+        spec = {
             "revision_iris": list(pending_staged_fallback_iris),
             "path": self._suggested_review_export_path(
                 "profile-fallback-pending",
@@ -2136,8 +2136,8 @@ class ProfilesMixin:
         }
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.export_staged_revisions",
-                args=arguments,
+                tool="doxabase.export_bundle",
+                args={"kind": "staged_revisions", "spec": spec},
                 reason="Write a grouped review bundle for the pending staged "
                     "profile fallback(s) before deciding whether more fallback "
                     "work is needed. The export blocks if scanner-matching "

@@ -246,7 +246,7 @@ class LineageMixin:
                 triples_removed_truncated = triples_removed_count > 0
                 note = (
                     "Exact graph-version changed triples are available but "
-                    "omitted; call describe_graph_version_diff(..., "
+                    "omitted; call describe_revision(aspect='version_diff', "
                     "include_triples=True) to include arrays."
                 )
         else:
@@ -450,9 +450,10 @@ class LineageMixin:
     ) -> list[SuggestedNextAction]:
         actions = [
             SuggestedNextAction(
-                tool="doxabase.describe_revision_graph_snapshot",
+                tool="doxabase.describe_revision",
                 args={
                     "iri": before_revision_iri,
+                    "aspect": "graph_snapshot",
                     "graph_role": graph_role,
                 },
                 reason="Inspect the stored before snapshot metadata or exact "
@@ -462,9 +463,10 @@ class LineageMixin:
         if after_revision_iri is not None:
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_revision_graph_snapshot",
+                    tool="doxabase.describe_revision",
                     args={
                         "iri": after_revision_iri,
+                        "aspect": "graph_snapshot",
                         "graph_role": graph_role,
                     },
                     reason="Inspect the stored after snapshot metadata or exact "
@@ -482,8 +484,8 @@ class LineageMixin:
             seen_lineage_iris.add(context.revision_iri)
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_revision_lineage",
-                    args={"iri": context.revision_iri},
+                    tool="doxabase.describe_revision",
+                    args={"iri": context.revision_iri, "aspect": "lineage"},
                     reason="Inspect staged/applied/restaged lineage before "
                         "using this graph-version diff as recovery context.",
                 )
@@ -499,8 +501,8 @@ class LineageMixin:
             seen_applied_diff_iris.add(context.revision_iri)
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_applied_revision_diff",
-                    args={"iri": context.revision_iri},
+                    tool="doxabase.describe_revision",
+                    args={"iri": context.revision_iri, "aspect": "applied_diff"},
                     reason="This comparison point is an applied revision event; "
                         "inspect its stored before/after diff to recover the "
                         "revision story behind the graph-version delta.",
@@ -508,8 +510,9 @@ class LineageMixin:
             )
         if exact_available and has_changes and not include_triples:
             arguments: dict[str, Any] = {
+                "iri": before_revision_iri,
+                "aspect": "version_diff",
                 "graph_role": graph_role,
-                "before_revision_iri": before_revision_iri,
                 "include_triples": True,
             }
             if after_revision_iri is not None:
@@ -518,7 +521,7 @@ class LineageMixin:
                 arguments["compare_to_current"] = True
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.describe_graph_version_diff",
+                    tool="doxabase.describe_revision",
                     args=arguments,
                     reason="Exact changed triples are available; include them "
                         "when the diff content is safe and useful to inspect.",
@@ -636,13 +639,13 @@ class LineageMixin:
         ):
             arguments = {"iri": chain_applied_source.iri}
             if not any(
-                action.tool == "doxabase.describe_staged_revision"
+                action.tool == "doxabase.describe_revision"
                 and action.args == arguments
                 for action in suggested_next_actions
             ):
                 suggested_next_actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.describe_staged_revision",
+                        tool="doxabase.describe_revision",
                         args=arguments,
                         reason="Inspect the staged successor that was actually "
                             "applied for this lineage, rather than inferring it "
@@ -1520,7 +1523,7 @@ class LineageMixin:
 
         preferred_actions = [
             action(
-                tool_name="describe_graph_revision",
+                tool_name="describe_revision",
                 arguments={"iri": current_successor_applied_revision_iri},
                 reason=(
                     "The refreshed successor has already been applied; inspect "
@@ -1529,8 +1532,11 @@ class LineageMixin:
                 ),
             ),
             action(
-                tool_name="describe_applied_revision_diff",
-                arguments={"iri": current_successor_applied_revision_iri},
+                tool_name="describe_revision",
+                arguments={
+                    "iri": current_successor_applied_revision_iri,
+                    "aspect": "applied_diff",
+                },
                 reason=(
                     "Inspect stored before/after graph snapshot counts and, "
                     "when needed, exact changed triples for the applied event."

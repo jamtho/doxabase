@@ -904,8 +904,8 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         "list_entities",
         "stage_revision",
         "describe_resource",
-        "describe_staged_revision",
-        "export_staged_revisions",
+        "describe_revision",
+        "export_bundle",
     ]
     assert not any(
         (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
@@ -916,7 +916,8 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         for action in rerun["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-        if action["tool"] == "doxabase.export_staged_revisions"
+        if action["args"].get("kind") == "staged_revisions"
+        and action["tool"] == "doxabase.export_bundle"
     )
 
 
@@ -1169,22 +1170,28 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         "dry_run": True,
     }
     assert result["suggested_next_actions"][1]["tool"] == (
-        "doxabase.export_profile_insight_review_bundle"
+        "doxabase.export_bundle"
+    )
+    assert result["suggested_next_actions"][1]["args"]["kind"] == (
+        "profile_insight_review"
     )
     assert result["suggested_next_actions"][1]["tool"] == (
-        "doxabase.export_profile_insight_review_bundle"
+        "doxabase.export_bundle"
     )
-    assert result["suggested_next_actions"][1]["args"]["dataset_iri"] == (
+    assert result["suggested_next_actions"][1]["args"]["kind"] == (
+        "profile_insight_review"
+    )
+    assert result["suggested_next_actions"][1]["args"]["spec"]["dataset_iri"] == (
         table
     )
-    assert result["suggested_next_actions"][1]["args"]["evidence_iri"] == (
+    assert result["suggested_next_actions"][1]["args"]["spec"]["evidence_iri"] == (
         shared_evidence
     )
-    assert result["suggested_next_actions"][1]["args"]["revision_iris"] == [
+    assert result["suggested_next_actions"][1]["args"]["spec"]["revision_iris"] == [
         result["staged_revision"]["revision_iri"]
     ]
-    assert result["suggested_next_actions"][1]["args"]["overwrite"] is True
-    assert result["suggested_next_actions"][1]["args"]["path"].startswith(
+    assert result["suggested_next_actions"][1]["args"]["spec"]["overwrite"] is True
+    assert result["suggested_next_actions"][1]["args"]["spec"]["path"].startswith(
         "/tmp/profile-insight-review-"
     )
     described = describe_staged_revision_tool(
@@ -1268,7 +1275,7 @@ def test_stage_profile_map_updates_tool_marks_rerun_precondition(
 
     assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
         "apply_staged_revision",
-        "export_profile_insight_review_bundle",
+        "export_bundle",
         "stage_revision",
     ]
     assert result["suggested_next_actions"][0]["args"].get("dry_run") is True

@@ -148,7 +148,7 @@ def test_recovery_first_safe_action_prefers_semantic_frontier_over_informational
     assert plan.first_mutation_action is None
     assert plan.first_safe_review_or_mutation_action is not None
     assert plan.first_safe_review_or_mutation_action.tool == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert plan.first_safe_review_or_mutation_action.args == {
         "iri": semantic_iri
@@ -533,11 +533,11 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     predicate_action = next(
         action
         for action in predicate_slice.suggested_next_actions
-        if action.tool == "doxabase.export_graph"
+        if action.tool == "doxabase.export_bundle"
+        and action.args.get("kind") == "graph"
     )
-    assert predicate_action.tool == "doxabase.export_graph"
-    assert predicate_action.args["graphs"] == "project"
-    assert "predicate-usage" in predicate_action.args["path"]
+    assert predicate_action.args["spec"]["graphs"] == "project"
+    assert "predicate-usage" in predicate_action.args["spec"]["path"]
 
 
 def test_resource_brief_incoming_cap_prioritizes_lore_rich_references(
@@ -1210,9 +1210,11 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
     )
 
     assert preflight.suggested_next_actions[0].tool == (
-        "doxabase.preflight_context_slice_export"
+        "doxabase.export_preflight"
     )
+    assert preflight.suggested_next_actions[0].args["kind"] == "context_slice"
     assert preflight.suggested_next_actions[0].args == {
+        "kind": "context_slice",
         "seed_iris": [profile.observation.evidence_iri],
         "profile": "resource_brief",
         "max_triples": 500,
@@ -1220,7 +1222,8 @@ def test_evidence_seed_wrong_profile_suggests_resource_brief_before_export(
         "limit": 20,
     }
     assert any(
-        action.tool == "doxabase.export_context_slice"
+        action.tool == "doxabase.export_bundle"
+        and action.args.get("kind") == "context_slice"
         for action in preflight.suggested_next_actions[1:]
     )
 
@@ -1296,7 +1299,7 @@ def test_project_brief_gate_stale_seed_recovery(tmp_path: Path) -> None:
     first_action = brief.suggested_next_actions[0]
     assert first_action.tool == "doxabase.export_preflight"
     assert first_action.args == {
-        "export_kind": "handoff_bundle",
+        "kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
         "validation_scope": "map",

@@ -81,7 +81,7 @@ def test_revision_lineage_warns_when_restage_ancestor_lacks_snapshots(
     assert "history_only_count_digest: 1" in grouped_export_text
     assert staged.revision_iri in grouped_export_text
     assert restaged.revision_iri in grouped_export_text
-    assert "import_revision_snapshots" in grouped_export_text
+    assert '"kind": "revision_snapshots"' in grouped_export_text
     assert grouped_export_text.index("## Snapshot Evidence") < grouped_export_text.index(
         "## Review Queues"
     )
@@ -249,7 +249,7 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_summary.active_recommendation_field == "summary_recommendation"
     assert stale_summary.restaged_by == restaged.revision_iri
     assert stale_summary.suggested_next_actions[-1].tool == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert stale_summary.suggested_next_actions[-1].args == {
         "iri": restaged.revision_iri
@@ -371,21 +371,22 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
         "inspect_already_applied"
     )
     assert stale_check_after_apply.next_action.queue == "inspect_already_applied"
-    assert stale_check_after_apply.next_action.tool_name == "describe_graph_revision"
+    assert stale_check_after_apply.next_action.tool_name == "describe_revision"
     assert stale_check_after_apply.next_action.arguments == {
         "iri": result.applied_revision_iri
     }
     assert stale_check_after_apply.suggested_next_actions[0].tool == (
-        "doxabase.describe_graph_revision"
+        "doxabase.describe_revision"
     )
     assert stale_check_after_apply.suggested_next_actions[0].args == {
         "iri": result.applied_revision_iri
     }
     assert stale_check_after_apply.suggested_next_actions[1].tool == (
-        "doxabase.describe_applied_revision_diff"
+        "doxabase.describe_revision"
     )
     assert stale_check_after_apply.suggested_next_actions[1].args == {
-        "iri": result.applied_revision_iri
+        "iri": result.applied_revision_iri,
+        "aspect": "applied_diff",
     }
     applied_grouped_export = db.export_staged_revisions(
         [staged.revision_iri, restaged.revision_iri],
@@ -400,7 +401,7 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
         "iri": result.applied_revision_iri
     }
     assert applied_stale_summary.suggested_next_actions[0].tool == (
-        "doxabase.describe_graph_revision"
+        "doxabase.describe_revision"
     )
     assert applied_stale_summary.suggested_next_actions[0].args == {
         "iri": result.applied_revision_iri
@@ -652,7 +653,7 @@ def test_ready_restage_source_apply_check_redirects_to_successor(
     assert source_check.blocking_reasons == ["superseded_by_restage"]
     assert source_check.validation_conforms is True
     assert source_check.suggested_next_actions[0].tool == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert source_check.suggested_next_actions[0].args == {
         "iri": repair.revision_iri
@@ -687,7 +688,7 @@ def test_ready_restage_source_apply_check_redirects_to_successor(
     summaries = {item.revision_iri: item for item in export.revision_summaries}
     assert summaries[source.revision_iri].apply_status == "superseded_by_restage"
     assert summaries[source.revision_iri].suggested_next_actions[0].tool == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert summaries[source.revision_iri].suggested_next_actions[0].args == {
         "iri": repair.revision_iri
@@ -708,7 +709,7 @@ def test_ready_restage_source_apply_check_redirects_to_successor(
         "## Revision 2:",
         1,
     )[0]
-    assert "**doxabase.describe_staged_revision**" in source_section
+    assert "**doxabase.describe_revision**" in source_section
     assert "apply_staged_revision" not in source_section
     assert repair.revision_iri in source_section
 
@@ -1145,7 +1146,7 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     assert stale_check.next_action is not None
     assert stale_check.next_action.action_type == "inspect_no_effective_change"
     assert stale_check.next_action.queue == "informational"
-    assert stale_check.next_action.tool_name == "describe_staged_revision"
+    assert stale_check.next_action.tool_name == "describe_revision"
     assert stale_check.next_action.arguments == {
         "iri": staged.revision_iri,
         "include_current_apply_check": True,
@@ -1225,8 +1226,8 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     assert [
         action.tool.removeprefix("doxabase.") for action in resolution.suggested_next_actions
     ] == [
-        "describe_graph_revision",
-        "describe_staged_revision",
+        "describe_revision",
+        "describe_revision",
         "plan_staged_revision_recovery",
     ]
 
@@ -1871,7 +1872,7 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert check.next_action is not None
     assert check.next_action.action_type == "repair_or_replace"
     assert check.next_action.queue == "repair_or_replace"
-    assert check.next_action.tool_name == "describe_staged_revision"
+    assert check.next_action.tool_name == "describe_revision"
     assert not any(
         action.tool == "doxabase.apply_staged_revision"
         for action in check.suggested_next_actions
@@ -2172,7 +2173,7 @@ def test_restage_chain_routes_to_current_successor(
     )
     assert "- Restaged by: " in exported
     assert "- Current restaged by: " in exported
-    assert "**doxabase.describe_staged_revision**" in exported
+    assert "**doxabase.describe_revision**" in exported
     assert "- Recommended review: " in exported
     assert current_successor.revision_iri in exported
 
@@ -2631,10 +2632,14 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert [
         action.tool.removeprefix("doxabase.") for action in applied_source_lineage.suggested_next_actions
     ][:3] == [
-        "describe_graph_revision",
-        "describe_applied_revision_diff",
-        "describe_staged_revision",
+        "describe_revision",
+        "describe_revision",
+        "describe_revision",
     ]
+    assert [
+        action.args.get("aspect")
+        for action in applied_source_lineage.suggested_next_actions
+    ][:3] == [None, "applied_diff", None]
     assert applied_source_lineage.applied_diff_status == "available"
     assert applied_source_lineage.applied_diff is not None
     assert applied_source_lineage.applied_diff.applied_revision_iri == (
@@ -2741,7 +2746,7 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     )
     assert semantic_check.first_safe_next_action is not None
     assert semantic_check.first_safe_next_action.tool_name == (
-        "describe_staged_revision"
+        "describe_revision"
     )
     assert source.check_staged_revision_apply(
         stale_mechanical.revision_iri
@@ -2828,7 +2833,7 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     assert trig_only_plan.first_mutation_action is None
     assert trig_only_plan.first_safe_review_or_mutation_action is not None
     assert trig_only_plan.first_safe_review_or_mutation_action.tool == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
 
     receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
@@ -2920,7 +2925,7 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     assert receiver_semantic_check.can_apply is True
     assert receiver_semantic_check.first_safe_next_action is not None
     assert receiver_semantic_check.first_safe_next_action.tool_name == (
-        "describe_staged_revision"
+        "describe_revision"
     )
     assert receiver_semantic_check.next_action is not None
     assert receiver_semantic_check.next_action.action_label == (

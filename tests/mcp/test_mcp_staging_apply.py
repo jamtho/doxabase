@@ -43,18 +43,22 @@ def test_check_staged_revision_apply_tool_surfaces_snapshot_preflight(
     assert check["mutation_allowed_after"] == (
         "handoff_preflight_required_before_mutation"
     )
-    assert [action["tool"].removeprefix("doxabase.") for action in check["blocking_preflight_actions"]] == [
-        "import_revision_snapshots"
-    ]
+    assert [
+        (
+            action["tool"].removeprefix("doxabase."),
+            action["args"].get("kind"),
+        )
+        for action in check["blocking_preflight_actions"]
+    ] == [("import_bundle", "revision_snapshots")]
     assert check["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
     assert any(
         action["tool"] == "doxabase.apply_staged_revision"
         for action in check["suggested_next_actions"][1:]
     )
     assert check["first_safe_next_action"]["tool_name"] == (
-        "import_revision_snapshots"
+        "import_bundle"
     )
     assert check["first_safe_next_action"]["queue"] == "complete_handoff_import"
     assert check["first_safe_next_action"]["mutation_scope"] == "snapshot_storage"
@@ -104,7 +108,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["patch_checks"][0]["already_present_triples"] == 0
     assert check["patch_checks"][0]["already_absent_triples"] == 3
     assert check["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert check["suggested_next_actions"][-1]["tool"] == (
         "doxabase.apply_staged_revision"
@@ -267,7 +271,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         staged["revision_iri"]: "history_only_count_digest",
     }
     assert trig_import["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
+    )
+    assert trig_import["suggested_next_actions"][0]["args"]["kind"] == (
+        "revision_snapshots"
     )
     snapshot_status_before_import = describe_revision_snapshot_evidence_tool(
         round_trip,
@@ -276,17 +283,17 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert snapshot_status_before_import["status"] == "history_only_count_digest"
     assert snapshot_status_before_import["suggested_next_actions"][0][
         "tool"
-    ] == "doxabase.import_revision_snapshots"
+    ] == "doxabase.import_bundle"
     assert snapshot_status_before_import["suggested_next_actions"][0][
         "args"
-    ] == {
+    ]["spec"] == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
     assert "real handoff path" in snapshot_status_before_import[
         "suggested_next_actions"
     ][0]["reason"]
-    assert "export_handoff_bundle" in snapshot_status_before_import[
+    assert "export_bundle(kind='handoff')" in snapshot_status_before_import[
         "suggested_next_actions"
     ][0]["reason"]
     imported_detail_before_snapshots = describe_graph_revision_tool(
@@ -298,7 +305,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         for action in imported_detail_before_snapshots["suggested_next_actions"][
             :2
         ]
-    ] == ["import_revision_snapshots", "describe_graph_revision"]
+    ] == ["import_bundle", "describe_revision"]
     imported_list_before_snapshots = list_graph_revisions_tool(
         round_trip,
         record_kind="applied_event",
@@ -319,10 +326,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert imported_diff_before_snapshots["snapshot_evidence"][
         "suggested_next_actions"
-    ][0]["tool"] == "doxabase.import_revision_snapshots"
+    ][0]["tool"] == "doxabase.import_bundle"
     assert imported_diff_before_snapshots["suggested_next_actions"][0][
         "tool"
-    ] == "doxabase.import_revision_snapshots"
+    ] == "doxabase.import_bundle"
     assert (
         imported_diff_before_snapshots["graph_diffs"][0][
             "exact_changed_triples_available"
@@ -344,7 +351,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert rdf_only_snapshot["triples_included"] is False
     assert rdf_only_snapshot.get("triples", []) == []
     assert rdf_only_snapshot["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
     rdf_only_version_diff = describe_graph_version_diff_tool(
         round_trip,
@@ -354,7 +361,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert rdf_only_version_diff["exact_changed_triples_available"] is False
     assert rdf_only_version_diff["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
     )
     snapshot_import = import_revision_snapshots_tool(
         round_trip,
@@ -383,7 +390,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     }
     assert orphan_import["post_import_snapshot_evidence"][0][
         "suggested_next_actions"
-    ][0]["tool"] == "doxabase.import_trig"
+    ][0]["tool"] == "doxabase.import_bundle"
     snapshot_status_after_import = describe_revision_snapshot_evidence_tool(
         round_trip,
         result["applied_revision_iri"],
@@ -465,7 +472,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
             path=str(tmp_path / "mixed-applied-event-review.md"),
         )
     export_message = str(export_exc.value)
-    assert "export_staged_revisions only accepts staged patch revisions" in (
+    assert "review exports only accept staged patch revisions" in (
         export_message
     )
     assert "applied revision event" in export_message

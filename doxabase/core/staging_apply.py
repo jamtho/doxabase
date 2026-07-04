@@ -150,7 +150,7 @@ class StagingApplyMixin:
                 triples_removed_truncated = triples_removed_count > 0
                 note = (
                     "Exact before/after snapshot triples are available but "
-                    "omitted; call describe_applied_revision_diff(..., "
+                    "omitted; call describe_revision(aspect='applied_diff', "
                     "include_triples=True) to include arrays."
                 )
         else:
@@ -193,14 +193,14 @@ class StagingApplyMixin:
     ) -> list[SuggestedNextAction]:
         return [
             SuggestedNextAction(
-                tool="doxabase.describe_graph_revision",
+                tool="doxabase.describe_revision",
                 args={"iri": revision_iri},
                 reason="Inspect the applied revision event for durable history "
                     "context.",
             ),
             SuggestedNextAction(
-                tool="doxabase.describe_applied_revision_diff",
-                args={"iri": revision_iri},
+                tool="doxabase.describe_revision",
+                args={"iri": revision_iri, "aspect": "applied_diff"},
                 reason="Inspect stored before/after graph snapshot counts and, "
                     "when needed, exact changed triples for the applied event.",
             ),
@@ -554,16 +554,21 @@ class StagingApplyMixin:
         staged_revision_iri: str,
         suggested_next_actions: list[SuggestedNextAction],
     ) -> SuggestedNextAction:
-        for tool_name in (
-            "describe_staged_revision",
-            "describe_revision_lineage",
-            "export_staged_revision",
+        def matches(action: SuggestedNextAction, selector: str) -> bool:
+            if selector in {"auto", "lineage"}:
+                return describe_revision_action_aspect(action) == selector
+            return export_bundle_action_kind(action) == "staged_revisions"
+
+        for selector in (
+            "auto",
+            "lineage",
+            "export_bundle",
         ):
             for action in suggested_next_actions:
-                if action.tool == f"doxabase.{tool_name}":
+                if matches(action, selector):
                     return action
         return SuggestedNextAction(
-                   tool="doxabase.describe_staged_revision",
+                   tool="doxabase.describe_revision",
                    args={"iri": staged_revision_iri},
                    reason="Semantic review is required before mutating this staged "
                 "revision because it belongs to an unresolved or already-applied "
@@ -625,7 +630,7 @@ class StagingApplyMixin:
             )
         if check.validation_conforms is False and not allow_validation_failure:
             inspect_call = (
-                "describe_staged_revision("
+                "describe_revision("
                 f"iri={staged.iri!r}, include_current_apply_check=True)"
             )
             raise DoxaBaseError(
@@ -1206,7 +1211,7 @@ class StagingApplyMixin:
                 "set."
             )
         if status == "conflict" and any(
-            action.tool == "doxabase.describe_staged_revision"
+            describe_revision_action_aspect(action) == "auto"
             and "no effective delta" in action.reason
             for action in suggested_next_actions or []
         ):
@@ -1299,8 +1304,13 @@ class StagingApplyMixin:
             arguments: dict[str, Any],
             reason: str,
         ) -> None:
-            if tool_name in {"export_staged_revision", "export_staged_revisions"}:
-                arguments = {**arguments, "fail_on_sensitive": True}
+            if tool_name == "export_bundle":
+                # Review-bundle exports go out through the merged export
+                # door with the privacy gate pre-armed.
+                arguments = {
+                    "kind": "staged_revisions",
+                    "spec": {**arguments, "fail_on_sensitive": True},
+                }
                 reason = (
                     f"{reason} The suggested call blocks if scanner-matching "
                     "content appears before export."
@@ -1322,7 +1332,7 @@ class StagingApplyMixin:
             if applied_successor_iri is None:
                 return False
             add_action(
-                "describe_graph_revision",
+                "describe_revision",
                 {"iri": applied_successor_iri},
                 (
                     "The refreshed successor has already been applied; inspect "
@@ -1330,8 +1340,8 @@ class StagingApplyMixin:
                 )
             )
             add_action(
-                "describe_applied_revision_diff",
-                {"iri": applied_successor_iri},
+                "describe_revision",
+                {"iri": applied_successor_iri, "aspect": "applied_diff"},
                 (
                     "Inspect the applied diff for the refreshed successor when "
                     "exact before/after graph changes matter."
@@ -1345,7 +1355,7 @@ class StagingApplyMixin:
             and restaged_successor_reuses_source_patch_payload
         ):
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri},
                 (
                     f"{restaged_source_validation_warning} Inspect the "
@@ -1354,9 +1364,9 @@ class StagingApplyMixin:
                 )
             )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         "staged-revision-restaged-validation-history",
                         [staged_revision_iri],
@@ -1448,14 +1458,14 @@ class StagingApplyMixin:
                     "proposal is still desired."
                 )
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri},
                 review_reason
             )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         export_slug,
                         [staged_revision_iri],
@@ -1472,7 +1482,7 @@ class StagingApplyMixin:
             successor_iri = current_restaged_by or restaged_by
             if not add_applied_successor_actions(successor_iri):
                 add_action(
-                    "describe_staged_revision",
+                    "describe_revision",
                     {"iri": successor_iri or staged_revision_iri},
                     (
                         "This staged source already has a refreshed successor; "
@@ -1481,7 +1491,7 @@ class StagingApplyMixin:
                 )
         elif status == "noop":
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri},
                 (
                     "Inspect the staged revision and current graph state; replay "
@@ -1489,9 +1499,9 @@ class StagingApplyMixin:
                 )
             )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         "staged-revision-noop",
                         [staged_revision_iri],
@@ -1501,13 +1511,13 @@ class StagingApplyMixin:
             )
         elif status == "already_applied" and already_applied_by is not None:
             add_action(
-                "describe_graph_revision",
+                "describe_revision",
                 {"iri": already_applied_by},
                 "Inspect the applied revision event instead of applying again."
             )
             add_action(
-                "describe_applied_revision_diff",
-                {"iri": already_applied_by},
+                "describe_revision",
+                {"iri": already_applied_by, "aspect": "applied_diff"},
                 (
                     "Inspect stored before/after graph snapshot counts and, when "
                     "needed, exact changed triples for the applied event."
@@ -1583,14 +1593,14 @@ class StagingApplyMixin:
                     "Write a review bundle that captures the blocked staged proposal."
                 )
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri, "include_current_apply_check": True},
                 review_reason
             )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         export_slug,
                         [staged_revision_iri],
@@ -1603,10 +1613,13 @@ class StagingApplyMixin:
                 for drift in snapshot_drifts or []
             ) and not already_effective_stale and restaged_by is None:
                 add_action(
-                    "import_revision_snapshots",
+                    "import_bundle",
                     {
-                        "path": "/tmp/revision-snapshots.json",
-                        "path_is_placeholder": True,
+                        "kind": "revision_snapshots",
+                        "spec": {
+                            "path": "/tmp/revision-snapshots.json",
+                            "path_is_placeholder": True,
+                        },
                     },
                     (
                         "Exact drift triples are unavailable for one or more "
@@ -1695,7 +1708,7 @@ class StagingApplyMixin:
                 successor_iri = current_restaged_by or restaged_by
                 if not applied_successor_actions_added:
                     add_action(
-                        "describe_staged_revision",
+                        "describe_revision",
                         {"iri": successor_iri},
                         (
                             "Inspect the current refreshed successor instead of "
@@ -1709,7 +1722,7 @@ class StagingApplyMixin:
             )
             if not applied_successor_actions_added:
                 add_action(
-                    "describe_staged_revision",
+                    "describe_revision",
                     {"iri": successor_iri},
                     (
                         "This failed staged source already has a refreshed "
@@ -1719,9 +1732,9 @@ class StagingApplyMixin:
                     )
                 )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         "staged-revision-handled-validation-failure",
                         [staged_revision_iri],
@@ -1749,7 +1762,7 @@ class StagingApplyMixin:
                 )
             )
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri},
                 (
                     "Inspect structured validation_results, then stage a repaired "
@@ -1760,9 +1773,9 @@ class StagingApplyMixin:
                 )
             )
             add_action(
-                "export_staged_revision",
+                "export_bundle",
                 {
-                    "iri": staged_revision_iri,
+                    "revision_iris": staged_revision_iri,
                     "path": self._suggested_review_export_path(
                         "staged-revision-validation-failed",
                         [staged_revision_iri],
@@ -1775,7 +1788,7 @@ class StagingApplyMixin:
             )
         else:
             add_action(
-                "describe_staged_revision",
+                "describe_revision",
                 {"iri": staged_revision_iri},
                 "Inspect staged revision details to understand why apply is not ready."
             )

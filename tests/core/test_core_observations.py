@@ -991,12 +991,17 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
     assert "pattern_synthesis" in role_loss_warning
     assert "Omitted graph roles:" in role_loss_warning
     assert [
-        action.tool.removeprefix("doxabase.") for action in preflight.suggested_next_actions[:2]
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in preflight.suggested_next_actions[:2]
     ] == [
-        "preflight_context_slice_export",
-        "export_context_slice",
+        ("export_preflight", "context_slice"),
+        ("export_bundle", "context_slice"),
     ]
     assert preflight.suggested_next_actions[0].args == {
+        "kind": "context_slice",
         "seed_iris": [column],
         "profile": "deep_lore",
         "max_triples": preflight.candidate_triple_count,

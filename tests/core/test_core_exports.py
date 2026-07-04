@@ -608,11 +608,14 @@ def test_import_handoff_bundle_blocks_mutation_when_resolved_target_lacks_snapsh
     assert plan.mutation_frontier_iris == []
     assert plan.blocking_preflight_actions
     assert plan.blocking_preflight_actions[0].tool == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
+    )
+    assert plan.blocking_preflight_actions[0].args["kind"] == (
+        "revision_snapshots"
     )
     assert imported.suggested_next_actions[0] == plan.blocking_preflight_actions[0]
     first_action = imported.suggested_next_actions[0]
-    assert first_action.args == {
+    assert first_action.args["spec"] == {
         "path": "<broader-source-revision-snapshots.json>",
         "path_is_placeholder": True,
         "missing_revision_iris": [restaged.revision_iri],
@@ -706,20 +709,29 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     assert preflight.scanner_note not in preflight.warnings
     assert not any("Scanner-clean means" in warning for warning in preflight.warnings)
     assert [
-        action.tool.removeprefix("doxabase.") for action in preflight.suggested_next_actions
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in preflight.suggested_next_actions
     ] == [
-        "scan_sensitive_literals",
-        "export_preflight",
-        "preflight_context_slice_export",
+        ("export_preflight", "scan_only"),
+        ("export_preflight", "revision_snapshots"),
+        ("export_preflight", "context_slice"),
     ]
     snapshot_action = preflight.suggested_next_actions[1]
     assert snapshot_action.args == {
-        "export_kind": "revision_snapshots",
+        "kind": "revision_snapshots",
         "revision_iris": [staged.revision_iri],
         "snapshot_graph_roles": ["map"],
         "limit": 20,
     }
-    snapshot_followup = db.export_preflight(**snapshot_action.args)
+    snapshot_followup = db.export_preflight(
+        export_kind=snapshot_action.args["kind"],
+        revision_iris=snapshot_action.args["revision_iris"],
+        snapshot_graph_roles=snapshot_action.args["snapshot_graph_roles"],
+        limit=snapshot_action.args["limit"],
+    )
     assert snapshot_followup.graph_sensitive_literal_count == 0
     assert snapshot_followup.snapshot_sensitive_literal_count >= 1
     assert snapshot_followup.matches
@@ -728,6 +740,7 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     }
     slice_action = preflight.suggested_next_actions[-1]
     assert slice_action.args == {
+        "kind": "context_slice",
         "seed_iris": ["<target-resource-iri>"],
         "profile": "dataset_brief",
         "max_triples": 500,
@@ -760,26 +773,32 @@ def test_export_preflight_returns_scanner_clean_export_action(
     assert preflight.privacy_warnings == []
     assert len(preflight.warnings) == 2
     assert "review context only" in preflight.warnings[0]
-    assert "export_handoff_bundle" in preflight.warnings[0]
+    assert "export_bundle(kind='handoff')" in preflight.warnings[0]
     assert preflight.warnings[1] == preflight.scanner_note
-    assert [action.tool.removeprefix("doxabase.") for action in preflight.suggested_next_actions] == [
-        "export_trig"
-    ]
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in preflight.suggested_next_actions
+    ] == [("export_bundle", "trig")]
     action = preflight.suggested_next_actions[0]
-    assert action.args["graphs"] == [
+    assert action.args["spec"]["graphs"] == [
         "map",
         "observations",
         "patterns",
         "evidence",
     ]
-    assert action.args["fail_on_sensitive"] is True
+    assert action.args["spec"]["fail_on_sensitive"] is True
     assert not (tmp_path / "<project-review-bundle.trig>").exists()
 
     workflow_export = db.export_trig(tmp_path / "workflow.trig", graphs="workflow")
     assert "review context only" in workflow_export.warnings[0]
     assert workflow_export.artifact_kind == "workflow_review_trig"
     assert workflow_export.importable is True
-    assert workflow_export.recommended_import_tool == "doxabase.import_trig"
+    assert workflow_export.recommended_import_tool == (
+        'doxabase.import_bundle(kind="trig")'
+    )
     assert workflow_export.recovery_complete is False
 
     project_preflight = db.export_preflight(export_kind="trig", graphs="project")
@@ -787,9 +806,12 @@ def test_export_preflight_returns_scanner_clean_export_action(
     handoff_preflight = db.export_preflight(export_kind="handoff_bundle")
     assert handoff_preflight.warnings == [handoff_preflight.scanner_note]
     handoff_action = handoff_preflight.suggested_next_actions[0]
-    assert handoff_action.tool == "doxabase.export_handoff_bundle"
+    assert handoff_action.tool == "doxabase.export_bundle"
+    assert handoff_action.args["kind"] == "handoff"
     assert "placeholders" in handoff_action.reason
-    assert handoff_action.args["manifest_path"] == "<handoff-manifest.json>"
+    assert handoff_action.args["spec"]["manifest_path"] == (
+        "<handoff-manifest.json>"
+    )
 
 
 def test_export_trig_preserves_graph_roles_for_round_trip(tmp_path: Path) -> None:
@@ -922,8 +944,11 @@ def test_context_slice_export_is_importable_and_resource_scoped(
         "Immutable seed graph triples were omitted" in warning
         for warning in preflight.warnings
     )
-    assert preflight.suggested_next_actions[0].tool == "doxabase.export_context_slice"
-    assert preflight.suggested_next_actions[0].args["fail_on_sensitive"] is True
+    assert preflight.suggested_next_actions[0].tool == "doxabase.export_bundle"
+    assert preflight.suggested_next_actions[0].args["kind"] == "context_slice"
+    assert preflight.suggested_next_actions[0].args["spec"][
+        "fail_on_sensitive"
+    ] is True
     assert fake_secret not in json.dumps(to_dict(preflight))
 
     dirty_preflight = db.preflight_context_slice_export(
@@ -951,12 +976,12 @@ def test_context_slice_export_is_importable_and_resource_scoped(
         "privacy_scan_limit": 5,
     }
     assert dirty_preflight.suggested_next_actions[1].args == {
-        "export_kind": "handoff_bundle",
+        "kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 5,
     }
     assert all(
-        action.tool != "doxabase.export_context_slice"
+        action.tool != "doxabase.export_bundle"
         for action in dirty_preflight.suggested_next_actions
     )
     assert fake_secret not in json.dumps(to_dict(dirty_preflight))
@@ -1075,7 +1100,10 @@ def test_query_failure_evidence_slice_exports_when_broad_handoff_blocks_sensitiv
     assert slice_preflight.sensitive_literal_count == 0
     assert slice_preflight.would_block_sensitive_export is False
     assert slice_preflight.suggested_next_actions[0].tool == (
-        "doxabase.export_context_slice"
+        "doxabase.export_bundle"
+    )
+    assert slice_preflight.suggested_next_actions[0].args["kind"] == (
+        "context_slice"
     )
 
     slice_path = tmp_path / "query-failure-evidence-slice.trig"
@@ -1597,7 +1625,10 @@ def test_grouped_export_marks_partial_snapshot_evidence(
     assert snapshot_row.exact_snapshot_graph_roles == ["map"]
     assert snapshot_row.missing_snapshot_row_graph_roles == ["ontology"]
     assert snapshot_row.suggested_next_actions[0].tool == (
-        "doxabase.import_revision_snapshots"
+        "doxabase.import_bundle"
+    )
+    assert snapshot_row.suggested_next_actions[0].args["kind"] == (
+        "revision_snapshots"
     )
     assert "## Snapshot Evidence" in grouped_export_text
     assert "history_plus_snapshot_rows: 1" in grouped_export_text
@@ -1605,7 +1636,7 @@ def test_grouped_export_marks_partial_snapshot_evidence(
     assert "history_plus_snapshot_rows | partial | map, ontology | map | map | ontology" in (
         grouped_export_text
     )
-    assert "import_revision_snapshots" in grouped_export_text
+    assert '"kind": "revision_snapshots"' in grouped_export_text
 
     full_snapshot_path = tmp_path / "full-plus-extra-snapshots.json"
     db.export_revision_snapshots(
@@ -1682,13 +1713,19 @@ def test_stale_project_import_suggests_snapshot_json_before_restaging(
     assert check.blocking_reasons == ["target_count_drift"]
     assert check.snapshot_drifts
     assert check.snapshot_drifts[0].exact_changed_triples_available is False
-    assert [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions] == [
-        "import_revision_snapshots",
-        "describe_staged_revision",
-        "export_staged_revision",
-        "restage_staged_revision",
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in check.suggested_next_actions
+    ] == [
+        ("import_bundle", "revision_snapshots"),
+        ("describe_revision", None),
+        ("export_bundle", "staged_revisions"),
+        ("restage_staged_revision", None),
     ]
-    assert check.suggested_next_actions[0].args == {
+    assert check.suggested_next_actions[0].args["spec"] == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
@@ -1734,9 +1771,12 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
         "snapshot_rows_without_history"
     )
     assert [
-        action.tool.removeprefix("doxabase.")
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
         for action in imported.post_import_snapshot_evidence[0].suggested_next_actions
-    ] == ["import_trig"]
+    ] == [("import_bundle", "trig")]
     assert valid_db._graph_snapshot_storage_rows(valid_revision, "map")[0][3] == ""
     snapshot_only = valid_db.describe_revision_graph_snapshot(
         valid_revision,
@@ -2190,9 +2230,13 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
         staged.revision_iri
     )
     assert snapshot_only_evidence.status == "snapshot_rows_without_history"
-    assert [action.tool.removeprefix("doxabase.") for action in snapshot_only_evidence.suggested_next_actions] == [
-        "import_trig"
-    ]
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in snapshot_only_evidence.suggested_next_actions
+    ] == [("import_bundle", "trig")]
     snapshot_first_plan = snapshot_first.plan_staged_revision_recovery(
         [staged.revision_iri],
         current_staged_work_only=False,
@@ -2204,14 +2248,18 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     assert snapshot_first_plan.not_restageable_revision_iris_by_reason == {
         "missing_history_graph": [staged.revision_iri]
     }
-    assert snapshot_first_plan.suggested_next_actions[0].tool == "doxabase.import_trig"
+    assert snapshot_first_plan.suggested_next_actions[0].tool == "doxabase.import_bundle"
+    assert snapshot_first_plan.suggested_next_actions[0].args["kind"] == "trig"
     assert snapshot_first_plan.mutation_allowed_after == (
         "handoff_preflight_required_before_mutation"
     )
     assert [
-        action.tool.removeprefix("doxabase.")
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
         for action in snapshot_first_plan.blocking_preflight_actions
-    ] == ["import_trig"]
+    ] == [("import_bundle", "trig")]
     assert snapshot_first_plan.first_mutation_action is None
     assert (
         snapshot_first_plan.first_safe_review_or_mutation_action
@@ -2229,7 +2277,7 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
         "snapshot_rows_without_history"
     )
     assert snapshot_first_lane.next_action is not None
-    assert snapshot_first_lane.next_action.tool_name == "import_trig"
+    assert snapshot_first_lane.next_action.tool_name == "import_bundle"
 
     partial = DoxaBase.create(tmp_path / "history-snapshots-only.sqlite")
     partial.import_trig(history_path)
@@ -2242,9 +2290,13 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     assert snapshot_evidence.status == "history_plus_snapshot_rows"
     assert snapshot_evidence.exact_snapshot_graph_roles == ["map"]
     assert snapshot_evidence.missing_current_graph_roles == ["map"]
-    assert [action.tool.removeprefix("doxabase.") for action in snapshot_evidence.suggested_next_actions] == [
-        "import_trig"
-    ]
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in snapshot_evidence.suggested_next_actions
+    ] == [("import_bundle", "trig")]
     assert "complete project RDF bundle" in (
         snapshot_evidence.suggested_next_actions[0].reason
     )
@@ -2258,7 +2310,7 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     }
     assert listing.revisions[0].next_action is not None
     assert listing.revisions[0].next_action.queue == "complete_handoff_import"
-    assert listing.revisions[0].next_action.tool_name == "import_trig"
+    assert listing.revisions[0].next_action.tool_name == "import_bundle"
 
     plan = partial.plan_staged_revision_recovery([staged.revision_iri])
     assert plan.lane_counts == {"complete_handoff_import": 1}
@@ -2266,13 +2318,17 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
         "complete_handoff_import": [staged.revision_iri]
     }
     assert plan.lanes[0].next_action is not None
-    assert plan.lanes[0].next_action.tool_name == "import_trig"
+    assert plan.lanes[0].next_action.tool_name == "import_bundle"
     assert plan.mutation_allowed_after == (
         "handoff_preflight_required_before_mutation"
     )
-    assert [action.tool.removeprefix("doxabase.") for action in plan.blocking_preflight_actions] == [
-        "import_trig"
-    ]
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in plan.blocking_preflight_actions
+    ] == [("import_bundle", "trig")]
 
 
 def test_handoff_import_gates_nested_plan_when_source_session_matches(
@@ -2395,7 +2451,7 @@ def test_export_preflight_and_writes_gate_invalid_graphs(tmp_path: Path) -> None
         "limit_results": 20,
     }
     assert not any(
-        action.tool == "doxabase.export_handoff_bundle"
+        action.tool == "doxabase.export_bundle"
         for action in preflight.suggested_next_actions
     )
 

@@ -378,9 +378,9 @@ class ExportsMixin:
                     "This context-slice export includes history graph triples, "
                     "but it is not a recovery-complete revision handoff because "
                     "context slices do not include SQLite-side revision snapshot "
-                    "rows. Use export_handoff_bundle when a receiving capsule "
-                    "needs exact applied diffs, stale-drift checks, or staged "
-                    "revision recovery."
+                    "rows. Use export_bundle(kind='handoff') when a "
+                    "receiving capsule needs exact applied diffs, stale-drift "
+                    "checks, or staged revision recovery."
                 ),
             )
         validation = self._export_validation_result(
@@ -631,6 +631,7 @@ class ExportsMixin:
                     continue
                 resource_brief_retry_keys.add(retry_key)
                 arguments = {
+                    "kind": "context_slice",
                     "seed_iris": retry_seed_values,
                     "profile": "resource_brief",
                     "max_triples": retry_max_triples,
@@ -639,7 +640,7 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.preflight_context_slice_export",
+                        tool="doxabase.export_preflight",
                         args=arguments,
                         reason="The described slice reported that profile-specific "
                             "expansion did not apply. Rerun export preflight "
@@ -650,6 +651,7 @@ class ExportsMixin:
         if truncated:
             full_triple_cap = max(candidate_triple_count, max_triples)
             arguments = {
+                "kind": "context_slice",
                 "seed_iris": seed_values,
                 "profile": profile,
                 "max_triples": full_triple_cap,
@@ -658,7 +660,7 @@ class ExportsMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.preflight_context_slice_export",
+                    tool="doxabase.export_preflight",
                     args=arguments,
                     reason="The current context-slice export is truncated, so "
                         "graphs and graph_counts may omit structured lore "
@@ -701,7 +703,7 @@ class ExportsMixin:
             )
             if not includes_history:
                 preflight_arguments = {
-                    "export_kind": "handoff_bundle",
+                    "kind": "handoff_bundle",
                     "graphs": ["project"],
                     "limit": limit,
                 }
@@ -725,7 +727,7 @@ class ExportsMixin:
             label_source = self._local_name(seed_values[0]) if seed_values else None
             label = re.sub(r"[^A-Za-z0-9]+", "-", label_source or "context-slice")
             label = label.strip("-").lower() or "context-slice"
-            arguments = {
+            spec: dict[str, Any] = {
                 "path": f"/tmp/context-slice-{label[:40]}-{digest}.trig",
                 "seed_iris": seed_values,
                 "profile": profile,
@@ -735,13 +737,13 @@ class ExportsMixin:
                 "fail_on_invalid": True,
             }
             if fail_on_sensitive:
-                arguments["fail_on_sensitive"] = fail_on_sensitive
+                spec["fail_on_sensitive"] = fail_on_sensitive
             if validation_scope is not None:
-                arguments["validation_scope"] = validation_scope
+                spec["validation_scope"] = validation_scope
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.export_context_slice",
-                    args=arguments,
+                    tool="doxabase.export_bundle",
+                    args={"kind": "context_slice", "spec": spec},
                     reason="Write an importable TriG bundle for only the selected "
                         "context-slice triples after reviewing the preflight scan.",
                 )
@@ -750,7 +752,7 @@ class ExportsMixin:
             handoff_arguments: dict[str, Any]
             if would_block_sensitive_export or would_block_invalid_export:
                 handoff_arguments = {
-                    "export_kind": "handoff_bundle",
+                    "kind": "handoff_bundle",
                     "graphs": ["project"],
                     "limit": limit,
                 }
@@ -777,7 +779,11 @@ class ExportsMixin:
                     "before writing recovery-complete handoff artifacts."
                 )
             else:
-                tool_name = "export_handoff_bundle"
+                tool_name = "export_bundle"
+                handoff_arguments = {
+                    "kind": "handoff",
+                    "spec": handoff_arguments,
+                }
                 reason = (
                     "History-bearing context slices are importable review "
                     "context but do not carry revision snapshot rows; use a "
@@ -1141,8 +1147,8 @@ class ExportsMixin:
             return []
         return [
             "This is review context only: it omits history and revision snapshot "
-            "rows. Use export_handoff_bundle or project TriG plus "
-            "export_revision_snapshots for recovery."
+            "rows. Use export_bundle(kind='handoff'), or project TriG plus "
+            "export_bundle(kind='revision_snapshots'), for recovery."
         ]
     @staticmethod
     def _trig_export_artifact_kind(graph_names: list[str]) -> str:
@@ -1324,7 +1330,7 @@ class ExportsMixin:
             validation_results=validation.results if validation is not None else [],
             would_block_invalid_export=validation_blocks_export,
             artifact_kind="handoff_trig",
-            recommended_import_tool="doxabase.import_trig",
+            recommended_import_tool='doxabase.import_bundle(kind="trig")',
             recovery_complete=False,
             shareability_hints=trig_shareability_hints,
             shareability_hint_count=trig_shareability_hint_count,
@@ -1356,9 +1362,12 @@ class ExportsMixin:
             shareability_hint_matches=snapshot_shareability_hint_matches,
         )
         recommended_import_tool = (
-            "doxabase.import_handoff_bundle"
+            'doxabase.import_bundle(kind="handoff")'
             if manifest_path is not None
-            else "doxabase.import_trig then doxabase.import_revision_snapshots"
+            else (
+                'doxabase.import_bundle(kind="trig") then '
+                'doxabase.import_bundle(kind="revision_snapshots")'
+            )
         )
         manifest = self._handoff_bundle_manifest(
             trig=trig_record,
@@ -1560,7 +1569,8 @@ class ExportsMixin:
             "recommended_import_sequence": [
                 {
                     "step": 1,
-                    "tool": "doxabase.import_trig",
+                    "tool": "doxabase.import_bundle",
+                    "kind": "trig",
                     "path": trig.path,
                     "expected_snapshot_evidence_status": (
                         "history_only_count_digest"
@@ -1568,7 +1578,8 @@ class ExportsMixin:
                 },
                 {
                     "step": 2,
-                    "tool": "doxabase.import_revision_snapshots",
+                    "tool": "doxabase.import_bundle",
+                    "kind": "revision_snapshots",
                     "path": revision_snapshots.path,
                     "expected_snapshot_evidence_status": (
                         "history_plus_snapshot_rows"
@@ -1922,8 +1933,9 @@ class ExportsMixin:
         action: SuggestedNextAction,
     ) -> bool:
         return (
-            action.tool == "doxabase.import_revision_snapshots"
-            and action.args.get("path_is_placeholder") is True
+            import_bundle_action_kind(action) == "revision_snapshots"
+            and action_staging_arguments(action).get("path_is_placeholder")
+            is True
         )
     @staticmethod
     def _import_handoff_bundle_missing_resolved_snapshots(
@@ -1994,8 +2006,8 @@ class ExportsMixin:
                 f"{', '.join(missing_graph_roles)}."
             )
         return SuggestedNextAction(
-                   tool="doxabase.import_revision_snapshots",
-                   args=arguments,
+                   tool="doxabase.import_bundle",
+                   args={"kind": "revision_snapshots", "spec": arguments},
                    reason=reason,
                )
     def _handoff_manifest_artifact_path(
@@ -2181,7 +2193,7 @@ class ExportsMixin:
         sensitive_literal_count: int,
     ) -> SuggestedNextAction:
         arguments: dict[str, Any] = {
-            "export_kind": "handoff_bundle",
+            "kind": "handoff_bundle",
             "graphs": graph_roles or ["project"],
             "limit": max(20, min(sensitive_literal_count, 100)),
         }
@@ -2239,8 +2251,8 @@ class ExportsMixin:
                 "revision snapshot rows, and return a staged recovery plan."
             )
         return SuggestedNextAction(
-                   tool="doxabase.import_handoff_bundle",
-                   args=arguments,
+                   tool="doxabase.import_bundle",
+                   args={"kind": "handoff", "spec": arguments},
                    reason=reason,
                )
     @staticmethod
@@ -2257,7 +2269,7 @@ class ExportsMixin:
         resolved_paths = [path.resolve(strict=False) for path in paths]
         if len(set(resolved_paths)) != len(resolved_paths):
             raise DoxaBaseError(
-                "export_handoff_bundle requires distinct trig_path, "
+                "Handoff bundle exports require distinct trig_path, "
                 "revision_snapshot_path, and manifest_path outputs."
             )
         if overwrite:
@@ -2353,9 +2365,10 @@ class ExportsMixin:
                     "graphs": record.graphs,
                     "limit": max(record.limit, 20),
                 }
+                arguments["kind"] = "scan_only"
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.scan_sensitive_literals",
+                        tool="doxabase.export_preflight",
                         args=arguments,
                         reason="Review redacted graph-term matches before changing "
                             "scope or removing sensitive-looking graph content.",
@@ -2363,7 +2376,7 @@ class ExportsMixin:
                 )
             if record.snapshot_sensitive_literal_count:
                 arguments = {
-                    "export_kind": "revision_snapshots",
+                    "kind": "revision_snapshots",
                     "revision_iris": record.revision_iris,
                     "snapshot_graph_roles": record.snapshot_graph_roles,
                     "limit": max(record.limit, 20),
@@ -2380,6 +2393,7 @@ class ExportsMixin:
                 )
             if record.graph_sensitive_literal_count and record.graphs:
                 arguments = {
+                    "kind": "context_slice",
                     "seed_iris": ["<target-resource-iri>"],
                     "profile": "dataset_brief",
                     "max_triples": 500,
@@ -2387,7 +2401,7 @@ class ExportsMixin:
                 }
                 actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.preflight_context_slice_export",
+                        tool="doxabase.export_preflight",
                         args=arguments,
                         reason="If the intended handoff only needs clean context "
                             "around known resources, preflight a context-slice "
@@ -2400,52 +2414,52 @@ class ExportsMixin:
             return actions
 
         if record.export_kind == "graph":
-            arguments = {
+            spec = {
                 "path": "<review-artifact.ttl>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
                 "fail_on_invalid": True,
             }
             if record.validation_scope is not None:
-                arguments["validation_scope"] = record.validation_scope
-            tool_name = "export_graph"
+                spec["validation_scope"] = record.validation_scope
+            bundle_kind = "graph"
             reason = (
                 "The selected graph terms scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the write "
                 "still blocks if content changes before export."
             )
         elif record.export_kind == "trig":
-            arguments = {
+            spec = {
                 "path": "<project-review-bundle.trig>",
                 "graphs": record.graphs,
                 "fail_on_sensitive": True,
                 "fail_on_invalid": True,
             }
             if record.validation_scope is not None:
-                arguments["validation_scope"] = record.validation_scope
-            tool_name = "export_trig"
+                spec["validation_scope"] = record.validation_scope
+            bundle_kind = "trig"
             reason = (
                 "The selected named graphs scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the write "
                 "still blocks if content changes before export."
             )
         elif record.export_kind == "revision_snapshots":
-            arguments = {
+            spec = {
                 "path": "<revision-snapshots.json>",
                 "fail_on_sensitive": True,
             }
             if record.revision_iris:
-                arguments["revision_iris"] = record.revision_iris
+                spec["revision_iris"] = record.revision_iris
             if record.snapshot_graph_roles:
-                arguments["graph_roles"] = record.snapshot_graph_roles
-            tool_name = "export_revision_snapshots"
+                spec["graph_roles"] = record.snapshot_graph_roles
+            bundle_kind = "revision_snapshots"
             reason = (
                 "The selected snapshot rows scanned clean; keep "
                 "fail_on_sensitive=True so the write still blocks if snapshot "
                 "content changes before export."
             )
         else:
-            arguments = {
+            spec = {
                 "trig_path": "<project-handoff.trig>",
                 "revision_snapshot_path": "<revision-snapshots.json>",
                 "manifest_path": "<handoff-manifest.json>",
@@ -2454,22 +2468,19 @@ class ExportsMixin:
                 "fail_on_invalid": True,
             }
             if record.validation_scope is not None:
-                arguments["validation_scope"] = record.validation_scope
+                spec["validation_scope"] = record.validation_scope
             if record.revision_iris:
-                arguments["revision_iris"] = record.revision_iris
+                spec["revision_iris"] = record.revision_iris
             if record.snapshot_graph_roles:
-                arguments["snapshot_graph_roles"] = record.snapshot_graph_roles
-            tool_name = "export_handoff_bundle"
+                spec["snapshot_graph_roles"] = record.snapshot_graph_roles
+            bundle_kind = "handoff"
             reason = (
                 "The selected RDF graphs and snapshot rows scanned clean; keep "
                 "fail_on_sensitive=True and fail_on_invalid=True so the paired "
                 "write still blocks if content changes before export."
             )
 
-        if (
-            record.export_kind == "handoff_bundle"
-            and tool_name == "export_handoff_bundle"
-        ):
+        if bundle_kind == "handoff":
             reason = (
                 f"{reason} Replace the angle-bracketed path placeholders with "
                 "reviewed output paths before calling."
@@ -2477,8 +2488,8 @@ class ExportsMixin:
 
         return [
             SuggestedNextAction(
-                tool=f"doxabase.{tool_name}",
-                args=arguments,
+                tool="doxabase.export_bundle",
+                args={"kind": bundle_kind, "spec": spec},
                 reason=reason,
             )
         ]
@@ -2528,7 +2539,7 @@ class ExportsMixin:
         warning = (
             f"Revision snapshot export includes {match_count} potential sensitive "
             "term match(es). Snapshot JSON faithfully preserves stored graph "
-            "content; run scan_sensitive_literals on project graph roles before "
+            "content; run export_preflight(kind='scan_only') on project graph roles before "
             "sharing. Redacted examples: "
             + "; ".join(examples)
         )
@@ -2779,7 +2790,7 @@ class ExportsMixin:
             validation_results=validation.results if validation is not None else [],
             would_block_invalid_export=validation_blocks_export,
             artifact_kind=self._trig_export_artifact_kind(graph_names),
-            recommended_import_tool="doxabase.import_trig",
+            recommended_import_tool='doxabase.import_bundle(kind="trig")',
             recovery_complete=False,
             shareability_hints=shareability_hints,
             shareability_hint_count=shareability_hint_count,
@@ -2807,7 +2818,7 @@ class ExportsMixin:
         )
         warning = (
             f"Export includes {scan.match_count} potential sensitive graph term "
-            "match(es). Run scan_sensitive_literals on these graph roles before "
+            "match(es). Run export_preflight(kind='scan_only') on these graph roles before "
             "sharing. Redacted examples: "
             f"{example_text}"
         )

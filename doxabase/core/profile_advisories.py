@@ -2235,7 +2235,7 @@ class ProfileAdvisoriesMixin:
             if pending_staged_promotion_values:
                 for staged_iri in pending_staged_promotion_values[:3]:
                     add_action(
-                        "describe_staged_revision",
+                        "describe_revision",
                         {
                             "iri": staged_iri,
                             "include_current_apply_check": True,
@@ -2248,14 +2248,17 @@ class ProfileAdvisoriesMixin:
                         ),
                     )
                 add_action(
-                    "export_staged_revisions",
+                    "export_bundle",
                     {
-                        "revision_iris": pending_staged_promotion_values,
-                        "path": self._suggested_review_export_path(
-                            "profile-metric-vocabulary-pending",
-                            pending_staged_promotion_values,
-                        ),
-                        "fail_on_sensitive": True,
+                        "kind": "staged_revisions",
+                        "spec": {
+                            "revision_iris": pending_staged_promotion_values,
+                            "path": self._suggested_review_export_path(
+                                "profile-metric-vocabulary-pending",
+                                pending_staged_promotion_values,
+                            ),
+                            "fail_on_sensitive": True,
+                        },
                     },
                     (
                         "Write a grouped review bundle for pending staged metric "

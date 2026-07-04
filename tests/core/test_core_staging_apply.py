@@ -46,9 +46,9 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.triples_to_remove == 0
     assert check.patch_checks[0].current_triple_count == 0
     assert check.patch_checks[0].preview_triple_count == 3
-    assert check.suggested_next_actions[0].tool == "doxabase.describe_staged_revision"
+    assert check.suggested_next_actions[0].tool == "doxabase.describe_revision"
     assert check.suggested_next_actions[0].tool == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert check.suggested_next_actions[0].args == {"iri": staged.revision_iri}
     assert check.suggested_next_actions[-1].tool == "doxabase.apply_staged_revision"
@@ -127,11 +127,15 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.graph_snapshots[0].content_digest is not None
     assert applied.graph_snapshots[0].content_digest.startswith("sha256:")
     assert [action.tool.removeprefix("doxabase.") for action in applied.suggested_next_actions] == [
-        "describe_graph_revision",
-        "describe_applied_revision_diff",
+        "describe_revision",
+        "describe_revision",
     ]
-    assert applied.suggested_next_actions[1].args == {
+    assert applied.suggested_next_actions[0].args == {
         "iri": result.applied_revision_iri
+    }
+    assert applied.suggested_next_actions[1].args == {
+        "iri": result.applied_revision_iri,
+        "aspect": "applied_diff",
     }
     diff = db.describe_applied_revision_diff(result.applied_revision_iri)
     assert diff.applied_revision_iri == result.applied_revision_iri
@@ -289,7 +293,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert imported_lineage_before_snapshots.suggested_next_actions[
         0
-    ].tool == "doxabase.import_revision_snapshots"
+    ].tool == "doxabase.import_bundle"
+    assert imported_lineage_before_snapshots.suggested_next_actions[0].args[
+        "kind"
+    ] == "revision_snapshots"
     assert imported_lineage_before_snapshots.paired_revision is not None
     assert (
         imported_lineage_before_snapshots.paired_revision.revision.iri
@@ -311,11 +318,14 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert imported_status_before_snapshots.rdf_snapshot_graph_roles == ["map"]
     assert imported_status_before_snapshots.stored_snapshot_graph_roles == []
     assert [
-        action.tool.removeprefix("doxabase.")
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
         for action in imported_status_before_snapshots.suggested_next_actions
-    ] == ["import_revision_snapshots"]
+    ] == [("import_bundle", "revision_snapshots")]
     snapshot_action = imported_status_before_snapshots.suggested_next_actions[0]
-    assert snapshot_action.args == {
+    assert snapshot_action.args["spec"] == {
         "path": "/tmp/revision-snapshots.json",
         "path_is_placeholder": True,
     }
@@ -328,7 +338,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         for action in imported_graph_detail_before_snapshots.suggested_next_actions[
             :2
         ]
-    ] == ["import_revision_snapshots", "describe_graph_revision"]
+    ] == ["import_bundle", "describe_revision"]
     imported_revision_list_before_snapshots = round_trip.list_graph_revisions(
         record_kind="applied_event"
     )
@@ -349,7 +359,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert imported_graph_lineage_before_snapshots.suggested_next_actions[
         0
-    ].tool == "doxabase.import_revision_snapshots"
+    ].tool == "doxabase.import_bundle"
     assert [
         item.snapshot_evidence.status
         for item in [
@@ -380,16 +390,16 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         for action in (
             imported_diff_before_snapshots.snapshot_evidence.suggested_next_actions
         )
-    ] == ["import_revision_snapshots"]
+    ] == ["import_bundle"]
     assert [
         action.tool.removeprefix("doxabase.")
         for action in imported_diff_before_snapshots.suggested_next_actions
-    ] == ["import_revision_snapshots"]
+    ] == ["import_bundle"]
     assert (
         imported_diff_before_snapshots.graph_diffs[0].exact_changed_triples_available
         is False
     )
-    assert "import_revision_snapshots" in (
+    assert "import_bundle(kind='revision_snapshots')" in (
         imported_diff_before_snapshots.graph_diffs[0].note
     )
     rdf_only_snapshot = round_trip.describe_revision_graph_snapshot(
@@ -406,7 +416,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert rdf_only_snapshot.triples == []
     assert [
         action.tool.removeprefix("doxabase.") for action in rdf_only_snapshot.suggested_next_actions
-    ] == ["import_revision_snapshots"]
+    ] == ["import_bundle"]
     assert "Import a companion revision snapshot JSON bundle" in (
         rdf_only_snapshot.note
     )
@@ -418,7 +428,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert rdf_only_version_diff.exact_changed_triples_available is False
     assert [
         action.tool.removeprefix("doxabase.") for action in rdf_only_version_diff.suggested_next_actions
-    ][:1] == ["import_revision_snapshots"]
+    ][:1] == ["import_bundle"]
 
     snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
     assert snapshot_import.imported_snapshot_count == 2
@@ -540,16 +550,20 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         for action in orphan_import.post_import_snapshot_evidence[
             0
         ].suggested_next_actions
-    ] == ["import_trig"]
+    ] == ["import_bundle"]
     orphan_status = workflow_round_trip.describe_revision_snapshot_evidence(
         result.applied_revision_iri
     )
     assert orphan_status.status == "snapshot_rows_without_history"
     assert orphan_status.orphan_snapshot_row_graph_roles == ["map"]
-    assert [action.tool.removeprefix("doxabase.") for action in orphan_status.suggested_next_actions] == [
-        "import_trig"
-    ]
-    assert orphan_status.suggested_next_actions[0].args == {
+    assert [
+        (
+            action.tool.removeprefix("doxabase."),
+            action.args.get("kind"),
+        )
+        for action in orphan_status.suggested_next_actions
+    ] == [("import_bundle", "trig")]
+    assert orphan_status.suggested_next_actions[0].args["spec"] == {
         "path": "/tmp/project.trig",
         "path_is_placeholder": True,
     }
@@ -591,13 +605,17 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert applied_check.already_applied_by == result.applied_revision_iri
     assert applied_check.suggested_next_actions[0].tool == (
-        "doxabase.describe_graph_revision"
+        "doxabase.describe_revision"
     )
+    assert applied_check.suggested_next_actions[0].args == {
+        "iri": result.applied_revision_iri
+    }
     assert applied_check.suggested_next_actions[1].tool == (
-        "doxabase.describe_applied_revision_diff"
+        "doxabase.describe_revision"
     )
     assert applied_check.suggested_next_actions[1].args == {
-        "iri": result.applied_revision_iri
+        "iri": result.applied_revision_iri,
+        "aspect": "applied_diff",
     }
     applied_description = db.describe_staged_revision(staged.revision_iri)
     assert applied_description.application_status == "already_applied"
@@ -631,7 +649,8 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     applied_export_path = tmp_path / "applied-single-review.md"
     db.export_staged_revision(staged.revision_iri, applied_export_path)
     applied_export_text = applied_export_path.read_text(encoding="utf-8")
-    assert "**doxabase.describe_applied_revision_diff**" in applied_export_text
+    assert "**doxabase.describe_revision**" in applied_export_text
+    assert '"aspect": "applied_diff"' in applied_export_text
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
@@ -643,7 +662,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         )
 
     mixed_export_message = str(mixed_export_exc.value)
-    assert "export_staged_revisions only accepts staged patch revisions" in (
+    assert "review exports only accept staged patch revisions" in (
         mixed_export_message
     )
     assert "applied revision event" in mixed_export_message
@@ -672,7 +691,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_event_lane.batch_action == "skipped_applied_event"
     assert applied_event_lane.not_restageable_reason == "applied_event_record"
     assert applied_event_lane.next_action is not None
-    assert applied_event_lane.next_action.tool_name == "describe_graph_revision"
+    assert applied_event_lane.next_action.tool_name == "describe_revision"
     assert applied_event_lane.next_action.arguments == {
         "iri": result.applied_revision_iri
     }
@@ -684,10 +703,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert [
         action.tool.removeprefix("doxabase.") for action in applied_event_lane.suggested_next_actions
-    ] == ["describe_graph_revision", "describe_applied_revision_diff"]
+    ] == ["describe_revision", "describe_revision"]
     assert any(
-        action.tool == "doxabase.describe_applied_revision_diff"
-        and action.args == {"iri": result.applied_revision_iri}
+        action.tool == "doxabase.describe_revision"
+        and action.args == {
+            "iri": result.applied_revision_iri,
+            "aspect": "applied_diff",
+        }
         for action in recovery_event_plan.suggested_next_actions
     )
 
@@ -904,7 +926,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "Create a refreshed staged revision" in export_text
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
-    assert check.suggested_next_actions[0].tool == "doxabase.describe_staged_revision"
+    assert check.suggested_next_actions[0].tool == "doxabase.describe_revision"
     assert check.suggested_next_actions[0].args == {
         "iri": staged.revision_iri,
         "include_current_apply_check": True,
@@ -1072,7 +1094,7 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "inspect_no_effective_change"
     assert recheck.next_action.queue == "informational"
-    assert recheck.next_action.tool_name == "describe_staged_revision"
+    assert recheck.next_action.tool_name == "describe_revision"
     assert recheck.next_action.arguments == {
         "iri": noop_successor.revision_iri,
         "include_current_apply_check": True,

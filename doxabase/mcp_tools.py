@@ -64,17 +64,97 @@ def scan_sensitive_literals_tool(
     return to_dict(result)
 
 
+_EXPORT_PREFLIGHT_SHARED_PARAMS = ("kind", "limit")
+
+_EXPORT_PREFLIGHT_KIND_PARAMS: dict[str, frozenset[str]] = {
+    "graph": frozenset(
+        {"graphs", "revision_iris", "snapshot_graph_roles", "validation_scope"}
+    ),
+    "trig": frozenset(
+        {"graphs", "revision_iris", "snapshot_graph_roles", "validation_scope"}
+    ),
+    "revision_snapshots": frozenset(
+        {"graphs", "revision_iris", "snapshot_graph_roles", "validation_scope"}
+    ),
+    "handoff_bundle": frozenset(
+        {"graphs", "revision_iris", "snapshot_graph_roles", "validation_scope"}
+    ),
+    "scan_only": frozenset({"graphs"}),
+    "context_slice": frozenset(
+        {
+            "seed_iris",
+            "profile",
+            "max_triples",
+            "include_seed_graphs",
+            "validation_scope",
+        }
+    ),
+}
+
+
 def export_preflight_tool(
     db: DoxaBase,
-    export_kind: str = "handoff_bundle",
+    kind: str = "handoff_bundle",
     graphs: list[str] | str | None = None,
     revision_iris: list[str] | None = None,
     snapshot_graph_roles: list[str] | None = None,
     validation_scope: str | None = None,
     limit: int = 20,
+    seed_iris: list[str] | None = None,
+    profile: str | None = None,
+    max_triples: int | None = None,
+    include_seed_graphs: bool | None = None,
 ) -> dict[str, Any]:
+    """Dry-run export privacy/validation review; kind picks the export shape,
+    a bare graph scan, or a context-slice preflight (targeted errors)."""
+    valid_kinds = sorted(_EXPORT_PREFLIGHT_KIND_PARAMS)
+    if kind not in _EXPORT_PREFLIGHT_KIND_PARAMS:
+        raise DoxaBaseError(
+            f"export_preflight kind must be one of {valid_kinds}; got {kind!r}"
+        )
+    provided = {
+        name
+        for name, value in (
+            ("graphs", graphs),
+            ("revision_iris", revision_iris),
+            ("snapshot_graph_roles", snapshot_graph_roles),
+            ("validation_scope", validation_scope),
+            ("seed_iris", seed_iris),
+            ("profile", profile),
+            ("max_triples", max_triples),
+            ("include_seed_graphs", include_seed_graphs),
+        )
+        if value is not None
+    }
+    valid = _EXPORT_PREFLIGHT_KIND_PARAMS[kind]
+    invalid = sorted(provided - valid)
+    if invalid:
+        raise DoxaBaseError(
+            f"export_preflight kind={kind!r} does not take {invalid}; valid "
+            f"fields for this kind: "
+            f"{sorted([*valid, *_EXPORT_PREFLIGHT_SHARED_PARAMS])}"
+        )
+    if kind == "scan_only":
+        return scan_sensitive_literals_tool(db, graphs=graphs, limit=limit)
+    if kind == "context_slice":
+        if seed_iris is None:
+            raise DoxaBaseError(
+                "export_preflight kind='context_slice' requires seed_iris "
+                "(the resources whose context slice would be exported)."
+            )
+        return preflight_context_slice_export_tool(
+            db,
+            seed_iris=seed_iris,
+            profile="dataset_brief" if profile is None else profile,
+            max_triples=500 if max_triples is None else max_triples,
+            include_seed_graphs=(
+                False if include_seed_graphs is None else include_seed_graphs
+            ),
+            validation_scope=validation_scope,
+            limit=limit,
+        )
     result = db.export_preflight(
-        export_kind=export_kind,  # type: ignore[arg-type]
+        export_kind=kind,  # type: ignore[arg-type]
         graphs=graphs,
         revision_iris=revision_iris,
         snapshot_graph_roles=snapshot_graph_roles,
@@ -439,6 +519,336 @@ def describe_staged_revision_tool(
             include_current_apply_check=include_current_apply_check,
         )
     )
+
+
+_LIST_REVISIONS_SHARED_PARAMS = (
+    "graph",
+    "include_apply_checks",
+    "drift_detail",
+    "limit",
+    "offset",
+)
+
+_LIST_REVISIONS_KIND_PARAMS: dict[str, frozenset[str]] = {
+    "graph": frozenset(
+        {
+            "revision_type",
+            "record_kind",
+            "application_status",
+            "staged_validation_status",
+            "stale_resolution_state",
+            "current_staged_work_only",
+        }
+    ),
+    "versions": frozenset(
+        {
+            "graph_role",
+            "exact_only",
+            "include_current",
+            "record_kind",
+        }
+    ),
+    "resource": frozenset(
+        {
+            "resource_iri",
+            "include_patch_mentions",
+            "current_staged_work_only",
+        }
+    ),
+}
+
+
+def list_revisions_tool(
+    db: DoxaBase,
+    kind: str = "graph",
+    graph: str | None = "history",
+    revision_type: str | None = None,
+    record_kind: str | None = None,
+    application_status: str | None = None,
+    staged_validation_status: str | None = None,
+    stale_resolution_state: str | None = None,
+    current_staged_work_only: bool | None = None,
+    graph_role: str | None = None,
+    exact_only: bool | None = None,
+    include_current: bool | None = None,
+    resource_iri: str | None = None,
+    include_patch_mentions: bool | None = None,
+    include_apply_checks: bool | None = None,
+    drift_detail: str = "summary",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """List revision history; kind picks graph rows, version snapshots, or
+    resource-anchored rows. Kind-invalid params fail with targeted errors."""
+    valid_kinds = sorted(_LIST_REVISIONS_KIND_PARAMS)
+    if kind not in _LIST_REVISIONS_KIND_PARAMS:
+        raise DoxaBaseError(
+            f"list_revisions kind must be one of {valid_kinds}; got {kind!r}"
+        )
+    provided = {
+        name
+        for name, value in (
+            ("revision_type", revision_type),
+            ("record_kind", record_kind),
+            ("application_status", application_status),
+            ("staged_validation_status", staged_validation_status),
+            ("stale_resolution_state", stale_resolution_state),
+            ("current_staged_work_only", current_staged_work_only),
+            ("graph_role", graph_role),
+            ("exact_only", exact_only),
+            ("include_current", include_current),
+            ("resource_iri", resource_iri),
+            ("include_patch_mentions", include_patch_mentions),
+        )
+        if value is not None
+    }
+    valid = _LIST_REVISIONS_KIND_PARAMS[kind]
+    invalid = sorted(provided - valid)
+    if invalid:
+        raise DoxaBaseError(
+            f"list_revisions kind={kind!r} does not take {invalid}; valid "
+            f"fields for this kind: "
+            f"{sorted([*valid, *_LIST_REVISIONS_SHARED_PARAMS])}"
+        )
+    if kind == "versions":
+        if graph_role is None:
+            raise DoxaBaseError(
+                "list_revisions kind='versions' requires graph_role (the "
+                "stored graph role whose version timeline to list)."
+            )
+        return list_graph_versions_tool(
+            db,
+            graph_role=graph_role,
+            graph=graph,
+            exact_only=False if exact_only is None else exact_only,
+            include_current=True if include_current is None else include_current,
+            include_apply_checks=(
+                False if include_apply_checks is None else include_apply_checks
+            ),
+            drift_detail=drift_detail,
+            record_kind=record_kind,
+            limit=limit,
+            offset=offset,
+        )
+    if kind == "resource":
+        if resource_iri is None:
+            raise DoxaBaseError(
+                "list_revisions kind='resource' requires resource_iri (the "
+                "resource whose anchored or patch-mentioning revisions to "
+                "list)."
+            )
+        return list_resource_revisions_tool(
+            db,
+            resource_iri=resource_iri,
+            graph=graph,
+            include_patch_mentions=(
+                True if include_patch_mentions is None else include_patch_mentions
+            ),
+            include_apply_checks=(
+                True if include_apply_checks is None else include_apply_checks
+            ),
+            drift_detail=drift_detail,
+            current_staged_work_only=(
+                False
+                if current_staged_work_only is None
+                else current_staged_work_only
+            ),
+            limit=limit,
+            offset=offset,
+        )
+    return list_graph_revisions_tool(
+        db,
+        revision_type=revision_type,
+        graph=graph,
+        include_apply_checks=(
+            False if include_apply_checks is None else include_apply_checks
+        ),
+        drift_detail=drift_detail,
+        record_kind=record_kind,
+        application_status=application_status,
+        staged_validation_status=staged_validation_status,
+        stale_resolution_state=stale_resolution_state,
+        current_staged_work_only=(
+            False if current_staged_work_only is None else current_staged_work_only
+        ),
+        limit=limit,
+        offset=offset,
+    )
+
+
+_DESCRIBE_REVISION_SHARED_PARAMS = ("iri", "aspect", "graph")
+
+_DESCRIBE_REVISION_ASPECT_PARAMS: dict[str, frozenset[str]] = {
+    "auto": frozenset({"include_current_apply_check"}),
+    "applied_diff": frozenset({"include_triples", "max_triples"}),
+    "version_diff": frozenset(
+        {
+            "graph_role",
+            "after_revision_iri",
+            "compare_to_current",
+            "include_triples",
+            "max_triples",
+        }
+    ),
+    "lineage": frozenset({"include_apply_checks", "drift_detail"}),
+    "resource_lineage": frozenset(
+        {
+            "resource_iri",
+            "include_patch_mentions",
+            "include_apply_checks",
+            "drift_detail",
+            "include_applied_diff",
+            "include_triples",
+            "max_triples",
+        }
+    ),
+    "snapshot_evidence": frozenset(),
+    "graph_snapshot": frozenset({"graph_role", "include_triples", "max_triples"}),
+}
+
+
+def describe_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    aspect: str = "auto",
+    graph: str | None = "history",
+    include_current_apply_check: bool | None = None,
+    include_triples: bool | None = None,
+    max_triples: int | None = None,
+    graph_role: str | None = None,
+    after_revision_iri: str | None = None,
+    compare_to_current: bool | None = None,
+    resource_iri: str | None = None,
+    include_patch_mentions: bool | None = None,
+    include_apply_checks: bool | None = None,
+    drift_detail: str | None = None,
+    include_applied_diff: bool | None = None,
+) -> dict[str, Any]:
+    """Describe one revision; aspect='auto' detects staged patch rows, other
+    aspects serve diffs, lineage, and snapshot views with targeted errors."""
+    valid_aspects = sorted(_DESCRIBE_REVISION_ASPECT_PARAMS)
+    if aspect not in _DESCRIBE_REVISION_ASPECT_PARAMS:
+        raise DoxaBaseError(
+            f"describe_revision aspect must be one of {valid_aspects}; "
+            f"got {aspect!r}"
+        )
+    provided = {
+        name
+        for name, value in (
+            ("include_current_apply_check", include_current_apply_check),
+            ("include_triples", include_triples),
+            ("max_triples", max_triples),
+            ("graph_role", graph_role),
+            ("after_revision_iri", after_revision_iri),
+            ("compare_to_current", compare_to_current),
+            ("resource_iri", resource_iri),
+            ("include_patch_mentions", include_patch_mentions),
+            ("include_apply_checks", include_apply_checks),
+            ("drift_detail", drift_detail),
+            ("include_applied_diff", include_applied_diff),
+        )
+        if value is not None
+    }
+    valid = _DESCRIBE_REVISION_ASPECT_PARAMS[aspect]
+    invalid = sorted(provided - valid)
+    if invalid:
+        raise DoxaBaseError(
+            f"describe_revision aspect={aspect!r} does not take {invalid}; "
+            f"valid fields for this aspect: "
+            f"{sorted([*valid, *_DESCRIBE_REVISION_SHARED_PARAMS])}"
+        )
+    include_triples = False if include_triples is None else include_triples
+    drift_detail = "summary" if drift_detail is None else drift_detail
+    include_apply_checks = (
+        True if include_apply_checks is None else include_apply_checks
+    )
+    if aspect == "applied_diff":
+        return describe_applied_revision_diff_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=500 if max_triples is None else max_triples,
+        )
+    if aspect == "version_diff":
+        if graph_role is None:
+            raise DoxaBaseError(
+                "describe_revision aspect='version_diff' requires graph_role; "
+                "iri is the stored before-version revision, compared to "
+                "after_revision_iri or (by default) the current graph."
+            )
+        return describe_graph_version_diff_tool(
+            db,
+            graph_role=graph_role,
+            before_revision_iri=iri,
+            after_revision_iri=after_revision_iri,
+            compare_to_current=(
+                True if compare_to_current is None else compare_to_current
+            ),
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=500 if max_triples is None else max_triples,
+        )
+    if aspect == "lineage":
+        return describe_revision_lineage_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+        )
+    if aspect == "resource_lineage":
+        if resource_iri is None:
+            raise DoxaBaseError(
+                "describe_revision aspect='resource_lineage' requires "
+                "resource_iri (iri is the revision whose match to describe)."
+            )
+        return describe_resource_revision_lineage_tool(
+            db,
+            resource_iri=resource_iri,
+            revision_iri=iri,
+            graph=graph,
+            include_patch_mentions=(
+                True if include_patch_mentions is None else include_patch_mentions
+            ),
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+            include_applied_diff=(
+                True if include_applied_diff is None else include_applied_diff
+            ),
+            include_triples=include_triples,
+            max_triples=100 if max_triples is None else max_triples,
+        )
+    if aspect == "snapshot_evidence":
+        return describe_revision_snapshot_evidence_tool(db, iri=iri, graph=graph)
+    if aspect == "graph_snapshot":
+        if graph_role is None:
+            raise DoxaBaseError(
+                "describe_revision aspect='graph_snapshot' requires "
+                "graph_role (the stored snapshot's graph role)."
+            )
+        return describe_revision_graph_snapshot_tool(
+            db,
+            iri=iri,
+            graph_role=graph_role,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=500 if max_triples is None else max_triples,
+        )
+    # aspect == "auto": staged patch rows get the staged review shape; an
+    # explicit include_current_apply_check also forces the staged door so its
+    # targeted errors explain non-staged rows.
+    record_kind = db._graph_revision_record_kind_for_iri(  # noqa: SLF001
+        db.expand_iri(iri)
+    )
+    if record_kind == "staged_patch" or include_current_apply_check:
+        return describe_staged_revision_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_current_apply_check=bool(include_current_apply_check),
+        )
+    return describe_graph_revision_tool(db, iri=iri, graph=graph)
 
 
 def check_staged_revision_apply_tool(
@@ -3144,6 +3554,91 @@ def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str,
         "totals": totals,
         "total_imported": sum(totals.values()),
     })
+
+
+def _export_bundle_staged_revisions(
+    db: DoxaBase,
+    revision_iris: list[str] | str,
+    path: str,
+    title: str | None = None,
+    executive_summary: str | None = None,
+    format: str = "markdown",
+    overwrite: bool = False,
+    fail_on_sensitive: bool = False,
+) -> dict[str, Any]:
+    """Export staged-revision review bundles; revision_iris is one IRI string
+    for a single-revision bundle or a list for the grouped comparison bundle.
+    """
+    if isinstance(revision_iris, str):
+        batch_only = [
+            name
+            for name, value in (
+                ("title", title),
+                ("executive_summary", executive_summary),
+            )
+            if value is not None
+        ]
+        if batch_only:
+            raise DoxaBaseError(
+                f"export_bundle kind='staged_revisions' {sorted(batch_only)} "
+                "belong to the grouped comparison bundle; pass revision_iris "
+                "as a list to export several staged revisions together."
+            )
+        return export_staged_revision_tool(
+            db,
+            iri=revision_iris,
+            path=path,
+            format=format,
+            overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
+        )
+    return export_staged_revisions_tool(
+        db,
+        revision_iris=revision_iris,
+        path=path,
+        title=title,
+        executive_summary=executive_summary,
+        format=format,
+        overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
+    )
+
+
+_EXPORT_BUNDLE_KINDS: dict[str, Any] = {
+    "trig": export_trig_tool,
+    "graph": export_graph_tool,
+    "context_slice": export_context_slice_tool,
+    "staged_revisions": _export_bundle_staged_revisions,
+    "profile_insight_review": export_profile_insight_review_bundle_tool,
+    "revision_snapshots": export_revision_snapshots_tool,
+    "handoff": export_handoff_bundle_tool,
+}
+
+
+def export_bundle_tool(
+    db: DoxaBase,
+    kind: str,
+    spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Write a reviewed export artifact; kind picks the bundle shape."""
+    return _dispatch_kind(db, "export_bundle", _EXPORT_BUNDLE_KINDS, kind, spec)
+
+
+_IMPORT_BUNDLE_KINDS: dict[str, Any] = {
+    "trig": import_trig_tool,
+    "revision_snapshots": import_revision_snapshots_tool,
+    "handoff": import_handoff_bundle_tool,
+    "example_fixtures": load_example_fixtures_tool,
+}
+
+
+def import_bundle_tool(
+    db: DoxaBase,
+    kind: str,
+    spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Import an artifact into the capsule; kind picks the bundle shape."""
+    return _dispatch_kind(db, "import_bundle", _IMPORT_BUNDLE_KINDS, kind, spec)
 
 
 def validate_graph_tool(

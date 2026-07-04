@@ -1120,7 +1120,8 @@ class RevisionsMixin:
                     continue
                 if (
                     args_aspect is not None
-                    and action.args.get("aspect") != args_aspect
+                    # An omitted aspect means the merged describers' default.
+                    and (action.args.get("aspect") or "auto") != args_aspect
                 ):
                     continue
                 if (
@@ -1140,10 +1141,12 @@ class RevisionsMixin:
             *,
             tool_name: str | None = None,
             reason_contains: str | None = None,
+            args_aspect: str | None = None,
         ) -> SuggestedNextAction | None:
             found = find_exact_action(
                 tool_name=tool_name,
                 reason_contains=reason_contains,
+                args_aspect=args_aspect,
             )
             if found is not None:
                 return found
@@ -1158,7 +1161,7 @@ class RevisionsMixin:
                 (
                     action
                     for action in suggested_next_actions
-                    if action.tool == "doxabase.describe_staged_revision"
+                    if describe_revision_action_aspect(action) == "auto"
                     and action.args.get("iri") == successor_iri
                 ),
                 None,
@@ -1166,7 +1169,7 @@ class RevisionsMixin:
             if exact_action is not None:
                 return exact_action
             return SuggestedNextAction(
-                       tool="doxabase.describe_staged_revision",
+                       tool="doxabase.describe_revision",
                        args={"iri": successor_iri},
                        reason=reason,
                    )
@@ -1180,7 +1183,7 @@ class RevisionsMixin:
                 (
                     action
                     for action in suggested_next_actions
-                    if action.tool == "doxabase.describe_graph_revision"
+                    if describe_revision_action_aspect(action) == "auto"
                     and action.args.get("iri") == applied_revision_iri
                 ),
                 None,
@@ -1188,7 +1191,7 @@ class RevisionsMixin:
             if exact_action is not None:
                 return exact_action
             return SuggestedNextAction(
-                       tool="doxabase.describe_graph_revision",
+                       tool="doxabase.describe_revision",
                        args={"iri": applied_revision_iri},
                        reason=reason,
                    )
@@ -1211,7 +1214,7 @@ class RevisionsMixin:
             label = "Inspect applied event"
             reason = "Inspect the applied revision event for durable history context."
             selected_action = SuggestedNextAction(
-                                  tool="doxabase.describe_graph_revision",
+                                  tool="doxabase.describe_revision",
                                   args={"iri": revision_iri},
                                   reason=reason,
                               )
@@ -1288,7 +1291,9 @@ class RevisionsMixin:
                 "Inspect the restaged source validation diagnostics, then stage "
                 "a repaired or alternative candidate before applying this row."
             )
-            selected_action = find_action(tool_name="describe_staged_revision")
+            selected_action = find_action(
+                tool_name="describe_revision", args_aspect="auto"
+            )
         elif staged_validation_status == "failed":
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
@@ -1300,7 +1305,7 @@ class RevisionsMixin:
             )
             selected_action = (
                 find_exact_action(rebase_draft=True)
-                or find_action(tool_name="describe_staged_revision")
+                or find_action(tool_name="describe_revision", args_aspect="auto")
             )
         elif apply_decision == "review_then_apply" or apply_status == "ready":
             action_type = "apply_after_review"
@@ -1329,13 +1334,14 @@ class RevisionsMixin:
             )
             selected_action = (
                 find_exact_action(rebase_draft=True)
-                or find_action(tool_name="describe_staged_revision")
+                or find_action(tool_name="describe_revision", args_aspect="auto")
             )
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
         ) and find_exact_action(
-            tool_name="describe_staged_revision",
+            tool_name="describe_revision",
+            args_aspect="auto",
             reason_contains="no effective delta",
         ) is not None:
             action_type = "inspect_no_effective_change"
@@ -1346,7 +1352,8 @@ class RevisionsMixin:
                 "has no effective delta; inspect before ignoring or replacing it."
             )
             selected_action = find_exact_action(
-                tool_name="describe_staged_revision",
+                tool_name="describe_revision",
+                args_aspect="auto",
                 reason_contains="no effective delta",
             )
         elif (
@@ -1419,7 +1426,9 @@ class RevisionsMixin:
             queue = "inspect_already_applied"
             label = "Inspect applied event"
             reason = "Inspect the applied revision event instead of applying again."
-            selected_action = find_action(tool_name="describe_graph_revision")
+            selected_action = find_action(
+                tool_name="describe_revision", args_aspect="auto"
+            )
         elif (
             apply_decision == "inspect_no_effective_change"
             or apply_status == "noop"
@@ -1431,9 +1440,13 @@ class RevisionsMixin:
                 "Patch replay validates but would not change graph triples; "
                 "inspect before replacing or ignoring it."
             )
-            selected_action = find_action(tool_name="describe_staged_revision")
+            selected_action = find_action(
+                tool_name="describe_revision", args_aspect="auto"
+            )
         else:
-            selected_action = find_action(tool_name="describe_staged_revision")
+            selected_action = find_action(
+                tool_name="describe_revision", args_aspect="auto"
+            )
 
         if selected_action is not None:
             return RevisionNextAction(
@@ -1474,11 +1487,15 @@ class RevisionsMixin:
     def _revision_next_action_resolved_target_iri(
         next_action: RevisionNextAction,
     ) -> str | None:
-        target_iri = next_action.arguments.get("iri")
+        arguments: Mapping[str, Any] = next_action.arguments
+        if next_action.tool_name in KIND_SPEC_TOOL_NAMES:
+            spec = arguments.get("spec")
+            arguments = spec if isinstance(spec, Mapping) else {}
+        target_iri = arguments.get("iri")
         if not isinstance(target_iri, str):
-            # Single-IRI restage actions carry their target as a string
-            # revision_iris value on the merged restage door.
-            target_iri = next_action.arguments.get("revision_iris")
+            # Single-IRI restage and staged-revision export actions carry
+            # their target as a string revision_iris value.
+            target_iri = arguments.get("revision_iris")
         return target_iri if isinstance(target_iri, str) else None
     def _revision_next_action_queue_item(
         self,

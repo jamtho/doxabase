@@ -1326,13 +1326,16 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("incoming_blank_node_owner", seed_iri),
-                    tool_name="export_graph",
+                    tool_name="export_bundle",
                     arguments={
-                        "path": resource_brief_export_path(
-                            seed_iri,
-                            "blank-node-owners",
-                        ),
-                        "graphs": "shapes",
+                        "kind": "graph",
+                        "spec": {
+                            "path": resource_brief_export_path(
+                                seed_iri,
+                                "blank-node-owners",
+                            ),
+                            "graphs": "shapes",
+                        },
                     },
                     reason=(
                         "resource_brief capped incoming blank-node owners. DoxaBase "
@@ -1369,13 +1372,16 @@ class SlicesMixin:
                     )
                     add_resource_brief_recovery_action(
                         ("blank_node_seed_owner", seed_iri),
-                        tool_name="export_graph",
+                        tool_name="export_bundle",
                         arguments={
-                            "path": resource_brief_export_path(
-                                seed_iri,
-                                "blank-node-seed-owners",
-                            ),
-                            "graphs": "shapes",
+                            "kind": "graph",
+                            "spec": {
+                                "path": resource_brief_export_path(
+                                    seed_iri,
+                                    "blank-node-seed-owners",
+                                ),
+                                "graphs": "shapes",
+                            },
                         },
                         reason=(
                             "resource_brief capped owners for a blank-node seed. "
@@ -1418,10 +1424,16 @@ class SlicesMixin:
                 )
                 add_resource_brief_recovery_action(
                     ("predicate_usage_subject", seed_iri),
-                    tool_name="export_graph",
+                    tool_name="export_bundle",
                     arguments={
-                        "path": resource_brief_export_path(seed_iri, "predicate-usage"),
-                        "graphs": "project",
+                        "kind": "graph",
+                        "spec": {
+                            "path": resource_brief_export_path(
+                                seed_iri,
+                                "predicate-usage",
+                            ),
+                            "graphs": "project",
+                        },
                     },
                     reason=(
                         "resource_brief capped subjects using this resource as a "
@@ -1468,9 +1480,10 @@ class SlicesMixin:
                 raise DoxaBaseError(
                     f"Seed resource '{seed}' was not found in visible RDF "
                     "triples. If this IRI may exist only inside staged patch "
-                    "payloads, call list_resource_revisions(resource_iri=..., "
-                    "include_patch_mentions=True) or search(scope='staged_patches') "
-                    "before concluding it is absent."
+                    "payloads, call list_revisions(kind='resource', "
+                    "resource_iri=..., include_patch_mentions=True) or "
+                    "search(scope='staged_patches') before concluding it is "
+                    "absent."
                 )
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
@@ -1721,8 +1734,8 @@ class SlicesMixin:
             "Context-slice privacy scan covers only the returned raw triples. "
             "This get_context_graph payload may still contain unredacted "
             "raw triples, TriG, labels, summaries, and project facts; use "
-            "preflight_context_slice_export or export_preflight before sharing "
-            "or writing handoff artifacts."
+            "export_preflight (kind='context_slice' for slice scope) before "
+            "sharing or writing handoff artifacts."
             if sensitive_literal_count
             else None
         )
@@ -1838,6 +1851,7 @@ class SlicesMixin:
         if sensitive_literal_count == 0:
             return []
         arguments = {
+            "kind": "context_slice",
             "seed_iris": seed_iris,
             "profile": profile,
             "max_triples": max_triples,
@@ -1852,7 +1866,7 @@ class SlicesMixin:
         )
         return [
             SuggestedNextAction(
-                tool="doxabase.preflight_context_slice_export",
+                tool="doxabase.export_preflight",
                 args=arguments,
                 reason="Selected raw context-slice triples matched the sensitive-term "
                     "scanner. Use the redacted export preflight before sharing "

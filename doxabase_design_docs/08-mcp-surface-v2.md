@@ -105,9 +105,29 @@ gate green each wave:
    so stored session settings win in describe mode; explicit
    `repair_draft_limit=null` no longer means unlimited on the MCP door
    (Python API unchanged). `query_evidence_overlay` is a dry_run-only kind.
-4. Revisions reads: rows 20–21 (−9 tools).
-5. Export/import: rows 22–24 (−12 tools).
-6. Sweep (48 → 25 with rows 4/5): row 8 fold, removals, docstring budget pass, schema-char budget
+4. **DONE (2026-07-04)** Revisions reads: rows 20–21 (48 → 39 tools; the
+   rows absorb 11 registrations and add 2 doors). LATITUDE notes:
+   `describe_revision(aspect="version_diff")` reads `iri` as the stored
+   before-version revision (uniform-iri rule) with
+   `graph_role`/`after_revision_iri`/`compare_to_current` as aspect-only
+   params; `max_triples` defaults per aspect (500, except
+   resource_lineage's historical 100); `include_apply_checks` defaults
+   True only for `list_revisions(kind="resource")`, matching the old
+   doors; explicit `include_current_apply_check` forces the staged path
+   so its targeted errors explain non-staged rows.
+5. **DONE (2026-07-04)** Export/import: rows 22–24 (39 → 27 tools; the
+   rows absorb 14 registrations and add 2 doors). LATITUDE notes:
+   `export_preflight`'s selector is `kind` on the MCP door (the Python
+   API keeps `export_kind`); `kind="scan_only"` inherits the door's
+   default `limit=20` rather than the old scanner's 50;
+   `export_bundle(kind="staged_revisions")` dispatches single/grouped on
+   str|list `revision_iris` per the restage precedent (title/
+   executive_summary are grouped-only, targeted error otherwise);
+   `recommended_import_tool` response strings became call-shaped
+   (`doxabase.import_bundle(kind="trig")` …) and handoff-manifest
+   `recommended_import_sequence` steps carry a `kind` field so the
+   which-kind information the old tool names carried survives.
+6. Sweep (27 → 25 with rows 4/5): row 8 fold, removals, docstring budget pass, schema-char budget
    pass, scoreboard ceilings to ≤ 25 tools / ≤ 25,000 chars; battery rerun.
 
 Each wave updates: `mcp_tools.py`, `mcp_server.py`, `tests/mcp/`, examples,

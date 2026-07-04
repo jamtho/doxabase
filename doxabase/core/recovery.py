@@ -357,13 +357,8 @@ class RecoveryMixin:
             (
                 action
                 for action in suggested_next_actions
-                if action.tool
-                in {
-                    "doxabase.describe_staged_revision",
-                    "doxabase.export_staged_revision",
-                    "doxabase.export_staged_revisions",
-                    "doxabase.describe_revision_lineage",
-                }
+                if describe_revision_action_aspect(action) in {"auto", "lineage"}
+                or export_bundle_action_kind(action) == "staged_revisions"
             ),
             suggested_next_actions[0] if suggested_next_actions else None,
         )
@@ -1743,25 +1738,31 @@ class RecoveryMixin:
             snapshot_evidence.suggested_next_actions
         )
         if next_action is None:
-            arguments = {"path": "/tmp/project.trig", "path_is_placeholder": True}
+            arguments = {
+                "kind": "trig",
+                "spec": {
+                    "path": "/tmp/project.trig",
+                    "path_is_placeholder": True,
+                },
+            }
             next_action = RevisionNextAction(
                 action_type="complete_handoff_import",
                 queue="complete_handoff_import",
                 action_label="Import project/history RDF bundle",
-                tool_name="import_trig",
-                mcp_tool_name="doxabase.import_trig",
+                tool_name="import_bundle",
+                mcp_tool_name="doxabase.import_bundle",
                 arguments=arguments,
                 reason=(
                     "Snapshot rows exist for this revision, but the RDF history "
                     "record is missing. Import the project/history RDF bundle at "
                     "its real handoff path before using normal revision helpers."
                 ),
-                call=self._suggested_call_string("import_trig", arguments),
+                call=self._suggested_call_string("import_bundle", arguments),
                 source="snapshot_evidence",
             )
         suggested_next_actions = snapshot_evidence.suggested_next_actions or [
             SuggestedNextAction(
-                tool=next_action.mcp_tool_name or "doxabase.import_trig",
+                tool=next_action.mcp_tool_name or "doxabase.import_bundle",
                 args=next_action.arguments,
                 reason=next_action.reason,
             )
@@ -1839,8 +1840,8 @@ class RecoveryMixin:
             action_type="inspect_missing_patch_payload",
             queue="informational",
             action_label="Inspect patchless staged metadata",
-            tool_name="describe_graph_revision",
-            mcp_tool_name="doxabase.describe_graph_revision",
+            tool_name="describe_revision",
+            mcp_tool_name="doxabase.describe_revision",
             arguments=arguments,
             reason=(
                 "This explicit recovery input is staged revision history metadata "
@@ -1848,12 +1849,12 @@ class RecoveryMixin:
                 "restaged as a staged patch. Inspect the graph revision and import "
                 "the complete staged handoff if patch payloads are expected."
             ),
-            call=self._suggested_call_string("describe_graph_revision", arguments),
+            call=self._suggested_call_string("describe_revision", arguments),
             source="plan_staged_revision_recovery",
         )
         suggested_action = SuggestedNextAction(
                                tool=next_action.mcp_tool_name
-            or "doxabase.describe_graph_revision",
+            or "doxabase.describe_revision",
                                args=arguments,
                                reason=next_action.reason,
                            )
@@ -1930,20 +1931,20 @@ class RecoveryMixin:
             action_type="inspect_non_staged_history_record",
             queue="informational",
             action_label="Inspect non-staged history record",
-            tool_name="describe_graph_revision",
-            mcp_tool_name="doxabase.describe_graph_revision",
+            tool_name="describe_revision",
+            mcp_tool_name="doxabase.describe_revision",
             arguments=arguments,
             reason=(
                 "This explicit recovery input is ordinary graph-revision "
                 "history or snapshot context, not a staged patch. Inspect it as "
                 "history instead of applying or restaging it."
             ),
-            call=self._suggested_call_string("describe_graph_revision", arguments),
+            call=self._suggested_call_string("describe_revision", arguments),
             source="plan_staged_revision_recovery",
         )
         suggested_action = SuggestedNextAction(
                                tool=next_action.mcp_tool_name
-            or "doxabase.describe_graph_revision",
+            or "doxabase.describe_revision",
                                args=arguments,
                                reason=next_action.reason,
                            )
@@ -2019,15 +2020,15 @@ class RecoveryMixin:
             action_type="inspect_applied_event",
             queue="inspect_already_applied",
             action_label="Inspect applied event",
-            tool_name="describe_graph_revision",
-            mcp_tool_name="doxabase.describe_graph_revision",
+            tool_name="describe_revision",
+            mcp_tool_name="doxabase.describe_revision",
             arguments=arguments,
             reason=(
                 "This recovery input is an applied revision event rather than "
                 "a staged patch. Inspect the durable event or its applied diff "
                 "instead of applying or restaging it."
             ),
-            call=self._suggested_call_string("describe_graph_revision", arguments),
+            call=self._suggested_call_string("describe_revision", arguments),
             source="plan_staged_revision_recovery",
         )
         queue_item = self._revision_next_action_queue_item(
@@ -2043,7 +2044,7 @@ class RecoveryMixin:
             or [
                 SuggestedNextAction(
                     tool=next_action.mcp_tool_name
-                        or "doxabase.describe_graph_revision",
+                        or "doxabase.describe_revision",
                     args=arguments,
                     reason=next_action.reason,
                 )
@@ -2721,19 +2722,17 @@ class RecoveryMixin:
             )
         for lane in lanes:
             for action in lane.suggested_next_actions:
-                if action.tool in {
-                    "doxabase.import_revision_snapshots",
-                    "doxabase.import_trig",
+                if import_bundle_action_kind(action) in {
+                    "revision_snapshots",
+                    "trig",
                 }:
                     handoff_preflight_actions.append(action)
-                elif action.tool in {
-                    "doxabase.describe_staged_revision",
-                    "doxabase.export_staged_revision",
-                    "doxabase.export_staged_revisions",
-                    "doxabase.describe_revision_lineage",
-                    "doxabase.describe_graph_revision",
-                    "doxabase.describe_applied_revision_diff",
-                } or staged_rebase_draft_action(action):
+                elif describe_revision_action_aspect(action) in {
+                    "auto",
+                    "lineage",
+                    "applied_diff",
+                } or export_bundle_action_kind(action) == "staged_revisions" \
+                        or staged_rebase_draft_action(action):
                     review_first_actions.append(action)
                 else:
                     mutation_actions.append(action)
@@ -2747,9 +2746,9 @@ class RecoveryMixin:
         return [
             action
             for action in suggested_next_actions
-            if action.tool in {
-                "doxabase.import_revision_snapshots",
-                "doxabase.import_trig",
+            if import_bundle_action_kind(action) in {
+                "revision_snapshots",
+                "trig",
             }
         ]
     @staticmethod
@@ -3195,7 +3194,7 @@ class RecoveryMixin:
             "export the project/history TriG plus companion revision snapshot "
             "JSON, then import that manifest into a fresh DoxaBase.create(...) "
             "capsule. The snapshot bundle may be empty when no revision rows "
-            "exist; otherwise import_handoff_bundle() returns the staged "
+            "exist; otherwise import_bundle(kind='handoff') returns the staged "
             "recovery plan to follow before further mutation."
         )
     def _handoff_bundle_recovery_session_manifest_entries(

@@ -565,7 +565,7 @@ class StagingMixin:
         )
         actions = [
             SuggestedNextAction(
-                tool="doxabase.describe_staged_revision",
+                tool="doxabase.describe_revision",
                 args={
                     "iri": staged.iri,
                     "include_current_apply_check": True,
@@ -574,13 +574,16 @@ class StagingMixin:
                     "patch payload before treating the hit as live graph fact.",
             ),
             SuggestedNextAction(
-                tool="doxabase.export_staged_revisions",
+                tool="doxabase.export_bundle",
                 args={
-                    "revision_iris": [staged.iri],
-                    "path": self._staged_patch_payload_search_export_path(
-                        staged.iri
-                    ),
-                    "fail_on_sensitive": True,
+                    "kind": "staged_revisions",
+                    "spec": {
+                        "revision_iris": [staged.iri],
+                        "path": self._staged_patch_payload_search_export_path(
+                            staged.iri
+                        ),
+                        "fail_on_sensitive": True,
+                    },
                 },
                 reason="Export the owning staged revision as a review artifact "
                     "with full Turtle payload and current apply routing. The "
@@ -591,8 +594,9 @@ class StagingMixin:
         if patch_subject_iris:
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.list_resource_revisions",
+                    tool="doxabase.list_revisions",
                     args={
+                        "kind": "resource",
                         "resource_iri": patch_subject_iris[0],
                         "current_staged_work_only": True,
                         "include_patch_mentions": True,
@@ -3044,16 +3048,16 @@ class StagingMixin:
         )
         if applied_source is not None:
             raise DoxaBaseError(
-                "export_staged_revisions only accepts staged patch revisions; "
-                f"'{iri}' is an applied revision event. Use "
-                "describe_graph_revision or describe_revision_lineage for the "
+                "Staged revision review exports only accept staged patch "
+                f"revisions; '{iri}' is an applied revision event. Use "
+                "describe_revision (default or aspect='lineage') for the "
                 "applied event, or pass the applied event's staged source IRI "
                 f"'{applied_source}'."
             )
         raise DoxaBaseError(
-            "export_staged_revisions only accepts staged patch revisions; "
-            f"graph revision '{iri}' has no staged patch entries. Use "
-            "describe_graph_revision for revision metadata instead."
+            "Staged revision review exports only accept staged patch "
+            f"revisions; graph revision '{iri}' has no staged patch entries. "
+            "Use describe_revision for revision metadata instead."
         )
     def _staged_revisions_export_summaries(
         self,

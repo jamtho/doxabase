@@ -1561,7 +1561,7 @@ def test_query_evidence_storage_overlay_returns_stale_seed_blocker(
     )
     assert blocker.suggested_next_actions[0].tool == "doxabase.export_preflight"
     assert blocker.suggested_next_actions[0].args == {
-        "export_kind": "handoff_bundle",
+        "kind": "handoff_bundle",
         "graphs": ["project"],
         "limit": 20,
         "validation_scope": "map",

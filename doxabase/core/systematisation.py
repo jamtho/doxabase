@@ -824,14 +824,17 @@ class SystematisationMixin:
             )
 
         add_action(
-            "export_staged_revisions",
+            "export_bundle",
             {
-                "revision_iris": revision_iris,
-                "path": self._suggested_review_export_path(
-                    "systematisation-review",
-                    revision_iris,
-                ),
-                "fail_on_sensitive": True,
+                "kind": "staged_revisions",
+                "spec": {
+                    "revision_iris": revision_iris,
+                    "path": self._suggested_review_export_path(
+                        "systematisation-review",
+                        revision_iris,
+                    ),
+                    "fail_on_sensitive": True,
+                },
             },
             (
                 "Write a grouped Markdown review bundle before choosing among "

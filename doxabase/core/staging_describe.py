@@ -43,7 +43,7 @@ class StagingDescribeMixin:
                 raise DoxaBaseError(
                     f"Graph revision '{iri}' is an applied revision event, "
                     "not a staged patch revision. Inspect it with "
-                    "describe_graph_revision or describe_applied_revision_diff, "
+                    "describe_revision (default or aspect='applied_diff'), "
                     "or pass the applied event's staged source IRI "
                     f"'{applies_staged_revision}'."
                 )
@@ -1272,7 +1272,7 @@ class StagingDescribeMixin:
                 "sequential review targets: applying one ready revision can "
                 "change graph state and make sibling ready or no-op revisions "
                 "stale. Re-run apply_staged_revision with dry_run=true or "
-                "export_staged_revisions after each apply."
+                "export_bundle(kind='staged_revisions') after each apply."
             )
         if external_recommended_review_iris:
             warnings.append(

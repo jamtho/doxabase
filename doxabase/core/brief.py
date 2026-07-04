@@ -823,8 +823,10 @@ class BriefMixin:
         )
     @staticmethod
     def _project_brief_default_handoff_preflight_arguments() -> dict[str, Any]:
+        """Suggested-call args for the export_preflight door (kind, not the
+        Python API's export_kind)."""
         return {
-            "export_kind": "handoff_bundle",
+            "kind": "handoff_bundle",
             "graphs": ["project"],
             "limit": 20,
         }
@@ -832,7 +834,11 @@ class BriefMixin:
         self,
     ) -> tuple[dict[str, Any], ExportPreflightRecord]:
         arguments = self._project_brief_default_handoff_preflight_arguments()
-        return arguments, self.export_preflight(**arguments)
+        return arguments, self.export_preflight(
+            export_kind=arguments["kind"],
+            graphs=arguments["graphs"],
+            limit=arguments["limit"],
+        )
     def _project_brief_privacy_health_task(
         self,
         arguments: dict[str, Any],
@@ -2022,19 +2028,32 @@ class BriefMixin:
                 actions.append(lane.repair_draft.preferred_action)
         return self._dedupe_suggested_next_actions(actions)
     @staticmethod
+    def _staged_review_action_rank(action: SuggestedNextAction) -> int | None:
+        """Rank safe review actions for frontier review selection.
+
+        The merged describe door serves the old staged/graph describes as
+        aspect 'auto' (rank 0), lineage as rank 1, and the applied diff as
+        rank 3; review-bundle exports rank 2 and the read-only rebase draft
+        ranks last. None means the action is not a review candidate.
+        """
+        aspect = describe_revision_action_aspect(action)
+        if aspect == "auto":
+            return 0
+        if aspect == "lineage":
+            return 1
+        if export_bundle_action_kind(action) == "staged_revisions":
+            return 2
+        if aspect == "applied_diff":
+            return 3
+        if action_tool_name(action) == "restage_staged_revision":
+            return 4
+        return None
+
+    @staticmethod
     def _staged_recovery_semantic_frontier_review_action(
         mutation_frontier_items: Iterable[StagedRevisionMutationFrontierItem],
         suggested_next_actions: list[SuggestedNextAction],
     ) -> SuggestedNextAction | None:
-        review_tool_order = {
-            "describe_staged_revision": 0,
-            "describe_revision_lineage": 1,
-            "export_staged_revision": 2,
-            "export_staged_revisions": 3,
-            "describe_graph_revision": 4,
-            "describe_applied_revision_diff": 5,
-            "restage_staged_revision": 6,
-        }
         semantic_target_iris: list[str] = []
         for item in mutation_frontier_items:
             if not item.requires_semantic_review_before_mutation:
@@ -2057,7 +2076,7 @@ class BriefMixin:
         matching_actions = [
             action
             for action in suggested_next_actions
-            if action_tool_name(action) in review_tool_order
+            if DoxaBase._staged_review_action_rank(action) is not None
             and (
                 action_tool_name(action) != "restage_staged_revision"
                 or staged_rebase_draft_action(action)
@@ -2070,7 +2089,7 @@ class BriefMixin:
         ]
         return min(
             matching_actions,
-            key=lambda action: review_tool_order[action_tool_name(action)],
+            key=DoxaBase._staged_review_action_rank,
             default=None,
         )
     def _staged_recovery_frontier_review_action(
@@ -2078,15 +2097,6 @@ class BriefMixin:
         item: StagedRevisionMutationFrontierItem,
         suggested_next_actions: list[SuggestedNextAction],
     ) -> SuggestedNextAction | None:
-        review_tool_order = {
-            "describe_staged_revision": 0,
-            "describe_revision_lineage": 1,
-            "export_staged_revision": 2,
-            "export_staged_revisions": 3,
-            "describe_graph_revision": 4,
-            "describe_applied_revision_diff": 5,
-            "restage_staged_revision": 6,
-        }
         target_iris = [
             value
             for value in [
@@ -2100,7 +2110,7 @@ class BriefMixin:
         matching_actions = [
             action
             for action in suggested_next_actions
-            if action_tool_name(action) in review_tool_order
+            if DoxaBase._staged_review_action_rank(action) is not None
             and (
                 action_tool_name(action) != "restage_staged_revision"
                 or staged_rebase_draft_action(action)
@@ -2114,14 +2124,14 @@ class BriefMixin:
         if matching_actions:
             return min(
                 matching_actions,
-                key=lambda action: review_tool_order[action_tool_name(action)],
+                key=DoxaBase._staged_review_action_rank,
             )
         review_iri = next(iter(target_iris), None)
         if review_iri is None:
             return None
         arguments = {"iri": review_iri, "include_current_apply_check": True}
         return SuggestedNextAction(
-                   tool="doxabase.describe_staged_revision",
+                   tool="doxabase.describe_revision",
                    args=arguments,
                    reason="Inspect the staged revision before running its mutation "
                 "frontier action.",

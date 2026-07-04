@@ -721,8 +721,8 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         for action in rerun_advisory.suggested_next_actions
     ] == [
         ("get_context_graph", None),
-        ("describe_staged_revision", None),
-        ("export_staged_revisions", None),
+        ("describe_revision", None),
+        ("export_bundle", "staged_revisions"),
         ("stage_revision", "map_assertion"),
         ("stage_revision", "map_assertion"),
     ]
@@ -1251,8 +1251,8 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         ("stage_revision", "systematisation"),
         ("describe_resource", None),
         ("describe_resource", None),
-        ("describe_staged_revision", None),
-        ("export_staged_revisions", None),
+        ("describe_revision", None),
+        ("export_bundle", "staged_revisions"),
         ("stage_revision", "map_assertion"),
         ("stage_revision", "map_assertion"),
     ]
@@ -1263,8 +1263,9 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     pending_promotion_export = next(
         action
         for action in rerun.suggested_next_action_groups["profile_type_review"]
-        if action.tool == "doxabase.export_staged_revisions"
-        and staged.iri in (action.args.get("revision_iris") or [])
+        if action.args.get("kind") == "staged_revisions"
+        and action.tool == "doxabase.export_bundle"
+        and staged.iri in (action.args["spec"].get("revision_iris") or [])
     )
 
     review = db.export_profile_insight_review_bundle(
@@ -1438,7 +1439,8 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         for action in rerun_after_assertion.suggested_next_action_groups[
             "profile_type_review"
         ]
-        if action.tool == "doxabase.export_staged_revisions"
+        if action.args.get("kind") == "staged_revisions"
+        and action.tool == "doxabase.export_bundle"
     )
 
     brief_after_assertion = db.project_brief(limit=10)
@@ -1451,7 +1453,7 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     profile_action = next(
         action
         for action in brief_after_assertion.suggested_next_actions
-        if action.tool == "doxabase.describe_staged_revision"
+        if action.tool == "doxabase.describe_revision"
     )
     assert set(profile_action.args.values()) & {
         staged.iri,
@@ -3181,11 +3183,11 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert [action.tool.removeprefix("doxabase.") for action in rerun_advisory.suggested_next_actions] == [
         "get_context_graph",
         "list_entities",
-        "describe_staged_revision",
-        "export_staged_revisions",
+        "describe_revision",
+        "export_bundle",
         "describe_resource",
-        "describe_staged_revision",
-        "export_staged_revisions",
+        "describe_revision",
+        "export_bundle",
     ]
     assert not any(
         (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "systematisation")
@@ -3201,7 +3203,7 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "include_current_apply_check": True,
     }
     fallback_export_action = rerun_advisory.suggested_next_actions[3]
-    assert fallback_export_action.args["revision_iris"] == [
+    assert fallback_export_action.args["spec"]["revision_iris"] == [
         fallback_staged_iri
     ]
     inspect_action = rerun_advisory.suggested_next_actions[5]
@@ -3210,11 +3212,12 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "include_current_apply_check": True,
     }
     export_action = rerun_advisory.suggested_next_actions[6]
-    assert export_action.args["revision_iris"] == [staged.iri]
+    assert export_action.args["spec"]["revision_iris"] == [staged.iri]
     grouped_export_action = next(
         action
         for action in rerun.suggested_next_action_groups["metric_vocabulary_review"]
-        if action.tool == "doxabase.export_staged_revisions"
+        if action.args.get("kind") == "staged_revisions"
+        and action.tool == "doxabase.export_bundle"
     )
     export_path = tmp_path / "metric-promotion-review.md"
     db.export_staged_revision(staged.iri, export_path)
@@ -3668,7 +3671,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.staged_revision.changed_graphs == ["map"]
     assert [action.tool.removeprefix("doxabase.") for action in staged.suggested_next_actions] == [
         "apply_staged_revision",
-        "export_profile_insight_review_bundle",
+        "export_bundle",
         "stage_revision",
     ]
     assert staged.suggested_next_actions[0].args.get("dry_run") is True
@@ -3683,17 +3686,20 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.suggested_next_actions[0].tool == (
         "doxabase.apply_staged_revision"
     )
-    assert staged.suggested_next_actions[1].args["dataset_iri"] == dataset
-    assert staged.suggested_next_actions[1].args["evidence_iri"] == evidence
-    assert staged.suggested_next_actions[1].args["revision_iris"] == [
+    assert staged.suggested_next_actions[1].args["spec"]["dataset_iri"] == dataset
+    assert staged.suggested_next_actions[1].args["spec"]["evidence_iri"] == evidence
+    assert staged.suggested_next_actions[1].args["spec"]["revision_iris"] == [
         staged.staged_revision.revision_iri
     ]
-    assert staged.suggested_next_actions[1].args["overwrite"] is True
-    assert staged.suggested_next_actions[1].args["path"].startswith(
+    assert staged.suggested_next_actions[1].args["spec"]["overwrite"] is True
+    assert staged.suggested_next_actions[1].args["spec"]["path"].startswith(
         "/tmp/profile-insight-review-"
     )
     assert staged.suggested_next_actions[1].tool == (
-        "doxabase.export_profile_insight_review_bundle"
+        "doxabase.export_bundle"
+    )
+    assert staged.suggested_next_actions[1].args["kind"] == (
+        "profile_insight_review"
     )
     assert staged.suggested_next_actions[2].args == {
         "kind": "profile_map_updates",
@@ -3905,7 +3911,7 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         action.tool.removeprefix("doxabase.") for action in staged_updates.suggested_next_actions
     ] == [
         "apply_staged_revision",
-        "export_profile_insight_review_bundle",
+        "export_bundle",
         "stage_revision",
     ]
     assert staged_updates.suggested_next_actions[0].args.get("dry_run") is True
@@ -3913,13 +3919,13 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         "profile_map_updates"
     )
     assert staged_updates.suggested_next_actions[2].args.get("dry_run") is True
-    assert staged_updates.suggested_next_actions[1].args["dataset_iri"] == (
+    assert staged_updates.suggested_next_actions[1].args["spec"]["dataset_iri"] == (
         dataset
     )
-    assert staged_updates.suggested_next_actions[1].args["evidence_iri"] == (
+    assert staged_updates.suggested_next_actions[1].args["spec"]["evidence_iri"] == (
         full_evidence
     )
-    assert staged_updates.suggested_next_actions[1].args[
+    assert staged_updates.suggested_next_actions[1].args["spec"][
         "revision_iris"
     ] == [staged_updates.staged_revision.revision_iri]
     assert staged_updates.suggested_next_actions[2].args == {

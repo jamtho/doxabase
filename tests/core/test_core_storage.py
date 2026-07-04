@@ -390,8 +390,8 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
         for action in draft.suggested_next_actions
     ] == [
         ("stage_revision", "map_assertion"),
-        ("describe_staged_revision", None),
-        ("export_staged_revision", None),
+        ("describe_revision", None),
+        ("export_bundle", "staged_revisions"),
     ]
     assert draft.next_action_queue_item is not None
     assert draft.next_action_queue_item.row_iri == source.revision_iri
@@ -582,7 +582,7 @@ def test_stale_authored_replacement_with_target_already_current_routes_to_inspec
     assert check.next_action is not None
     assert check.next_action.action_type == "inspect_no_effective_change"
     assert check.next_action.queue == "informational"
-    assert check.next_action.tool_name == "describe_staged_revision"
+    assert check.next_action.tool_name == "describe_revision"
     assert not any(
         (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "map_assertion")
         for action in check.suggested_next_actions
@@ -757,13 +757,15 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert check.next_action.arguments.get("dry_run") is True
     assert [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions] == [
         "restage_staged_revision",
-        "describe_staged_revision",
-        "export_staged_revision",
+        "describe_revision",
+        "export_bundle",
     ]
     assert check.suggested_next_actions[0].args.get("dry_run") is True
     assert "read-only repair/rebase plan" in check.suggested_next_actions[0].reason
     assert "stage a repaired" in check.suggested_next_actions[1].reason
-    assert "validation-failed" in check.suggested_next_actions[2].args["path"]
+    assert "validation-failed" in (
+        check.suggested_next_actions[2].args["spec"]["path"]
+    )
     description = db.describe_staged_revision(
         staged.revision_iri,
         include_current_apply_check=True,
@@ -836,7 +838,7 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
         db.apply_staged_revision(staged.revision_iri)
     error = str(excinfo.value)
     assert staged.revision_iri in error
-    assert "describe_staged_revision(" in error
+    assert "describe_revision(" in error
     assert "include_current_apply_check=True" in error
 
 

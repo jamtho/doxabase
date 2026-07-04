@@ -644,25 +644,25 @@ class EntitiesMixin:
             for role in ("patch_subject", "patch_object", "revision_anchor")
         ):
             arguments: dict[str, Any] = {
+                "iri": source_revision_iri,
+                "aspect": "resource_lineage",
                 "resource_iri": resource_iri,
-                "revision_iri": source_revision_iri,
             }
-            tool_name = "describe_resource_revision_lineage"
             return SuggestedNextAction(
-                       tool=f"doxabase.{tool_name}",
+                       tool="doxabase.describe_revision",
                        args=arguments,
                        reason="This changed resource overlaps a staged patch subject, "
                     "patch object, or revision anchor; inspect its resource-level "
                     "revision route before restaging or applying.",
                    )
         arguments = {
+            "kind": "resource",
             "resource_iri": resource_iri,
             "include_patch_mentions": True,
             "include_apply_checks": True,
         }
-        tool_name = "list_resource_revisions"
         return SuggestedNextAction(
-                   tool=f"doxabase.{tool_name}",
+                   tool="doxabase.list_revisions",
                    args=arguments,
                    reason="Review other staged, applied, or historical revision records "
                 "that mention this changed resource before deciding whether "

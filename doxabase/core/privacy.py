@@ -223,11 +223,7 @@ class PrivacyMixin:
         if (
             "absolute_local_runtime_path" in hint_codes
             and '"path": "/tmp/' in line
-            and (
-                "doxabase.export_staged_revision" in line
-                or "doxabase.export_staged_revisions" in line
-                or "doxabase.export_profile_insight_review_bundle" in line
-            )
+            and "doxabase.export_bundle" in line
         ):
             hint_codes = [
                 hint_code

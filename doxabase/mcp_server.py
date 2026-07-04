@@ -9,40 +9,20 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
-    describe_applied_revision_diff_tool,
     describe_dataset_tool,
     get_context_graph_tool,
-    describe_graph_revision_tool,
-    describe_graph_version_diff_tool,
     describe_query_context_tool,
-    describe_revision_graph_snapshot_tool,
-    describe_revision_lineage_tool,
-    describe_resource_revision_lineage_tool,
     describe_resource_tool,
-    describe_revision_snapshot_evidence_tool,
-    describe_staged_revision_tool,
+    describe_revision_tool,
     draft_query_plan_tool,
-    export_context_slice_tool,
-    export_graph_tool,
-    export_handoff_bundle_tool,
+    export_bundle_tool,
     export_preflight_tool,
-    export_profile_insight_review_bundle_tool,
-    export_staged_revision_tool,
-    export_staged_revisions_tool,
-    export_trig_tool,
-    export_revision_snapshots_tool,
     get_doc_tool,
     graph_overview_tool,
-    import_handoff_bundle_tool,
-    import_revision_snapshots_tool,
-    import_trig_tool,
+    import_bundle_tool,
     list_entities_tool,
-    list_graph_revisions_tool,
-    list_graph_versions_tool,
-    list_resource_revisions_tool,
-    load_example_fixtures_tool,
+    list_revisions_tool,
     plan_staged_revision_recovery_tool,
-    preflight_context_slice_export_tool,
     project_brief_tool,
     record_analysis_packet_tool,
     record_claim_observation_tool,
@@ -72,7 +52,6 @@ from doxabase.mcp_tools import (
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
-    scan_sensitive_literals_tool,
     search_tool,
     stage_revision_tool,
     validate_graph_tool,
@@ -125,34 +104,39 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
         return graph_overview_tool(db, limit=limit)
 
-    @server.tool(name="doxabase.scan_sensitive_literals")
-    def scan_sensitive_literals(
-        graphs: list[str] | None = None,
-        limit: int = 50,
-    ) -> dict[str, Any]:
-        """Scan graph terms for suspicious credential-like values."""
-
-        return scan_sensitive_literals_tool(db, graphs=graphs, limit=limit)
-
     @server.tool(name="doxabase.export_preflight")
     def export_preflight(
-        export_kind: str = "handoff_bundle",
+        kind: str = "handoff_bundle",
         graphs: list[str] | None = None,
         revision_iris: list[str] | None = None,
         snapshot_graph_roles: list[str] | None = None,
         validation_scope: str | None = None,
         limit: int = 20,
+        seed_iris: list[str] | None = None,
+        profile: str | None = None,
+        max_triples: int | None = None,
+        include_seed_graphs: bool | None = None,
     ) -> dict[str, Any]:
-        """Dry-run export privacy scope and conservative shareability decision."""
+        """Dry-run export privacy scope and conservative shareability
+        decision. kind: 'handoff_bundle' (default), 'graph', 'trig', or
+        'revision_snapshots' preflight the matching export_bundle write;
+        kind='scan_only' just scans graph terms for credential-like values;
+        kind='context_slice' preflights a context-slice export (requires
+        seed_iris; optional profile/max_triples/include_seed_graphs).
+        Kind-invalid params fail with targeted errors."""
 
         return export_preflight_tool(
             db,
-            export_kind=export_kind,
+            kind=kind,
             graphs=graphs,
             revision_iris=revision_iris,
             snapshot_graph_roles=snapshot_graph_roles,
             validation_scope=validation_scope,
             limit=limit,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
         )
 
     @server.tool(name="doxabase.project_brief")
@@ -243,62 +227,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             privacy_scan_limit=privacy_scan_limit,
         )
 
-    @server.tool(name="doxabase.preflight_context_slice_export")
-    def preflight_context_slice_export(
-        seed_iris: list[str],
-        profile: str = "dataset_brief",
-        max_triples: int = 500,
-        include_seed_graphs: bool = False,
-        validation_scope: str | None = None,
-        limit: int = 20,
-    ) -> dict[str, Any]:
-        """Dry-run an importable context-slice TriG export with privacy and validation gates."""
-
-        return preflight_context_slice_export_tool(
-            db,
-            seed_iris=seed_iris,
-            profile=profile,
-            max_triples=max_triples,
-            include_seed_graphs=include_seed_graphs,
-            validation_scope=validation_scope,
-            limit=limit,
-        )
-
-    @server.tool(name="doxabase.export_context_slice")
-    def export_context_slice(
-        path: str,
-        seed_iris: list[str],
-        profile: str = "dataset_brief",
-        max_triples: int = 500,
-        include_seed_graphs: bool = False,
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-        fail_on_invalid: bool = True,
-        validation_scope: str | None = None,
-        limit: int = 20,
-    ) -> dict[str, Any]:
-        """Write an importable TriG bundle for selected context-slice triples.
-
-        By default, fail_on_invalid=True blocks writes when the live graph
-        validation scope implied by the selected graph roles fails. Pass
-        fail_on_invalid=False only for a deliberately reviewed diagnostic
-        artifact.
-        """
-
-        return export_context_slice_tool(
-            db,
-            path=path,
-            seed_iris=seed_iris,
-            profile=profile,
-            max_triples=max_triples,
-            include_seed_graphs=include_seed_graphs,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-            fail_on_invalid=fail_on_invalid,
-            validation_scope=validation_scope,
-            limit=limit,
-        )
-
     @server.tool(name="doxabase.describe_resource")
     def describe_resource(
         iri: str,
@@ -344,229 +272,99 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             object_lang=object_lang,
         )
 
-    @server.tool(name="doxabase.describe_graph_revision")
-    def describe_graph_revision(
-        iri: str,
+    @server.tool(name="doxabase.list_revisions")
+    def list_revisions(
+        kind: str = "graph",
         graph: str | None = "history",
-    ) -> dict[str, Any]:
-        """Return compact revision metadata, snapshots, and support links."""
-
-        return describe_graph_revision_tool(db, iri=iri, graph=graph)
-
-    @server.tool(name="doxabase.describe_revision_snapshot_evidence")
-    def describe_revision_snapshot_evidence(
-        iri: str,
-        graph: str | None = "history",
-    ) -> dict[str, Any]:
-        """Classify RDF history and SQLite snapshot-row evidence for a revision."""
-
-        return describe_revision_snapshot_evidence_tool(db, iri=iri, graph=graph)
-
-    @server.tool(name="doxabase.describe_revision_graph_snapshot")
-    def describe_revision_graph_snapshot(
-        iri: str,
-        graph_role: str,
-        graph: str | None = "history",
-        include_triples: bool = False,
-        max_triples: int = 500,
-    ) -> dict[str, Any]:
-        """Return one stored revision graph snapshot, optionally with triples."""
-
-        return describe_revision_graph_snapshot_tool(
-            db,
-            iri=iri,
-            graph_role=graph_role,
-            graph=graph,
-            include_triples=include_triples,
-            max_triples=max_triples,
-        )
-
-    @server.tool(name="doxabase.describe_applied_revision_diff")
-    def describe_applied_revision_diff(
-        iri: str,
-        graph: str | None = "history",
-        include_triples: bool = False,
-        max_triples: int = 500,
-    ) -> dict[str, Any]:
-        """Return stored snapshot diffs for an applied staged revision."""
-
-        return describe_applied_revision_diff_tool(
-            db,
-            iri=iri,
-            graph=graph,
-            include_triples=include_triples,
-            max_triples=max_triples,
-        )
-
-    @server.tool(name="doxabase.describe_graph_version_diff")
-    def describe_graph_version_diff(
-        graph_role: str,
-        before_revision_iri: str,
-        after_revision_iri: str | None = None,
-        compare_to_current: bool = True,
-        graph: str | None = "history",
-        include_triples: bool = False,
-        max_triples: int = 500,
-    ) -> dict[str, Any]:
-        """Compare a stored graph version to another version or current graph."""
-
-        return describe_graph_version_diff_tool(
-            db,
-            graph_role=graph_role,
-            before_revision_iri=before_revision_iri,
-            after_revision_iri=after_revision_iri,
-            compare_to_current=compare_to_current,
-            graph=graph,
-            include_triples=include_triples,
-            max_triples=max_triples,
-        )
-
-    @server.tool(name="doxabase.list_graph_revisions")
-    def list_graph_revisions(
         revision_type: str | None = None,
-        graph: str | None = "history",
-        include_apply_checks: bool = False,
-        drift_detail: str = "summary",
         record_kind: str | None = None,
         application_status: str | None = None,
         staged_validation_status: str | None = None,
         stale_resolution_state: str | None = None,
-        current_staged_work_only: bool = False,
+        current_staged_work_only: bool | None = None,
+        graph_role: str | None = None,
+        exact_only: bool | None = None,
+        include_current: bool | None = None,
+        resource_iri: str | None = None,
+        include_patch_mentions: bool | None = None,
+        include_apply_checks: bool | None = None,
+        drift_detail: str = "summary",
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """List graph revisions, optionally with staged apply-check status."""
+        """List revision history. kind='graph' lists graph revisions
+        (filters: revision_type, record_kind, application_status,
+        staged_validation_status, stale_resolution_state,
+        current_staged_work_only); kind='versions' lists graph-version
+        snapshots for one required graph_role (exact_only,
+        include_current); kind='resource' lists revisions anchored to or
+        patch-mentioning a required resource_iri. include_apply_checks
+        adds staged review routing (defaults True only for 'resource');
+        kind-invalid params fail with targeted errors."""
 
-        return list_graph_revisions_tool(
+        return list_revisions_tool(
             db,
-            revision_type=revision_type,
+            kind=kind,
             graph=graph,
-            include_apply_checks=include_apply_checks,
-            drift_detail=drift_detail,
+            revision_type=revision_type,
             record_kind=record_kind,
             application_status=application_status,
             staged_validation_status=staged_validation_status,
             stale_resolution_state=stale_resolution_state,
             current_staged_work_only=current_staged_work_only,
-            limit=limit,
-            offset=offset,
-        )
-
-    @server.tool(name="doxabase.list_graph_versions")
-    def list_graph_versions(
-        graph_role: str,
-        graph: str | None = "history",
-        exact_only: bool = False,
-        include_current: bool = True,
-        include_apply_checks: bool = False,
-        drift_detail: str = "summary",
-        record_kind: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> dict[str, Any]:
-        """List stored graph-version snapshots for one graph role.
-
-        Pass include_apply_checks=True for version-first staged review. Then
-        staged patch rows also carry application_status, stale/restage blockers,
-        next_action, and next_action_queue_item routing fields copied from the
-        revision triage surface.
-        """
-
-        return list_graph_versions_tool(
-            db,
             graph_role=graph_role,
-            graph=graph,
             exact_only=exact_only,
             include_current=include_current,
-            include_apply_checks=include_apply_checks,
-            drift_detail=drift_detail,
-            record_kind=record_kind,
-            limit=limit,
-            offset=offset,
-        )
-
-    @server.tool(name="doxabase.describe_revision_lineage")
-    def describe_revision_lineage(
-        iri: str,
-        graph: str | None = "history",
-        include_apply_checks: bool = True,
-        drift_detail: str = "summary",
-    ) -> dict[str, Any]:
-        """Describe one graph revision's restage/apply lineage."""
-
-        return describe_revision_lineage_tool(
-            db,
-            iri=iri,
-            graph=graph,
-            include_apply_checks=include_apply_checks,
-            drift_detail=drift_detail,
-        )
-
-    @server.tool(name="doxabase.list_resource_revisions")
-    def list_resource_revisions(
-        resource_iri: str,
-        graph: str | None = "history",
-        include_patch_mentions: bool = True,
-        include_apply_checks: bool = True,
-        drift_detail: str = "summary",
-        current_staged_work_only: bool = False,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> dict[str, Any]:
-        """List revisions anchored to or patch-mentioning one resource."""
-
-        return list_resource_revisions_tool(
-            db,
             resource_iri=resource_iri,
-            graph=graph,
             include_patch_mentions=include_patch_mentions,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
-            current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
         )
 
-    @server.tool(name="doxabase.describe_resource_revision_lineage")
-    def describe_resource_revision_lineage(
-        resource_iri: str,
-        revision_iri: str,
+    @server.tool(name="doxabase.describe_revision")
+    def describe_revision(
+        iri: str,
+        aspect: str = "auto",
         graph: str | None = "history",
-        include_patch_mentions: bool = True,
-        include_apply_checks: bool = True,
-        drift_detail: str = "summary",
-        include_applied_diff: bool = True,
-        include_triples: bool = False,
-        max_triples: int = 100,
+        include_current_apply_check: bool | None = None,
+        include_triples: bool | None = None,
+        max_triples: int | None = None,
+        graph_role: str | None = None,
+        after_revision_iri: str | None = None,
+        compare_to_current: bool | None = None,
+        resource_iri: str | None = None,
+        include_patch_mentions: bool | None = None,
+        include_apply_checks: bool | None = None,
+        drift_detail: str | None = None,
+        include_applied_diff: bool | None = None,
     ) -> dict[str, Any]:
-        """Describe one resource/revision match and its immediate lineage."""
+        """Describe one revision. aspect='auto' returns revision metadata,
+        auto-detecting staged patch rows (include_current_apply_check adds
+        their live apply check). Other aspects: 'applied_diff' (stored
+        before/after diff), 'version_diff' (iri = before version; requires
+        graph_role; optional after_revision_iri/compare_to_current),
+        'lineage', 'resource_lineage' (requires resource_iri),
+        'snapshot_evidence', 'graph_snapshot' (requires graph_role).
+        Aspect-invalid params fail with targeted errors."""
 
-        return describe_resource_revision_lineage_tool(
+        return describe_revision_tool(
             db,
-            resource_iri=resource_iri,
-            revision_iri=revision_iri,
+            iri=iri,
+            aspect=aspect,
             graph=graph,
+            include_current_apply_check=include_current_apply_check,
+            include_triples=include_triples,
+            max_triples=max_triples,
+            graph_role=graph_role,
+            after_revision_iri=after_revision_iri,
+            compare_to_current=compare_to_current,
+            resource_iri=resource_iri,
             include_patch_mentions=include_patch_mentions,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
             include_applied_diff=include_applied_diff,
-            include_triples=include_triples,
-            max_triples=max_triples,
-        )
-
-    @server.tool(name="doxabase.describe_staged_revision")
-    def describe_staged_revision(
-        iri: str,
-        graph: str | None = "history",
-        include_current_apply_check: bool = False,
-    ) -> dict[str, Any]:
-        """Return staged revision metadata and patch payloads for review."""
-
-        return describe_staged_revision_tool(
-            db,
-            iri=iri,
-            graph=graph,
-            include_current_apply_check=include_current_apply_check,
         )
 
     @server.tool(name="doxabase.plan_staged_revision_recovery")
@@ -804,64 +602,37 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             offset=offset,
         )
 
-    @server.tool(name="doxabase.import_trig")
-    def import_trig(path: str, replace: bool = False) -> dict[str, Any]:
-        """Import a TriG file into DoxaBase graph roles."""
-
-        return import_trig_tool(db, path=path, replace=replace)
-
-    @server.tool(name="doxabase.import_revision_snapshots")
-    def import_revision_snapshots(
-        path: str,
-        replace: bool = False,
+    @server.tool(name="doxabase.import_bundle")
+    def import_bundle(
+        kind: str,
+        spec: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Import a JSON bundle of stored revision snapshot rows."""
+        """Import an artifact into the capsule. kind: 'trig' (named-graph
+        TriG file; spec: path, replace), 'revision_snapshots' (stored
+        snapshot-row JSON; spec: path, replace), 'handoff'
+        (recovery-complete manifest; spec: manifest_path, dry_run, replace,
+        include_drafts, validation_scope, drift_detail), or
+        'example_fixtures' (bundled AIS/Polymarket fixtures; spec: replace).
+        Targeted errors name each kind's valid and missing spec fields."""
 
-        return import_revision_snapshots_tool(db, path=path, replace=replace)
+        return import_bundle_tool(db, kind=kind, spec=spec)
 
-    @server.tool(name="doxabase.import_handoff_bundle")
-    def import_handoff_bundle(
-        manifest_path: str,
-        dry_run: bool = False,
-        replace: bool = False,
-        include_drafts: bool = True,
-        validation_scope: str | None = None,
-        drift_detail: str = "summary",
+    @server.tool(name="doxabase.export_bundle")
+    def export_bundle(
+        kind: str,
+        spec: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Import a recovery-complete handoff manifest and return recovery state."""
+        """Write a reviewed export artifact. kind: 'trig' (named-graph
+        bundle), 'graph' (flattened RDF file), 'context_slice' (importable
+        slice TriG; spec: path, seed_iris, ...), 'staged_revisions'
+        (review bundle; spec revision_iris is one IRI string or a list for
+        the grouped comparison, plus path), 'profile_insight_review',
+        'revision_snapshots' (snapshot-row JSON), or 'handoff' (spec:
+        trig_path, revision_snapshot_path, manifest_path, ...). Run
+        export_preflight first; targeted errors name each kind's
+        valid/missing spec fields."""
 
-        return import_handoff_bundle_tool(
-            db,
-            manifest_path=manifest_path,
-            dry_run=dry_run,
-            replace=replace,
-            include_drafts=include_drafts,
-            validation_scope=validation_scope,
-            drift_detail=drift_detail,
-        )
-
-    @server.tool(name="doxabase.export_graph")
-    def export_graph(
-        path: str,
-        graphs: list[str] | None = None,
-        format: str = "turtle",
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-        fail_on_invalid: bool = True,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Export one or more graph roles as a flattened RDF graph file."""
-
-        return export_graph_tool(
-            db,
-            path=path,
-            graphs=graphs,
-            format=format,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-            fail_on_invalid=fail_on_invalid,
-            validation_scope=validation_scope,
-        )
+        return export_bundle_tool(db, kind=kind, spec=spec)
 
     @server.tool(name="doxabase.replace_graph_triples")
     def replace_graph_triples(
@@ -882,75 +653,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             format=format,
             expected_count=expected_count,
             allow_count_change=allow_count_change,
-        )
-
-    @server.tool(name="doxabase.export_trig")
-    def export_trig(
-        path: str,
-        graphs: list[str] | None = None,
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-        fail_on_invalid: bool = True,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Export graph roles as a named-graph TriG bundle."""
-
-        return export_trig_tool(
-            db,
-            path=path,
-            graphs=graphs,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-            fail_on_invalid=fail_on_invalid,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.export_revision_snapshots")
-    def export_revision_snapshots(
-        path: str,
-        revision_iris: list[str] | None = None,
-        graph_roles: list[str] | None = None,
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-    ) -> dict[str, Any]:
-        """Export stored revision snapshot rows as a JSON handoff bundle."""
-
-        return export_revision_snapshots_tool(
-            db,
-            path=path,
-            revision_iris=revision_iris,
-            graph_roles=graph_roles,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-        )
-
-    @server.tool(name="doxabase.export_handoff_bundle")
-    def export_handoff_bundle(
-        trig_path: str,
-        revision_snapshot_path: str,
-        manifest_path: str | None = None,
-        graphs: list[str] | None = None,
-        revision_iris: list[str] | None = None,
-        snapshot_graph_roles: list[str] | None = None,
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-        fail_on_invalid: bool = True,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Export project TriG plus revision snapshot JSON as one handoff."""
-
-        return export_handoff_bundle_tool(
-            db,
-            trig_path=trig_path,
-            revision_snapshot_path=revision_snapshot_path,
-            manifest_path=manifest_path,
-            graphs=graphs,
-            revision_iris=revision_iris,
-            snapshot_graph_roles=snapshot_graph_roles,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-            fail_on_invalid=fail_on_invalid,
-            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.record_graph_revision")
@@ -1054,25 +756,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             dry_run=dry_run,
         )
 
-    @server.tool(name="doxabase.export_staged_revision")
-    def export_staged_revision(
-        iri: str,
-        path: str,
-        format: str = "markdown",
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-    ) -> dict[str, Any]:
-        """Export a staged revision review bundle."""
-
-        return export_staged_revision_tool(
-            db,
-            iri=iri,
-            path=path,
-            format=format,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-        )
-
     @server.tool(name="doxabase.apply_staged_revision")
     def apply_staged_revision(
         iri: str,
@@ -1097,70 +780,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_scope=validation_scope,
             dry_run=dry_run,
         )
-
-    @server.tool(name="doxabase.export_staged_revisions")
-    def export_staged_revisions(
-        revision_iris: list[str],
-        path: str,
-        title: str | None = None,
-        executive_summary: str | None = None,
-        format: str = "markdown",
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-    ) -> dict[str, Any]:
-        """Export multiple staged revisions into one comparison review bundle."""
-
-        return export_staged_revisions_tool(
-            db,
-            revision_iris=revision_iris,
-            path=path,
-            title=title,
-            executive_summary=executive_summary,
-            format=format,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-        )
-
-    @server.tool(name="doxabase.export_profile_insight_review_bundle")
-    def export_profile_insight_review_bundle(
-        dataset_iri: str,
-        evidence_iri: str,
-        path: str,
-        revision_iris: list[str] | None = None,
-        include_current_staged_work: bool = True,
-        current_staged_work_limit: int = 100,
-        include_applied_staged_sources: bool = True,
-        applied_staged_source_limit: int = 100,
-        title: str | None = None,
-        executive_summary: str | None = None,
-        format: str = "markdown",
-        overwrite: bool = False,
-        fail_on_sensitive: bool = False,
-    ) -> dict[str, Any]:
-        """Export staged revisions connected to one profile evidence run."""
-
-        return export_profile_insight_review_bundle_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            path=path,
-            revision_iris=revision_iris,
-            include_current_staged_work=include_current_staged_work,
-            current_staged_work_limit=current_staged_work_limit,
-            include_applied_staged_sources=include_applied_staged_sources,
-            applied_staged_source_limit=applied_staged_source_limit,
-            title=title,
-            executive_summary=executive_summary,
-            format=format,
-            overwrite=overwrite,
-            fail_on_sensitive=fail_on_sensitive,
-        )
-
-    @server.tool(name="doxabase.load_example_fixtures")
-    def load_example_fixtures(replace: bool = False) -> dict[str, Any]:
-        """Import the bundled AIS and Polymarket RC fixture graphs."""
-
-        return load_example_fixtures_tool(db, replace=replace)
 
     @server.tool(name="doxabase.validate_graph")
     def validate_graph(scope: str = "map", limit_results: int = 100) -> dict[str, Any]:

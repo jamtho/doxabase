@@ -162,13 +162,13 @@ class StagingReviewMixin:
     ) -> list[SuggestedNextAction]:
         actions = [
             SuggestedNextAction(
-                tool="doxabase.describe_graph_revision",
+                tool="doxabase.describe_revision",
                 args={"iri": resolution_revision_iri},
                 reason="Inspect the durable history event that recorded the staged "
                     "review decision.",
             ),
             SuggestedNextAction(
-                tool="doxabase.describe_staged_revision",
+                tool="doxabase.describe_revision",
                 args={
                     "iri": staged_revision_iri,
                     "include_current_apply_check": True,
@@ -913,8 +913,8 @@ class StagingReviewMixin:
                     resolved_target_record_kind=(
                         self._graph_revision_record_kind_for_iri(revision_iri)
                     ),
-                    tool_name="export_staged_revisions",
-                    mcp_tool_name="doxabase.export_staged_revisions",
+                    tool_name="export_bundle",
+                    mcp_tool_name="doxabase.export_bundle",
                     action_label="Recheck remaining bundle",
                     reason=(
                         "After applying one ready row in this changed-graph or "

@@ -252,8 +252,8 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert [
         action["tool"].removeprefix("doxabase.") for action in resolution["suggested_next_actions"]
     ] == [
-        "describe_graph_revision",
-        "describe_staged_revision",
+        "describe_revision",
+        "describe_revision",
         "plan_staged_revision_recovery",
     ]
 
@@ -710,11 +710,11 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
     revision_iri = result["staged_revisions"][0]["revision_iri"]
     assert result["next_action_queue"] == {"apply_after_review": [revision_iri]}
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.export_staged_revisions"
+        "doxabase.export_bundle"
     )
-    assert result["suggested_next_actions"][0]["args"]["path"].startswith(
-        "/tmp/systematisation-review-"
-    )
+    assert result["suggested_next_actions"][0]["args"]["spec"][
+        "path"
+    ].startswith("/tmp/systematisation-review-")
     assert [
         action["args"]
         for action in result["suggested_next_actions"]
@@ -828,13 +828,13 @@ def test_search_staged_patch_payloads_tool_returns_json_like_payload(
     assert match["patch_subject_iris"] == [term]
     assert "literal" in match["matched_term_roles"]
     assert match["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_staged_revision"
+        "doxabase.describe_revision"
     )
     assert match["suggested_next_actions"][1]["tool"] == (
-        "doxabase.export_staged_revisions"
+        "doxabase.export_bundle"
     )
     assert (
-        match["suggested_next_actions"][1]["args"]["fail_on_sensitive"]
+        match["suggested_next_actions"][1]["args"]["spec"]["fail_on_sensitive"]
         is True
     )
     assert result["suggested_next_actions"][0] == match["suggested_next_actions"][0]

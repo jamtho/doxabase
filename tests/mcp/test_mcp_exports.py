@@ -44,7 +44,9 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert trig_result.get("privacy_warnings", []) == []
     assert trig_result["artifact_kind"] == "project_trig"
     assert trig_result["importable"] is True
-    assert trig_result["recommended_import_tool"] == "doxabase.import_trig"
+    assert trig_result["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="trig")'
+    )
     assert trig_result["recovery_complete"] is False
     assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
     assert trig_path.exists()
@@ -69,7 +71,7 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
         storage_accesses=[storage["iri"]],
     )
 
-    result = scan_sensitive_literals_tool(db, graphs=["map"], limit=5)
+    result = export_preflight_tool(db, kind="scan_only", graphs=["map"], limit=5)
 
     assert result["graphs"] == ["map"]
     assert result["match_count"] >= 2
@@ -103,7 +105,7 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
 
     result = export_preflight_tool(
         db,
-        export_kind="graph",
+        kind="graph",
         graphs=["map"],
         limit=1,
     )
@@ -122,10 +124,12 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
         result["sensitive_literal_count"] - result["returned_match_count"]
     )
     assert result["matches"][0]["match_id"].startswith("redacted-sha256:")
-    assert result["suggested_next_actions"][0]["tool"] == "doxabase.scan_sensitive_literals"
+    assert result["suggested_next_actions"][0]["tool"] == "doxabase.export_preflight"
+    assert result["suggested_next_actions"][0]["args"]["kind"] == "scan_only"
     assert result["suggested_next_actions"][-1]["tool"] == (
-        "doxabase.preflight_context_slice_export"
+        "doxabase.export_preflight"
     )
+    assert result["suggested_next_actions"][-1]["args"]["kind"] == "context_slice"
     assert result["suggested_next_actions"][-1]["args"]["seed_iris"] == [
         "<target-resource-iri>"
     ]
@@ -153,7 +157,7 @@ def test_export_preflight_tool_reports_shareability_hints_for_home_paths(
         storage_accesses=[storage["iri"]],
     )
 
-    result = export_preflight_tool(db, export_kind="graph", graphs=["map"])
+    result = export_preflight_tool(db, kind="graph", graphs=["map"])
 
     assert result["decision"] == "clean_by_scanner_only"
     assert result["scanner_clean"] is True
@@ -201,7 +205,7 @@ def test_export_preflight_tool_reports_invalid_graph_gate(
         """
     )
 
-    result = export_preflight_tool(db, export_kind="handoff_bundle", limit=5)
+    result = export_preflight_tool(db, kind="handoff_bundle", limit=5)
 
     assert result["decision"] == "block"
     assert result["scanner_clean"] is True
@@ -243,16 +247,17 @@ def test_export_preflight_tool_marks_handoff_path_placeholders(
         is_table=True,
     )
 
-    result = export_preflight_tool(db, export_kind="handoff_bundle")
+    result = export_preflight_tool(db, kind="handoff_bundle")
 
     assert result["decision"] == "clean_by_scanner_only"
     action = result["suggested_next_actions"][0]
-    assert action["tool"] == "doxabase.export_handoff_bundle"
-    assert action["args"]["trig_path"] == "<project-handoff.trig>"
-    assert action["args"]["revision_snapshot_path"] == (
+    assert action["tool"] == "doxabase.export_bundle"
+    assert action["args"]["kind"] == "handoff"
+    assert action["args"]["spec"]["trig_path"] == "<project-handoff.trig>"
+    assert action["args"]["spec"]["revision_snapshot_path"] == (
         "<revision-snapshots.json>"
     )
-    assert action["args"]["manifest_path"] == "<handoff-manifest.json>"
+    assert action["args"]["spec"]["manifest_path"] == "<handoff-manifest.json>"
     assert "placeholders" in action["reason"]
 
 
@@ -477,16 +482,20 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert any("Scanner-clean means" in warning for warning in result["warnings"])
     assert result["artifact_kind"] == "handoff_bundle"
     assert result["importable"] is True
-    assert result["recommended_import_tool"] == "doxabase.import_handoff_bundle"
+    assert result["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="handoff")'
+    )
     assert result["recovery_complete"] is True
     assert result["trig"]["artifact_kind"] == "handoff_trig"
-    assert result["trig"]["recommended_import_tool"] == "doxabase.import_trig"
+    assert result["trig"]["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="trig")'
+    )
     assert result["trig"]["recovery_complete"] is False
     assert result["revision_snapshots"]["artifact_kind"] == (
         "revision_snapshot_bundle"
     )
     assert result["revision_snapshots"]["recommended_import_tool"] == (
-        "doxabase.import_revision_snapshots"
+        'doxabase.import_bundle(kind="revision_snapshots")'
     )
     assert result["revision_snapshots"]["recovery_complete"] is False
     assert trig_path.exists()
@@ -500,7 +509,9 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest["format"] == "doxabase.handoff_bundle.v1"
     assert manifest["artifact_kind"] == "handoff_bundle"
     assert manifest["importable"] is True
-    assert manifest["recommended_import_tool"] == "doxabase.import_handoff_bundle"
+    assert manifest["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="handoff")'
+    )
     assert manifest["recovery_complete"] is True
     assert manifest["decision"] == "clean_by_scanner_only"
     assert manifest["scanner_clean"] is True
@@ -517,8 +528,12 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         "revision_snapshot_bundle"
     )
     assert [
-        step["tool"].removeprefix("doxabase.") for step in manifest["recommended_import_sequence"]
-    ] == ["import_trig", "import_revision_snapshots"]
+        (step["tool"].removeprefix("doxabase."), step["kind"])
+        for step in manifest["recommended_import_sequence"]
+    ] == [
+        ("import_bundle", "trig"),
+        ("import_bundle", "revision_snapshots"),
+    ]
     assert [
         step["expected_snapshot_evidence_status"]
         for step in manifest["recommended_import_sequence"]
@@ -562,14 +577,15 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     )
     assert dry_run["recovery_summary"]["first_suggested_next_action"][
         "tool"
-    ] == "doxabase.import_handoff_bundle"
+    ] == "doxabase.import_bundle"
     assert {
         item["revision_iri"]: item["status"]
         for item in dry_run["pre_import_snapshot_evidence"]
     } == {staged["revision_iri"]: "history_missing"}
     assert dry_run["suggested_next_actions"][0]["tool"] == (
-        "doxabase.import_handoff_bundle"
+        "doxabase.import_bundle"
     )
+    assert dry_run["suggested_next_actions"][0]["args"]["kind"] == "handoff"
     assert any(
         "shareability review is still required" in warning
         for warning in dry_run["warnings"]
@@ -952,8 +968,9 @@ def test_get_context_graph_tool_reports_sensitive_selected_triples(
     assert fake_secret in result["trig"]
 
     privacy_action = result["suggested_next_actions"][0]
-    assert privacy_action["tool"] == "doxabase.preflight_context_slice_export"
+    assert privacy_action["tool"] == "doxabase.export_preflight"
     assert privacy_action["args"] == {
+        "kind": "context_slice",
         "seed_iris": [dataset],
         "profile": "dataset_brief",
         "max_triples": 100,
@@ -976,8 +993,9 @@ def test_get_context_graph_tool_reports_sensitive_selected_triples(
     assert preflight["would_block_sensitive_export"] is True
     assert preflight["handoff_fit"] == "resource_scoped_review_context"
     assert all(
-        action["tool"] != "doxabase.export_context_slice"
+        action["args"].get("kind") != "context_slice"
         for action in preflight["suggested_next_actions"]
+        if action["tool"] == "doxabase.export_bundle"
     )
     assert fake_secret not in json.dumps(preflight["matches"])
 
@@ -1006,8 +1024,9 @@ def test_context_slice_export_tools_return_json_like_payload(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
-    preflight = preflight_context_slice_export_tool(
+    preflight = export_preflight_tool(
         db,
+        kind="context_slice",
         seed_iris=[dataset],
         profile="dataset_brief",
         max_triples=100,
@@ -1037,18 +1056,20 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight.get("privacy_warnings", []) == []
     assert preflight["artifact_kind"] == "context_slice_trig"
     assert preflight["importable"] is True
-    assert preflight["recommended_import_tool"] == "doxabase.import_trig"
+    assert preflight["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="trig")'
+    )
     assert preflight["recovery_complete"] is False
     assert preflight["scanner_note"] in preflight["warnings"]
     assert [
         action["tool"].removeprefix("doxabase.") for action in preflight["suggested_next_actions"]
-    ] == ["export_context_slice"]
+    ] == ["export_bundle"]
     action = preflight["suggested_next_actions"][0]
-    assert action["tool"] == "doxabase.export_context_slice"
-    assert action["args"]["seed_iris"] == [dataset]
-    assert action["args"]["fail_on_sensitive"] is True
-    assert action["args"]["fail_on_invalid"] is True
-    assert action["args"]["validation_scope"] == "map"
+    assert action["args"]["kind"] == "context_slice"
+    assert action["args"]["spec"]["seed_iris"] == [dataset]
+    assert action["args"]["spec"]["fail_on_sensitive"] is True
+    assert action["args"]["spec"]["fail_on_invalid"] is True
+    assert action["args"]["spec"]["validation_scope"] == "map"
 
     export_path = tmp_path / "orders-context-slice.trig"
     export = export_context_slice_tool(
@@ -1076,7 +1097,9 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["sensitive_literal_count"] == 0
     assert export["artifact_kind"] == "context_slice_trig"
     assert export["importable"] is True
-    assert export["recommended_import_tool"] == "doxabase.import_trig"
+    assert export["recommended_import_tool"] == (
+        'doxabase.import_bundle(kind="trig")'
+    )
     assert export["recovery_complete"] is False
     assert export.get("suggested_next_actions", []) == []
     assert export_path.exists()
@@ -1136,7 +1159,7 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
 
     broad_preflight = export_preflight_tool(
         db,
-        export_kind="graph",
+        kind="graph",
         graphs=["map"],
     )
 
@@ -1145,18 +1168,19 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
     assert broad_preflight["would_block_sensitive_export"] is True
     assert broad_preflight["sensitive_literal_count"] >= 1
     assert all(
-        action["tool"]
-        not in {
-            "doxabase.export_graph",
-            "doxabase.export_trig",
-            "doxabase.export_handoff_bundle",
-        }
+        action["tool"] != "doxabase.export_bundle"
         for action in broad_preflight["suggested_next_actions"]
     )
     assert [
-        action["tool"].removeprefix("doxabase.")
+        (
+            action["tool"].removeprefix("doxabase."),
+            action["args"].get("kind"),
+        )
         for action in broad_preflight["suggested_next_actions"]
-    ] == ["scan_sensitive_literals", "preflight_context_slice_export"]
+    ] == [
+        ("export_preflight", "scan_only"),
+        ("export_preflight", "context_slice"),
+    ]
 
     blocked_path = tmp_path / "blocked-map.ttl"
     with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
@@ -1192,9 +1216,12 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
         "evidence",
     }
     assert [
-        action["tool"].removeprefix("doxabase.")
+        (
+            action["tool"].removeprefix("doxabase."),
+            action["args"].get("kind"),
+        )
         for action in scoped_preflight["suggested_next_actions"]
-    ] == ["export_context_slice"]
+    ] == [("export_bundle", "context_slice")]
     assert fake_secret not in json.dumps(scoped_preflight)
 
     slice_path = tmp_path / "orders-clean-slice.trig"
@@ -1262,3 +1289,180 @@ def test_context_slice_export_tools_redact_sensitive_seed_descriptions(
             fail_on_sensitive=True,
         )
 
+
+
+def test_export_preflight_kind_validation_names_kind_fields(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="kind must be one of"):
+        export_preflight_tool(db, kind="bundle")
+    with pytest.raises(DoxaBaseError, match="requires seed_iris"):
+        export_preflight_tool(db, kind="context_slice")
+    with pytest.raises(DoxaBaseError) as handoff_error:
+        export_preflight_tool(db, kind="handoff_bundle", profile="dataset_brief")
+    assert "does not take ['profile']" in str(handoff_error.value)
+    assert "snapshot_graph_roles" in str(handoff_error.value)
+    with pytest.raises(DoxaBaseError) as scan_error:
+        export_preflight_tool(
+            db,
+            kind="scan_only",
+            graphs=["map"],
+            validation_scope="map",
+        )
+    assert "does not take ['validation_scope']" in str(scan_error.value)
+    with pytest.raises(DoxaBaseError) as slice_error:
+        export_preflight_tool(
+            db,
+            kind="context_slice",
+            seed_iris=["https://example.test/project#Orders"],
+            snapshot_graph_roles=["map"],
+        )
+    assert "does not take ['snapshot_graph_roles']" in str(slice_error.value)
+    assert "seed_iris" in str(slice_error.value)
+
+
+def test_export_bundle_and_import_bundle_dispatch_kinds(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    fixtures = import_bundle_tool(db, kind="example_fixtures", spec={})
+    assert fixtures["total_imported"] > 0
+    # The fixture guard clears only fixture graph roles on replace.
+    reloaded = import_bundle_tool(db, kind="example_fixtures", spec={"replace": True})
+    assert reloaded["replace"] is True
+    assert reloaded["totals"] == fixtures["totals"]
+
+    with pytest.raises(DoxaBaseError, match="kind must be one of"):
+        export_bundle_tool(db, kind="turtle", spec={"path": "x.ttl"})
+    with pytest.raises(DoxaBaseError) as missing_error:
+        export_bundle_tool(db, kind="trig", spec={})
+    assert "missing required spec field(s) ['path']" in str(missing_error.value)
+    with pytest.raises(DoxaBaseError) as unknown_error:
+        import_bundle_tool(db, kind="trig", spec={"path": "x.trig", "graphs": []})
+    assert "unknown spec field(s) ['graphs']" in str(unknown_error.value)
+    with pytest.raises(DoxaBaseError, match="kind must be one of"):
+        import_bundle_tool(db, kind="fixtures", spec={})
+
+    trig_path = tmp_path / "roundtrip.trig"
+    exported = export_bundle_tool(
+        db,
+        kind="trig",
+        spec={"path": str(trig_path), "graphs": ["map"]},
+    )
+    assert exported["bytes_written"] > 0
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = import_bundle_tool(
+        receiver,
+        kind="trig",
+        spec={"path": str(trig_path)},
+    )
+    assert imported["total_imported"] == exported["triples"]
+
+    graph_path = tmp_path / "map.ttl"
+    graph_export = export_bundle_tool(
+        db,
+        kind="graph",
+        spec={"path": str(graph_path), "graphs": ["map"]},
+    )
+    assert graph_export["format"] == "turtle"
+
+    snapshot_path = tmp_path / "snapshots.json"
+    snapshot_export = export_bundle_tool(
+        db,
+        kind="revision_snapshots",
+        spec={"path": str(snapshot_path)},
+    )
+    assert snapshot_export["path"] == str(snapshot_path)
+    snapshot_import = import_bundle_tool(
+        receiver,
+        kind="revision_snapshots",
+        spec={"path": str(snapshot_path)},
+    )
+    assert snapshot_import["path"] == str(snapshot_path)
+
+    slice_path = tmp_path / "slice.trig"
+    slice_export = export_bundle_tool(
+        db,
+        kind="context_slice",
+        spec={
+            "path": str(slice_path),
+            "seed_iris": ["https://richcanopy.org/example/manifest/ais#DailyIndex"],
+        },
+    )
+    assert slice_export["artifact_kind"] == "context_slice_trig"
+
+
+def test_export_bundle_staged_revisions_dispatches_on_revision_iris(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    single_path = tmp_path / "single-review.md"
+    single = export_bundle_tool(
+        db,
+        kind="staged_revisions",
+        spec={
+            "revision_iris": staged["revision_iri"],
+            "path": str(single_path),
+        },
+    )
+    assert single["revision_iri"] == staged["revision_iri"]
+    assert single_path.exists()
+
+    with pytest.raises(DoxaBaseError) as batch_only_error:
+        export_bundle_tool(
+            db,
+            kind="staged_revisions",
+            spec={
+                "revision_iris": staged["revision_iri"],
+                "path": str(tmp_path / "other.md"),
+                "title": "Grouped title",
+            },
+        )
+    assert "['title']" in str(batch_only_error.value)
+    assert "list" in str(batch_only_error.value)
+
+    grouped_path = tmp_path / "grouped-review.md"
+    grouped = export_bundle_tool(
+        db,
+        kind="staged_revisions",
+        spec={
+            "revision_iris": [staged["revision_iri"]],
+            "path": str(grouped_path),
+            "title": "Grouped review",
+        },
+    )
+    assert grouped["revision_iris"] == [staged["revision_iri"]]
+    assert grouped_path.exists()
+
+    handoff_paths = {
+        "trig_path": str(tmp_path / "handoff.trig"),
+        "revision_snapshot_path": str(tmp_path / "handoff-snapshots.json"),
+        "manifest_path": str(tmp_path / "handoff-manifest.json"),
+    }
+    handoff = export_bundle_tool(db, kind="handoff", spec=handoff_paths)
+    assert handoff["recovery_complete"] is True
+    receiver = DoxaBase.create(tmp_path / "handoff-receiver.sqlite")
+    handoff_import = import_bundle_tool(
+        receiver,
+        kind="handoff",
+        spec={"manifest_path": handoff_paths["manifest_path"], "dry_run": True},
+    )
+    assert handoff_import["dry_run"] is True

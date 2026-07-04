@@ -405,23 +405,13 @@ STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES = frozenset(
     }
 )
 
-STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES = frozenset(
+# import_bundle kinds that write project graph content (trig also rebuilds
+# imported history rows; handoff and example_fixtures import graph content).
+IMPORT_BUNDLE_PROJECT_GRAPH_MUTATING_KINDS = frozenset(
     {
-        "apply_staged_revision",
-        "import_trig",
-    }
-)
-
-STAGED_ACTION_FILE_WRITING_TOOL_NAMES = frozenset(
-    {
-        "export_staged_revision",
-        "export_staged_revisions",
-    }
-)
-
-STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES = frozenset(
-    {
-        "import_revision_snapshots",
+        "trig",
+        "handoff",
+        "example_fixtures",
     }
 )
 
@@ -477,12 +467,53 @@ def stage_revision_action_spec(action: Any) -> MappingABC[str, Any]:
     return spec if isinstance(spec, MappingABC) else {}
 
 
-def action_staging_arguments(action: Any) -> MappingABC[str, Any]:
-    """Effective call fields: the spec for stage_revision actions, else args."""
+KIND_SPEC_TOOL_NAMES = frozenset(
+    {
+        "stage_revision",
+        "export_bundle",
+        "import_bundle",
+    }
+)
 
-    if action_tool_name(action) == "stage_revision":
+
+def action_staging_arguments(action: Any) -> MappingABC[str, Any]:
+    """Effective call fields: the spec for kind/spec doors, else args."""
+
+    if action_tool_name(action) in KIND_SPEC_TOOL_NAMES:
         return stage_revision_action_spec(action)
     return action_arguments(action)
+
+
+def export_bundle_action_kind(action: Any) -> str | None:
+    """kind of an export_bundle action; None for any other tool."""
+
+    if action_tool_name(action) != "export_bundle":
+        return None
+    kind = action_arguments(action).get("kind")
+    return kind if isinstance(kind, str) else None
+
+
+def import_bundle_action_kind(action: Any) -> str | None:
+    """kind of an import_bundle action; None for any other tool."""
+
+    if action_tool_name(action) != "import_bundle":
+        return None
+    kind = action_arguments(action).get("kind")
+    return kind if isinstance(kind, str) else None
+
+
+def describe_revision_action_aspect(action: Any) -> str | None:
+    """Aspect of a describe_revision action ('auto' when omitted).
+
+    Returns None for any other tool so matchers can select the merged
+    describe door by aspect: 'auto' is the plain staged/graph revision
+    describe, other values name the diff/lineage/snapshot views.
+    """
+
+    if action_tool_name(action) != "describe_revision":
+        return None
+    aspect = action_arguments(action).get("aspect")
+    return aspect if isinstance(aspect, str) else "auto"
 
 
 def staged_rebase_draft_action(action: Any) -> bool:
@@ -525,18 +556,28 @@ def staged_action_effect_metadata(
         "stage_revision",
     }:
         return no_effect
+    kind = action_arguments.get("kind")
     if tool_name == "stage_revision" and (
-        action_arguments.get("kind") not in STAGE_REVISION_HISTORY_WRITING_KINDS
+        kind not in STAGE_REVISION_HISTORY_WRITING_KINDS
     ):
         return no_effect
+    spec = action_arguments.get("spec")
+    spec = spec if isinstance(spec, MappingABC) else {}
+    if tool_name == "import_bundle" and spec.get("dry_run") is True:
+        # The handoff manifest dry run parses and plans without importing.
+        return no_effect
 
-    mutates_project_graph = (
-        tool_name in STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES
+    mutates_project_graph = tool_name == "apply_staged_revision" or (
+        tool_name == "import_bundle"
+        and kind in IMPORT_BUNDLE_PROJECT_GRAPH_MUTATING_KINDS
     )
-    writes_files = tool_name in STAGED_ACTION_FILE_WRITING_TOOL_NAMES
-    writes_storage = tool_name in STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES
+    writes_files = tool_name == "export_bundle"
+    writes_storage = tool_name == "import_bundle" and kind in {
+        "revision_snapshots",
+        "handoff",
+    }
     writes_history = tool_name in STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES
-    if tool_name == "import_trig":
+    if tool_name == "import_bundle" and kind in {"trig", "handoff"}:
         writes_history = True
     if tool_name == "plan_staged_revision_recovery":
         writes_history = action_arguments.get("start_session") is True
@@ -768,12 +809,14 @@ __all__ = [
     "STAGE_REVISION_RECOVERY_MUTATING_KINDS",
     "STAGE_REVISION_HISTORY_WRITING_KINDS",
     "STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES",
-    "STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES",
-    "STAGED_ACTION_FILE_WRITING_TOOL_NAMES",
-    "STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES",
+    "IMPORT_BUNDLE_PROJECT_GRAPH_MUTATING_KINDS",
+    "KIND_SPEC_TOOL_NAMES",
     "stage_revision_action_kind",
     "stage_revision_action_spec",
     "action_staging_arguments",
+    "describe_revision_action_aspect",
+    "export_bundle_action_kind",
+    "import_bundle_action_kind",
     "staged_rebase_draft_action",
     "staged_action_effect_metadata",
     "suggested_action_key",

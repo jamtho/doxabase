@@ -366,7 +366,7 @@ class ContextSliceExportRecord:
     would_block_invalid_export: bool = False
     artifact_kind: str = "context_slice_trig"
     importable: bool = True
-    recommended_import_tool: str | None = "doxabase.import_trig"
+    recommended_import_tool: str | None = 'doxabase.import_bundle(kind="trig")'
     recovery_complete: bool = False
     shareability_hints: list[str] = field(default_factory=list)
     shareability_hint_count: int = 0
@@ -446,7 +446,9 @@ class RevisionSnapshotBundleExportRecord:
     privacy_warnings: list[str] = field(default_factory=list)
     artifact_kind: str = "revision_snapshot_bundle"
     importable: bool = True
-    recommended_import_tool: str | None = "doxabase.import_revision_snapshots"
+    recommended_import_tool: str | None = (
+        'doxabase.import_bundle(kind="revision_snapshots")'
+    )
     recovery_complete: bool = False
     shareability_review_required: bool = True
     shareability_review_status: str = "required_not_completed"
@@ -505,7 +507,8 @@ class HandoffBundleExportRecord:
     artifact_kind: str = "handoff_bundle"
     importable: bool = True
     recommended_import_tool: str | None = (
-        "doxabase.import_trig then doxabase.import_revision_snapshots"
+        'doxabase.import_bundle(kind="trig") then '
+        'doxabase.import_bundle(kind="revision_snapshots")'
     )
     recovery_complete: bool = True
 

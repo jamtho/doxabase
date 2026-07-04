@@ -120,7 +120,7 @@ def test_import_handoff_bundle_routes_non_staged_revision_context(
     manual_lane = lanes_by_source[manual.revision_iri]
     assert manual_lane.batch_action == "skipped_non_staged_history_record"
     assert manual_lane.next_action is not None
-    assert manual_lane.next_action.tool_name == "describe_graph_revision"
+    assert manual_lane.next_action.tool_name == "describe_revision"
     assert plan.not_restageable_revision_iris_by_reason[
         "non_staged_history_record"
     ] == [manual.revision_iri]
@@ -187,8 +187,10 @@ def test_privacy_handoff_fallback_keeps_clean_slice_when_staged_markdown_is_dirt
     assert handoff_preflight.would_block_sensitive_export is True
     assert handoff_preflight.graph_sensitive_literal_count >= 1
     assert handoff_preflight.snapshot_sensitive_literal_count == 0
-    assert "preflight_context_slice_export" in [
-        action.tool.removeprefix("doxabase.") for action in handoff_preflight.suggested_next_actions
+    assert "context_slice" in [
+        action.args.get("kind")
+        for action in handoff_preflight.suggested_next_actions
+        if action.tool == "doxabase.export_preflight"
     ]
     assert fake_secret not in json.dumps(to_dict(handoff_preflight))
 
@@ -691,10 +693,10 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     assert check.validation_conforms is None
     assert check.validation_skipped_reason == "conflicts_present"
     assert [action.tool.removeprefix("doxabase.") for action in check.suggested_next_actions] == [
-        "describe_staged_revision",
-        "export_staged_revision",
+        "describe_revision",
+        "export_bundle",
     ]
-    assert check.suggested_next_actions[1].args["fail_on_sensitive"] is True
+    assert check.suggested_next_actions[1].args["spec"]["fail_on_sensitive"] is True
     assert check.patch_checks[0].target_graph == unknown_graph
     assert check.patch_checks[0].can_apply is False
     assert check.patch_checks[0].conflict is not None
@@ -1040,20 +1042,20 @@ def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
     assert source_check.next_action is not None
     assert source_check.next_action.action_type == "inspect_current_successor"
     assert source_check.next_action.queue == "informational"
-    assert source_check.next_action.tool_name == "describe_staged_revision"
+    assert source_check.next_action.tool_name == "describe_revision"
     assert source_check.next_action.arguments == {"iri": repair.revision_iri}
     assert [action.tool.removeprefix("doxabase.") for action in source_check.suggested_next_actions] == [
-        "describe_staged_revision",
-        "export_staged_revision",
+        "describe_revision",
+        "export_bundle",
     ]
     assert source_check.suggested_next_actions[0].args == {
         "iri": repair.revision_iri,
     }
-    assert source_check.suggested_next_actions[1].args["iri"] == (
+    assert source_check.suggested_next_actions[1].args["spec"]["revision_iris"] == (
         source.revision_iri
     )
     assert "handled-validation-failure" in (
-        source_check.suggested_next_actions[1].args["path"]
+        source_check.suggested_next_actions[1].args["spec"]["path"]
     )
     assert source_check.recommended_resolution is not None
     assert "already has a refreshed successor" in (
@@ -1182,11 +1184,10 @@ def test_list_graph_versions_can_include_staged_apply_checks(
     assert row.next_action_queue_item.resolved_target_iri == staged.revision_iri
     assert [
         action.tool.removeprefix("doxabase.") for action in row.suggested_next_actions[:3]
-    ] == [
-        "describe_revision_graph_snapshot",
-        "describe_revision_lineage",
-        "describe_graph_version_diff",
-    ]
+    ] == ["describe_revision", "describe_revision", "describe_revision"]
+    assert [
+        action.args.get("aspect") for action in row.suggested_next_actions[:3]
+    ] == ["graph_snapshot", "lineage", "version_diff"]
 
 
 def test_graph_versions_surface_review_resolved_staged_rows(
@@ -2158,12 +2159,13 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     ]
     assert "link_alternatives=False" in rerun_action.reason
     export_action = draft.suggested_next_actions[1]
-    assert export_action.tool == "doxabase.export_staged_revisions"
-    assert export_action.args["revision_iris"] == revision_iris
-    assert export_action.args["path"].startswith(
+    assert export_action.tool == "doxabase.export_bundle"
+    assert export_action.args["kind"] == "staged_revisions"
+    assert export_action.args["spec"]["revision_iris"] == revision_iris
+    assert export_action.args["spec"]["path"].startswith(
         "/tmp/systematisation-review-"
     )
-    assert export_action.args["path"].endswith(".md")
+    assert export_action.args["spec"]["path"].endswith(".md")
     assert [
         action.args
         for action in draft.suggested_next_actions
@@ -2822,12 +2824,14 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
     assert "literal" in match.matched_term_roles
     assert match.parse_error is None
     assert [action.tool.removeprefix("doxabase.") for action in match.suggested_next_actions] == [
-        "describe_staged_revision",
-        "export_staged_revisions",
-        "list_resource_revisions",
+        "describe_revision",
+        "export_bundle",
+        "list_revisions",
     ]
+    assert match.suggested_next_actions[2].args["kind"] == "resource"
     assert (
-        match.suggested_next_actions[1].args["fail_on_sensitive"] is True
+        match.suggested_next_actions[1].args["spec"]["fail_on_sensitive"]
+        is True
     )
     assert results.suggested_next_actions[0].args == {
         "iri": staged.revision_iri,
@@ -2838,7 +2842,7 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
         db.get_context_graph(term, profile="resource_brief")
     missing_seed_message = str(exc_info.value)
     assert "staged patch payloads" in missing_seed_message
-    assert "list_resource_revisions" in missing_seed_message
+    assert "list_revisions(kind='resource'" in missing_seed_message
     assert "include_patch_mentions=True" in missing_seed_message
     assert "search(scope='staged_patches')" in missing_seed_message
 
