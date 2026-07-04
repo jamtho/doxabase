@@ -676,9 +676,12 @@ def test_stage_map_assertion_change_packages_support_context(
         for impact in draft_change.impacts
     )
     assert draft_change.judgement_panel.semantic_risk_level == "high"
-    assert [action.tool.removeprefix("doxabase.") for action in draft_change.suggested_next_actions] == [
-        "describe_resource",
-        "stage_map_assertion_change",
+    assert [
+        (action.tool.removeprefix("doxabase."), action.args.get("kind"))
+        for action in draft_change.suggested_next_actions
+    ] == [
+        ("describe_resource", None),
+        ("stage_revision", "map_assertion"),
     ]
     assert draft_change.suggested_next_actions[0].args["aspect"] == "assertion_support"
     assert "high-risk" in draft_change.suggested_next_actions[0].reason

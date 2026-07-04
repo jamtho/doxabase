@@ -98,21 +98,22 @@ def test_column_physical_type_same_slot_drift_suggests_replacement(
     assert check.status == "conflict"
     assert check.next_action is not None
     assert check.next_action.queue == "repair_or_replace"
-    assert check.next_action.tool_name == "stage_map_assertion_change"
+    assert check.next_action.tool_name == "stage_revision"
+    assert check.next_action.arguments.get("kind") == "map_assertion"
     assert check.recommended_resolution is not None
     assert "same single-valued map assertion slot" in check.recommended_resolution
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool == "doxabase.stage_map_assertion_change"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "map_assertion")
     )
-    assert action.args["subject"] == column
-    assert action.args["predicate"] == RC + "physicalType"
-    assert action.args["object"] == RC + "Double"
-    assert action.args["object_kind"] == "iri"
+    assert action.args["spec"]["subject"] == column
+    assert action.args["spec"]["predicate"] == RC + "physicalType"
+    assert action.args["spec"]["object"] == RC + "Double"
+    assert action.args["spec"]["object_kind"] == "iri"
     assert "physical type" in action.reason
 
-    repair = db.stage_map_assertion_change(**action.args)
+    repair = db.stage_map_assertion_change(**action.args["spec"])
     assert db.check_staged_revision_apply(
         repair.staged_revision.revision_iri
     ).status == "ready"
@@ -150,15 +151,15 @@ def test_column_nullable_same_slot_drift_preserves_boolean_payload(
     action = next(
         action
         for action in check.suggested_next_actions
-        if action.tool == "doxabase.stage_map_assertion_change"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "map_assertion")
     )
-    assert action.args["predicate"] == RC + "nullable"
-    assert action.args["object"] == "true"
-    assert action.args["object_kind"] == "literal"
-    assert action.args["object_datatype"] == str(XSD.boolean)
+    assert action.args["spec"]["predicate"] == RC + "nullable"
+    assert action.args["spec"]["object"] == "true"
+    assert action.args["spec"]["object_kind"] == "literal"
+    assert action.args["spec"]["object_datatype"] == str(XSD.boolean)
     assert "nullable" in action.reason
 
-    repair = db.stage_map_assertion_change(**action.args)
+    repair = db.stage_map_assertion_change(**action.args["spec"])
     assert db.check_staged_revision_apply(
         repair.staged_revision.revision_iri
     ).status == "ready"

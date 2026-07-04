@@ -47,12 +47,25 @@ Permanent Loop Rules are in `AGENTS.md`; progress log is
     pattern there. `docs/agent/response-conventions.md` (registered) states
     the target suggestion shape; update its "Suggestions" section to the
     exact `tool`/`args`/`reason` keys when 3.4 lands.
-- **Phase 4 — mapping DONE, implementation NOT started**:
-  `doxabase_design_docs/08-mcp-surface-v2.md` is the complete, authoritative
-  89 → 25 tool mapping, including kind-dispatch conventions, the two
-  baseline-trial trap fixes, chosen LATITUDE folds, and a 6-wave
-  implementation order. Implement exactly from that doc.
-- **Phases 5–7 — NOT started.**
+- **Phase 4 — IN PROGRESS** (doc 08 is authoritative; its wave list carries
+  DONE markers): R1 reads (`606012f`, 89→83) and R2 recording (`88e3a41`,
+  83→65, schema chars 138k→82k) are landed; R3 staging / R4 revisions /
+  R5 export-import / sweep remain. Pattern per the R1/R2 commits:
+  `mcp_tools._dispatch_kind` + targeted errors; absorbed `*_tool` functions
+  survive as dispatch targets; same-wave registration deletion; migrate
+  every core suggestion emitter (watch string-based `add_action` helpers,
+  `find_exact_action` matchers, repair-hint `arguments_template` dicts);
+  reconcile tests without weakening semantics.
+- **Phase 3 — DONE except 3.5/3.6 ratchets** (project_brief rebuilt with
+  5.1 at `095ed90`, 22x smaller; SuggestedNextAction collapsed at
+  `37bbaae`); remaining response diets (describe_dataset,
+  describe_query_context, get_context_graph routes, graph_overview,
+  list_entities) fall naturally out of Phase 4 merges + a final ratchet
+  wave with the Gate-3 battery rerun.
+- **Phase 5 — 5.1 and 5.2 and 5.3 DONE** (brief, working-the-capsule doc,
+  start-here). Remaining: 5.x wrong-hunch trial at Gate 5.
+- **Phases 6–7 — NOT started** (response-conventions.md exists early;
+  field-trials journal extracted; rest of the docs pass pending).
 
 ## Exact next steps (in order)
 

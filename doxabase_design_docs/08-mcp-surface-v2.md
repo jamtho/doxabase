@@ -91,11 +91,23 @@ gate green each wave:
    `predicate`/`object*`, iri = subject); suggestion emitters across core
    now produce the merged names, and `revisions.find_exact_action` matches
    on `args_aspect` rather than the old tool name.
-2. Recording: rows 10, 13, 14 (biggest count win: −22 tools).
-3. Staging: rows 16–19 (−13 tools).
+2. **DONE (2026-07-05)** Recording: rows 10, 13, 14 (83 → 65 tools — the
+   original "−22" estimate here was a miscount; schema
+   chars 135,986 → 81,816). `_dispatch_kind` in `mcp_tools.py` is the
+   generic kind-validator (targeted errors naming valid/missing fields per
+   kind); absorbed `*_tool` functions remain as dispatch targets.
+3. **DONE (2026-07-05)** Staging: rows 16–19 (65 → 48 tools — the "−13"
+   estimate was a miscount; the rows absorb 18 registrations and add one
+   door). LATITUDE notes: profile followthrough advisory content is served
+   by `stage_revision(kind="profile_map_updates", dry_run=True)` dispatching
+   on spec content; `restage_staged_revision` dispatches single/batch on
+   str/list `revision_iris`; recovery-session override params default None
+   so stored session settings win in describe mode; explicit
+   `repair_draft_limit=null` no longer means unlimited on the MCP door
+   (Python API unchanged). `query_evidence_overlay` is a dry_run-only kind.
 4. Revisions reads: rows 20–21 (−9 tools).
 5. Export/import: rows 22–24 (−12 tools).
-6. Sweep: row 8 fold, removals, docstring budget pass, schema-char budget
+6. Sweep (48 → 25 with rows 4/5): row 8 fold, removals, docstring budget pass, schema-char budget
    pass, scoreboard ceilings to ≤ 25 tools / ≤ 25,000 chars; battery rerun.
 
 Each wave updates: `mcp_tools.py`, `mcp_server.py`, `tests/mcp/`, examples,

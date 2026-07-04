@@ -48,7 +48,9 @@ class MapStagingMixin:
         limit: int = 20,
     ) -> _MapAssertionChangePrepared:
         if graph != "map":
-            raise DoxaBaseError("stage_map_assertion_change currently targets map only")
+            raise DoxaBaseError(
+                "stage_revision kind='map_assertion' currently targets map only"
+            )
         kind = change_kind.strip().lower()
         if kind not in {"add", "remove", "replace"}:
             raise DoxaBaseError("change_kind must be one of 'add', 'remove', or 'replace'")
@@ -473,8 +475,11 @@ class MapStagingMixin:
         limit: int,
     ) -> list[SuggestedNextAction]:
         stage_action = SuggestedNextAction(
-                           tool="doxabase.stage_map_assertion_change",
-                           args=prepared.stage_arguments,
+                           tool="doxabase.stage_revision",
+                           args={
+                               "kind": "map_assertion",
+                               "spec": prepared.stage_arguments,
+                           },
                            reason="Stage this reviewed map assertion change only after the draft "
                 "support, impacts, validation preview, and judgement panel still "
                 "justify the write.",

@@ -1038,8 +1038,9 @@ class RevisionsMixin:
         action: SuggestedNextAction,
         revision_iris: set[str],
     ) -> bool:
-        for key in ("iri", "revision_iri"):
-            value = action_arguments(action).get(key)
+        arguments = action_staging_arguments(action)
+        for key in ("iri", "revision_iri", "revision_iris"):
+            value = arguments.get(key)
             if isinstance(value, str) and value in revision_iris:
                 return True
         for key in (
@@ -1047,7 +1048,7 @@ class RevisionsMixin:
             "source_revision_iris",
             "missing_revision_iris",
         ):
-            values = action_arguments(action).get(key)
+            values = arguments.get(key)
             if not isinstance(values, list):
                 continue
             if any(
@@ -1062,14 +1063,16 @@ class RevisionsMixin:
     ) -> list[str]:
         if action is None:
             return []
+        arguments = action_staging_arguments(action)
         values: list[str] = []
         for key in (
             "iri",
             "revision_iri",
+            "revision_iris",
             "restages_revision",
             "source_revision_iri",
         ):
-            value = action_arguments(action).get(key)
+            value = arguments.get(key)
             if isinstance(value, str):
                 values.append(value)
         for key in (
@@ -1077,7 +1080,7 @@ class RevisionsMixin:
             "source_revision_iris",
             "missing_revision_iris",
         ):
-            list_value = action_arguments(action).get(key)
+            list_value = arguments.get(key)
             if isinstance(list_value, list):
                 values.extend(
                     value for value in list_value if isinstance(value, str)
@@ -1104,8 +1107,12 @@ class RevisionsMixin:
             tool_name: str | None = None,
             reason_contains: str | None = None,
             args_aspect: str | None = None,
+            args_kind: str | None = None,
+            rebase_draft: bool = False,
         ) -> SuggestedNextAction | None:
             for action in suggested_next_actions:
+                if rebase_draft and not staged_rebase_draft_action(action):
+                    continue
                 if (
                     tool_name is not None
                     and action.tool != f"doxabase.{tool_name}"
@@ -1114,6 +1121,11 @@ class RevisionsMixin:
                 if (
                     args_aspect is not None
                     and action.args.get("aspect") != args_aspect
+                ):
+                    continue
+                if (
+                    args_kind is not None
+                    and action.args.get("kind") != args_kind
                 ):
                     continue
                 if (
@@ -1287,7 +1299,7 @@ class RevisionsMixin:
                 "applying this row."
             )
             selected_action = (
-                find_exact_action(tool_name="draft_staged_revision_rebase")
+                find_exact_action(rebase_draft=True)
                 or find_action(tool_name="describe_staged_revision")
             )
         elif apply_decision == "review_then_apply" or apply_status == "ready":
@@ -1316,7 +1328,7 @@ class RevisionsMixin:
                 "candidate instead of applying this row."
             )
             selected_action = (
-                find_exact_action(tool_name="draft_staged_revision_rebase")
+                find_exact_action(rebase_draft=True)
                 or find_action(tool_name="describe_staged_revision")
             )
         elif (
@@ -1340,7 +1352,10 @@ class RevisionsMixin:
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
-        ) and find_exact_action(tool_name="stage_map_assertion_change") is not None:
+        ) and find_exact_action(
+            tool_name="stage_revision",
+            args_kind="map_assertion",
+        ) is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
             label = "Stage same-slot replacement"
@@ -1348,7 +1363,10 @@ class RevisionsMixin:
                 "Exact snapshot drift shows this stale proposal should be "
                 "reviewed as a replacement of a current same-slot value."
             )
-            selected_action = find_exact_action(tool_name="stage_map_assertion_change")
+            selected_action = find_exact_action(
+                tool_name="stage_revision",
+                args_kind="map_assertion",
+            )
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
@@ -1371,9 +1389,7 @@ class RevisionsMixin:
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
-        ) and find_exact_action(
-            tool_name="draft_staged_revision_rebase",
-        ) is not None:
+        ) and find_exact_action(rebase_draft=True) is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
             label = "Draft patch repair plan"
@@ -1382,9 +1398,7 @@ class RevisionsMixin:
                 "a larger stale staged revision. Inspect the read-only plan "
                 "before authoring a complete repaired successor."
             )
-            selected_action = find_exact_action(
-                tool_name="draft_staged_revision_rebase",
-            )
+            selected_action = find_exact_action(rebase_draft=True)
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
@@ -1461,6 +1475,10 @@ class RevisionsMixin:
         next_action: RevisionNextAction,
     ) -> str | None:
         target_iri = next_action.arguments.get("iri")
+        if not isinstance(target_iri, str):
+            # Single-IRI restage actions carry their target as a string
+            # revision_iris value on the merged restage door.
+            target_iri = next_action.arguments.get("revision_iris")
         return target_iri if isinstance(target_iri, str) else None
     def _revision_next_action_queue_item(
         self,
@@ -1498,9 +1516,13 @@ class RevisionsMixin:
             mcp_tool_name=next_action.mcp_tool_name,
             resolved_target_iri=resolved_target_iri,
             resolved_target_iri_source=(
-                "next_action.arguments.iri"
-                if resolved_target_iri is not None
-                else None
+                None
+                if resolved_target_iri is None
+                else (
+                    "next_action.arguments.iri"
+                    if next_action.arguments.get("iri") == resolved_target_iri
+                    else "next_action.arguments.revision_iris"
+                )
             ),
             resolved_target_record_kind=(
                 self._graph_revision_record_kind_for_iri(resolved_target_iri)
@@ -1592,7 +1614,13 @@ class RevisionsMixin:
             return True
         if item.queue != "repair_or_replace":
             return False
-        return item.tool_name in STAGED_RECOVERY_MUTATING_TOOL_NAMES
+        # Queue items carry no arguments, so this cannot consult dry_run or
+        # kind. In repair_or_replace queues the only staging-family action
+        # routed as the selected mutation is the same-slot map_assertion
+        # stage_revision; rebase drafts and apply checks keep their
+        # inspect-only classification because their doors
+        # (restage_staged_revision/apply_staged_revision) are excluded here.
+        return item.tool_name == "stage_revision"
     @staticmethod
     def _semantic_review_required_queue_counts(
         queue_items: Iterable[RevisionNextActionQueueItem],

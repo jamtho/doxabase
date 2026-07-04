@@ -44,13 +44,13 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         action["tool"].removeprefix("doxabase.") for action in before_context["suggested_next_actions"]
     ] == [
         "describe_resource",
-        "draft_query_evidence_storage_overlay",
+        "stage_revision",
     ]
     assert before_context["safe_inspection_action_indexes"] == [0]
     assert before_context["first_safe_inspection_action_index"] == 0
     overlay_action = before_context["suggested_next_actions"][1]
-    assert overlay_action["args"]["dataset_iri"] == dataset
-    assert overlay_action["args"]["evidence_iri"] == result["evidence_iri"]
+    assert overlay_action["args"]["spec"]["dataset_iri"] == dataset
+    assert overlay_action["args"]["spec"]["evidence_iri"] == result["evidence_iri"]
     assert "reviewed values" in overlay_action["reason"]
     route_candidate = next(
         candidate
@@ -66,7 +66,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     )
     assert route_candidate["candidate_kind"] == "local_path_from_query_evidence"
     assert route_candidate[
-        "draft_query_evidence_storage_overlay_candidate_arguments"
+        "query_evidence_overlay_candidate_spec"
     ] == {
         "storage_protocol": "rc:LocalFilesystemStorage",
         "storage_root": str(warehouse),
@@ -75,17 +75,23 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         "file_format": "rc:CSV",
     }
 
-    draft = draft_query_evidence_storage_overlay_tool(
+    draft = stage_revision_tool(
         db,
-        dataset_iri=dataset,
-        evidence_iri=result["evidence_iri"],
-        storage_protocol="rc:LocalFilesystemStorage",
-        storage_root=str(warehouse),
-        location_kind="directory",
-        route_roles=["rc:CurrentRoute"],
-        path_templates=["orders.csv"],
-        file_format="rc:CSV",
-        layout_verification_note="Reviewed query evidence scanned orders.csv.",
+        kind="query_evidence_overlay",
+        dry_run=True,
+        spec={
+            "dataset_iri": dataset,
+            "evidence_iri": result["evidence_iri"],
+            "storage_protocol": "rc:LocalFilesystemStorage",
+            "storage_root": str(warehouse),
+            "location_kind": "directory",
+            "route_roles": ["rc:CurrentRoute"],
+            "path_templates": ["orders.csv"],
+            "file_format": "rc:CSV",
+            "layout_verification_note": (
+                "Reviewed query evidence scanned orders.csv."
+            ),
+        },
     )
 
     assert draft["result_kind"] == "query_evidence_storage_overlay_draft"
@@ -115,8 +121,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         result["observation_iri"]
     ]
     assert draft["suggested_next_actions"][0]["tool"] == (
-        "doxabase.stage_graph_revision"
+        "doxabase.stage_revision"
     )
+    assert draft["suggested_next_actions"][0]["args"]["kind"] == "graph"
 
     still_before_apply = describe_query_context_tool(db, iri=dataset)
     assert still_before_apply["readiness"] == "insufficient_metadata"
@@ -124,7 +131,16 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
 
     staged = stage_graph_revision_tool(db, **draft["stage_arguments"])
     assert staged["validation_conforms"] is True
-    check = check_staged_revision_apply_tool(db, staged["revision_iri"])
+    check = apply_staged_revision_tool(
+        db, iri=staged["revision_iri"], dry_run=True
+    )
+    with pytest.raises(DoxaBaseError, match="read-only apply check"):
+        apply_staged_revision_tool(
+            db,
+            iri=staged["revision_iri"],
+            dry_run=True,
+            created_by="agent",
+        )
     assert check["status"] == "ready"
     applied = apply_staged_revision_tool(db, staged["revision_iri"])
     assert applied["patches_applied"] == 1
@@ -148,17 +164,28 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
         rdfs:label "Messages" .
     """
 
-    result = stage_graph_revision_tool(
+    result = stage_revision_tool(
         db,
-        summary="Try messages table framing",
-        rationale=(
-            "Exploratory hunch: this map shape may generalise better once "
-            "more message-like datasets arrive."
-        ),
-        additions=[{"graph": "map", "content": content}],
-        stance="rc:ExploratoryHunch",
-        validation_scope="all",
+        kind="graph",
+        spec={
+            "summary": "Try messages table framing",
+            "rationale": (
+                "Exploratory hunch: this map shape may generalise better once "
+                "more message-like datasets arrive."
+            ),
+            "additions": [{"graph": "map", "content": content}],
+            "stance": "rc:ExploratoryHunch",
+            "validation_scope": "all",
+        },
     )
+    with pytest.raises(DoxaBaseError, match="kind must be one of"):
+        stage_revision_tool(db, kind="bogus", spec={})
+    with pytest.raises(DoxaBaseError, match="has no dry-run planner"):
+        stage_revision_tool(db, kind="graph", spec={}, dry_run=True)
+    with pytest.raises(DoxaBaseError, match="missing required spec field"):
+        stage_revision_tool(db, kind="graph", spec={"summary": "x"})
+    with pytest.raises(DoxaBaseError, match="dry_run-only"):
+        stage_revision_tool(db, kind="query_evidence_overlay", spec={})
 
     assert result["revision_iri"].startswith(
         "https://richcanopy.org/doxabase/generated/staged-revision/"
@@ -203,12 +230,17 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
             rationale="Reviewer decided not to keep this ready proposal.",
         )
 
-    resolution = record_staged_revision_review_decision_tool(
+    resolution = stage_revision_tool(
         db,
-        iri=result["revision_iri"],
-        decision="discarded",
-        rationale="Reviewer explicitly decided not to keep this ready proposal.",
-        allow_mutation_target=True,
+        kind="review_decision",
+        spec={
+            "iri": result["revision_iri"],
+            "decision": "discarded",
+            "rationale": (
+                "Reviewer explicitly decided not to keep this ready proposal."
+            ),
+            "allow_mutation_target": True,
+        },
     )
 
     assert resolution["staged_revision_iri"] == result["revision_iri"]
@@ -536,7 +568,9 @@ def test_list_graph_versions_tool_can_include_staged_apply_checks(
     assert row["application_blocking_reasons"] == ["target_count_drift"]
     assert row["stale_resolution_state"] == "stale_unresolved"
     assert row["next_action"]["queue"] == "restage_after_review"
-    assert row["next_action"]["arguments"] == {"iri": staged["revision_iri"]}
+    assert row["next_action"]["arguments"] == {
+        "revision_iris": staged["revision_iri"]
+    }
     assert row["next_action_queue_item"]["queue"] == "restage_after_review"
     assert row["next_action_queue_item"]["resolved_target_iri"] == (
         staged["revision_iri"]
@@ -633,8 +667,10 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
         map_implications=[implication],
     )
 
-    result = stage_pattern_promotion_tool(
+    result = stage_revision_tool(
         db,
+        kind="pattern_promotion",
+        spec=dict(
         patterns=[pattern.pattern_iri],
         summary="Promote body_top caveat",
         profile_route_sources=[
@@ -661,6 +697,7 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
                 """,
             }
         ],
+        ),
     )
 
     assert result["result_kind"] == "systematisation_draft"
@@ -681,8 +718,8 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
     assert [
         action["args"]
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.check_staged_revision_apply"
-    ] == [{"iri": revision_iri}]
+        if (action["tool"], action["args"].get("dry_run")) == ("doxabase.apply_staged_revision", True)
+    ] == [{"iri": revision_iri, "dry_run": True}]
     assert result["framings"][0]["stance"] == (
         "https://richcanopy.org/ns/rc#CandidateRevision"
     )
@@ -714,18 +751,23 @@ def test_stage_query_storage_access_repair_tool_stages_new_storage_link(
         path_templates=["messages/current/*.jsonl"],
     )
 
-    staged = stage_query_storage_access_repair_tool(
+    staged = stage_revision_tool(
         db,
-        dataset_iri=dataset,
-        storage_access_iri=storage_access,
-        storage_protocol="rc:LocalFilesystemStorage",
-        storage_root=str(tmp_path / "warehouse"),
-        rationale="Reviewed the local warehouse route for Messages.",
-        route_roles=["rc:CurrentRoute"],
-        location_kind="directory",
-        path_templates=["messages/current/*.jsonl"],
-        layout_verification_status="rc:VerifiedByListingLayout",
-        layout_verification_note="Reviewed from local warehouse listing.",
+        kind="query_storage_access_repair",
+        spec={
+            "dataset_iri": dataset,
+            "storage_access_iri": storage_access,
+            "storage_protocol": "rc:LocalFilesystemStorage",
+            "storage_root": str(tmp_path / "warehouse"),
+            "rationale": "Reviewed the local warehouse route for Messages.",
+            "route_roles": ["rc:CurrentRoute"],
+            "location_kind": "directory",
+            "path_templates": ["messages/current/*.jsonl"],
+            "layout_verification_status": "rc:VerifiedByListingLayout",
+            "layout_verification_note": (
+                "Reviewed from local warehouse listing."
+            ),
+        },
     )
 
     assert staged["validation_conforms"] is True

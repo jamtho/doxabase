@@ -208,7 +208,10 @@ class SystematisationMixin:
         self._validate_resource_values("anchors", anchor_values)
         framing_values = list(framings)
         if not framing_values:
-            raise DoxaBaseError("stage_systematisation requires at least one framing")
+            raise DoxaBaseError(
+                "stage_revision kind='systematisation' requires at least one "
+                "framing"
+            )
         shared_addition_specs = self._patch_specs_with_role(
             self._normalise_patch_spec_list("shared_additions", shared_additions) or [],
             "rc:SharedContextPatch",
@@ -375,7 +378,7 @@ class SystematisationMixin:
                 if relative_index < 1 or relative_index >= index:
                     raise DoxaBaseError(
                         "alternative_to_framing_index must reference an earlier "
-                        "framing in the same stage_systematisation call"
+                        "framing in the same systematisation staging call"
                     )
                 alternative_target = staged_revisions[relative_index - 1].revision_iri
             elif framing_alternative_to:
@@ -579,8 +582,11 @@ class SystematisationMixin:
                 )
                 warning_suggested_actions.append(
                     SuggestedNextAction(
-                        tool="doxabase.stage_systematisation",
-                        args=rerun_arguments,
+                        tool="doxabase.stage_revision",
+                        args={
+                            "kind": "systematisation",
+                            "spec": rerun_arguments,
+                        },
                         reason="The first framing did not route to apply review, "
                             "but later framings default-linked to it as "
                             "alternatives. Rerun with link_alternatives=False "
@@ -835,8 +841,8 @@ class SystematisationMixin:
         )
         for revision_iri in revision_iris:
             add_action(
-                "check_staged_revision_apply",
-                {"iri": revision_iri},
+                "apply_staged_revision",
+                {"iri": revision_iri, "dry_run": True},
                 (
                     "Recheck live apply status and follow the returned "
                     "next_action before applying, repairing, or restaging."
@@ -1344,8 +1350,8 @@ class SystematisationMixin:
                 "framing."
             )
         action = SuggestedNextAction(
-                     tool="doxabase.stage_systematisation",
-                     args=stage_args,
+                     tool="doxabase.stage_revision",
+                     args={"kind": "systematisation", "spec": stage_args},
                      reason="Read-only draft: rerun the systematisation with shared "
                 "ontology/shapes patches copied into only the selected framing "
                 "patches, avoiding manual Turtle reconstruction.",
@@ -1366,8 +1372,9 @@ class SystematisationMixin:
             warnings=warnings,
             note=(
                 "Review the selected target framings semantically before "
-                "calling stage_systematisation. This helper drafts arguments "
-                "only; it does not stage, restage, apply, or edit RDF."
+                "staging the systematisation rerun. This helper drafts "
+                "arguments only; it does not stage, restage, apply, or edit "
+                "RDF."
             ),
         )
     def _append_patch_description_spec(

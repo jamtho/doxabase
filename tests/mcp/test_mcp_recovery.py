@@ -168,10 +168,24 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
     db.apply_staged_revision(event_successor.revision_iri)
     snapshot_successor = db.restage_staged_revision(snapshot_framing.revision_iri)
 
-    result = draft_staged_revision_rebase_tool(
+    result = restage_staged_revision_tool(
         db,
-        iri=snapshot_successor.revision_iri,
+        revision_iris=snapshot_successor.revision_iri,
+        dry_run=True,
     )
+    with pytest.raises(DoxaBaseError, match="read-only"):
+        restage_staged_revision_tool(
+            db,
+            revision_iris=snapshot_successor.revision_iri,
+            dry_run=True,
+            summary="not allowed on a dry run",
+        )
+    with pytest.raises(DoxaBaseError, match="batch review-bundle path"):
+        restage_staged_revision_tool(
+            db,
+            revision_iris=snapshot_successor.revision_iri,
+            path="/tmp/never-written.md",
+        )
 
     assert result["helper"] == "draft_staged_revision_rebase"
     assert result["mode"] == "non_executed_review_draft"
@@ -192,9 +206,12 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
         "none"
     )
     assert result["repair_actions"][0]["tool"] == (
-        "doxabase.stage_map_assertion_change"
+        "doxabase.stage_revision"
     )
-    assert result["repair_actions"][0]["args"]["restages_revision"] == (
+    assert result["repair_actions"][0]["args"]["kind"] == "map_assertion"
+    assert result["repair_actions"][0]["args"]["spec"][
+        "restages_revision"
+    ] == (
         snapshot_successor.revision_iri
     )
     assert result["repair_candidates"][0]["proposed_triples"][0]["object"] == (
@@ -471,10 +488,14 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         ("restage_after_review", True, 2, ["ontology", "shapes"]),
     ]
 
-    rerun_draft = draft_systematisation_shared_context_rerun_tool(
+    rerun_draft = stage_revision_tool(
         db,
-        revision_iris=revision_iris,
-        shared_context_target_revision_iris=[revision_iris[0]],
+        kind="systematisation",
+        dry_run=True,
+        spec={
+            "revision_iris": revision_iris,
+            "shared_context_target_revision_iris": [revision_iris[0]],
+        },
     )
 
     assert rerun_draft["result_kind"] == (
@@ -509,7 +530,10 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         for framing in rerun_args["framings"]
     ] == [["ontology", "shapes", "map"], ["patterns"]]
     assert rerun_draft["suggested_next_actions"][0]["tool"] == (
-        "doxabase.stage_systematisation"
+        "doxabase.stage_revision"
+    )
+    assert rerun_draft["suggested_next_actions"][0]["args"]["kind"] == (
+        "systematisation"
     )
 
     rerun = stage_systematisation_tool(db, **rerun_args)
@@ -561,7 +585,9 @@ def test_shared_systematisation_recovery_drafts_no_surgery_rerun(
         ("restage_after_review", True, 2, ["ontology", "shapes"]),
     ]
 
-    restaged = restage_staged_revisions_tool(db, revision_iris, dry_run=False)
+    restaged = restage_staged_revision_tool(
+        db, revision_iris=revision_iris, dry_run=False
+    )
 
     assert restaged["restaged_revision_iris"]
     assert restaged["bundle_summary"]["shared_context_graphs"] == [
@@ -602,9 +628,16 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
     )
     manifest_path = tmp_path / "handoff-manifest.json"
 
-    session = start_staged_revision_recovery_session_tool(
+    with pytest.raises(DoxaBaseError, match="only valid with start_session"):
+        plan_staged_revision_recovery_tool(
+            db,
+            revision_iris=[staged["revision_iri"]],
+            summary="MCP recovery session",
+        )
+    session = plan_staged_revision_recovery_tool(
         db,
         revision_iris=[staged["revision_iri"]],
+        start_session=True,
         summary="MCP recovery session",
         handoff_manifest_path=str(manifest_path),
         drift_detail="exact",
@@ -628,7 +661,13 @@ def test_staged_revision_recovery_session_tools_return_json_like_payload(
     )
 
     restaged = restage_staged_revision_tool(db, staged["revision_iri"])
-    described = describe_staged_revision_recovery_session_tool(
+    with pytest.raises(DoxaBaseError, match="describes a persisted recovery"):
+        plan_staged_revision_recovery_tool(
+            db,
+            session_iri=session["session_iri"],
+            revision_iris=[staged["revision_iri"]],
+        )
+    described = plan_staged_revision_recovery_tool(
         db,
         session_iri=session["session_iri"],
         drift_detail="exact",
@@ -796,7 +835,7 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
         lane["exact_drift_summary"]
     )
     batch_action = result["suggested_next_actions"][0]
-    assert batch_action["tool"] == "doxabase.restage_staged_revisions"
+    assert batch_action["tool"] == "doxabase.restage_staged_revision"
     assert batch_action["args"] == {
         "revision_iris": [staged["revision_iri"]],
         "dry_run": True,
@@ -811,7 +850,7 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     assert steps[0]["mutates"] is False
     assert steps[0]["requires_replan_after_completion"] is False
     assert steps[0]["revision_iris"] == [staged["revision_iri"]]
-    assert steps[1]["action"]["tool"] == "doxabase.restage_staged_revisions"
+    assert steps[1]["action"]["tool"] == "doxabase.restage_staged_revision"
     assert steps[1]["action"]["args"] == {
         "revision_iris": [staged["revision_iri"]],
         "dry_run": False,
@@ -831,7 +870,7 @@ def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     )
     assert any(
         action["tool"] == "doxabase.restage_staged_revision"
-        and action["args"] == {"iri": staged["revision_iri"]}
+        and action["args"] == {"revision_iris": staged["revision_iri"]}
         for action in result["suggested_next_actions"]
     )
 
@@ -879,11 +918,11 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert lane.get("repair_draft_deferred_reason") is None
     assert lane["next_action"]["tool_name"] != "draft_staged_revision_rebase"
     assert all(
-        action["tool"] != "doxabase.draft_staged_revision_rebase"
+        (action["tool"], action["args"].get("dry_run")) != ("doxabase.restage_staged_revision", True)
         for action in lane["suggested_next_actions"]
     )
     assert all(
-        action["tool"] != "doxabase.draft_staged_revision_rebase"
+        (action["tool"], action["args"].get("dry_run")) != ("doxabase.restage_staged_revision", True)
         for action in result["suggested_next_actions"]
     )
 
@@ -901,7 +940,8 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     assert zero_lane["repair_draft_deferred_reason"] == (
         "repair_draft_limit_reached"
     )
-    assert zero_lane["next_action"]["tool_name"] == "draft_staged_revision_rebase"
+    assert zero_lane["next_action"]["tool_name"] == "restage_staged_revision"
+    assert zero_lane["next_action"]["arguments"].get("dry_run") is True
     assert any(
         "repair_draft_limit=0" in warning
         for warning in zero_draft_result["warnings"]
@@ -945,8 +985,10 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         rdfs:label "Messages" .
     """
 
-    result = stage_systematisation_tool(
+    result = stage_revision_tool(
         db,
+        kind="systematisation",
+        spec=dict(
         summary="Explore identity-ladder modelling",
         intent="Preserve two possible RDF shapes for the same modelling hunch.",
         anchors=[observation.observation_iri],
@@ -969,6 +1011,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
                 "reviewRecommendation": "Keep as a concrete alternative.",
             },
         ],
+        ),
     )
 
     assert result["result_kind"] == "systematisation_draft"
@@ -1072,8 +1115,11 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert [
         action["args"]
         for action in result["suggested_next_actions"]
-        if action["tool"] == "doxabase.check_staged_revision_apply"
-    ] == [{"iri": revision_iri} for revision_iri in revision_iris]
+        if (action["tool"], action["args"].get("dry_run")) == ("doxabase.apply_staged_revision", True)
+    ] == [
+        {"iri": revision_iri, "dry_run": True}
+        for revision_iri in revision_iris
+    ]
     assert result["staged_revisions"][0]["summary"] == (
         "Explore identity-ladder modelling: Pattern first"
     )
@@ -1321,14 +1367,15 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
         "suggested_rerun_arguments": {"link_alternatives": False},
     }
     rerun_action = result["suggested_next_actions"][0]
-    assert rerun_action["tool"] == "doxabase.stage_systematisation"
-    assert rerun_action["args"]["summary"] == "Compare thing framings"
-    assert rerun_action["args"]["link_alternatives"] is False
-    assert rerun_action["args"]["shared_additions"] == [
+    assert (rerun_action["tool"], rerun_action["args"].get("kind")) == ("doxabase.stage_revision", "systematisation")
+    assert rerun_action["args"]["spec"]["summary"] == "Compare thing framings"
+    assert rerun_action["args"]["spec"]["link_alternatives"] is False
+    assert rerun_action["args"]["spec"]["shared_additions"] == [
         {"graph": "shapes", "content": shared_shape}
     ]
     assert [
-        framing["label"] for framing in rerun_action["args"]["framings"]
+        framing["label"]
+        for framing in rerun_action["args"]["spec"]["framings"]
     ] == [
         "Diagnostic incomplete thing",
         "Complete thing",

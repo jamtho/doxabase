@@ -682,7 +682,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "add_reviewed_relation_template"
     )
     assert plan["handoff_summary"]["primary_repair_tool"] == (
-        "doxabase.stage_map_assertion_change"
+        "doxabase.stage_revision"
     )
     assert plan["handoff_summary"]["primary_repair_required_extra_arguments"] == [
         "object",
@@ -768,7 +768,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         staged_storage_option,
         action_index=0,
         action_type="stage_reviewed_storage_access",
-        tool="doxabase.stage_query_storage_access_repair",
+        tool="doxabase.stage_revision",
         required_extra_arguments=[
             "storage_access_iri",
             "storage_protocol",
@@ -815,7 +815,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     )
     assert "non-secret storage protocol" in storage_option["reason"]
     assert "Database relation identifiers" in storage_option["condition"]
-    assert "record_map_storage_access writes current-best map facts directly" in (
+    assert "record_map_fact kind='storage_access' writes current-best map facts" in (
         storage_option["review_rationale_guidance"]
     )
     link_option = repair_group["pending_action_options"][2]
@@ -823,7 +823,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         link_option,
         action_index=2,
         action_type="stage_existing_storage_access_link",
-        tool="doxabase.stage_map_assertion_change",
+        tool="doxabase.stage_revision",
         required_extra_arguments=["object", "rationale"],
         placeholder_fields=["object"],
         reviewed_value_fields=["object"],
@@ -869,11 +869,15 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     ] is False
     record_action = action_by_type["record_reviewed_storage_access"]
     staged_record_action = action_by_type["stage_reviewed_storage_access"]
-    assert staged_record_action["arguments_template"]["dataset_iri"] == dataset
-    assert staged_record_action["arguments_template"]["storage_access_iri"] == (
+    assert staged_record_action["arguments_template"]["spec"][
+        "dataset_iri"
+    ] == dataset
+    assert staged_record_action["arguments_template"]["spec"][
+        "storage_access_iri"
+    ] == (
         "<reviewed storage access IRI>"
     )
-    assert "stage_query_storage_access_repair records a reviewable" in (
+    assert "stage_revision kind='query_storage_access_repair' records" in (
         staged_record_action["review_rationale_guidance"]
     )
     assert "rc:DatabaseStorage" in record_action["protocol_guidance"]
@@ -886,11 +890,11 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     link_action = action_by_type["stage_existing_storage_access_link"]
     assert link_action["placeholder_fields"] == ["object"]
     assert link_action["reviewed_value_fields"] == ["object"]
-    assert link_action["arguments_template"]["object"] == (
+    assert link_action["arguments_template"]["spec"]["object"] == (
         "<reviewed existing storage access IRI>"
     )
 
-    link_arguments = dict(link_action["arguments_template"])
+    link_arguments = dict(link_action["arguments_template"]["spec"])
     link_arguments["object"] = storage["iri"]
     link_arguments["rationale"] = "Reviewed the existing Messages storage route."
     staged = stage_map_assertion_change_tool(db, **link_arguments)

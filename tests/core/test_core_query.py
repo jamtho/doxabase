@@ -298,20 +298,26 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "stage_existing_storage_access_link",
     ]
     assert [action["tool"].removeprefix("doxabase.") for action in repair_actions] == [
-        "stage_query_storage_access_repair",
+        "stage_revision",
         "record_map_fact",
-        "stage_map_assertion_change",
+        "stage_revision",
     ]
+    assert repair_actions[0]["arguments_template"]["kind"] == (
+        "query_storage_access_repair"
+    )
+    assert repair_actions[2]["arguments_template"]["kind"] == "map_assertion"
     assert repair_actions[0]["required_extra_arguments"] == [
         "storage_access_iri",
         "storage_protocol",
         "storage_root",
         "rationale",
     ]
-    assert repair_actions[0]["arguments_template"]["dataset_iri"] == dataset
-    assert repair_actions[0]["arguments_template"]["storage_access_iri"] == (
-        "<reviewed storage access IRI>"
+    assert repair_actions[0]["arguments_template"]["spec"]["dataset_iri"] == (
+        dataset
     )
+    assert repair_actions[0]["arguments_template"]["spec"][
+        "storage_access_iri"
+    ] == "<reviewed storage access IRI>"
     assert repair_actions[0]["placeholder_fields"] == [
         "storage_access_iri",
         "storage_protocol",
@@ -323,8 +329,10 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "layout_verification_status",
         "layout_verification_note",
     ]
-    assert "stage_query_storage_access_repair records a reviewable" in (
-        repair_actions[0]["review_rationale_guidance"]
+    assert (
+        "stage_revision kind='query_storage_access_repair' records" in (
+            repair_actions[0]["review_rationale_guidance"]
+        )
     )
     assert repair_actions[1]["required_extra_arguments"] == [
         "iri",
@@ -355,16 +363,19 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert "database relation identifiers" in repair_actions[1][
         "protocol_guidance"
     ]["rc:DatabaseStorage"]
-    assert "record_map_storage_access writes current-best map facts directly" in (
-        repair_actions[1]["review_rationale_guidance"]
+    assert (
+        "record_map_fact kind='storage_access' writes current-best map facts"
+        in repair_actions[1]["review_rationale_guidance"]
     )
-    assert repair_actions[2]["arguments_template"]["subject"] == dataset
-    assert repair_actions[2]["arguments_template"]["predicate"] == (
+    assert repair_actions[2]["arguments_template"]["spec"]["subject"] == dataset
+    assert repair_actions[2]["arguments_template"]["spec"]["predicate"] == (
         "rc:hasStorageAccess"
     )
     assert repair_actions[2]["placeholder_fields"] == ["object"]
     assert repair_actions[2]["reviewed_value_fields"] == ["object"]
-    assert "revision_anchors" not in repair_actions[2]["arguments_template"]
+    assert "revision_anchors" not in (
+        repair_actions[2]["arguments_template"]["spec"]
+    )
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.group_name == "query_repair_review"
@@ -399,7 +410,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         staged_storage_option,
         action_index=0,
         action_type="stage_reviewed_storage_access",
-        tool="doxabase.stage_query_storage_access_repair",
+        tool="doxabase.stage_revision",
         required_extra_arguments=[
             "storage_access_iri",
             "storage_protocol",
@@ -446,7 +457,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
     )
     assert "non-secret storage protocol" in storage_option["reason"]
     assert "Database relation identifiers" in storage_option["condition"]
-    assert "record_map_storage_access writes current-best map facts directly" in (
+    assert "record_map_fact kind='storage_access' writes current-best map facts" in (
         storage_option["review_rationale_guidance"]
     )
     link_option = repair_group.pending_action_options[2]
@@ -454,7 +465,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         link_option,
         action_index=2,
         action_type="stage_existing_storage_access_link",
-        tool="doxabase.stage_map_assertion_change",
+        tool="doxabase.stage_revision",
         required_extra_arguments=["object", "rationale"],
         placeholder_fields=["object"],
         reviewed_value_fields=["object"],
@@ -466,14 +477,16 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "stage_existing_storage_access_link",
     ]
     assert [action["tool"].removeprefix("doxabase.") for action in repair_group.actions] == [
-        "stage_query_storage_access_repair",
+        "stage_revision",
         "record_map_fact",
-        "stage_map_assertion_change",
+        "stage_revision",
     ]
-    assert repair_group.actions[0]["arguments_template"]["dataset_iri"] == dataset
+    assert repair_group.actions[0]["arguments_template"]["spec"][
+        "dataset_iri"
+    ] == dataset
     assert repair_group.actions[1]["arguments_template"]["kind"] == "storage_access"
     assert repair_group.actions[1]["arguments_template"]["spec"]["datasets"] == [dataset]
-    assert repair_group.actions[2]["arguments_template"]["predicate"] == (
+    assert repair_group.actions[2]["arguments_template"]["spec"]["predicate"] == (
         "rc:hasStorageAccess"
     )
     assert repair_group.actions[2]["placeholder_fields"] == ["object"]
@@ -954,12 +967,15 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     }
     assert grouped_action_by_type == action_by_type
     assert action_by_type["set_reviewed_storage_protocol"]["arguments_template"] == {
-        "subject": storage.iri,
-        "predicate": "rc:storageProtocol",
-        "object": "<reviewed_rc_storage_protocol_iri>",
-        "object_kind": "iri",
-        "change_kind": "replace",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:storageProtocol",
+            "object": "<reviewed_rc_storage_protocol_iri>",
+            "object_kind": "iri",
+            "change_kind": "replace",
+            "graph": "map",
+        },
     }
     assert action_by_type["set_reviewed_storage_protocol"]["placeholder_fields"] == [
         "object"
@@ -973,24 +989,32 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     assert "set_reviewed_bucket_name" not in action_by_type
     assert "set_reviewed_key_prefix" not in action_by_type
     assert action_by_type["remove_conflicting_bucket_name"]["args"] == {
-        "subject": storage.iri,
-        "predicate": "rc:bucketName",
-        "object": "public",
-        "object_kind": "literal",
-        "change_kind": "remove",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:bucketName",
+            "object": "public",
+            "object_kind": "literal",
+            "change_kind": "remove",
+            "graph": "map",
+        },
     }
     assert action_by_type["remove_conflicting_key_prefix"]["args"] == {
-        "subject": storage.iri,
-        "predicate": "rc:keyPrefix",
-        "object": "snapshots",
-        "object_kind": "literal",
-        "change_kind": "remove",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:keyPrefix",
+            "object": "snapshots",
+            "object_kind": "literal",
+            "change_kind": "remove",
+            "graph": "map",
+        },
     }
 
     protocol_arguments = dict(
-        action_by_type["set_reviewed_storage_protocol"]["arguments_template"]
+        action_by_type["set_reviewed_storage_protocol"]["arguments_template"][
+            "spec"
+        ]
     )
     protocol_arguments["object"] = "rc:S3CompatibleStorage"
     protocol_arguments["rationale"] = (
@@ -1298,12 +1322,15 @@ def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
         action["action_type"]: action for action in repair_hint["actions"]
     }
     assert action_by_type["add_reviewed_path_template"]["arguments_template"] == {
-        "subject": storage.iri,
-        "predicate": "rc:pathTemplate",
-        "object": "<reviewed_protocol_appropriate_path_template>",
-        "object_kind": "literal",
-        "change_kind": "add",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:pathTemplate",
+            "object": "<reviewed_protocol_appropriate_path_template>",
+            "object_kind": "literal",
+            "change_kind": "add",
+            "graph": "map",
+        },
     }
     assert action_by_type["add_reviewed_path_template"]["placeholder_fields"] == [
         "object"
@@ -1312,12 +1339,15 @@ def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
         "reviewed_value_fields"
     ] == ["object"]
     assert action_by_type["remove_conflicting_path_template"]["args"] == {
-        "subject": storage.iri,
-        "predicate": "rc:pathTemplate",
-        "object": "s3://public-bucket/snapshots/*.parquet",
-        "object_kind": "literal",
-        "change_kind": "remove",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:pathTemplate",
+            "object": "s3://public-bucket/snapshots/*.parquet",
+            "object_kind": "literal",
+            "change_kind": "remove",
+            "graph": "map",
+        },
     }
 
 
@@ -1567,12 +1597,12 @@ def test_query_context_suggests_overlay_for_ordinary_query_evidence(
     overlay_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
+        if (action.tool, action.args.get("kind"), action.args.get("dry_run")) == ("doxabase.stage_revision", "query_evidence_overlay", True)
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action.args["dataset_iri"] == dataset
-    assert overlay_action.args["evidence_iri"] == result.evidence_iri
+    assert overlay_action.args["spec"]["dataset_iri"] == dataset
+    assert overlay_action.args["spec"]["evidence_iri"] == result.evidence_iri
 
 
 def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
@@ -1598,7 +1628,7 @@ def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
     overlay_action = next(
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
+        if (action.tool, action.args.get("kind"), action.args.get("dry_run")) == ("doxabase.stage_revision", "query_evidence_overlay", True)
     )
     s3_candidate = next(
         candidate
@@ -1626,7 +1656,7 @@ def test_query_evidence_storage_overlay_echoes_optional_storage_fields(
     assert s3_candidate["path_templates"] == ["warehouse/orders/*.parquet"]
     assert s3_candidate["file_format"] == "rc:Parquet"
     assert s3_candidate[
-        "draft_query_evidence_storage_overlay_candidate_arguments"
+        "query_evidence_overlay_candidate_spec"
     ] == {
         "storage_protocol": "rc:S3CompatibleStorage",
         "storage_root": "s3://orders-reviewed",
@@ -2326,7 +2356,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "remove_misplaced_source_template"
     )
     assert plan.handoff_summary.primary_repair_tool == (
-        "doxabase.stage_map_assertion_change"
+        "doxabase.stage_revision"
     )
     assert plan.handoff_summary.primary_repair_required_extra_arguments == [
         "rationale"
@@ -2491,12 +2521,15 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "required_template_source": "storage_access",
     }
     assert repair_hint["actions"][0]["arguments_template"] == {
-        "subject": storage.iri,
-        "predicate": "rc:pathTemplate",
-        "object": "<reviewed_database_relation_identifier>",
-        "object_kind": "literal",
-        "change_kind": "add",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:pathTemplate",
+            "object": "<reviewed_database_relation_identifier>",
+            "object_kind": "literal",
+            "change_kind": "add",
+            "graph": "map",
+        },
     }
     assert repair_hint["actions"][0]["source_subject_iri"] == dataset
     assert repair_hint["actions"][0]["misplaced_template_subject_iri"] == dataset
@@ -2511,12 +2544,15 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         f"Reviewed database relation identifier for {storage.iri}."
     )
     assert repair_hint["actions"][1]["args"] == {
-        "subject": dataset,
-        "predicate": "rc:pathTemplate",
-        "object": dataset_template,
-        "object_kind": "literal",
-        "change_kind": "remove",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": dataset,
+            "predicate": "rc:pathTemplate",
+            "object": dataset_template,
+            "object_kind": "literal",
+            "change_kind": "remove",
+            "graph": "map",
+        },
     }
     assert repair_hint["actions"][1]["source_subject_iri"] == dataset
     assert repair_hint["actions"][1]["misplaced_template_subject_iri"] == dataset
@@ -2661,12 +2697,12 @@ def test_database_root_only_storage_requires_relation_template(
     }
     assert repair_hint["candidate_relation_identifier"]["requires_review"] is True
     add_action = repair_hint["actions"][0]
-    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
-    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
+    assert add_action["tool"] == "doxabase.stage_revision"
+    assert add_action["arguments_template"]["kind"] == "map_assertion"
     assert add_action["required_extra_arguments"] == ["object", "rationale"]
     assert add_action["placeholder_fields"] == ["object"]
     assert add_action["reviewed_value_fields"] == ["object"]
-    assert add_action["arguments_template"] == {
+    assert add_action["arguments_template"]["spec"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",
         "object": "<reviewed_database_relation_identifier>",
@@ -2783,8 +2819,9 @@ def test_describe_query_context_demotes_non_object_root_only_location(
         "set_root_as_exact_object_location",
     ]
     add_action = repair_hint["actions"][0]
-    assert add_action["tool"] == "doxabase.stage_map_assertion_change"
-    assert add_action["arguments_template"] == {
+    assert add_action["tool"] == "doxabase.stage_revision"
+    assert add_action["arguments_template"]["kind"] == "map_assertion"
+    assert add_action["arguments_template"]["spec"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",
         "object": "<reviewed_relative_path_template>",
@@ -2797,12 +2834,15 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert add_action["reviewed_value_fields"] == ["object"]
     exact_root_action = repair_hint["actions"][1]
     assert exact_root_action["args"] == {
-        "subject": storage.iri,
-        "predicate": "rc:locationKind",
-        "object": "object",
-        "object_kind": "literal",
-        "change_kind": "add" if location_kind is None else "replace",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage.iri,
+            "predicate": "rc:locationKind",
+            "object": "object",
+            "object_kind": "literal",
+            "change_kind": "add" if location_kind is None else "replace",
+            "graph": "map",
+        },
     }
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]

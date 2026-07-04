@@ -1174,7 +1174,9 @@ def test_list_graph_versions_can_include_staged_apply_checks(
     assert row.stale_resolution_state == "stale_unresolved"
     assert row.next_action is not None
     assert row.next_action.queue == "restage_after_review"
-    assert row.next_action.arguments == {"iri": staged.revision_iri}
+    assert row.next_action.arguments == {
+        "revision_iris": staged.revision_iri
+    }
     assert row.next_action_queue_item is not None
     assert row.next_action_queue_item.queue == "restage_after_review"
     assert row.next_action_queue_item.resolved_target_iri == staged.revision_iri
@@ -1570,7 +1572,8 @@ def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
     assert conflict_row.next_action is not None
     assert conflict_row.next_action.action_type == "repair_or_replace"
     assert conflict_row.next_action.queue == "repair_or_replace"
-    assert conflict_row.next_action.tool_name == "draft_staged_revision_rebase"
+    assert conflict_row.next_action.tool_name == "restage_staged_revision"
+    assert conflict_row.next_action.arguments.get("dry_run") is True
 
     export = db.export_staged_revisions(
         [staged.revision_iri],
@@ -2132,20 +2135,23 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "link_alternatives": False
     }
     rerun_action = draft.suggested_next_actions[0]
-    assert rerun_action.tool == "doxabase.stage_systematisation"
-    assert rerun_action.args["summary"] == (
+    assert (rerun_action.tool, rerun_action.args.get("kind")) == ("doxabase.stage_revision", "systematisation")
+    assert rerun_action.args["spec"]["summary"] == (
         "Promote temporal interpretation alternatives"
     )
-    assert rerun_action.args["intent"] == (
+    assert rerun_action.args["spec"]["intent"] == (
         "Stage alternative RDF framings for temporal semantics that do not "
         "fit a simple dataset or column map helper."
     )
-    assert rerun_action.args["link_alternatives"] is False
-    assert rerun_action.args["shared_additions"] == [
+    assert rerun_action.args["spec"]["link_alternatives"] is False
+    assert rerun_action.args["spec"]["shared_additions"] == [
         {"graph": "ontology", "content": shared_ontology},
         {"graph": "shapes", "content": shared_shape},
     ]
-    assert [framing["label"] for framing in rerun_action.args["framings"]] == [
+    assert [
+        framing["label"]
+        for framing in rerun_action.args["spec"]["framings"]
+    ] == [
         "Incomplete map scope without timezone evidence",
         "Repaired map scope with timezone evidence",
         "Pattern-first temporal lore",
@@ -2161,8 +2167,11 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     assert [
         action.args
         for action in draft.suggested_next_actions
-        if action.tool == "doxabase.check_staged_revision_apply"
-    ] == [{"iri": revision_iri} for revision_iri in revision_iris]
+        if (action.tool, action.args.get("dry_run")) == ("doxabase.apply_staged_revision", True)
+    ] == [
+        {"iri": revision_iri, "dry_run": True}
+        for revision_iri in revision_iris
+    ]
     export_path = tmp_path / "temporal-interpretation-review.md"
     export = db.export_staged_revisions(
         revision_iris,
@@ -2461,14 +2470,20 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         action.tool.removeprefix("doxabase.") for action in before_context.suggested_next_actions
     ] == [
         "describe_resource",
-        "draft_query_evidence_storage_overlay",
+        "stage_revision",
     ]
+    assert before_context.suggested_next_actions[1].args.get("kind") == (
+        "query_evidence_overlay"
+    )
+    assert before_context.suggested_next_actions[1].args.get(
+        "dry_run"
+    ) is True
     assert before_context.safe_inspection_action_indexes == [0]
     assert before_context.first_safe_inspection_action_index == 0
     overlay_action = before_context.suggested_next_actions[1]
-    assert overlay_action.args["dataset_iri"] == dataset
-    assert overlay_action.args["evidence_iri"] == result.evidence_iri
-    assert overlay_action.args["storage_protocol"] == (
+    assert overlay_action.args["spec"]["dataset_iri"] == dataset
+    assert overlay_action.args["spec"]["evidence_iri"] == result.evidence_iri
+    assert overlay_action.args["spec"]["storage_protocol"] == (
         "REVIEWED_STORAGE_PROTOCOL"
     )
     assert "reviewed values" in overlay_action.reason
@@ -2493,7 +2508,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert local_candidate["path_templates"] == ["orders.csv"]
     assert local_candidate["file_format"] == "rc:CSV"
     assert local_candidate[
-        "draft_query_evidence_storage_overlay_candidate_arguments"
+        "query_evidence_overlay_candidate_spec"
     ] == {
         "storage_protocol": "rc:LocalFilesystemStorage",
         "storage_root": str(warehouse),
@@ -2554,8 +2569,14 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         result.observation_iri
     ]
     assert draft.stage_arguments["evidence"] == [result.evidence_iri]
-    assert draft.suggested_next_actions[0].tool == "doxabase.stage_graph_revision"
-    assert draft.suggested_next_actions[0].args == draft.stage_arguments
+    assert (
+        draft.suggested_next_actions[0].tool,
+        draft.suggested_next_actions[0].args.get("kind"),
+    ) == ("doxabase.stage_revision", "graph")
+    assert draft.suggested_next_actions[0].args == {
+        "kind": "graph",
+        "spec": draft.stage_arguments,
+    }
 
     staged = db.stage_graph_revision(**draft.stage_arguments)
     assert staged.validation_conforms is True
@@ -2616,7 +2637,7 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     assert add_action["required_extra_arguments"] == ["object", "rationale"]
     assert add_action["placeholder_fields"] == ["object"]
     assert add_action["reviewed_value_fields"] == ["object"]
-    add_arguments = dict(add_action["arguments_template"])
+    add_arguments = dict(add_action["arguments_template"]["spec"])
     add_arguments["object"] = "mart.events"
     add_arguments["rationale"] = "Reviewed mart.events as the database relation."
     add_revision = db.stage_map_assertion_change(**add_arguments)
@@ -2686,7 +2707,7 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     ] == ["mart.events"]
     remove_action = repair_hint["actions"][0]
     assert remove_action["required_extra_arguments"] == ["rationale"]
-    remove_arguments = dict(remove_action["args"])
+    remove_arguments = dict(remove_action["args"]["spec"])
     remove_arguments["rationale"] = (
         "Reviewed dataset path template as misplaced database relation metadata."
     )

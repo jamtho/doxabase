@@ -493,24 +493,105 @@ def draft_systematisation_shared_context_rerun_tool(
 def plan_staged_revision_recovery_tool(
     db: DoxaBase,
     revision_iris: list[str] | None = None,
-    current_staged_work_only: bool = True,
-    include_drafts: bool = True,
-    repair_draft_limit: int | None = 1,
+    start_session: bool = False,
+    session_iri: str | None = None,
+    summary: str | None = None,
+    handoff_manifest_path: str | None = None,
+    current_staged_work_only: bool | None = None,
+    include_drafts: bool | None = None,
+    repair_draft_limit: int | None = None,
     validation_scope: str | None = None,
-    drift_detail: str = "summary",
-    limit: int = 50,
-    offset: int = 0,
+    drift_detail: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
 ) -> dict[str, Any]:
+    if start_session:
+        return start_staged_revision_recovery_session_tool(
+            db,
+            revision_iris=revision_iris,
+            session_iri=session_iri,
+            summary=summary,
+            handoff_manifest_path=handoff_manifest_path,
+            current_staged_work_only=(
+                True if current_staged_work_only is None else current_staged_work_only
+            ),
+            include_drafts=True if include_drafts is None else include_drafts,
+            repair_draft_limit=(
+                1 if repair_draft_limit is None else repair_draft_limit
+            ),
+            validation_scope=validation_scope,
+            drift_detail="summary" if drift_detail is None else drift_detail,
+            limit=50 if limit is None else limit,
+            offset=0 if offset is None else offset,
+            created_at=created_at,
+            created_by=created_by,
+        )
+    if session_iri is not None:
+        invalid = [
+            name
+            for name, value in (
+                ("revision_iris", revision_iris),
+                ("summary", summary),
+                ("handoff_manifest_path", handoff_manifest_path),
+                ("current_staged_work_only", current_staged_work_only),
+                ("limit", limit),
+                ("offset", offset),
+                ("created_at", created_at),
+                ("created_by", created_by),
+            )
+            if value is not None
+        ]
+        if invalid:
+            raise DoxaBaseError(
+                "plan_staged_revision_recovery session_iri= describes a "
+                "persisted recovery session, which only takes include_drafts, "
+                "repair_draft_limit, validation_scope, and drift_detail "
+                "overrides (session settings otherwise); remove "
+                f"{sorted(invalid)} or set start_session=true to persist a "
+                "new session."
+            )
+        return describe_staged_revision_recovery_session_tool(
+            db,
+            session_iri=session_iri,
+            include_drafts=include_drafts,
+            repair_draft_limit=repair_draft_limit,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+        )
+    invalid = [
+        name
+        for name, value in (
+            ("summary", summary),
+            ("handoff_manifest_path", handoff_manifest_path),
+            ("created_at", created_at),
+            ("created_by", created_by),
+        )
+        if value is not None
+    ]
+    if invalid:
+        raise DoxaBaseError(
+            f"plan_staged_revision_recovery {sorted(invalid)} are only valid "
+            "with start_session=true, which persists the plan as a durable "
+            "recovery session."
+        )
     return to_dict(
         db.plan_staged_revision_recovery(
             revision_iris=revision_iris,
-            current_staged_work_only=current_staged_work_only,
-            include_drafts=include_drafts,
-            repair_draft_limit=repair_draft_limit,
+            current_staged_work_only=(
+                True if current_staged_work_only is None else current_staged_work_only
+            ),
+            include_drafts=True if include_drafts is None else include_drafts,
+            repair_draft_limit=(
+                1 if repair_draft_limit is None else repair_draft_limit
+            ),
             validation_scope=validation_scope,  # type: ignore[arg-type]
-            drift_detail=drift_detail,  # type: ignore[arg-type]
-            limit=limit,
-            offset=offset,
+            drift_detail=(  # type: ignore[arg-type]
+                "summary" if drift_detail is None else drift_detail
+            ),
+            limit=50 if limit is None else limit,
+            offset=0 if offset is None else offset,
         )
     )
 
@@ -2481,22 +2562,88 @@ def stage_graph_revision_tool(
 
 def restage_staged_revision_tool(
     db: DoxaBase,
-    iri: str,
+    revision_iris: list[str] | str,
     summary: str | None = None,
     rationale: str | None = None,
+    path: str | None = None,
+    title: str | None = None,
+    executive_summary: str | None = None,
+    format: str = "markdown",
+    overwrite: bool = False,
     created_at: str | None = None,
     created_by: str | None = None,
     validation_scope: str | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
-    result = db.restage_staged_revision(
-        iri=iri,
-        summary=summary,
-        rationale=rationale,
+    if isinstance(revision_iris, str):
+        batch_only = [
+            name
+            for name, value in (
+                ("path", path),
+                ("title", title),
+                ("executive_summary", executive_summary),
+            )
+            if value is not None
+        ]
+        if overwrite:
+            batch_only.append("overwrite")
+        if batch_only:
+            raise DoxaBaseError(
+                f"restage_staged_revision {sorted(batch_only)} belong to the "
+                "batch review-bundle path; pass revision_iris as a list to "
+                "restage several revisions or export a comparison bundle."
+            )
+        if dry_run:
+            single_only = [
+                name
+                for name, value in (
+                    ("summary", summary),
+                    ("rationale", rationale),
+                    ("created_at", created_at),
+                    ("created_by", created_by),
+                )
+                if value is not None
+            ]
+            if single_only:
+                raise DoxaBaseError(
+                    "restage_staged_revision dry_run=True drafts a read-only "
+                    "rebase plan, which only takes revision_iris and "
+                    f"validation_scope; remove {sorted(single_only)} or set "
+                    "dry_run=false to restage."
+                )
+            return draft_staged_revision_rebase_tool(
+                db,
+                iri=revision_iris,
+                validation_scope=validation_scope,
+            )
+        result = db.restage_staged_revision(
+            iri=revision_iris,
+            summary=summary,
+            rationale=rationale,
+            created_at=created_at,
+            created_by=created_by,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+        )
+        return to_dict(result)
+    if summary is not None or rationale is not None:
+        raise DoxaBaseError(
+            "restage_staged_revision summary/rationale overrides only apply "
+            "when revision_iris is a single IRI string; the batch path "
+            "derives per-revision restage summaries."
+        )
+    return restage_staged_revisions_tool(
+        db,
+        revision_iris=revision_iris,
+        path=path,
+        title=title,
+        executive_summary=executive_summary,
+        format=format,
+        overwrite=overwrite,
         created_at=created_at,
         created_by=created_by,
-        validation_scope=validation_scope,  # type: ignore[arg-type]
+        validation_scope=validation_scope,
+        dry_run=dry_run,
     )
-    return to_dict(result)
 
 
 def restage_staged_revisions_tool(
@@ -2756,6 +2903,104 @@ def stage_pattern_promotion_tool(
     return to_dict(result)
 
 
+def _stage_revision_profile_map_updates_dry_run(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    graph: str | None = "map",
+    result_bindings: dict[str, Any] | None = None,
+    staged_revision_iris: list[str] | None = None,
+    restage_stale_revisions: bool = False,
+) -> dict[str, Any]:
+    """Dry-run planner for stage_revision(kind='profile_map_updates').
+
+    Without followthrough fields this returns the profile map-update draft
+    shape. Supplying result_bindings or staged_revision_iris switches to the
+    followthrough-plan shape (which embeds the draft) so advisory binding
+    resolution and staged-revision rechecks stay reachable from the dry run.
+    restage_stale_revisions=True would write restaged successors, so a dry
+    run rejects it; restage via restage_staged_revision instead.
+    """
+    if restage_stale_revisions:
+        raise DoxaBaseError(
+            "stage_revision kind='profile_map_updates' dry_run=True cannot "
+            "take restage_stale_revisions=true: restaging writes refreshed "
+            "staged revisions. Review the followthrough plan's "
+            "revision_checks, then restage via restage_staged_revision."
+        )
+    if result_bindings is None and staged_revision_iris is None:
+        return draft_profile_map_updates_tool(
+            db,
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+        )
+    return plan_profile_followthrough_tool(
+        db,
+        dataset_iri=dataset_iri,
+        evidence_iri=evidence_iri,
+        graph=graph,
+        result_bindings=result_bindings,
+        staged_revision_iris=staged_revision_iris,
+        restage_stale_revisions=False,
+    )
+
+
+_STAGE_REVISION_KINDS: dict[str, Any] = {
+    "graph": stage_graph_revision_tool,
+    "map_assertion": stage_map_assertion_change_tool,
+    "systematisation": stage_systematisation_tool,
+    "pattern_promotion": stage_pattern_promotion_tool,
+    "profile_map_updates": stage_profile_map_updates_tool,
+    "query_storage_access_repair": stage_query_storage_access_repair_tool,
+    "query_physical_layout_repair": stage_query_physical_layout_repair_tool,
+    "review_decision": record_staged_revision_review_decision_tool,
+}
+
+_STAGE_REVISION_DRY_RUN_KINDS: dict[str, Any] = {
+    "map_assertion": draft_map_assertion_change_tool,
+    "profile_map_updates": _stage_revision_profile_map_updates_dry_run,
+    "systematisation": draft_systematisation_shared_context_rerun_tool,
+    "query_evidence_overlay": draft_query_evidence_storage_overlay_tool,
+}
+
+
+def stage_revision_tool(
+    db: DoxaBase,
+    kind: str,
+    spec: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Stage a reviewable revision (or dry-run its read-only planner)."""
+    valid_kinds = sorted(set(_STAGE_REVISION_KINDS) | set(_STAGE_REVISION_DRY_RUN_KINDS))
+    if kind not in valid_kinds:
+        raise DoxaBaseError(
+            f"stage_revision kind must be one of {valid_kinds}; got {kind!r}"
+        )
+    if dry_run:
+        if kind not in _STAGE_REVISION_DRY_RUN_KINDS:
+            raise DoxaBaseError(
+                f"stage_revision kind={kind!r} has no dry-run planner; "
+                "dry_run=True supports "
+                f"{sorted(_STAGE_REVISION_DRY_RUN_KINDS)}"
+            )
+        return _dispatch_kind(
+            db,
+            "stage_revision",
+            _STAGE_REVISION_DRY_RUN_KINDS,
+            kind,
+            spec,
+        )
+    if kind == "query_evidence_overlay":
+        raise DoxaBaseError(
+            "stage_revision kind='query_evidence_overlay' is dry_run-only: it "
+            "drafts reviewed stage_revision(kind='graph') arguments from query "
+            "evidence storage values. Call it with dry_run=true, review the "
+            "drafted arguments, then stage them as kind='graph'."
+        )
+    return _dispatch_kind(db, "stage_revision", _STAGE_REVISION_KINDS, kind, spec)
+
+
 def apply_staged_revision_tool(
     db: DoxaBase,
     iri: str,
@@ -2764,7 +3009,31 @@ def apply_staged_revision_tool(
     created_by: str | None = None,
     allow_validation_failure: bool = False,
     validation_scope: str | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
+    if dry_run:
+        invalid = [
+            name
+            for name, value in (
+                ("applied_revision_iri", applied_revision_iri),
+                ("created_at", created_at),
+                ("created_by", created_by),
+            )
+            if value is not None
+        ]
+        if allow_validation_failure:
+            invalid.append("allow_validation_failure")
+        if invalid:
+            raise DoxaBaseError(
+                "apply_staged_revision dry_run=True runs the read-only apply "
+                "check, which only takes iri and validation_scope; remove "
+                f"{sorted(invalid)} or set dry_run=false to apply."
+            )
+        return check_staged_revision_apply_tool(
+            db,
+            iri=iri,
+            validation_scope=validation_scope,
+        )
     result = db.apply_staged_revision(
         iri=iri,
         applied_revision_iri=applied_revision_iri,

@@ -30,15 +30,23 @@ def test_stage_profile_map_updates_tool_handles_all_skipped_recommendations(
         update_map_snapshot=False,
         column_defaults={"update_map_column": False},
     )
-    draft = draft_profile_map_updates_tool(db, dataset, evidence)
+    draft = stage_revision_tool(
+        db,
+        kind="profile_map_updates",
+        dry_run=True,
+        spec={"dataset_iri": dataset, "evidence_iri": evidence},
+    )
     assert draft["recommendations"][0]["kind"] == "dataset_row_count_snapshot"
     assert draft["recommendations"][0]["default_stageable"] is False
 
-    result = stage_profile_map_updates_tool(
+    result = stage_revision_tool(
         db,
-        dataset,
-        evidence,
-        accepted_recommendation_indexes=[0],
+        kind="profile_map_updates",
+        spec={
+            "dataset_iri": dataset,
+            "evidence_iri": evidence,
+            "accepted_recommendation_indexes": [0],
+        },
     )
 
     assert result["result_kind"] == "profile_map_update_staging"
@@ -158,12 +166,18 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         (1, "column_nullable", status_column),
     ]
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.stage_profile_map_updates"
+        "doxabase.stage_revision"
+    )
+    assert result["suggested_next_actions"][0]["args"]["kind"] == (
+        "profile_map_updates"
     )
     assert result["suggested_next_actions"][0]["args"] == {
-        "dataset_iri": table,
-        "evidence_iri": shared_evidence,
-        "accepted_recommendation_indexes": [0, 1],
+        "kind": "profile_map_updates",
+        "spec": {
+            "dataset_iri": table,
+            "evidence_iri": shared_evidence,
+            "accepted_recommendation_indexes": [0, 1],
+        },
     }
     assert list(result["suggested_next_action_groups"]) == [
         "profile_map_updates",
@@ -171,22 +185,24 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "profile_type_review",
     ]
     assert [
-        action["tool"].removeprefix("doxabase.")
+        (action["tool"].removeprefix("doxabase."), action["args"].get("kind"))
         for action in result["suggested_next_action_groups"]["profile_map_updates"]
-    ] == ["stage_profile_map_updates"]
+    ] == [("stage_revision", "profile_map_updates")]
 
     assert [
         action["tool"].removeprefix("doxabase.")
         for action in result["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-    ] == ["get_context_graph", "list_entities", "stage_systematisation"]
+    ] == ["get_context_graph", "list_entities", "stage_revision"]
     metric_action_sources = [
         source
         for action in result["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-        for source in action["args"].get("profile_route_sources") or []
+        for source in (
+            action["args"].get("spec") or action["args"]
+        ).get("profile_route_sources") or []
     ]
     assert metric_action_sources
     assert metric_action_sources[0]["advisory_kind"] == "metric_vocabulary_review"
@@ -206,12 +222,14 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == [
         "get_context_graph",
         "record_pattern",
-        "stage_systematisation",
-        "stage_map_assertion_change",
+        "stage_revision",
+        "stage_revision",
     ]
     type_action = result["suggested_next_action_groups"]["profile_type_review"][3]
-    assert type_action["tool"] == "doxabase.stage_map_assertion_change"
-    type_action_source = type_action["args"]["profile_route_sources"][0]
+    assert (type_action["tool"], type_action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
+    type_action_source = type_action["args"]["spec"][
+        "profile_route_sources"
+    ][0]
     assert type_action_source["advisory_kind"] == "profile_type_review"
     assert type_action_source["index_field"] == "type_advisory_index"
     assert type_action_source["advisory_indexes"] == [0]
@@ -364,8 +382,8 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
         for action in draft["suggested_next_action_groups"][
             "profile_type_review"
         ]
-        if action["tool"] == "doxabase.stage_map_assertion_change"
-        for source in action["args"].get("profile_route_sources") or []
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
+        for source in action["args"]["spec"].get("profile_route_sources") or []
         for binding in source.get("consumes_result_bindings") or []
     )
     pattern = record_pattern_tool(db, **pattern_action["args"])
@@ -384,12 +402,27 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
         "suggested_next_action_groups"
     ]
 
-    result = plan_profile_followthrough_tool(
+    result = stage_revision_tool(
         db,
-        dataset_iri=table,
-        evidence_iri=shared_evidence,
-        result_bindings={binding_key: pattern["pattern_iri"]},
+        kind="profile_map_updates",
+        dry_run=True,
+        spec={
+            "dataset_iri": table,
+            "evidence_iri": shared_evidence,
+            "result_bindings": {binding_key: pattern["pattern_iri"]},
+        },
     )
+    with pytest.raises(DoxaBaseError, match="restage_stale_revisions"):
+        stage_revision_tool(
+            db,
+            kind="profile_map_updates",
+            dry_run=True,
+            spec={
+                "dataset_iri": table,
+                "evidence_iri": shared_evidence,
+                "restage_stale_revisions": True,
+            },
+        )
 
     assert result["result_kind"] == "profile_followthrough_plan"
     assert result["result_binding_keys"] == [binding_key]
@@ -403,13 +436,13 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
         for resolution in result["action_resolution_groups"][
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change"]
+    ] == ["stage_revision"]
     assert [
         action["tool"].removeprefix("doxabase.")
         for action in result["suggested_next_action_groups"][
             "ready_resolved_mutations"
         ]
-    ] == ["stage_map_assertion_change"]
+    ] == ["stage_revision"]
     batch_plan = result["profile_type_assertion_batch_plan"]
     assert batch_plan["result_kind"] == "profile_type_assertion_batch_plan"
     assert batch_plan["policy"] == "safe_missing_physical_type"
@@ -420,16 +453,22 @@ def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
     value_type_resolution = [
         resolution
         for resolution in result["action_resolutions"]
-        if resolution["tool"] == "doxabase.stage_map_assertion_change"
-        and resolution["action"]["args"]["predicate"] == "rc:valueType"
+        if resolution["tool"] == "doxabase.stage_revision"
+        and resolution["action"]["args"].get("kind") == "map_assertion"
+        and resolution["action"]["args"]["spec"]["predicate"]
+        == "rc:valueType"
     ][0]
     assert value_type_resolution["binding_status"] == "not_applicable"
     assert value_type_resolution.get("applied_binding_keys", []) == []
-    assert value_type_resolution["action"]["args"]["supporting_patterns"] == [
+    assert value_type_resolution["action"]["args"]["spec"][
+        "supporting_patterns"
+    ] == [
         pattern["pattern_iri"]
     ]
     assert "resolved_result_bindings" not in (
-        value_type_resolution["action"]["args"]["profile_route_sources"][0]
+        value_type_resolution["action"]["args"]["spec"][
+            "profile_route_sources"
+        ][0]
     )
 
 
@@ -486,13 +525,14 @@ def test_plan_profile_followthrough_tool_serializes_eligible_type_batch(
     result_bindings: dict[str, str] = {}
     type_actions = draft["suggested_next_action_groups"]["profile_type_review"]
     for stage_action in type_actions:
-        if stage_action["tool"] != "doxabase.stage_map_assertion_change":
+        if (stage_action["tool"], stage_action["args"].get("kind")) != ("doxabase.stage_revision", "map_assertion"):
             continue
         consumed = next(
             (
                 binding
                 for source in (
-                    stage_action["args"].get("profile_route_sources") or []
+                    stage_action["args"]["spec"].get("profile_route_sources")
+                    or []
                 )
                 for binding in source.get("consumes_result_bindings") or []
             ),
@@ -504,7 +544,7 @@ def test_plan_profile_followthrough_tool_serializes_eligible_type_batch(
             action
             for action in type_actions
             if action["tool"] == "doxabase.record_pattern"
-            and stage_action["args"]["subject"]
+            and stage_action["args"]["spec"]["subject"]
             in (action["args"].get("pattern_targets") or [])
         )
         pattern = record_pattern_tool(db, **pattern_action["args"])
@@ -530,10 +570,15 @@ def test_plan_profile_followthrough_tool_serializes_eligible_type_batch(
     }
     assert all(isinstance(item["action"], dict) for item in items)
     assert {
-        item["action"]["tool"].removeprefix("doxabase.") for item in items
-    } == {"stage_map_assertion_change"}
+        (
+            item["action"]["tool"].removeprefix("doxabase."),
+            item["action"]["args"].get("kind"),
+        )
+        for item in items
+    } == {("stage_revision", "map_assertion")}
     assert all(
-        item["action"]["args"]["supporting_patterns"] for item in items
+        item["action"]["args"]["spec"]["supporting_patterns"]
+        for item in items
     )
 
 
@@ -579,12 +624,15 @@ def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
     conflict_actions = result["suggested_next_action_groups"][
         "profile_scalar_conflict_review"
     ]
-    assert [action["tool"].removeprefix("doxabase.") for action in conflict_actions] == [
-        "stage_profile_map_updates",
-        "stage_profile_map_updates",
+    assert [
+        (action["tool"].removeprefix("doxabase."), action["args"].get("kind"))
+        for action in conflict_actions
+    ] == [
+        ("stage_revision", "profile_map_updates"),
+        ("stage_revision", "profile_map_updates"),
     ]
     accepted_indexes = {
-        tuple(action["args"]["accepted_recommendation_indexes"])
+        tuple(action["args"]["spec"]["accepted_recommendation_indexes"])
         for action in conflict_actions
     }
     assert len(accepted_indexes) == 2
@@ -677,9 +725,12 @@ def test_draft_profile_map_updates_tool_routes_query_blockers_first(
     assert query_action["args"] == {"iri": table}
     assert query_action == result["suggested_next_actions"][0]
     assert result["suggested_next_actions"][1]["tool"] == (
-        "doxabase.stage_profile_map_updates"
+        "doxabase.stage_revision"
     )
-    assert result["suggested_next_actions"][1]["args"][
+    assert result["suggested_next_actions"][1]["args"]["kind"] == (
+        "profile_map_updates"
+    )
+    assert result["suggested_next_actions"][1]["args"]["spec"][
         "accepted_recommendation_indexes"
     ] == [4]
     assert "query_context_review" in result["review_note"]
@@ -731,8 +782,8 @@ def test_draft_profile_map_updates_tool_omits_undefined_value_type_seed(
     value_type_action = [
         action
         for action in advisory["suggested_next_actions"]
-        if action["tool"] == "doxabase.stage_map_assertion_change"
-        and action["args"]["predicate"] == "rc:valueType"
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
+        and action["args"]["spec"]["predicate"] == "rc:valueType"
     ][0]
 
     assert context_action["tool"] == "doxabase.get_context_graph"
@@ -744,7 +795,7 @@ def test_draft_profile_map_updates_tool_omits_undefined_value_type_seed(
     ]
     context = get_context_graph_tool(db, **context_action["args"])
     assert status_column in {resource["iri"] for resource in context["resources"]}
-    assert value_type_action["args"]["object"] == value_type
+    assert value_type_action["args"]["spec"]["object"] == value_type
 
 
 def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
@@ -810,17 +861,22 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     ]
     assert advisory["context_pattern_count"] == 0
     assert advisory.get("context_patterns", []) == []
-    assert [action["tool"].removeprefix("doxabase.") for action in advisory["suggested_next_actions"]] == [
-        "get_context_graph",
-        "list_entities",
-        "stage_systematisation",
-        "describe_resource",
-        "stage_pattern_promotion",
+    assert [
+        (action["tool"].removeprefix("doxabase."), action["args"].get("kind"))
+        for action in advisory["suggested_next_actions"]
+    ] == [
+        ("get_context_graph", None),
+        ("list_entities", None),
+        ("stage_revision", "systematisation"),
+        ("describe_resource", None),
+        ("stage_revision", "pattern_promotion"),
     ]
     fallback_action = advisory["suggested_next_actions"][2]
-    assert fallback_action["args"]["framings"][0]["graph"] == "patterns"
+    assert fallback_action["args"]["spec"]["framings"][0]["graph"] == (
+        "patterns"
+    )
     promotion_action = advisory["suggested_next_actions"][4]
-    promotion_args = promotion_action["args"]
+    promotion_args = promotion_action["args"]["spec"]
     assert promotion_args["patterns"] == [pattern["pattern_iri"]]
     assert promotion_args["evidence"] == [shared_evidence]
     assert promotion_args["anchors"] == [project_metric]
@@ -846,13 +902,13 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     ] == [
         "get_context_graph",
         "list_entities",
-        "stage_systematisation",
+        "stage_revision",
         "describe_resource",
         "describe_staged_revision",
         "export_staged_revisions",
     ]
     assert not any(
-        action["tool"] == "doxabase.stage_pattern_promotion"
+        (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
         for action in rerun_advisory["suggested_next_actions"]
     )
     export_action = next(
@@ -949,19 +1005,19 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
         for action in result["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-        if action["tool"] == "doxabase.stage_pattern_promotion"
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
     ][0]
     grouped_type_action = [
         action
         for action in result["suggested_next_action_groups"]["profile_type_review"]
-        if action["tool"] == "doxabase.stage_map_assertion_change"
-        and action["args"]["predicate"] == "rc:valueType"
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
+        and action["args"]["spec"]["predicate"] == "rc:valueType"
     ][0]
-    assert grouped_type_action["args"]["supporting_patterns"] == [
+    assert grouped_type_action["args"]["spec"]["supporting_patterns"] == [
         pattern_iri
     ]
     assert "Mixed support" in grouped_metric_action["reason"]
-    assert "Mixed support" in grouped_type_action["args"]["review_note"]
+    assert "Mixed support" in grouped_type_action["args"]["spec"]["review_note"]
     followthrough = plan_profile_followthrough_tool(
         db,
         dataset_iri=table,
@@ -974,11 +1030,15 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     value_type_resolution = [
         resolution
         for resolution in followthrough["action_resolutions"]
-        if resolution["tool"] == "doxabase.stage_map_assertion_change"
-        and resolution["action"]["args"]["predicate"] == "rc:valueType"
+        if resolution["tool"] == "doxabase.stage_revision"
+        and resolution["action"]["args"].get("kind") == "map_assertion"
+        and resolution["action"]["args"]["spec"]["predicate"]
+        == "rc:valueType"
     ][0]
     assert value_type_resolution["binding_status"] == "not_applicable"
-    assert value_type_resolution["action"]["args"]["supporting_patterns"] == [
+    assert value_type_resolution["action"]["args"]["spec"][
+        "supporting_patterns"
+    ] == [
         pattern_iri
     ]
 
@@ -1084,24 +1144,29 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     )
     assert result["type_review_required"] is True
     assert [
-        action["tool"].removeprefix("doxabase.")
+        (action["tool"].removeprefix("doxabase."), action["args"].get("kind"))
         for action in result["type_advisory_suggested_next_actions"]
     ] == [
-        "get_context_graph",
-        "record_pattern",
-        "stage_systematisation",
-        "stage_map_assertion_change",
+        ("get_context_graph", None),
+        ("record_pattern", None),
+        ("stage_revision", "systematisation"),
+        ("stage_revision", "map_assertion"),
     ]
     fallback_action = result["type_advisory_suggested_next_actions"][2]
-    assert fallback_action["args"]["framings"][0]["graph"] == "patterns"
-    assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.check_staged_revision_apply"
+    assert fallback_action["args"]["spec"]["framings"][0]["graph"] == (
+        "patterns"
     )
     assert result["suggested_next_actions"][0]["tool"] == (
-        "doxabase.check_staged_revision_apply"
+        "doxabase.apply_staged_revision"
     )
+    assert result["suggested_next_actions"][0]["args"].get("dry_run") is True
+    assert result["suggested_next_actions"][0]["tool"] == (
+        "doxabase.apply_staged_revision"
+    )
+    assert result["suggested_next_actions"][0]["args"].get("dry_run") is True
     assert result["suggested_next_actions"][0]["args"] == {
-        "iri": result["staged_revision"]["revision_iri"]
+        "iri": result["staged_revision"]["revision_iri"],
+        "dry_run": True,
     }
     assert result["suggested_next_actions"][1]["tool"] == (
         "doxabase.export_profile_insight_review_bundle"
@@ -1202,10 +1267,15 @@ def test_stage_profile_map_updates_tool_marks_rerun_precondition(
     )
 
     assert [action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]] == [
-        "check_staged_revision_apply",
+        "apply_staged_revision",
         "export_profile_insight_review_bundle",
-        "draft_profile_map_updates",
+        "stage_revision",
     ]
+    assert result["suggested_next_actions"][0]["args"].get("dry_run") is True
+    assert result["suggested_next_actions"][2]["args"].get("kind") == (
+        "profile_map_updates"
+    )
+    assert result["suggested_next_actions"][2]["args"].get("dry_run") is True
     rerun_action = result["suggested_next_actions"][2]
     assert "reviewing and applying" in rerun_action["reason"]
 

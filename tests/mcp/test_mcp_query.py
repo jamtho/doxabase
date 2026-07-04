@@ -813,12 +813,15 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
         "required_template_source": "storage_access",
     }
     assert repair_hint["actions"][0]["arguments_template"] == {
-        "subject": storage["iri"],
-        "predicate": "rc:pathTemplate",
-        "object": "<reviewed_database_relation_identifier>",
-        "object_kind": "literal",
-        "change_kind": "add",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage["iri"],
+            "predicate": "rc:pathTemplate",
+            "object": "<reviewed_database_relation_identifier>",
+            "object_kind": "literal",
+            "change_kind": "add",
+            "graph": "map",
+        },
     }
     assert repair_hint["actions"][0]["required_extra_arguments"] == [
         "object",
@@ -906,20 +909,26 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
         "required_template_source": "storage_access",
     }
     assert repair_hint["actions"][0]["arguments_template"] == {
-        "subject": storage["iri"],
-        "predicate": "rc:pathTemplate",
-        "object": "<reviewed_relative_path_template>",
-        "object_kind": "literal",
-        "change_kind": "add",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage["iri"],
+            "predicate": "rc:pathTemplate",
+            "object": "<reviewed_relative_path_template>",
+            "object_kind": "literal",
+            "change_kind": "add",
+            "graph": "map",
+        },
     }
     assert repair_hint["actions"][1]["args"] == {
-        "subject": storage["iri"],
-        "predicate": "rc:locationKind",
-        "object": "object",
-        "object_kind": "literal",
-        "change_kind": "replace",
-        "graph": "map",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": storage["iri"],
+            "predicate": "rc:locationKind",
+            "object": "object",
+            "object_kind": "literal",
+            "change_kind": "replace",
+            "graph": "map",
+        },
     }
     target = result["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"

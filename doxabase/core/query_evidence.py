@@ -122,8 +122,12 @@ class QueryEvidenceMixin:
             "layout_verification_note": "REVIEWED_LAYOUT_VERIFICATION_NOTE",
         }
         return SuggestedNextAction(
-                   tool="doxabase.draft_query_evidence_storage_overlay",
-                   args=arguments,
+                   tool="doxabase.stage_revision",
+                   args={
+                       "kind": "query_evidence_overlay",
+                       "dry_run": True,
+                       "spec": arguments,
+                   },
                    reason="This query context has singleton query/profile evidence and "
                 "physical metadata blockers. Review the evidence, replace the "
                 "storage/path/layout placeholders with confirmed non-secret "
@@ -278,7 +282,7 @@ class QueryEvidenceMixin:
             and not source_query_evidence.get("execution_status")
         ):
             raise DoxaBaseError(
-                "draft_query_evidence_storage_overlay requires profile or "
+                "stage_revision kind='query_evidence_overlay' requires profile or "
                 "query-result evidence linked to the dataset"
             )
         if (
@@ -289,7 +293,7 @@ class QueryEvidenceMixin:
             )
         ):
             raise DoxaBaseError(
-                "draft_query_evidence_storage_overlay requires query-result "
+                "stage_revision kind='query_evidence_overlay' requires query-result "
                 "evidence linked to the requested dataset when no profile "
                 "observations use the evidence"
             )
@@ -430,8 +434,8 @@ class QueryEvidenceMixin:
         if removals:
             stage_arguments["removals"] = removals
         stage_action = SuggestedNextAction(
-                           tool="doxabase.stage_graph_revision",
-                           args=stage_arguments,
+                           tool="doxabase.stage_revision",
+                           args={"kind": "graph", "spec": stage_arguments},
                            reason="Stage the reviewed storage/path/layout overlay as a graph "
                 "revision before applying it to current map facts.",
                        )

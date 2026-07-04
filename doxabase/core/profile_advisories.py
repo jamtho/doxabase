@@ -19,7 +19,8 @@ class ProfileAdvisoriesMixin:
         if isinstance(explicit_move, str):
             return explicit_move
         review_lane = source_profile_advisory.get("review_lane")
-        if action.tool == "doxabase.stage_systematisation":
+        action_kind = stage_revision_action_kind(action)
+        if action_kind == "systematisation":
             return "caveat_fallback"
         if review_lane == "metric_vocabulary_review":
             return "define_metric"
@@ -29,11 +30,11 @@ class ProfileAdvisoriesMixin:
             DoxaBase._profile_advisory_status_set(source_profile_advisory)
             == {"type_finding_current_map_undefined_value_type"}
         )
-        if action.tool == "doxabase.stage_pattern_promotion":
+        if action_kind == "pattern_promotion":
             return "define_value_type"
         if action.args.get("aspect") == "pattern":
             return "define_value_type"
-        if action.tool == "doxabase.stage_map_assertion_change":
+        if action_kind == "map_assertion":
             return "assert_map_type"
         if action.tool == "doxabase.get_context_graph":
             if current_map_undefined_value_type_only:
@@ -78,7 +79,8 @@ class ProfileAdvisoriesMixin:
                 action = option.suggested_next_action
                 selection_rule = (
                     "current_value_already_chosen_review_before_replacing"
-                    if action.tool != "doxabase.stage_profile_map_updates"
+                    if stage_revision_action_kind(action)
+                    != "profile_map_updates"
                     else "choose_at_most_one_option_per_conflict_group"
                 )
                 route_source = DoxaBase._with_profile_route_step_key(
@@ -379,8 +381,11 @@ class ProfileAdvisoriesMixin:
                         ],
                     }
                     action = SuggestedNextAction(
-                                 tool="doxabase.stage_profile_map_updates",
-                                 args=arguments,
+                                 tool="doxabase.stage_revision",
+                                 args={
+                                     "kind": "profile_map_updates",
+                                     "spec": arguments,
+                                 },
                                  reason="This same-evidence scalar conflict is not "
                             "default-stageable. Use this action only after "
                             "reviewing the conflicting profile observations and "
@@ -799,6 +804,7 @@ class ProfileAdvisoriesMixin:
         updated_actions: list[SuggestedNextAction] = []
         for action in actions:
             arguments = dict(action.args)
+            action_kind = stage_revision_action_kind(action)
             if action.tool == "doxabase.get_context_graph":
                 seed_iris = list(arguments.get("seed_iris") or [])
                 arguments["seed_iris"] = list(
@@ -806,23 +812,27 @@ class ProfileAdvisoriesMixin:
                         [*duplicate_profile_observation_iris, *seed_iris]
                     )
                 )
-            elif action.tool in {
-                "doxabase.record_pattern",
-                "doxabase.stage_map_assertion_change",
-                "doxabase.stage_systematisation",
+            elif action.tool == "doxabase.record_pattern" or action_kind in {
+                "map_assertion",
+                "systematisation",
             }:
-                arguments["supporting_observations"] = (
+                if action_kind is not None:
+                    call_fields = dict(stage_revision_action_spec(action))
+                    arguments["spec"] = call_fields
+                else:
+                    call_fields = arguments
+                call_fields["supporting_observations"] = (
                     duplicate_profile_observation_iris
                 )
-                if action.tool == "doxabase.stage_systematisation":
-                    anchors = list(arguments.get("anchors") or [])
-                    arguments["anchors"] = list(
+                if action_kind == "systematisation":
+                    anchors = list(call_fields.get("anchors") or [])
+                    call_fields["anchors"] = list(
                         dict.fromkeys(
                             [*duplicate_profile_observation_iris, *anchors]
                         )
                     )
                     framings = []
-                    for framing in arguments.get("framings") or []:
+                    for framing in call_fields.get("framings") or []:
                         if not isinstance(framing, MappingABC):
                             framings.append(framing)
                             continue
@@ -836,17 +846,17 @@ class ProfileAdvisoriesMixin:
                                 )
                             )
                         framings.append(updated_framing)
-                    arguments["framings"] = framings
+                    call_fields["framings"] = framings
                 if (
-                    action.tool == "doxabase.stage_map_assertion_change"
+                    action_kind == "map_assertion"
                     and len(duplicate_profile_observation_iris) > 1
                 ):
-                    arguments["rationale"] = (
+                    call_fields["rationale"] = (
                         "Duplicate profile observations "
                         f"{', '.join(duplicate_profile_observation_iris)} "
-                        f"recorded {arguments.get('predicate')} "
-                        f"{arguments.get('object')} for "
-                        f"{arguments.get('subject')}. Treat this as a "
+                        f"recorded {call_fields.get('predicate')} "
+                        f"{call_fields.get('object')} for "
+                        f"{call_fields.get('subject')}. Treat this as a "
                         "candidate map assertion and review current context "
                         "before applying."
                     )
@@ -1014,13 +1024,16 @@ class ProfileAdvisoriesMixin:
             ),
         )
         add_action(
-            "stage_systematisation",
-            self._profile_type_fallback_systematisation_arguments(
-                profile=profile,
-                evidence_iri=evidence_iri,
-                type_implication_iris=type_implication_iris,
-                column_label=column_label,
-            ),
+            "stage_revision",
+            {
+                "kind": "systematisation",
+                "spec": self._profile_type_fallback_systematisation_arguments(
+                    profile=profile,
+                    evidence_iri=evidence_iri,
+                    type_implication_iris=type_implication_iris,
+                    column_label=column_label,
+                ),
+            },
             (
                 "Stage a reviewable pattern fallback if this type finding "
                 "needs semantic review before any current map assertion."
@@ -1041,12 +1054,17 @@ class ProfileAdvisoriesMixin:
                     ),
                 )
             add_action(
-                "stage_pattern_promotion",
-                self._profile_value_type_promotion_skeleton_arguments(
-                    value_type_iri=profile.observed_value_type.iri,
-                    pattern_iris=value_type_promotion_pattern_iris,
-                    evidence_iri=evidence_iri,
-                ),
+                "stage_revision",
+                {
+                    "kind": "pattern_promotion",
+                    "spec": (
+                        self._profile_value_type_promotion_skeleton_arguments(
+                            value_type_iri=profile.observed_value_type.iri,
+                            pattern_iris=value_type_promotion_pattern_iris,
+                            evidence_iri=evidence_iri,
+                        )
+                    ),
+                },
                 (
                     "Stage a reviewable ontology skeleton for this project "
                     "value type only after checking that the same-evidence "
@@ -1065,14 +1083,17 @@ class ProfileAdvisoriesMixin:
                 )
             ):
                 add_action(
-                    "stage_map_assertion_change",
-                    self._profile_type_assertion_action_arguments(
-                        profile=profile,
-                        evidence_iri=evidence_iri,
-                        predicate="rc:physicalType",
-                        object_iri=profile.observed_physical_type.iri,
-                        advisory_status=advisory_status,
-                    ),
+                    "stage_revision",
+                    {
+                        "kind": "map_assertion",
+                        "spec": self._profile_type_assertion_action_arguments(
+                            profile=profile,
+                            evidence_iri=evidence_iri,
+                            predicate="rc:physicalType",
+                            object_iri=profile.observed_physical_type.iri,
+                            advisory_status=advisory_status,
+                        ),
+                    },
                     (
                         "Stage a reviewable physical-type assertion only after "
                         "checking the profile evidence and value-type context."
@@ -1096,15 +1117,18 @@ class ProfileAdvisoriesMixin:
                     else pattern_carry_forward_note
                 )
                 add_action(
-                    "stage_map_assertion_change",
-                    self._profile_type_assertion_action_arguments(
-                        profile=profile,
-                        evidence_iri=evidence_iri,
-                        predicate="rc:valueType",
-                        object_iri=profile.observed_value_type.iri,
-                        advisory_status=advisory_status,
-                        supporting_patterns=value_type_supporting_patterns,
-                    ),
+                    "stage_revision",
+                    {
+                        "kind": "map_assertion",
+                        "spec": self._profile_type_assertion_action_arguments(
+                            profile=profile,
+                            evidence_iri=evidence_iri,
+                            predicate="rc:valueType",
+                            object_iri=profile.observed_value_type.iri,
+                            advisory_status=advisory_status,
+                            supporting_patterns=value_type_supporting_patterns,
+                        ),
+                    },
                     (
                         "Stage a reviewable value-type assertion only after "
                         "checking the profile evidence and domain semantics."
@@ -1177,8 +1201,8 @@ class ProfileAdvisoriesMixin:
                     "appropriate, then rerun or review type assertions after "
                     "the column is map-present. When these indexes are a "
                     "duplicate group, following the representative "
-                    "stage_profile_map_updates action is enough to stage the "
-                    "shared shell before rerun."
+                    "stage_revision profile_map_updates action is enough to "
+                    "stage the shared shell before rerun."
                 )
             return (
                 "No related unmapped_profiled_column recommendation was found; "
@@ -1467,6 +1491,8 @@ class ProfileAdvisoriesMixin:
         updated_actions: list[SuggestedNextAction] = []
         for action in actions:
             arguments = action.args
+            action_kind = stage_revision_action_kind(action)
+            staging_fields = action_staging_arguments(action)
             reason = action.reason
             should_note = False
             if (
@@ -1475,27 +1501,32 @@ class ProfileAdvisoriesMixin:
             ):
                 should_note = True
             elif (
-                action.tool == "doxabase.stage_pattern_promotion"
-                and set(arguments.get("patterns") or []) & mixed_pattern_iris
+                action_kind == "pattern_promotion"
+                and set(staging_fields.get("patterns") or [])
+                & mixed_pattern_iris
             ):
                 should_note = True
-            elif action.tool == "doxabase.stage_map_assertion_change":
+            elif action_kind == "map_assertion":
                 should_note = True
-            elif action.tool == "doxabase.stage_systematisation":
+            elif action_kind == "systematisation":
                 should_note = True
 
             if not should_note:
                 updated_actions.append(action)
                 continue
 
-            updated_arguments = copy.deepcopy(arguments)
-            if action.tool in {
-                "doxabase.stage_pattern_promotion",
-                "doxabase.stage_map_assertion_change",
-                "doxabase.stage_systematisation",
+            updated_arguments = copy.deepcopy(dict(arguments))
+            if action_kind in {
+                "pattern_promotion",
+                "map_assertion",
+                "systematisation",
             }:
+                updated_spec = updated_arguments.get("spec")
+                if not isinstance(updated_spec, dict):
+                    updated_spec = {}
+                    updated_arguments["spec"] = updated_spec
                 self._add_mixed_support_review_note(
-                    updated_arguments,
+                    updated_spec,
                     mixed_support_note,
                 )
             updated_actions.append(
@@ -1760,10 +1791,10 @@ class ProfileAdvisoriesMixin:
             source_profile_advisory
         )
         if (
-            action.tool in {
-                "doxabase.record_pattern",
-                "doxabase.stage_systematisation",
-            }
+            (
+                action.tool == "doxabase.record_pattern"
+                or stage_revision_action_kind(action) == "systematisation"
+            )
             and source_profile_advisory.get("semantic_move") == "caveat_fallback"
             and pending_fallback_iris
         ):
@@ -1786,7 +1817,7 @@ class ProfileAdvisoriesMixin:
             )
         )
         if (
-            action.tool == "doxabase.stage_pattern_promotion"
+            stage_revision_action_kind(action) == "pattern_promotion"
             and source_profile_advisory.get("semantic_move") == "define_value_type"
         ):
             if not pending_value_type_promotion_iris:
@@ -1819,7 +1850,7 @@ class ProfileAdvisoriesMixin:
             source_profile_advisory.get("pending_staged_assertion_iris")
         )
         if (
-            action.tool == "doxabase.stage_map_assertion_change"
+            stage_revision_action_kind(action) == "map_assertion"
             and source_profile_advisory.get("semantic_move") == "assert_map_type"
         ):
             if not pending_type_assertion_iris:
@@ -2040,8 +2071,10 @@ class ProfileAdvisoriesMixin:
         }:
             return
         binding_key = f"{route_group_key}:profile-type-support-pattern"
-        if action.tool == "doxabase.stage_map_assertion_change":
-            supporting_patterns = action.args.get("supporting_patterns")
+        if stage_revision_action_kind(action) == "map_assertion":
+            supporting_patterns = stage_revision_action_spec(action).get(
+                "supporting_patterns"
+            )
             if isinstance(supporting_patterns, list) and supporting_patterns:
                 return
             source_profile_advisory["consumes_result_bindings"] = [
@@ -2062,13 +2095,17 @@ class ProfileAdvisoriesMixin:
         *,
         source_profile_advisory: dict[str, Any],
     ) -> SuggestedNextAction:
-        arguments = copy.deepcopy(action.args)
-        if action.tool in {
-            "doxabase.stage_pattern_promotion",
-            "doxabase.stage_map_assertion_change",
-            "doxabase.stage_systematisation",
+        arguments = copy.deepcopy(dict(action.args))
+        if stage_revision_action_kind(action) in {
+            "pattern_promotion",
+            "map_assertion",
+            "systematisation",
         }:
-            arguments.setdefault(
+            spec = arguments.get("spec")
+            if not isinstance(spec, dict):
+                spec = {}
+                arguments["spec"] = spec
+            spec.setdefault(
                 "profile_route_sources",
                 [copy.deepcopy(source_profile_advisory)],
             )
@@ -2145,13 +2182,18 @@ class ProfileAdvisoriesMixin:
             )
             if profile_observation_iri is not None and evidence_iri is not None:
                 add_action(
-                    "stage_systematisation",
-                    self._profile_metric_fallback_systematisation_arguments(
-                        metric_iri=metric_iri,
-                        observed_metric_iri=observed_metric_iri,
-                        profile_observation_iri=profile_observation_iri,
-                        evidence_iri=evidence_iri,
-                    ),
+                    "stage_revision",
+                    {
+                        "kind": "systematisation",
+                        "spec": (
+                            self._profile_metric_fallback_systematisation_arguments(
+                                metric_iri=metric_iri,
+                                observed_metric_iri=observed_metric_iri,
+                                profile_observation_iri=profile_observation_iri,
+                                evidence_iri=evidence_iri,
+                            )
+                        ),
+                    },
                     (
                         "Stage a reviewable pattern fallback if this metric "
                         "needs semantic review before becoming project "
@@ -2225,12 +2267,15 @@ class ProfileAdvisoriesMixin:
                 )
             else:
                 add_action(
-                    "stage_pattern_promotion",
-                    self._profile_metric_promotion_skeleton_arguments(
-                        metric_iri=metric_iri,
-                        pattern_iris=promotion_pattern_values,
-                        evidence_iri=evidence_iri,
-                    ),
+                    "stage_revision",
+                    {
+                        "kind": "pattern_promotion",
+                        "spec": self._profile_metric_promotion_skeleton_arguments(
+                            metric_iri=metric_iri,
+                            pattern_iris=promotion_pattern_values,
+                            evidence_iri=evidence_iri,
+                        ),
+                    },
                     (
                         "Stage a reviewable ontology skeleton for this project metric "
                         "only after checking that the same-evidence pattern captures "

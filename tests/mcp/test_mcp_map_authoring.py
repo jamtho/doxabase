@@ -11,16 +11,22 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
     before_map_count = db.triple_count("map")
     before_history_count = db.triple_count("history")
 
-    result = draft_map_assertion_change_tool(
+    result = stage_revision_tool(
         db,
-        subject="https://richcanopy.org/example/manifest/polymarket#px_price",
-        predicate="rc:physicalType",
-        object="rc:Double",
-        rationale=(
-            "Preview a tempting but unsafe type change before deciding whether "
-            "to stage it."
-        ),
-        change_kind="replace",
+        kind="map_assertion",
+        dry_run=True,
+        spec={
+            "subject": (
+                "https://richcanopy.org/example/manifest/polymarket#px_price"
+            ),
+            "predicate": "rc:physicalType",
+            "object": "rc:Double",
+            "rationale": (
+                "Preview a tempting but unsafe type change before deciding "
+                "whether to stage it."
+            ),
+            "change_kind": "replace",
+        },
     )
 
     assert result["result_kind"] == "draft_map_assertion_change"
@@ -36,15 +42,16 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
         for impact in result["impacts"]
     )
     assert [
-        action["tool"].removeprefix("doxabase.") for action in result["suggested_next_actions"]
-    ] == ["describe_resource", "stage_map_assertion_change"]
+        (action["tool"].removeprefix("doxabase."), action["args"].get("kind"))
+        for action in result["suggested_next_actions"]
+    ] == [("describe_resource", None), ("stage_revision", "map_assertion")]
     assert result["suggested_next_actions"][0]["tool"] == (
         "doxabase.describe_resource"
     )
     assert result["suggested_next_actions"][0]["args"]["aspect"] == "assertion_support"
     assert "high-risk" in result["suggested_next_actions"][0]["reason"]
     assert result["suggested_next_actions"][1]["tool"] == (
-        "doxabase.stage_map_assertion_change"
+        "doxabase.stage_revision"
     )
     assert result["stage_arguments"]["summary"] == (
         "Replace map assertion: price physicalType DOUBLE"
@@ -60,8 +67,10 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     load_example_fixtures_tool(db)
     before_map_count = db.triple_count("map")
 
-    result = stage_map_assertion_change_tool(
+    result = stage_revision_tool(
         db,
+        kind="map_assertion",
+        spec=dict(
         subject="https://richcanopy.org/example/manifest/polymarket#px_price",
         predicate="rc:physicalType",
         object="rc:Double",
@@ -77,6 +86,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
                 "route_step_key": "profile-route-step:test-route",
             }
         ],
+        ),
     )
 
     assert result["change_kind"] == "replace"

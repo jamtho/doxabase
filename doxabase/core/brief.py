@@ -743,7 +743,7 @@ class BriefMixin:
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
         return SuggestedNextAction(
-                   tool="doxabase.describe_staged_revision_recovery_session",
+                   tool="doxabase.plan_staged_revision_recovery",
                    args=arguments,
                    reason="A persisted staged-revision recovery session overlaps current "
                 "staged work. Describe it so live recovery state, imported "
@@ -1521,8 +1521,12 @@ class BriefMixin:
             "evidence_iri": evidence_iri,
         }
         return SuggestedNextAction(
-                   tool="doxabase.draft_profile_map_updates",
-                   args=arguments,
+                   tool="doxabase.stage_revision",
+                   args={
+                       "kind": "profile_map_updates",
+                       "dry_run": True,
+                       "spec": arguments,
+                   },
                    reason="Review profile-derived map updates and advisory lanes.",
                )
     def _resource_brief_seed_exists(self, graphs: list[str], seed: str) -> bool:
@@ -1948,7 +1952,9 @@ class BriefMixin:
             if lane.lane == "repair_or_replace"
         }
         for action in helper_mutation_frontier_actions:
-            restages_revision = action.args.get("restages_revision")
+            restages_revision = action_staging_arguments(action).get(
+                "restages_revision"
+            )
             source_revision_iris = (
                 [restages_revision] if isinstance(restages_revision, str) else []
             )
@@ -2027,7 +2033,7 @@ class BriefMixin:
             "export_staged_revisions": 3,
             "describe_graph_revision": 4,
             "describe_applied_revision_diff": 5,
-            "draft_staged_revision_rebase": 6,
+            "restage_staged_revision": 6,
         }
         semantic_target_iris: list[str] = []
         for item in mutation_frontier_items:
@@ -2052,6 +2058,10 @@ class BriefMixin:
             action
             for action in suggested_next_actions
             if action_tool_name(action) in review_tool_order
+            and (
+                action_tool_name(action) != "restage_staged_revision"
+                or staged_rebase_draft_action(action)
+            )
             and DoxaBase._staged_recovery_action_is_safe_review(action)
             and DoxaBase._suggested_action_references_any_revision(
                 action,
@@ -2075,7 +2085,7 @@ class BriefMixin:
             "export_staged_revisions": 3,
             "describe_graph_revision": 4,
             "describe_applied_revision_diff": 5,
-            "draft_staged_revision_rebase": 6,
+            "restage_staged_revision": 6,
         }
         target_iris = [
             value
@@ -2091,6 +2101,10 @@ class BriefMixin:
             action
             for action in suggested_next_actions
             if action_tool_name(action) in review_tool_order
+            and (
+                action_tool_name(action) != "restage_staged_revision"
+                or staged_rebase_draft_action(action)
+            )
             and DoxaBase._staged_recovery_action_is_safe_review(action)
             and DoxaBase._suggested_action_references_any_revision(
                 action,

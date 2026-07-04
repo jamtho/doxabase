@@ -569,7 +569,7 @@ class RevisionSnapshotsMixin:
                     "The graph content digest changed since this revision was "
                     "staged. Exact changed triples are available but omitted "
                     "from this summary response; call "
-                    "check_staged_revision_apply() or "
+                    "apply_staged_revision(dry_run=true) or "
                     "list_graph_revisions(drift_detail='exact') for them."
                 )
             else:

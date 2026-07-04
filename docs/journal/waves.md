@@ -231,3 +231,24 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Next: R3 staging family (rows 16–19, −13), R4 revisions reads (rows
   20–21, −9), R5 export/import (rows 22–24, −12), sweep (row 8 fold +
   removals + docstring budget).
+
+## Wave 13 — 2026-07-04 — Phase 4 wave R3: staging family (65 → 48 tools)
+
+- Doc 08 rows 16–19. New `stage_revision` (kinds: graph/map_assertion/
+  systematisation/pattern_promotion/profile_map_updates/query_storage_
+  access_repair/query_physical_layout_repair/review_decision; dry_run=True
+  keeps the draft response shapes for map_assertion, profile_map_updates —
+  followthrough spec fields switch to the followthrough plan —
+  systematisation rerun, and dry-run-only query_evidence_overlay).
+  `apply_staged_revision` dry_run=True is the apply check;
+  `restage_staged_revision` takes revision_iris str|list (str+dry_run=True
+  is the rebase draft, list+dry_run the batch preview);
+  `plan_staged_revision_recovery` gained start_session=/session_iri= modes.
+  Eighteen registrations deleted same-wave; count 48 (doc 08's "−13"
+  estimate was miscounted — the rows enumerate 18 absorptions + 1 new door).
+- Effect classification became args-aware (staged_action_effect_metadata,
+  staged_rebase_draft_action, stage_revision_action_kind/spec); fixed
+  _revision_next_action_resolved_target_iri to also read string
+  revision_iris so restage targets keep resolving. Suite 726 passed;
+  gate green; schema 50,543 chars (≤ 86,000 ceiling, untouched).
+- Next: R4 revisions reads (rows 20–21), then R5 export/import, then sweep.

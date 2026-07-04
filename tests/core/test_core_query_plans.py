@@ -1061,11 +1061,11 @@ def test_query_context_suggests_overlay_for_blocked_candidate_query_evidence(
     overlay_actions = [
         action
         for action in context.suggested_next_actions
-        if action.tool == "doxabase.draft_query_evidence_storage_overlay"
+        if (action.tool, action.args.get("kind"), action.args.get("dry_run")) == ("doxabase.stage_revision", "query_evidence_overlay", True)
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action.args["evidence_iri"] == result.evidence_iri
+    assert overlay_action.args["spec"]["evidence_iri"] == result.evidence_iri
 
 
 def test_object_root_candidate_stays_visible_with_partition_templates(

@@ -1271,7 +1271,7 @@ class StagingDescribeMixin:
                 "Ready/no-op staged revisions sharing a changed graph are "
                 "sequential review targets: applying one ready revision can "
                 "change graph state and make sibling ready or no-op revisions "
-                "stale. Re-run check_staged_revision_apply or "
+                "stale. Re-run apply_staged_revision with dry_run=true or "
                 "export_staged_revisions after each apply."
             )
         if external_recommended_review_iris:

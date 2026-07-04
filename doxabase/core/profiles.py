@@ -328,8 +328,12 @@ class ProfilesMixin:
             draft_arguments["graph"] = graph
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.draft_profile_map_updates",
-                args=draft_arguments,
+                tool="doxabase.stage_revision",
+                args={
+                    "kind": "profile_map_updates",
+                    "dry_run": True,
+                    "spec": draft_arguments,
+                },
                 reason="Compare this shared-evidence profile run with current map "
                     "facts and inspect whether map updates, scalar conflicts, "
                     "metric vocabulary, type findings, or query-context review "
@@ -341,7 +345,9 @@ class ProfilesMixin:
     def _profile_action_route_source_mapping(
         action: SuggestedNextAction,
     ) -> dict[str, Any] | None:
-        route_sources = action.args.get("profile_route_sources")
+        route_sources = action_staging_arguments(action).get(
+            "profile_route_sources"
+        )
         if not isinstance(route_sources, list):
             return None
         for source in route_sources:
@@ -359,7 +365,7 @@ class ProfilesMixin:
         skipped_reasons: list[dict[str, Any]] = []
 
         for resolution in action_resolutions:
-            if resolution.tool != "doxabase.stage_map_assertion_change":
+            if stage_revision_action_kind(resolution.action) != "map_assertion":
                 continue
             source = self._profile_action_route_source_mapping(resolution.action)
             if source is None:
@@ -392,8 +398,9 @@ class ProfilesMixin:
                 )
                 continue
 
-            predicate = str(resolution.action.args["predicate"])
-            object_value = str(resolution.action.args["object"])
+            action_spec = stage_revision_action_spec(resolution.action)
+            predicate = str(action_spec["predicate"])
+            object_value = str(action_spec["object"])
             key = (predicate, object_value)
             if key not in batches:
                 batch_key = self._profile_type_assertion_batch_key(
@@ -471,11 +478,12 @@ class ProfilesMixin:
             return f"unsupported_binding_status:{resolution.binding_status}"
         if source_profile_advisory.get("pending_staged_assertion_iris"):
             return "pending_staged_assertion"
-        predicate = resolution.action.args.get("predicate")
+        action_spec = stage_revision_action_spec(resolution.action)
+        predicate = action_spec.get("predicate")
         if predicate != "rc:physicalType":
             return "unsupported_predicate"
         for required_field in ("subject", "object"):
-            if not isinstance(resolution.action.args.get(required_field), str):
+            if not isinstance(action_spec.get(required_field), str):
                 return f"missing_{required_field}"
         route_group_key = source_profile_advisory.get("route_group_key")
         route_step_key = source_profile_advisory.get("route_step_key")
@@ -509,8 +517,12 @@ class ProfilesMixin:
             "duplicate_advisory_indexes": DoxaBase._int_values(
                 source_profile_advisory.get("duplicate_advisory_indexes"),
             ),
-            "predicate": resolution.action.args.get("predicate"),
-            "object": resolution.action.args.get("object"),
+            "predicate": stage_revision_action_spec(
+                resolution.action
+            ).get("predicate"),
+            "object": stage_revision_action_spec(
+                resolution.action
+            ).get("object"),
         }
     @staticmethod
     def _profile_type_assertion_batch_item(
@@ -538,14 +550,20 @@ class ProfilesMixin:
             "duplicate_group_keys": duplicate_group_keys,
             "route_group_keys": [route_group_key],
             "route_step_keys": [route_step_key],
-            "subject": resolution.action.args["subject"],
-            "predicate": resolution.action.args["predicate"],
-            "object": resolution.action.args["object"],
+            "subject": stage_revision_action_spec(resolution.action)["subject"],
+            "predicate": stage_revision_action_spec(
+                resolution.action
+            )["predicate"],
+            "object": stage_revision_action_spec(resolution.action)["object"],
             "supporting_observations": list(
-                resolution.action.args.get("supporting_observations", [])
+                stage_revision_action_spec(resolution.action).get(
+                    "supporting_observations", []
+                )
             ),
             "supporting_patterns": list(
-                resolution.action.args.get("supporting_patterns", [])
+                stage_revision_action_spec(resolution.action).get(
+                    "supporting_patterns", []
+                )
             ),
             "action": resolution.action,
         }
@@ -863,12 +881,16 @@ class ProfilesMixin:
         route_group_key: str,
         action: SuggestedNextAction,
     ) -> str:
-        arguments = action.args
+        arguments = action_staging_arguments(action)
         payload = {
             "route_group_key": route_group_key,
             "tool": action.tool,
             "arguments": DoxaBase._profile_route_step_argument_identity(arguments),
         }
+        if action.tool == "doxabase.stage_revision":
+            payload["kind"] = action.args.get("kind")
+            if action.args.get("dry_run") is True:
+                payload["dry_run"] = True
         return DoxaBase._profile_route_key("profile-route-step", payload)
     @staticmethod
     def _with_profile_route_step_key(
@@ -893,13 +915,14 @@ class ProfilesMixin:
         actions: list[SuggestedNextAction] = []
         if staged_revision is None:
             return actions
-        arguments = {"iri": staged_revision.revision_iri}
+        arguments = {"iri": staged_revision.revision_iri, "dry_run": True}
         actions.append(
             SuggestedNextAction(
-                tool="doxabase.check_staged_revision_apply",
+                tool="doxabase.apply_staged_revision",
                 args=arguments,
-                reason="Run the read-only apply check before reviewing, exporting, "
-                    "or applying the grouped profile-derived map revision.",
+                reason="Run the read-only apply check (dry_run=true) before "
+                    "reviewing, exporting, or applying the grouped "
+                    "profile-derived map revision.",
             )
         )
         export_arguments = {
@@ -932,8 +955,12 @@ class ProfilesMixin:
             }
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.draft_profile_map_updates",
-                    args=rerun_arguments,
+                    tool="doxabase.stage_revision",
+                    args={
+                        "kind": "profile_map_updates",
+                        "dry_run": True,
+                        "spec": rerun_arguments,
+                    },
                     reason="After reviewing and applying the staged unmapped "
                         "column shell(s), rerun the profile map-update draft "
                         "for the same dataset and evidence so type advisories "
@@ -1184,10 +1211,11 @@ class ProfilesMixin:
             for item in items
         ):
             type_followthrough_note = (
-                " After applying staged unmapped column shells, rerun "
-                "draft_profile_map_updates for the same dataset and evidence "
-                "so related profile type advisories can reclassify against "
-                "map-present columns."
+                " After applying staged unmapped column shells, rerun the "
+                "profile map-update draft (stage_revision "
+                "kind='profile_map_updates' with dry_run=true) for the same "
+                "dataset and evidence so related profile type advisories can "
+                "reclassify against map-present columns."
             )
         evidence_summary = "; ".join(
             (

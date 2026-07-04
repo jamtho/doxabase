@@ -376,31 +376,32 @@ QUERY_REPAIR_PREDICATE_CURIES = frozenset(
     }
 )
 
-STAGED_RECOVERY_MUTATING_TOOL_NAMES = frozenset(
+# Merged-door staging kinds whose stage_revision(kind=...) calls belong to the
+# recovery mutating family. review_decision and the query repair kinds keep
+# their pre-merge classification (their old registrations were never members).
+STAGE_REVISION_RECOVERY_MUTATING_KINDS = frozenset(
     {
-        "apply_staged_revision",
-        "restage_staged_revision",
-        "restage_staged_revisions",
-        "stage_graph_revision",
-        "stage_map_assertion_change",
-        "stage_pattern_promotion",
-        "stage_profile_map_updates",
-        "stage_systematisation",
+        "graph",
+        "map_assertion",
+        "pattern_promotion",
+        "profile_map_updates",
+        "systematisation",
+    }
+)
+
+# stage_revision kinds that write a history row when dry_run is not set.
+STAGE_REVISION_HISTORY_WRITING_KINDS = frozenset(
+    {
+        *STAGE_REVISION_RECOVERY_MUTATING_KINDS,
+        "review_decision",
     }
 )
 
 STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES = frozenset(
     {
         "apply_staged_revision",
-        "record_staged_revision_review_decision",
         "restage_staged_revision",
-        "restage_staged_revisions",
-        "start_staged_revision_recovery_session",
-        "stage_graph_revision",
-        "stage_map_assertion_change",
-        "stage_pattern_promotion",
-        "stage_profile_map_updates",
-        "stage_systematisation",
+        "stage_revision",
     }
 )
 
@@ -453,33 +454,81 @@ def suggested_action_key(action: Any) -> tuple[str, str]:
     )
 
 
+def stage_revision_action_kind(action: Any) -> str | None:
+    """Staging kind for a writing stage_revision action; None otherwise.
+
+    Dry-run planner calls return None so matchers for real staged writes do
+    not treat the read-only drafts as staging actions.
+    """
+
+    if action_tool_name(action) != "stage_revision":
+        return None
+    arguments = action_arguments(action)
+    if arguments.get("dry_run") is True:
+        return None
+    kind = arguments.get("kind")
+    return kind if isinstance(kind, str) else None
+
+
+def stage_revision_action_spec(action: Any) -> MappingABC[str, Any]:
+    """spec mapping carried by a stage_revision action (empty when absent)."""
+
+    spec = action_arguments(action).get("spec")
+    return spec if isinstance(spec, MappingABC) else {}
+
+
+def action_staging_arguments(action: Any) -> MappingABC[str, Any]:
+    """Effective call fields: the spec for stage_revision actions, else args."""
+
+    if action_tool_name(action) == "stage_revision":
+        return stage_revision_action_spec(action)
+    return action_arguments(action)
+
+
+def staged_rebase_draft_action(action: Any) -> bool:
+    """True for the single-IRI dry-run restage (the rebase-draft planner).
+
+    The read-only rebase draft shares the restage_staged_revision door with
+    the writing restage paths; dry_run=True on one IRI string is the planner,
+    dry_run=True on a list is the batch would-restage preview.
+    """
+
+    if action_tool_name(action) != "restage_staged_revision":
+        return False
+    arguments = action_arguments(action)
+    return (
+        arguments.get("dry_run") is True
+        and isinstance(arguments.get("revision_iris"), str)
+    )
+
+
 def staged_action_effect_metadata(
     tool_name: str | None,
     arguments: MappingABC[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Classify the write effects of staged-revision workflow actions."""
 
+    no_effect = {
+        "mutation_scope": "none",
+        "mutates_project_graph": False,
+        "writes_history": False,
+        "writes_files": False,
+        "writes_storage": False,
+    }
     if tool_name is None:
-        return {
-            "mutation_scope": "none",
-            "mutates_project_graph": False,
-            "writes_history": False,
-            "writes_files": False,
-            "writes_storage": False,
-        }
+        return no_effect
 
     action_arguments = arguments or {}
-    if (
-        tool_name == "restage_staged_revisions"
-        and action_arguments.get("dry_run") is True
+    if action_arguments.get("dry_run") is True and tool_name in {
+        "apply_staged_revision",
+        "restage_staged_revision",
+        "stage_revision",
+    }:
+        return no_effect
+    if tool_name == "stage_revision" and (
+        action_arguments.get("kind") not in STAGE_REVISION_HISTORY_WRITING_KINDS
     ):
-        return {
-            "mutation_scope": "none",
-            "mutates_project_graph": False,
-            "writes_history": False,
-            "writes_files": False,
-            "writes_storage": False,
-        }
+        return no_effect
 
     mutates_project_graph = (
         tool_name in STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES
@@ -489,6 +538,8 @@ def staged_action_effect_metadata(
     writes_history = tool_name in STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES
     if tool_name == "import_trig":
         writes_history = True
+    if tool_name == "plan_staged_revision_recovery":
+        writes_history = action_arguments.get("start_session") is True
 
     if tool_name == "apply_staged_revision":
         mutation_scope = "project_graph_and_history"
@@ -714,11 +765,16 @@ __all__ = [
     "PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER",
     "PROFILE_VALUE_TYPE_PROMOTION_REVIEW_NOTE_MARKER",
     "QUERY_REPAIR_PREDICATE_CURIES",
-    "STAGED_RECOVERY_MUTATING_TOOL_NAMES",
+    "STAGE_REVISION_RECOVERY_MUTATING_KINDS",
+    "STAGE_REVISION_HISTORY_WRITING_KINDS",
     "STAGED_ACTION_HISTORY_WRITING_TOOL_NAMES",
     "STAGED_ACTION_PROJECT_GRAPH_MUTATING_TOOL_NAMES",
     "STAGED_ACTION_FILE_WRITING_TOOL_NAMES",
     "STAGED_ACTION_STORAGE_WRITING_TOOL_NAMES",
+    "stage_revision_action_kind",
+    "stage_revision_action_spec",
+    "action_staging_arguments",
+    "staged_rebase_draft_action",
     "staged_action_effect_metadata",
     "suggested_action_key",
     "action_tool_name",

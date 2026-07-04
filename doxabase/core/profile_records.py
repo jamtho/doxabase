@@ -1090,10 +1090,14 @@ class ProfileRecordsMixin:
             )
         if dataset_describe_available and profile_run_available:
             add_action(
-                "draft_profile_map_updates",
+                "stage_revision",
                 {
-                    "dataset_iri": dataset_iri,
-                    "evidence_iri": profile_run_evidence_iri,
+                    "kind": "profile_map_updates",
+                    "dry_run": True,
+                    "spec": {
+                        "dataset_iri": dataset_iri,
+                        "evidence_iri": profile_run_evidence_iri,
+                    },
                 },
                 (
                     "Draft reviewable map update recommendations from this "

@@ -623,7 +623,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest_import["recovery_summary"].get("first_mutation_action") is None
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool"] == "doxabase.describe_staged_revision_recovery_session"
+    ]["tool"] == "doxabase.plan_staged_revision_recovery"
     assert manifest_import["recovery_summary"][
         "first_safe_review_or_mutation_action"
     ]["args"]["session_iri"] == manifest_import[
@@ -649,7 +649,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     )
     assert manifest_import["recovery_summary"]["first_suggested_next_action"][
         "tool"
-    ] == "doxabase.describe_staged_revision_recovery_session"
+    ] == "doxabase.plan_staged_revision_recovery"
     assert "Continue the imported source recovery session" in (
         manifest_import["recovery_summary"]["note"]
     )
@@ -663,13 +663,13 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         session.session_iri
     ]
     assert manifest_import["suggested_next_actions"][0]["tool"] == (
-        "doxabase.describe_staged_revision_recovery_session"
+        "doxabase.plan_staged_revision_recovery"
     )
     assert manifest_import["suggested_next_actions"][0]["args"] == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
     }
-    described_session = describe_staged_revision_recovery_session_tool(
+    described_session = plan_staged_revision_recovery_tool(
         manifest_receiver,
         session_iri=session.session_iri,
         drift_detail="exact",
@@ -777,9 +777,11 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     ]
     assert imported["recovery_summary"].get("first_mutation_action") is None
     assert imported["recovery_summary"].get("first_mutation_frontier_item") is None
-    assert imported["recovery_summary"][
+    assert (imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
-    ]["tool"] == "doxabase.start_staged_revision_recovery_session"
+    ]["tool"], imported["recovery_summary"][
+        "first_safe_review_or_mutation_action"
+    ]["args"].get("start_session")) == ("doxabase.plan_staged_revision_recovery", True)
     assert imported["recovery_summary"][
         "first_safe_review_or_mutation_action"
     ]["args"]["revision_iris"] == [staged["revision_iri"]]
@@ -788,7 +790,10 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
     ] == "receiver_local_recovery_session"
     assert imported["recovery_summary"]["first_suggested_next_action"][
         "tool"
-    ] == "doxabase.start_staged_revision_recovery_session"
+    ] == "doxabase.plan_staged_revision_recovery"
+    assert imported["recovery_summary"]["first_suggested_next_action"][
+        "args"
+    ]["start_session"] is True
     assert "Start a receiver-local recovery session" in (
         imported["recovery_summary"]["note"]
     )
@@ -796,7 +801,7 @@ def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_ses
         staged["revision_iri"]
     ]
     action = imported["suggested_next_actions"][0]
-    assert action["tool"] == "doxabase.start_staged_revision_recovery_session"
+    assert (action["tool"], action["args"].get("start_session")) == ("doxabase.plan_staged_revision_recovery", True)
     assert action["args"]["revision_iris"] == [staged["revision_iri"]]
     assert action["args"]["handoff_manifest_path"] == str(manifest_path)
     assert action["args"]["current_staged_work_only"] is False

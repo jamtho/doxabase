@@ -9,7 +9,6 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
-    check_staged_revision_apply_tool,
     describe_applied_revision_diff_tool,
     describe_dataset_tool,
     get_context_graph_tool,
@@ -21,14 +20,8 @@ from doxabase.mcp_tools import (
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
-    describe_staged_revision_recovery_session_tool,
     describe_staged_revision_tool,
-    draft_profile_map_updates_tool,
-    draft_query_evidence_storage_overlay_tool,
     draft_query_plan_tool,
-    draft_map_assertion_change_tool,
-    draft_staged_revision_rebase_tool,
-    draft_systematisation_shared_context_rerun_tool,
     export_context_slice_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
@@ -48,7 +41,6 @@ from doxabase.mcp_tools import (
     list_graph_versions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
-    plan_profile_followthrough_tool,
     plan_staged_revision_recovery_tool,
     preflight_context_slice_export_tool,
     project_brief_tool,
@@ -72,7 +64,6 @@ from doxabase.mcp_tools import (
     record_profiled_parquet_table_tool,
     record_profile_to_capsule_manifest_tool,
     record_graph_revision_tool,
-    record_staged_revision_review_decision_tool,
     record_observation_tool,
     record_profile_tool,
     record_map_fact_tool,
@@ -81,17 +72,9 @@ from doxabase.mcp_tools import (
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
-    restage_staged_revisions_tool,
     scan_sensitive_literals_tool,
     search_tool,
-    stage_graph_revision_tool,
-    stage_query_physical_layout_repair_tool,
-    stage_query_storage_access_repair_tool,
-    stage_map_assertion_change_tool,
-    stage_pattern_promotion_tool,
-    stage_profile_map_updates_tool,
-    stage_systematisation_tool,
-    start_staged_revision_recovery_session_tool,
+    stage_revision_tool,
     validate_graph_tool,
 )
 
@@ -207,79 +190,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
 
-    @server.tool(name="doxabase.draft_profile_map_updates")
-    def draft_profile_map_updates(
-        dataset_iri: str,
-        evidence_iri: str,
-        graph: str | None = "map",
-    ) -> dict[str, Any]:
-        """Draft review-oriented map updates from profile-run observations."""
-
-        return draft_profile_map_updates_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            graph=graph,
-        )
-
-    @server.tool(name="doxabase.plan_profile_followthrough")
-    def plan_profile_followthrough(
-        dataset_iri: str,
-        evidence_iri: str,
-        graph: str | None = "map",
-        result_bindings: dict[str, Any] | None = None,
-        staged_revision_iris: list[str] | None = None,
-        restage_stale_revisions: bool = False,
-    ) -> dict[str, Any]:
-        """Resolve profile advisory bindings and recheck related staged revisions."""
-
-        return plan_profile_followthrough_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            graph=graph,
-            result_bindings=result_bindings,
-            staged_revision_iris=staged_revision_iris,
-            restage_stale_revisions=restage_stale_revisions,
-        )
-
-    @server.tool(name="doxabase.stage_profile_map_updates")
-    def stage_profile_map_updates(
-        dataset_iri: str,
-        evidence_iri: str,
-        accepted_recommendation_indexes: list[int],
-        graph: str = "map",
-        allow_sampled_row_count_updates: bool = False,
-        allow_pending_profile_updates: bool = False,
-        summary: str | None = None,
-        rationale: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        revision_anchors: list[str] | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Stage accepted profile-map recommendations as one reviewable revision."""
-
-        return stage_profile_map_updates_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            accepted_recommendation_indexes=accepted_recommendation_indexes,
-            graph=graph,
-            allow_sampled_row_count_updates=allow_sampled_row_count_updates,
-            allow_pending_profile_updates=allow_pending_profile_updates,
-            summary=summary,
-            rationale=rationale,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            revision_anchors=revision_anchors,
-            validation_scope=validation_scope,
-        )
-
     @server.tool(name="doxabase.describe_query_context")
     def describe_query_context(
         iri: str,
@@ -312,169 +222,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             storage_access_iri=storage_access_iri,
             physical_layout_iri=physical_layout_iri,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
-        )
-
-    @server.tool(name="doxabase.draft_query_evidence_storage_overlay")
-    def draft_query_evidence_storage_overlay(
-        dataset_iri: str,
-        evidence_iri: str,
-        storage_protocol: str,
-        storage_root: str,
-        location_kind: str,
-        file_format: str,
-        graph: str | None = "map",
-        storage_access_iri: str | None = None,
-        physical_layout_iri: str | None = None,
-        storage_label: str | None = None,
-        physical_layout_label: str | None = None,
-        route_roles: list[str] | None = None,
-        access_mode: str | None = "rc:ReadOnlyAccess",
-        endpoint_profile: str | None = None,
-        bucket_name: str | None = None,
-        key_prefix: str | None = None,
-        region: str | None = None,
-        path_style_access: bool | None = None,
-        credential_reference: str | None = None,
-        path_templates: list[str] | None = None,
-        compression_codec: str | None = None,
-        layout_verification_status: str | None = None,
-        layout_verification_note: str | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Draft stage_graph_revision args from reviewed query evidence storage values.
-
-        route_roles are optional reviewed route-intent IRIs/CURIEs carried onto
-        the staged storage access.
-        """
-
-        return draft_query_evidence_storage_overlay_tool(
-            db,
-            dataset_iri=dataset_iri,
-            evidence_iri=evidence_iri,
-            storage_protocol=storage_protocol,
-            storage_root=storage_root,
-            location_kind=location_kind,
-            file_format=file_format,
-            graph=graph,
-            storage_access_iri=storage_access_iri,
-            physical_layout_iri=physical_layout_iri,
-            storage_label=storage_label,
-            physical_layout_label=physical_layout_label,
-            route_roles=route_roles,
-            access_mode=access_mode,
-            endpoint_profile=endpoint_profile,
-            bucket_name=bucket_name,
-            key_prefix=key_prefix,
-            region=region,
-            path_style_access=path_style_access,
-            credential_reference=credential_reference,
-            path_templates=path_templates,
-            compression_codec=compression_codec,
-            layout_verification_status=layout_verification_status,
-            layout_verification_note=layout_verification_note,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.stage_query_physical_layout_repair")
-    def stage_query_physical_layout_repair(
-        dataset_iri: str,
-        layout_iri: str,
-        file_format: str,
-        rationale: str,
-        label: str | None = None,
-        description: str | None = None,
-        compression_codec: str | None = None,
-        layout_verification_status: str | None = None,
-        layout_verification_note: str | None = None,
-        allow_existing_physical_layouts: bool = False,
-        summary: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        profile_route_sources: list[dict[str, Any]] | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Stage reviewed physical layout metadata for a query repair."""
-
-        return stage_query_physical_layout_repair_tool(
-            db,
-            dataset_iri=dataset_iri,
-            layout_iri=layout_iri,
-            file_format=file_format,
-            rationale=rationale,
-            label=label,
-            description=description,
-            compression_codec=compression_codec,
-            layout_verification_status=layout_verification_status,
-            layout_verification_note=layout_verification_note,
-            allow_existing_physical_layouts=allow_existing_physical_layouts,
-            summary=summary,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            profile_route_sources=profile_route_sources,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.stage_query_storage_access_repair")
-    def stage_query_storage_access_repair(
-        dataset_iri: str,
-        storage_access_iri: str,
-        storage_protocol: str,
-        storage_root: str,
-        rationale: str,
-        label: str | None = None,
-        description: str | None = None,
-        route_roles: list[str] | None = None,
-        access_mode: str | None = None,
-        location_kind: str | None = None,
-        endpoint_profile: str | None = None,
-        bucket_name: str | None = None,
-        key_prefix: str | None = None,
-        region: str | None = None,
-        path_style_access: bool | None = None,
-        credential_reference: str | None = None,
-        path_templates: list[str] | None = None,
-        layout_verification_status: str | None = None,
-        layout_verification_note: str | None = None,
-        allow_existing_storage_accesses: bool = False,
-        summary: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        profile_route_sources: list[dict[str, Any]] | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Stage reviewed storage access metadata for a query repair.
-
-        route_roles are optional reviewed route-intent IRIs/CURIEs carried onto
-        the staged storage access.
-        """
-
-        return stage_query_storage_access_repair_tool(
-            db,
-            dataset_iri=dataset_iri,
-            storage_access_iri=storage_access_iri,
-            storage_protocol=storage_protocol,
-            storage_root=storage_root,
-            rationale=rationale,
-            label=label,
-            description=description,
-            route_roles=route_roles,
-            access_mode=access_mode,
-            location_kind=location_kind,
-            endpoint_profile=endpoint_profile,
-            bucket_name=bucket_name,
-            key_prefix=key_prefix,
-            region=region,
-            path_style_access=path_style_access,
-            credential_reference=credential_reference,
-            path_templates=path_templates,
-            layout_verification_status=layout_verification_status,
-            layout_verification_note=layout_verification_note,
-            allow_existing_storage_accesses=allow_existing_storage_accesses,
-            summary=summary,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            profile_route_sources=profile_route_sources,
-            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.get_context_graph")
@@ -822,103 +569,34 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             include_current_apply_check=include_current_apply_check,
         )
 
-    @server.tool(name="doxabase.check_staged_revision_apply")
-    def check_staged_revision_apply(
-        iri: str,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Preview whether a staged graph revision can apply cleanly."""
-
-        return check_staged_revision_apply_tool(
-            db,
-            iri=iri,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.draft_staged_revision_rebase")
-    def draft_staged_revision_rebase(
-        iri: str,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Draft a read-only repaired successor plan for a staged revision."""
-
-        return draft_staged_revision_rebase_tool(
-            db,
-            iri=iri,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.draft_systematisation_shared_context_rerun")
-    def draft_systematisation_shared_context_rerun(
-        revision_iris: list[str],
-        shared_context_target_revision_iris: list[str],
-        summary: str | None = None,
-        intent: str | None = None,
-        rationale: str | None = None,
-        link_alternatives: bool = False,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Draft a stage_systematisation rerun with shared context moved."""
-
-        return draft_systematisation_shared_context_rerun_tool(
-            db,
-            revision_iris=revision_iris,
-            shared_context_target_revision_iris=(
-                shared_context_target_revision_iris
-            ),
-            summary=summary,
-            intent=intent,
-            rationale=rationale,
-            link_alternatives=link_alternatives,
-            validation_scope=validation_scope,
-        )
-
     @server.tool(name="doxabase.plan_staged_revision_recovery")
     def plan_staged_revision_recovery(
         revision_iris: list[str] | None = None,
-        current_staged_work_only: bool = True,
-        include_drafts: bool = True,
-        repair_draft_limit: int | None = 1,
+        start_session: bool = False,
+        session_iri: str | None = None,
+        summary: str | None = None,
+        handoff_manifest_path: str | None = None,
+        current_staged_work_only: bool | None = None,
+        include_drafts: bool | None = None,
+        repair_draft_limit: int | None = None,
         validation_scope: str | None = None,
-        drift_detail: str = "summary",
-        limit: int = 50,
-        offset: int = 0,
+        drift_detail: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
     ) -> dict[str, Any]:
-        """Plan read-only recovery routes for staged revision queues."""
+        """Plan read-only recovery routes for staged revision queues.
+        start_session=True persists the plan as a durable recovery session
+        (summary, handoff_manifest_path, created_* apply only then).
+        session_iri= without start_session describes that persisted session
+        with a live replan; include_drafts/repair_draft_limit/drift_detail
+        then default to the stored session settings."""
 
         return plan_staged_revision_recovery_tool(
             db,
             revision_iris=revision_iris,
-            current_staged_work_only=current_staged_work_only,
-            include_drafts=include_drafts,
-            repair_draft_limit=repair_draft_limit,
-            validation_scope=validation_scope,
-            drift_detail=drift_detail,
-            limit=limit,
-            offset=offset,
-        )
-
-    @server.tool(name="doxabase.start_staged_revision_recovery_session")
-    def start_staged_revision_recovery_session(
-        revision_iris: list[str] | None = None,
-        session_iri: str | None = None,
-        summary: str | None = None,
-        handoff_manifest_path: str | None = None,
-        current_staged_work_only: bool = True,
-        include_drafts: bool = True,
-        repair_draft_limit: int | None = 1,
-        validation_scope: str | None = None,
-        drift_detail: str = "summary",
-        limit: int = 50,
-        offset: int = 0,
-        created_at: str | None = None,
-        created_by: str | None = None,
-    ) -> dict[str, Any]:
-        """Persist a staged recovery session and return its live plan."""
-
-        return start_staged_revision_recovery_session_tool(
-            db,
-            revision_iris=revision_iris,
+            start_session=start_session,
             session_iri=session_iri,
             summary=summary,
             handoff_manifest_path=handoff_manifest_path,
@@ -931,25 +609,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             offset=offset,
             created_at=created_at,
             created_by=created_by,
-        )
-
-    @server.tool(name="doxabase.describe_staged_revision_recovery_session")
-    def describe_staged_revision_recovery_session(
-        session_iri: str,
-        include_drafts: bool | None = None,
-        repair_draft_limit: int | None = None,
-        validation_scope: str | None = None,
-        drift_detail: str | None = None,
-    ) -> dict[str, Any]:
-        """Describe a persisted staged recovery session with a live replan."""
-
-        return describe_staged_revision_recovery_session_tool(
-            db,
-            session_iri=session_iri,
-            include_drafts=include_drafts,
-            repair_draft_limit=repair_draft_limit,
-            validation_scope=validation_scope,
-            drift_detail=drift_detail,
         )
 
     @server.tool(name="doxabase.record_observation")
@@ -1339,110 +998,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_result_count=validation_result_count,
         )
 
-    @server.tool(name="doxabase.record_staged_revision_review_decision")
-    def record_staged_revision_review_decision(
-        iri: str,
-        decision: str,
-        rationale: str,
-        summary: str | None = None,
-        resolution_revision_iri: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        allow_mutation_target: bool = False,
-        validation_scope: str | None = None,
+    @server.tool(name="doxabase.stage_revision")
+    def stage_revision(
+        kind: str,
+        spec: dict[str, Any] | None = None,
+        dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Record a durable review decision that closes a staged row without applying it."""
+        """Stage a reviewable revision without applying it. kind: 'graph',
+        'map_assertion', 'systematisation', 'pattern_promotion',
+        'profile_map_updates', 'query_storage_access_repair',
+        'query_physical_layout_repair', or 'review_decision' (closes a
+        staged row); spec carries that kind's fields (targeted errors name
+        them). dry_run=True writes nothing, keeping the draft shapes:
+        'map_assertion', 'profile_map_updates' (followthrough spec fields
+        switch to the followthrough plan), 'systematisation' (rerun),
+        'query_evidence_overlay' (dry-run only)."""
 
-        return record_staged_revision_review_decision_tool(
-            db,
-            iri=iri,
-            decision=decision,
-            rationale=rationale,
-            summary=summary,
-            resolution_revision_iri=resolution_revision_iri,
-            created_at=created_at,
-            created_by=created_by,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            allow_mutation_target=allow_mutation_target,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.stage_graph_revision")
-    def stage_graph_revision(
-        summary: str,
-        rationale: str,
-        additions: list[dict[str, str]] | None = None,
-        removals: list[dict[str, str]] | None = None,
-        stance: str = "rc:CandidateRevision",
-        revision_type: str = "rc:StagedRevision",
-        included_graphs: list[str] | None = None,
-        revision_iri: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        revision_anchors: list[str] | None = None,
-        evidence: list[str] | None = None,
-        alternative_to: str | None = None,
-        restages_revision: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Record a reviewable staged graph revision without applying it."""
-
-        return stage_graph_revision_tool(
-            db,
-            summary=summary,
-            rationale=rationale,
-            additions=additions,
-            removals=removals,
-            stance=stance,
-            revision_type=revision_type,
-            included_graphs=included_graphs,
-            revision_iri=revision_iri,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            revision_anchors=revision_anchors,
-            evidence=evidence,
-            alternative_to=alternative_to,
-            restages_revision=restages_revision,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            validation_scope=validation_scope,
-        )
+        return stage_revision_tool(db, kind=kind, spec=spec, dry_run=dry_run)
 
     @server.tool(name="doxabase.restage_staged_revision")
     def restage_staged_revision(
-        iri: str,
+        revision_iris: list[str] | str,
         summary: str | None = None,
         rationale: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        validation_scope: str | None = None,
-    ) -> dict[str, Any]:
-        """Restage a conflicted staged revision against current graph state."""
-
-        return restage_staged_revision_tool(
-            db,
-            iri=iri,
-            summary=summary,
-            rationale=rationale,
-            created_at=created_at,
-            created_by=created_by,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.restage_staged_revisions")
-    def restage_staged_revisions(
-        revision_iris: list[str],
         path: str | None = None,
         title: str | None = None,
         executive_summary: str | None = None,
@@ -1453,11 +1031,18 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         validation_scope: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Restage or dry-run several conflicted staged revisions."""
+        """Restage conflicted staged revisions against current graph state.
+        revision_iris: one IRI string restages that revision
+        (summary/rationale override provenance); a list runs the batch path
+        (path/title/executive_summary export one comparison review bundle).
+        dry_run=True writes nothing: with a string it returns the read-only
+        rebase-draft plan; with a list, the batch would-restage preview."""
 
-        return restage_staged_revisions_tool(
+        return restage_staged_revision_tool(
             db,
             revision_iris=revision_iris,
+            summary=summary,
+            rationale=rationale,
             path=path,
             title=title,
             executive_summary=executive_summary,
@@ -1467,236 +1052,6 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             created_by=created_by,
             validation_scope=validation_scope,
             dry_run=dry_run,
-        )
-
-    @server.tool(name="doxabase.draft_map_assertion_change")
-    def draft_map_assertion_change(
-        subject: str,
-        predicate: str,
-        object: str | None,
-        rationale: str,
-        change_kind: str = "replace",
-        graph: str = "map",
-        object_kind: str = "auto",
-        object_datatype: str | None = None,
-        object_lang: str | None = None,
-        summary: str | None = None,
-        stance: str = "rc:CandidateRevision",
-        revision_type: str = "rc:StagedRevision",
-        included_graphs: list[str] | None = None,
-        revision_iri: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        revision_anchors: list[str] | None = None,
-        evidence: list[str] | None = None,
-        alternative_to: str | None = None,
-        restages_revision: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        validation_scope: str = "all",
-        limit: int = 20,
-    ) -> dict[str, Any]:
-        """Preview a map assertion change with support, validation, and no write."""
-
-        return draft_map_assertion_change_tool(
-            db,
-            subject=subject,
-            predicate=predicate,
-            object=object,
-            rationale=rationale,
-            change_kind=change_kind,
-            graph=graph,
-            object_kind=object_kind,
-            object_datatype=object_datatype,
-            object_lang=object_lang,
-            summary=summary,
-            stance=stance,
-            revision_type=revision_type,
-            included_graphs=included_graphs,
-            revision_iri=revision_iri,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            revision_anchors=revision_anchors,
-            evidence=evidence,
-            alternative_to=alternative_to,
-            restages_revision=restages_revision,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            validation_scope=validation_scope,
-            limit=limit,
-        )
-
-    @server.tool(name="doxabase.stage_map_assertion_change")
-    def stage_map_assertion_change(
-        subject: str,
-        predicate: str,
-        object: str | None,
-        rationale: str,
-        change_kind: str = "replace",
-        graph: str = "map",
-        object_kind: str = "auto",
-        object_datatype: str | None = None,
-        object_lang: str | None = None,
-        summary: str | None = None,
-        stance: str = "rc:CandidateRevision",
-        revision_type: str = "rc:StagedRevision",
-        included_graphs: list[str] | None = None,
-        revision_iri: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        revision_anchors: list[str] | None = None,
-        evidence: list[str] | None = None,
-        alternative_to: str | None = None,
-        restages_revision: str | None = None,
-        review_note: str | None = None,
-        review_recommendation: str | None = None,
-        profile_route_sources: list[dict[str, Any]] | None = None,
-        validation_scope: str = "all",
-        limit: int = 20,
-    ) -> dict[str, Any]:
-        """Stage a map assertion add/remove/replace with support context."""
-
-        return stage_map_assertion_change_tool(
-            db,
-            subject=subject,
-            predicate=predicate,
-            object=object,
-            rationale=rationale,
-            change_kind=change_kind,
-            graph=graph,
-            object_kind=object_kind,
-            object_datatype=object_datatype,
-            object_lang=object_lang,
-            summary=summary,
-            stance=stance,
-            revision_type=revision_type,
-            included_graphs=included_graphs,
-            revision_iri=revision_iri,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            revision_anchors=revision_anchors,
-            evidence=evidence,
-            alternative_to=alternative_to,
-            restages_revision=restages_revision,
-            review_note=review_note,
-            review_recommendation=review_recommendation,
-            profile_route_sources=profile_route_sources,
-            validation_scope=validation_scope,
-            limit=limit,
-        )
-
-    @server.tool(name="doxabase.stage_systematisation")
-    def stage_systematisation(
-        summary: str,
-        intent: str,
-        framings: list[dict[str, Any]],
-        anchors: list[str] | None = None,
-        rationale: str | None = None,
-        shared_additions: list[dict[str, str]] | None = None,
-        shared_removals: list[dict[str, str]] | None = None,
-        shared_context_summary: str | None = None,
-        default_stance: str = "rc:ExploratoryHunch",
-        revision_type: str = "rc:StagedRevision",
-        included_graphs: list[str] | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        evidence: list[str] | None = None,
-        alternative_to: str | None = None,
-        link_alternatives: bool = True,
-        profile_route_sources: list[dict[str, Any]] | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Stage one or more caller-authored RDF framings for a systematisation."""
-
-        return stage_systematisation_tool(
-            db,
-            summary=summary,
-            intent=intent,
-            framings=framings,
-            anchors=anchors,
-            rationale=rationale,
-            shared_additions=shared_additions,
-            shared_removals=shared_removals,
-            shared_context_summary=shared_context_summary,
-            default_stance=default_stance,
-            revision_type=revision_type,
-            included_graphs=included_graphs,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            evidence=evidence,
-            alternative_to=alternative_to,
-            link_alternatives=link_alternatives,
-            profile_route_sources=profile_route_sources,
-            validation_scope=validation_scope,
-        )
-
-    @server.tool(name="doxabase.stage_pattern_promotion")
-    def stage_pattern_promotion(
-        patterns: list[str],
-        framings: list[dict[str, Any]],
-        summary: str | None = None,
-        intent: str | None = None,
-        rationale: str | None = None,
-        anchors: list[str] | None = None,
-        shared_additions: list[dict[str, str]] | None = None,
-        shared_removals: list[dict[str, str]] | None = None,
-        shared_context_summary: str | None = None,
-        default_stance: str = "rc:CandidateRevision",
-        revision_type: str = "rc:StagedRevision",
-        included_graphs: list[str] | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        evidence: list[str] | None = None,
-        alternative_to: str | None = None,
-        link_alternatives: bool = True,
-        profile_route_sources: list[dict[str, Any]] | None = None,
-        validation_scope: str = "all",
-    ) -> dict[str, Any]:
-        """Stage graph changes supported by existing patterns."""
-
-        return stage_pattern_promotion_tool(
-            db,
-            patterns=patterns,
-            framings=framings,
-            summary=summary,
-            intent=intent,
-            rationale=rationale,
-            anchors=anchors,
-            shared_additions=shared_additions,
-            shared_removals=shared_removals,
-            shared_context_summary=shared_context_summary,
-            default_stance=default_stance,
-            revision_type=revision_type,
-            included_graphs=included_graphs,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            evidence=evidence,
-            alternative_to=alternative_to,
-            link_alternatives=link_alternatives,
-            profile_route_sources=profile_route_sources,
-            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.export_staged_revision")
@@ -1726,8 +1081,11 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         created_by: str | None = None,
         allow_validation_failure: bool = False,
         validation_scope: str | None = None,
+        dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Apply a staged graph revision after conflict and validation checks."""
+        """Apply a staged graph revision after conflict and validation checks.
+        dry_run=True runs the read-only apply check instead (iri and
+        validation_scope only) and returns the check response shape."""
 
         return apply_staged_revision_tool(
             db,
@@ -1737,6 +1095,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             created_by=created_by,
             allow_validation_failure=allow_validation_failure,
             validation_scope=validation_scope,
+            dry_run=dry_run,
         )
 
     @server.tool(name="doxabase.export_staged_revisions")

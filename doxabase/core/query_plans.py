@@ -75,7 +75,7 @@ class QueryPlansMixin:
                         "storage_root": connection_reference,
                         "location_kind": "connection",
                         "path_templates": [relation_identifier],
-                        "stage_query_storage_access_repair_candidate_arguments": (
+                        "query_storage_access_repair_candidate_spec": (
                             candidate_arguments
                         ),
                         "candidate_value_fields": [
@@ -86,9 +86,10 @@ class QueryPlansMixin:
                         ],
                         "review_note": (
                             "Parsed from a query-result scanned_source_handle. "
-                            "Copy these values into stage_query_storage_access_repair "
-                            "only after reviewing the handle as a non-secret "
-                            "database relation route."
+                            "Copy these values into the stage_revision "
+                            "query_storage_access_repair spec only after "
+                            "reviewing the handle as a non-secret database "
+                            "relation route."
                         ),
                     }
                 )
@@ -412,10 +413,10 @@ class QueryPlansMixin:
             "storage_root": storage_arguments.get("storage_root"),
             "location_kind": storage_arguments.get("location_kind"),
             "path_templates": storage_arguments.get("path_templates", []),
-            "stage_query_storage_access_repair_candidate_arguments": (
+            "query_storage_access_repair_candidate_spec": (
                 storage_arguments
             ),
-            "draft_query_evidence_storage_overlay_candidate_arguments": (
+            "query_evidence_overlay_candidate_spec": (
                 overlay_arguments
             ),
             "candidate_value_fields": candidate_value_fields,

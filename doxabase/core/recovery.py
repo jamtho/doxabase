@@ -35,7 +35,9 @@ class RecoveryMixin:
         repair_actions = [
             action
             for action in check.suggested_next_actions
-            if action.tool == "doxabase.stage_map_assertion_change"
+            if action.tool == "doxabase.stage_revision"
+            and action.args.get("kind") == "map_assertion"
+            and action.args.get("dry_run") is not True
         ]
         repair_candidates = [
             candidate
@@ -69,13 +71,13 @@ class RecoveryMixin:
         preferred_action = repair_actions[0] if repair_actions else None
         action_candidates = [*repair_actions, *check.suggested_next_actions]
         if any(
-            action.tool != "doxabase.draft_staged_revision_rebase"
+            not staged_rebase_draft_action(action)
             for action in action_candidates
         ):
             action_candidates = [
                 action
                 for action in action_candidates
-                if action.tool != "doxabase.draft_staged_revision_rebase"
+                if not staged_rebase_draft_action(action)
             ]
         suggested_next_actions = self._dedupe_suggested_next_actions(
             action_candidates
@@ -169,8 +171,9 @@ class RecoveryMixin:
                 "same_slot_replacement",
                 ["same_slot_replacement"],
                 (
-                    "Drafted a reviewed stage_map_assertion_change replacement "
-                    "candidate. The helper did not stage or apply it."
+                    "Drafted a reviewed stage_revision map_assertion "
+                    "replacement candidate. The helper did not stage or "
+                    "apply it."
                 ),
             )
         if self._staged_apply_check_has_ambiguous_same_slot_review(check):
@@ -347,7 +350,7 @@ class RecoveryMixin:
     ) -> RevisionNextAction | None:
         if (
             check.next_action is not None
-            and check.next_action.tool_name != "draft_staged_revision_rebase"
+            and not staged_rebase_draft_action(check.next_action)
         ):
             return check.next_action
         selected_action = next(
@@ -408,7 +411,9 @@ class RecoveryMixin:
         *,
         validation_results: list[ValidationDiagnostic],
     ) -> StagedRevisionRebaseCandidate | None:
-        arguments = action.args
+        arguments = action.args.get("spec")
+        if not isinstance(arguments, Mapping):
+            return None
         subject = arguments.get("subject")
         predicate = arguments.get("predicate")
         object_value = arguments.get("object")
@@ -857,9 +862,9 @@ class RecoveryMixin:
                 f"{repair_drafts_deferred_count} embedded repair draft(s) "
                 f"because repair_draft_limit={effective_repair_draft_limit}. "
                 "All repair lanes remain visible; call "
-                "draft_staged_revision_rebase for a deferred lane or rerun the "
-                "planner with a larger repair_draft_limit when deeper embedded "
-                "drafts are needed."
+                "restage_staged_revision with dry_run=true for a deferred "
+                "lane or rerun the planner with a larger repair_draft_limit "
+                "when deeper embedded drafts are needed."
             )
         if repair_inspection_required:
             warnings.append(
@@ -2602,7 +2607,7 @@ class RecoveryMixin:
         if repair_draft is None or repair_draft.preferred_action is not None:
             return False
         if any(
-            action.tool == "doxabase.draft_staged_revision_rebase"
+            staged_rebase_draft_action(action)
             for action in repair_draft.suggested_next_actions
         ):
             return False
@@ -2640,7 +2645,21 @@ class RecoveryMixin:
     ) -> bool:
         if action is None:
             return False
-        return action_tool_name(action) in STAGED_RECOVERY_MUTATING_TOOL_NAMES
+        tool_name = action_tool_name(action)
+        arguments = action_arguments(action)
+        if tool_name == "stage_revision":
+            return (
+                arguments.get("dry_run") is not True
+                and arguments.get("kind") in STAGE_REVISION_RECOVERY_MUTATING_KINDS
+            )
+        if tool_name == "restage_staged_revision":
+            # The single-IRI rebase draft replaced the review-only
+            # draft_staged_revision_rebase door; the batch dry-run keeps its
+            # historical membership in the mutating family.
+            return not staged_rebase_draft_action(action)
+        if tool_name == "apply_staged_revision":
+            return arguments.get("dry_run") is not True
+        return False
     @staticmethod
     def _staged_recovery_action_is_safe_review(
         action: SuggestedNextAction | RevisionNextAction | None,
@@ -2662,8 +2681,9 @@ class RecoveryMixin:
     ) -> bool:
         return (
             action is not None
-            and action_tool_name(action) == "restage_staged_revisions"
+            and action_tool_name(action) == "restage_staged_revision"
             and action_arguments(action).get("dry_run") is True
+            and not staged_rebase_draft_action(action)
             and DoxaBase._staged_recovery_action_is_safe_review(action)
         )
     @staticmethod
@@ -2713,8 +2733,7 @@ class RecoveryMixin:
                     "doxabase.describe_revision_lineage",
                     "doxabase.describe_graph_revision",
                     "doxabase.describe_applied_revision_diff",
-                    "doxabase.draft_staged_revision_rebase",
-                }:
+                } or staged_rebase_draft_action(action):
                     review_first_actions.append(action)
                 else:
                     mutation_actions.append(action)
@@ -3143,7 +3162,7 @@ class RecoveryMixin:
             "dry_run": True,
         }
         return SuggestedNextAction(
-                   tool="doxabase.restage_staged_revisions",
+                   tool="doxabase.restage_staged_revision",
                    args=arguments,
                    reason="Planner found mechanically restageable stale revisions. Run a "
                 "batch dry-run over would_restage_revision_iris before creating "
@@ -3158,7 +3177,7 @@ class RecoveryMixin:
             "dry_run": False,
         }
         return SuggestedNextAction(
-                   tool="doxabase.restage_staged_revisions",
+                   tool="doxabase.restage_staged_revision",
                    args=arguments,
                    reason="Run the real batch restage only after the dry-run "
                 "classification has been reviewed and still matches the "
@@ -3322,7 +3341,8 @@ class RecoveryMixin:
             not dry_run
             and not matching_recovery_session_iris
             and first_action is not None
-            and first_action.tool == "doxabase.start_staged_revision_recovery_session"
+            and first_action.tool == "doxabase.plan_staged_revision_recovery"
+            and first_action.args.get("start_session") is True
         )
         if privacy_review_required_before_recovery:
             recommended_next_step = "review_handoff_privacy_before_recovery"
@@ -3351,8 +3371,9 @@ class RecoveryMixin:
         if imported_session_continuation_required:
             for action in suggested_next_actions:
                 if (
-                    action.tool
-                    == "doxabase.describe_staged_revision_recovery_session"
+                    action.tool == "doxabase.plan_staged_revision_recovery"
+                    and isinstance(action.args.get("session_iri"), str)
+                    and action.args.get("start_session") is not True
                 ):
                     resume_recovery_session_action = action
                     break
@@ -4074,7 +4095,7 @@ class RecoveryMixin:
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
         return SuggestedNextAction(
-                   tool="doxabase.describe_staged_revision_recovery_session",
+                   tool="doxabase.plan_staged_revision_recovery",
                    args=arguments,
                    reason="The handoff imported a persisted staged-revision recovery "
                 "session whose source revisions overlap the manifest revisions. "
@@ -4092,6 +4113,7 @@ class RecoveryMixin:
     ) -> SuggestedNextAction:
         arguments: dict[str, Any] = {
             "revision_iris": revision_iris,
+            "start_session": True,
             "current_staged_work_only": False,
             "include_drafts": include_drafts,
             "drift_detail": drift_detail,
@@ -4101,7 +4123,7 @@ class RecoveryMixin:
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
         return SuggestedNextAction(
-                   tool="doxabase.start_staged_revision_recovery_session",
+                   tool="doxabase.plan_staged_revision_recovery",
                    args=arguments,
                    reason="No matching imported recovery session was found. Persist a "
                 "receiver-local session for the imported manifest revisions so "

@@ -803,7 +803,7 @@ class StagingMixin:
                     layout.iri for layout in dataset.physical_layouts[:3]
                 )
                 raise DoxaBaseError(
-                    "stage_query_physical_layout_repair is intended for "
+                    "stage_revision kind='query_physical_layout_repair' is intended for "
                     "missing_physical_layout repair groups; dataset already "
                     f"has physical layout(s): {existing}. Pass "
                     "allow_existing_physical_layouts=True only after reviewing "
@@ -938,7 +938,7 @@ class StagingMixin:
                     access.iri for access in dataset.storage_accesses[:3]
                 )
                 raise DoxaBaseError(
-                    "stage_query_storage_access_repair is intended for "
+                    "stage_revision kind='query_storage_access_repair' is intended for "
                     "missing_storage_access repair groups; dataset already "
                     f"has storage access resource(s): {existing}. Pass "
                     "allow_existing_storage_accesses=True only after reviewing "
@@ -1236,7 +1236,10 @@ class StagingMixin:
             )
         )
         if not parsed_patches:
-            raise DoxaBaseError("stage_graph_revision requires at least one patch")
+            raise DoxaBaseError(
+                "staging a graph revision requires at least one patch "
+                "(additions or removals)"
+            )
 
         stance_iri = self.expand_iri(stance)
         self._ensure_revision_stance(stance_iri)
@@ -1557,8 +1560,8 @@ class StagingMixin:
         if object_lang is not None:
             arguments["object_lang"] = object_lang
         action = SuggestedNextAction(
-                     tool="doxabase.stage_map_assertion_change",
-                     args=arguments,
+                     tool="doxabase.stage_revision",
+                     args={"kind": "map_assertion", "spec": arguments},
                      reason=f"Validation failed because {replacement_label} is "
                 "single-valued and the current graph has a different value. "
                 "Stage a reviewed replacement successor instead of replaying "
@@ -2251,7 +2254,7 @@ class StagingMixin:
                     same_slot_details
                 )
                 effect_class = "same_slot_replace"
-                recommended_action_kind = "stage_map_assertion_change"
+                recommended_action_kind = "stage_revision_map_assertion"
                 note = (
                     "This single-triple subpatch targets a guarded "
                     "single-valued map slot whose current value changed since "
@@ -2459,8 +2462,8 @@ class StagingMixin:
         if lang is not None:
             arguments["object_lang"] = lang
         action = SuggestedNextAction(
-                     tool="doxabase.stage_map_assertion_change",
-                     args=arguments,
+                     tool="doxabase.stage_revision",
+                     args={"kind": "map_assertion", "spec": arguments},
                      reason="Patch-level repair planning found a guarded single-valued "
                 f"{replacement_label} subpatch inside a larger staged row. "
                 "Stage this replacement only after deciding how to preserve, "
@@ -2485,11 +2488,14 @@ class StagingMixin:
         *,
         validation_scope: str | None,
     ) -> SuggestedNextAction:
-        arguments: dict[str, Any] = {"iri": staged_revision_iri}
+        arguments: dict[str, Any] = {
+            "revision_iris": staged_revision_iri,
+            "dry_run": True,
+        }
         if validation_scope is not None:
             arguments["validation_scope"] = validation_scope
         return SuggestedNextAction(
-                   tool="doxabase.draft_staged_revision_rebase",
+                   tool="doxabase.restage_staged_revision",
                    args=arguments,
                    reason="Patch-level repair planning found at least one semantic "
                 "same-slot subpatch inside a larger stale revision. Inspect the "
@@ -2654,8 +2660,8 @@ class StagingMixin:
             f"{replacement_label} value."
         )
         return SuggestedNextAction(
-                   tool="doxabase.stage_map_assertion_change",
-                   args=arguments,
+                   tool="doxabase.stage_revision",
+                   args={"kind": "map_assertion", "spec": arguments},
                    reason=reason,
                )
     def _staged_ambiguous_same_slot_review_action(
@@ -3634,7 +3640,7 @@ class StagingMixin:
             prefix = (
                 f"Staged patch '{patch_iri}'"
                 if patch_iri is not None
-                else "stage_graph_revision"
+                else "stage_revision"
             )
             raise DoxaBaseError(
                 f"{prefix} cannot target 'history' because staged revision "
@@ -4757,8 +4763,8 @@ class StagingMixin:
                 f"has {self._compact_value_list(current_values)} and this "
                 f"staged patch adds {self._compact_value_list(added_values)}. "
                 "Choose the intended row framing and use a removal+addition "
-                "patch or stage_map_assertion_change replacement if the staged "
-                "value should replace the current value."
+                "patch or stage_revision map_assertion replacement if the "
+                "staged value should replace the current value."
             )
         if added_values:
             return (
@@ -4766,7 +4772,7 @@ class StagingMixin:
                 f"{self._compact_value_list(added_values)}, but the candidate "
                 "graph has multiple rowSemantics values. Choose one row "
                 "framing and use a removal+addition patch or "
-                "stage_map_assertion_change replacement when changing an "
+                "stage_revision map_assertion replacement when changing an "
                 "existing value."
             )
         if current_values and removed_values:

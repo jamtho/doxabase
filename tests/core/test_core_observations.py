@@ -1553,9 +1553,9 @@ def test_metric_promotion_skeleton_uses_generic_comment_for_broad_pattern(
     promotion_action = [
         action
         for action in advisory.suggested_next_actions
-        if action.tool == "doxabase.stage_pattern_promotion"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
     ][0]
-    framing_content = promotion_action.args["framings"][0]["content"]
+    framing_content = promotion_action.args["spec"]["framings"][0]["content"]
 
     assert [item.iri for item in advisory.promotion_patterns] == [
         pattern.pattern_iri
@@ -1630,15 +1630,17 @@ def test_metric_promotion_skeleton_uses_metric_specific_pattern_hint(
         for action in advisories_by_metric[
             completeness_metric
         ].suggested_next_actions
-        if action.tool == "doxabase.stage_pattern_promotion"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
     ][0]
     freshness_action = [
         action
         for action in advisories_by_metric[freshness_metric].suggested_next_actions
-        if action.tool == "doxabase.stage_pattern_promotion"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
     ][0]
-    completeness_content = completeness_action.args["framings"][0]["content"]
-    freshness_content = freshness_action.args["framings"][0]["content"]
+    completeness_content = completeness_action.args["spec"]["framings"][0][
+        "content"
+    ]
+    freshness_content = freshness_action.args["spec"]["framings"][0]["content"]
 
     assert "CompletenessScore is non-null values" in completeness_content
     assert "review and sharpen its calculation" in freshness_content

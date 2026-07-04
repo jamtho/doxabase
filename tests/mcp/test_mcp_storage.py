@@ -18,13 +18,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
-    assert "doxabase.draft_profile_map_updates" in tool_names
-    assert "doxabase.plan_profile_followthrough" in tool_names
-    assert "doxabase.stage_profile_map_updates" in tool_names
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
-    assert "doxabase.stage_query_physical_layout_repair" in tool_names
-    assert "doxabase.stage_query_storage_access_repair" in tool_names
     assert "doxabase.get_context_graph" in tool_names
     assert "doxabase.preflight_context_slice_export" in tool_names
     assert "doxabase.export_context_slice" in tool_names
@@ -40,12 +35,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.list_resource_revisions" in tool_names
     assert "doxabase.describe_resource_revision_lineage" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
-    assert "doxabase.check_staged_revision_apply" in tool_names
-    assert "doxabase.draft_staged_revision_rebase" in tool_names
-    assert "doxabase.draft_systematisation_shared_context_rerun" in tool_names
     assert "doxabase.plan_staged_revision_recovery" in tool_names
-    assert "doxabase.start_staged_revision_recovery_session" in tool_names
-    assert "doxabase.describe_staged_revision_recovery_session" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_profile" in tool_names
     assert "doxabase.record_map_fact" in tool_names
@@ -63,13 +53,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.export_staged_revisions" in tool_names
     assert "doxabase.export_trig" in tool_names
     assert "doxabase.record_graph_revision" in tool_names
-    assert "doxabase.stage_graph_revision" in tool_names
+    assert "doxabase.stage_revision" in tool_names
     assert "doxabase.restage_staged_revision" in tool_names
-    assert "doxabase.restage_staged_revisions" in tool_names
-    assert "doxabase.draft_map_assertion_change" in tool_names
-    assert "doxabase.stage_map_assertion_change" in tool_names
-    assert "doxabase.stage_systematisation" in tool_names
-    assert "doxabase.stage_pattern_promotion" in tool_names
     assert "doxabase.apply_staged_revision" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names

@@ -111,7 +111,8 @@ class ProfileReviewMixin:
         ):
             return "pending_profile_map_update_review"
         action_kind = DoxaBase._profile_followthrough_primary_action_kind(
-            resolution.tool
+            resolution.tool,
+            action=resolution.action,
         )
         if (
             resolution.binding_status == "resolved"
@@ -135,7 +136,9 @@ class ProfileReviewMixin:
     def _profile_action_semantic_move(
         action: SuggestedNextAction,
     ) -> str | None:
-        route_sources = action.args.get("profile_route_sources")
+        route_sources = action_staging_arguments(action).get(
+            "profile_route_sources"
+        )
         if not isinstance(route_sources, list):
             return None
         for source in route_sources:
@@ -150,7 +153,7 @@ class ProfileReviewMixin:
         *,
         pending_map_update_iris: list[str],
     ) -> bool:
-        if resolution.tool != "doxabase.stage_profile_map_updates":
+        if stage_revision_action_kind(resolution.action) != "profile_map_updates":
             return False
         return bool(pending_map_update_iris)
     def _profile_followthrough_resolve_action_bindings(
@@ -164,7 +167,9 @@ class ProfileReviewMixin:
         SuggestedNextAction,
         list[ProfileFollowthroughBindingResolution],
     ]:
-        route_sources = action.args.get("profile_route_sources")
+        route_sources = action_staging_arguments(action).get(
+            "profile_route_sources"
+        )
         bindings = [
             binding
             for source in (
@@ -178,8 +183,16 @@ class ProfileReviewMixin:
             return action, []
 
         arguments = copy.deepcopy(action.args)
+        if action.tool == "doxabase.stage_revision":
+            spec = arguments.get("spec")
+            if not isinstance(spec, dict):
+                spec = {}
+                arguments["spec"] = spec
+            call_fields: dict[str, Any] = spec
+        else:
+            call_fields = arguments
         resolved_sources = copy.deepcopy(
-            arguments.get("profile_route_sources")
+            call_fields.get("profile_route_sources")
         )
         resolutions: list[ProfileFollowthroughBindingResolution] = []
 
@@ -226,7 +239,7 @@ class ProfileReviewMixin:
                 )
                 continue
             self._profile_followthrough_apply_binding_value(
-                arguments,
+                call_fields,
                 target_argument=target_argument,
                 value=value,
                 append=bool(binding.get("append", False)),
@@ -252,7 +265,7 @@ class ProfileReviewMixin:
                 )
 
         if isinstance(resolved_sources, list):
-            arguments["profile_route_sources"] = resolved_sources
+            call_fields["profile_route_sources"] = resolved_sources
         resolved_action = replace(action, args=arguments)
         return resolved_action, resolutions
     @staticmethod
@@ -391,6 +404,7 @@ class ProfileReviewMixin:
                 restage_stale_revisions
                 and before.next_action is not None
                 and before.next_action.tool_name == "restage_staged_revision"
+                and not staged_rebase_draft_action(before.next_action)
             ):
                 restaged = self.restage_staged_revision(revision_iri)
                 restaged_revision_iri = restaged.revision_iri
@@ -514,10 +528,17 @@ class ProfileReviewMixin:
     @staticmethod
     def _profile_followthrough_primary_action_kind(
         primary_tool_name: str | None,
+        action: SuggestedNextAction | None = None,
     ) -> str | None:
         if primary_tool_name is None:
             return None
         primary_tool_name = primary_tool_name.removeprefix("doxabase.")
+        if action is not None and (
+            action_arguments(action).get("dry_run") is True
+        ):
+            # Dry-run planners share the staging doors but write nothing;
+            # they classified as "other" when they were draft_* tools.
+            return "other"
         if primary_tool_name.startswith("stage_"):
             return "stage_reviewable_change"
         if primary_tool_name.startswith("record_") or primary_tool_name in {
@@ -526,7 +547,6 @@ class ProfileReviewMixin:
             "import_trig",
             "replace_graph_triples",
             "restage_staged_revision",
-            "restage_staged_revisions",
         }:
             return "direct_graph_write"
         if primary_tool_name.startswith("export_"):
@@ -659,14 +679,14 @@ class ProfileReviewMixin:
                 "update is intentional. "
             )
         return SuggestedNextAction(
-                   tool="doxabase.stage_profile_map_updates",
-                   args=arguments,
+                   tool="doxabase.stage_revision",
+                   args={"kind": "profile_map_updates", "spec": arguments},
                    reason=f"{pending_intro}Review recommendation rows, sample scope, default staging "
                 "guardrails, evidence, and metric/type advisory lanes; then "
                 "pass accepted default-stageable indexes to "
-                "stage_profile_map_updates. Sampled row-count updates require "
-                "an explicit override; same-evidence scalar conflicts require "
-                "choosing one value explicitly.",
+                "stage_revision kind='profile_map_updates'. Sampled row-count "
+                "updates require an explicit override; same-evidence scalar "
+                "conflicts require choosing one value explicitly.",
                )
     def _profile_map_update_route_source(
         self,
@@ -1183,12 +1203,14 @@ class ProfileReviewMixin:
             for action in actions:
                 if (
                     group_name == "profile_map_updates"
-                    and action.tool == "doxabase.stage_profile_map_updates"
+                    and stage_revision_action_kind(action)
+                    == "profile_map_updates"
                 ):
+                    action_spec = stage_revision_action_spec(action)
                     indexes = [
                         index
                         for index in (
-                            action.args.get("accepted_recommendation_indexes")
+                            action_spec.get("accepted_recommendation_indexes")
                             or []
                         )
                         if isinstance(index, int) and not isinstance(index, bool)
@@ -1196,7 +1218,7 @@ class ProfileReviewMixin:
                     patterns = [
                         value
                         for value in (
-                            action.args.get("supporting_patterns") or []
+                            action_spec.get("supporting_patterns") or []
                         )
                         if isinstance(value, str)
                     ]
@@ -1239,7 +1261,9 @@ class ProfileReviewMixin:
                     )
                     pending_source["action_status"] = "already_pending"
                     add_source(pending_source, action)
-                route_sources = action.args.get("profile_route_sources")
+                route_sources = action_staging_arguments(action).get(
+                    "profile_route_sources"
+                )
                 if not isinstance(route_sources, list):
                     continue
                 for value in route_sources:
@@ -1783,7 +1807,7 @@ class ProfileReviewMixin:
             "profile-route-step",
             {
                 "route_group_key": route_group_key,
-                "tool_name": "stage_map_assertion_change",
+                "tool_name": "stage_revision",
                 "revision_iri": description.iri,
                 "issue_code": issue_code,
             },

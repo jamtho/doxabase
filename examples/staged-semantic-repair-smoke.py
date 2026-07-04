@@ -90,7 +90,9 @@ def main() -> None:
     repair_draft = db.draft_staged_revision_rebase(aggregate_rows.revision_iri)
     if repair_draft.preferred_action is None:
         raise RuntimeError("expected same-slot repair draft to include an action")
-    repair = db.stage_map_assertion_change(**repair_draft.preferred_action.args)
+    repair = db.stage_map_assertion_change(
+        **repair_draft.preferred_action.args["spec"]
+    )
     repair_check = db.check_staged_revision_apply(repair.staged_revision.revision_iri)
     if repair_check.next_action is None:
         raise RuntimeError("expected repaired successor to carry a next action")

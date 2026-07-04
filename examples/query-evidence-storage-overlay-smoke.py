@@ -57,10 +57,7 @@ def main() -> None:
 
     evidence_context = db.describe_query_context(dataset_iri)
     profile_action = _single_action(evidence_context, "describe_resource")
-    overlay_action = _single_action(
-        evidence_context,
-        "draft_query_evidence_storage_overlay",
-    )
+    overlay_action = _single_overlay_draft_action(evidence_context)
     route_candidate = next(
         candidate
         for issue in evidence_context.issues
@@ -74,7 +71,7 @@ def main() -> None:
         )
     )
     candidate_arguments = route_candidate[
-        "draft_query_evidence_storage_overlay_candidate_arguments"
+        "query_evidence_overlay_candidate_spec"
     ]
 
     draft = db.draft_query_evidence_storage_overlay(
@@ -215,6 +212,21 @@ def _single_action(context, tool_name: str):
     ]
     if len(matches) != 1:
         raise RuntimeError(f"Expected one {tool_name} action, got {len(matches)}")
+    return matches[0]
+
+
+def _single_overlay_draft_action(context):
+    matches = [
+        action
+        for action in context.suggested_next_actions
+        if action.tool == "doxabase.stage_revision"
+        and action.args.get("kind") == "query_evidence_overlay"
+        and action.args.get("dry_run") is True
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected one query_evidence_overlay draft action, got {len(matches)}"
+        )
     return matches[0]
 
 

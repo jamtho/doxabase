@@ -530,7 +530,7 @@ class ProfilePromotionMixin:
             suggested_next_action_groups=suggested_next_action_groups,
             profile_type_assertion_batch_plan=profile_type_assertion_batch_plan,
             review_note=(
-                "Rerun draft_profile_map_updates through this coordinator after "
+                "Rerun the profile map-update draft through this coordinator after "
                 "recording profile-support patterns or applying related staged "
                 "revisions. It resolves route-scoped result bindings into "
                 "structured action arguments and can recheck/restage supplied "
@@ -563,7 +563,10 @@ class ProfilePromotionMixin:
         ] = "all",
     ) -> ProfileMapUpdateStagingRecord:
         if graph != "map":
-            raise DoxaBaseError("stage_profile_map_updates currently targets map only")
+            raise DoxaBaseError(
+                "stage_revision kind='profile_map_updates' currently targets "
+                "map only"
+            )
         accepted_indexes = self._profile_update_accepted_indexes(
             accepted_recommendation_indexes,
         )
@@ -578,8 +581,9 @@ class ProfilePromotionMixin:
         ):
             pending = ", ".join(draft.pending_staged_profile_update_iris[:3])
             raise DoxaBaseError(
-                "stage_profile_map_updates found pending staged profile map "
-                "update(s) for the same dataset/evidence pair: "
+                "stage_revision kind='profile_map_updates' found pending "
+                "staged profile map update(s) for the same dataset/evidence "
+                "pair: "
                 f"{pending}. Review them with plan_staged_revision_recovery "
                 "or pass allow_pending_profile_updates=True only after "
                 "confirming another staged profile update is intentional."
@@ -708,7 +712,7 @@ class ProfilePromotionMixin:
                 rationale=rationale
                 or (
                     "Accepted profile map-update recommendations from "
-                    "draft_profile_map_updates and grouped them into one "
+                    "the profile map-update draft and grouped them into one "
                     "reviewable map revision so helper-equivalent shells and "
                     "scalar updates can be applied together after review."
                 ),

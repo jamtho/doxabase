@@ -37,7 +37,7 @@ def main() -> None:
     repair_group = _single_stale_partition_repair_group(overlay_context)
     repair_action = repair_group.actions[0]
     staged = db.stage_map_assertion_change(
-        **repair_action["args"],
+        **repair_action["args"]["spec"],
         rationale=(
             "Reviewed DailyIndex wildcard storage as the intended query route; "
             "the inherited broadcast partition link is stale for DailyIndex."

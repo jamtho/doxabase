@@ -1171,14 +1171,16 @@ class StagingApplyMixin:
                 f"'{successor_iri}' instead of restaging the source again."
             )
         if status == "conflict" and any(
-            action.tool == "doxabase.stage_map_assertion_change"
+            action.tool == "doxabase.stage_revision"
+            and action.args.get("kind") == "map_assertion"
             for action in suggested_next_actions or []
         ):
             return (
                 "Exact snapshot drift shows a different current value for the "
                 "same single-valued map assertion slot. Stage the suggested "
-                "stage_map_assertion_change replacement successor after review "
-                "instead of mechanically restaging the stale source patch."
+                "stage_revision map_assertion replacement successor after "
+                "review instead of mechanically restaging the stale source "
+                "patch."
             )
         if status == "conflict" and any(
             (action.tool == "doxabase.describe_resource"
@@ -1193,7 +1195,7 @@ class StagingApplyMixin:
                 "source patch."
             )
         if status == "conflict" and any(
-            action.tool == "doxabase.draft_staged_revision_rebase"
+            staged_rebase_draft_action(action)
             for action in suggested_next_actions or []
         ):
             return (
@@ -1268,8 +1270,8 @@ class StagingApplyMixin:
                 "Inspect validation_results and stage a repaired or alternative "
                 "candidate. If validation failed after restaging an overlapping "
                 "single assertion, repair with a removal+addition patch or "
-                "stage_map_assertion_change replacement instead of restaging the "
-                "same patch again."
+                "stage_revision map_assertion replacement instead of restaging "
+                "the same patch again."
             )
         return "Inspect staged revision details before taking action."
     def _staged_apply_check_next_actions(
@@ -1659,11 +1661,14 @@ class StagingApplyMixin:
                 and is_restageable_conflict
                 and staged_validation_failed
             ):
-                draft_arguments: dict[str, Any] = {"iri": staged_revision_iri}
+                draft_arguments: dict[str, Any] = {
+                    "revision_iris": staged_revision_iri,
+                    "dry_run": True,
+                }
                 if validation_scope is not None:
                     draft_arguments["validation_scope"] = validation_scope
                 add_action(
-                    "draft_staged_revision_rebase",
+                    "restage_staged_revision",
                     draft_arguments,
                     (
                         "Draft a repair/rebase plan from the stored validation "
@@ -1680,7 +1685,7 @@ class StagingApplyMixin:
             ):
                 add_action(
                     "restage_staged_revision",
-                    {"iri": staged_revision_iri},
+                    {"revision_iris": staged_revision_iri},
                     (
                         "Create a refreshed staged revision against current graph "
                         "counts if review confirms the patch intent is still desired."
@@ -1728,11 +1733,14 @@ class StagingApplyMixin:
                 )
             )
         elif status == "validation_failed":
-            draft_arguments: dict[str, Any] = {"iri": staged_revision_iri}
+            draft_arguments: dict[str, Any] = {
+                "revision_iris": staged_revision_iri,
+                "dry_run": True,
+            }
             if validation_scope is not None:
                 draft_arguments["validation_scope"] = validation_scope
             add_action(
-                "draft_staged_revision_rebase",
+                "restage_staged_revision",
                 draft_arguments,
                 (
                     "Draft a read-only repair/rebase plan from this validation "
@@ -1747,7 +1755,7 @@ class StagingApplyMixin:
                     "Inspect structured validation_results, then stage a repaired "
                     "or alternative candidate while preserving this failed revision "
                     "for comparison. For overlapping single-assertion failures, "
-                    "repair with removal+addition or stage_map_assertion_change "
+                    "repair with removal+addition or stage_revision map_assertion "
                     "replacement instead of restaging the same patch again."
                 )
             )
@@ -1779,7 +1787,10 @@ class StagingApplyMixin:
     ) -> str | None:
         if next_action is None:
             return decision
-        if next_action.tool_name == "stage_map_assertion_change":
+        if (
+            next_action.tool_name == "stage_revision"
+            and next_action.arguments.get("kind") == "map_assertion"
+        ):
             return "stage_same_slot_replacement"
         return next_action.action_type or decision
     def _staged_revision_apply_check_for_export(
@@ -1818,20 +1829,6 @@ class StagingApplyMixin:
             for summary in candidates
             if any(graph in graphs_needing_recheck for graph in summary.changed_graphs)
         ]
-    def _suggested_action_label(self, tool_name: str) -> str:
-        labels = {
-            "apply_staged_revision": "Apply staged revision",
-            "describe_assertion_support": "Inspect assertion support",
-            "get_context_graph": "Load context slice",
-            "describe_dataset": "Inspect dataset",
-            "describe_graph_revision": "Inspect graph revision",
-            "describe_resource": "Inspect resource",
-            "describe_staged_revision": "Inspect staged revision",
-            "export_staged_revision": "Export staged revision",
-            "restage_staged_revision": "Restage staged revision",
-            "search": "Search graph",
-        }
-        return labels.get(tool_name, tool_name.replace("_", " ").title())
     def _staged_apply_check_markdown(
         self,
         check: StagedRevisionApplyCheck | None,

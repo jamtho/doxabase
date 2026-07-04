@@ -328,10 +328,14 @@ class QueryPlanningMixin:
             )
             actions.extend(singleton_actions)
             ordinary_query_evidence_exclusions.update(
-                action.args["evidence_iri"]
+                stage_revision_action_spec(action)["evidence_iri"]
                 for action in singleton_actions
-                if action.tool == "doxabase.draft_query_evidence_storage_overlay"
-                and isinstance(action.args.get("evidence_iri"), str)
+                if action.tool == "doxabase.stage_revision"
+                and action.args.get("kind") == "query_evidence_overlay"
+                and isinstance(
+                    stage_revision_action_spec(action).get("evidence_iri"),
+                    str,
+                )
             )
         actions.extend(
             self._query_context_ordinary_query_evidence_actions(

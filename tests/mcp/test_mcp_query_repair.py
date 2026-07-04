@@ -65,15 +65,18 @@ def test_describe_query_context_tool_suggests_stale_partition_link_repair(
     assert repair_group["action_status_counts"] == {"pending_review": 1}
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action = repair_group["actions"][0]
-    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
     assert action["args"] == {
-        "subject": dataset,
-        "predicate": "rc:partitionedBy",
-        "object": stale_partition["iri"],
-        "object_kind": "iri",
-        "change_kind": "remove",
-        "graph": "map",
-        "validation_scope": "all",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": dataset,
+            "predicate": "rc:partitionedBy",
+            "object": stale_partition["iri"],
+            "object_kind": "iri",
+            "change_kind": "remove",
+            "graph": "map",
+            "validation_scope": "all",
+        },
     }
 
 
@@ -126,15 +129,18 @@ def test_describe_query_context_tool_suggests_stale_physical_layout_link_repair(
     assert repair_group["action_status_counts"] == {"pending_review": 1}
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action = repair_group["actions"][0]
-    assert action["tool"] == "doxabase.stage_map_assertion_change"
+    assert (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
     assert action["args"] == {
-        "subject": dataset,
-        "predicate": "rc:hasPhysicalLayout",
-        "object": stale_layout["iri"],
-        "object_kind": "iri",
-        "change_kind": "remove",
-        "graph": "map",
-        "validation_scope": "all",
+        "kind": "map_assertion",
+        "spec": {
+            "subject": dataset,
+            "predicate": "rc:hasPhysicalLayout",
+            "object": stale_layout["iri"],
+            "object_kind": "iri",
+            "change_kind": "remove",
+            "graph": "map",
+            "validation_scope": "all",
+        },
     }
 
 
@@ -202,23 +208,25 @@ def test_describe_query_context_tool_suggests_dataset_layout_status_repair(
         listing_option,
         action_index=0,
         action_type="replace_dataset_layout_verification_status",
-        tool="doxabase.stage_map_assertion_change",
+        tool="doxabase.stage_revision",
         required_extra_arguments=["rationale"],
         placeholder_fields=[],
         reviewed_value_fields=[],
     )
     action = repair_group["actions"][0]
-    assert action["args"]["subject"] == dataset
-    assert action["args"]["predicate"] == "rc:layoutVerificationStatus"
-    assert action["args"]["object"] == "rc:VerifiedByListingLayout"
-    assert action["args"]["object_kind"] == "iri"
-    assert action["args"]["change_kind"] == "replace"
-    assert action["args"]["validation_scope"] == "all"
+    assert action["args"]["spec"]["subject"] == dataset
+    assert action["args"]["spec"]["predicate"] == (
+        "rc:layoutVerificationStatus"
+    )
+    assert action["args"]["spec"]["object"] == "rc:VerifiedByListingLayout"
+    assert action["args"]["spec"]["object_kind"] == "iri"
+    assert action["args"]["spec"]["change_kind"] == "replace"
+    assert action["args"]["spec"]["validation_scope"] == "all"
     assert result["suggested_next_actions"]
     draft_action = result["suggested_next_actions"][0]
     assert draft_action["tool"] == "doxabase.draft_query_plan"
 
-    arguments = dict(action["args"])
+    arguments = dict(action["args"]["spec"])
     arguments["rationale"] = "Reviewed the dataset-owned path template by listing."
     staged = stage_map_assertion_change_tool(db, **arguments)
     assert staged["staged_revision"]["validation_conforms"] is True
@@ -274,7 +282,7 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         staged_option,
         action_index=0,
         action_type="stage_reviewed_physical_layout",
-        tool="doxabase.stage_query_physical_layout_repair",
+        tool="doxabase.stage_revision",
         required_extra_arguments=[
             "layout_iri",
             "file_format",
@@ -323,26 +331,38 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     draft_action = result["suggested_next_actions"][0]
     assert draft_action["tool"] == "doxabase.draft_query_plan"
     action = repair_group["actions"][0]
-    assert action["tool"] == "doxabase.stage_query_physical_layout_repair"
-    assert action["arguments_template"]["dataset_iri"] == dataset
-    assert action["arguments_template"]["layout_iri"] == (
+    assert (
+        action["tool"],
+        action["arguments_template"].get("kind"),
+    ) == ("doxabase.stage_revision", "query_physical_layout_repair")
+    assert action["arguments_template"]["spec"]["dataset_iri"] == dataset
+    assert action["arguments_template"]["spec"]["layout_iri"] == (
         "<reviewed physical layout IRI>"
     )
-    assert action["arguments_template"]["file_format"] == (
+    assert action["arguments_template"]["spec"]["file_format"] == (
         "<reviewed rc:FileFormat IRI>"
     )
     direct_action = repair_group["actions"][1]
     assert direct_action["tool"] == "doxabase.record_map_fact"
     assert direct_action["arguments_template"]["kind"] == "physical_layout"
     assert direct_action["arguments_template"]["spec"]["datasets"] == [dataset]
-    staged = stage_query_physical_layout_repair_tool(
+    staged = stage_revision_tool(
         db,
-        dataset_iri=dataset,
-        layout_iri="https://example.test/project#warehouse_orders_table_layout",
-        file_format="rc:PostgreSQLTable",
-        rationale="Reviewed the warehouse relation as a PostgreSQL table layout.",
-        layout_verification_status="rc:VerifiedByQueryLayout",
-        layout_verification_note="Reviewed from warehouse source metadata.",
+        kind="query_physical_layout_repair",
+        spec={
+            "dataset_iri": dataset,
+            "layout_iri": (
+                "https://example.test/project#warehouse_orders_table_layout"
+            ),
+            "file_format": "rc:PostgreSQLTable",
+            "rationale": (
+                "Reviewed the warehouse relation as a PostgreSQL table layout."
+            ),
+            "layout_verification_status": "rc:VerifiedByQueryLayout",
+            "layout_verification_note": (
+                "Reviewed from warehouse source metadata."
+            ),
+        },
     )
     assert staged["validation_conforms"] is True
     assert check_staged_revision_apply_tool(db, staged["revision_iri"])["status"] == (
@@ -602,7 +622,7 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     ] == ["object"]
     assert "set_reviewed_bucket_name" not in action_by_type
     assert "set_reviewed_key_prefix" not in action_by_type
-    assert action_by_type["remove_conflicting_bucket_name"]["args"][
+    assert action_by_type["remove_conflicting_bucket_name"]["args"]["spec"][
         "object"
     ] == "public"
 

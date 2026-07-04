@@ -1442,11 +1442,11 @@ def test_project_brief_gate_staged_recovery_session(tmp_path: Path) -> None:
     gate = next(g for g in brief.gates if g.gate == "staged_revision_recovery")
     assert gate.blocks == "mutation"
     assert gate.details_call == (
-        "doxabase.describe_staged_revision_recovery_session"
+        "doxabase.plan_staged_revision_recovery"
     )
     first_action = brief.suggested_next_actions[0]
     assert first_action.tool == (
-        "doxabase.describe_staged_revision_recovery_session"
+        "doxabase.plan_staged_revision_recovery"
     )
     assert first_action.args["session_iri"] == session.session_iri
     frontier_queue = next(

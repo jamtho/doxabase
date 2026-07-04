@@ -2327,14 +2327,14 @@ def test_handoff_import_gates_nested_plan_when_source_session_matches(
     assert imported.recovery_summary.first_mutation_action is None
     assert imported.recovery_summary.first_safe_review_or_mutation_action is not None
     assert imported.recovery_summary.first_safe_review_or_mutation_action.tool == (
-        "doxabase.describe_staged_revision_recovery_session"
+        "doxabase.plan_staged_revision_recovery"
     )
     assert imported.recovery_plan is not None
     assert imported.recovery_plan.mutation_frontier_iris == [staged.revision_iri]
     assert imported.recovery_plan.first_mutation_action is None
     assert imported.recovery_plan.first_safe_review_or_mutation_action is not None
     assert imported.recovery_plan.first_safe_review_or_mutation_action.tool == (
-        "doxabase.describe_staged_revision_recovery_session"
+        "doxabase.plan_staged_revision_recovery"
     )
     assert imported.recovery_plan.first_safe_review_or_mutation_action.args == {
         "session_iri": session.session_iri,
@@ -2348,14 +2348,14 @@ def test_handoff_import_gates_nested_plan_when_source_session_matches(
     )
     assert [
         action.tool.removeprefix("doxabase.") for action in imported.recovery_plan.blocking_preflight_actions
-    ] == ["describe_staged_revision_recovery_session"]
+    ] == ["plan_staged_revision_recovery"]
     assert imported.recovery_plan.recommended_unattended_steps
     first_step = imported.recovery_plan.recommended_unattended_steps[0]
     assert first_step.step_kind == "continue_imported_recovery_session"
     assert first_step.mutates is False
     assert first_step.requires_replan_after_completion is True
     assert first_step.action is not None
-    assert first_step.action.tool == "doxabase.describe_staged_revision_recovery_session"
+    assert first_step.action.tool == "doxabase.plan_staged_revision_recovery"
     assert "Continue the imported source recovery session" in (
         imported.recovery_plan.warnings[0]
     )

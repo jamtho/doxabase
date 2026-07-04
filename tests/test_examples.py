@@ -148,7 +148,7 @@ def test_staged_semantic_repair_smoke_example_runs(tmp_path: Path) -> None:
     assert "Recovery queues: {'repair_or_replace': 1, 'restage_after_review': 1}" in (
         output
     )
-    assert "Helper mutation actions: ['doxabase.stage_map_assertion_change']" in output
+    assert "Helper mutation actions: ['doxabase.stage_revision']" in output
     assert "same_slot_replacement" in output
     assert "Independent successor status: ready" in output
     assert "Repair draft: drafted / same_slot_replacement" in output
@@ -207,7 +207,7 @@ def test_query_evidence_storage_overlay_smoke_example_runs(tmp_path: Path) -> No
     assert "Recorded evidence status: succeeded" in output
     assert "Profile inspection action: doxabase.describe_resource" in output
     assert (
-        "Overlay action tool: doxabase.draft_query_evidence_storage_overlay"
+        "Overlay action tool: doxabase.stage_revision"
         in output
     )
     assert "Route candidate kind: local_path_from_query_evidence" in output

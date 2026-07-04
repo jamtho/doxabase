@@ -185,6 +185,9 @@ class QueryRepairMixin:
             action_arguments = action.get("arguments_template")
         if not isinstance(action_arguments, MappingABC):
             return []
+        spec = action_arguments.get("spec")
+        if isinstance(spec, MappingABC):
+            action_arguments = spec
         graph = action_arguments.get("graph", "map")
         subject = action_arguments.get("subject")
         predicate = action_arguments.get("predicate")
@@ -500,7 +503,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "remove_stale_partition_scheme_link",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "reason": (
                         "Use after review confirms the selected direct-clean "
                         "query target supersedes this partition scheme for the "
@@ -514,13 +517,16 @@ class QueryRepairMixin:
                         "planning route."
                     ),
                     "args": {
-                        "subject": dataset.iri,
-                        "predicate": "rc:partitionedBy",
-                        "object": partition.iri,
-                        "object_kind": "iri",
-                        "change_kind": "remove",
-                        "graph": "map",
-                        "validation_scope": "all",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": dataset.iri,
+                            "predicate": "rc:partitionedBy",
+                            "object": partition.iri,
+                            "object_kind": "iri",
+                            "change_kind": "remove",
+                            "graph": "map",
+                            "validation_scope": "all",
+                        },
                     },
                     "condition": (
                         "Only after review confirms this partition scheme is a "
@@ -575,7 +581,7 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "replace_dataset_layout_verification_status",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "reason": (
                         "Use after review confirms the dataset-owned path "
                         f"template has been verified by {evidence_label}."
@@ -588,24 +594,27 @@ class QueryRepairMixin:
                         f"by {evidence_label}."
                     ),
                     "args": {
-                        "subject": dataset.iri,
-                        "predicate": "rc:layoutVerificationStatus",
-                        "object": status_curie,
-                        "object_kind": "iri",
-                        "change_kind": "replace",
-                        "graph": "map",
-                        "review_note": (
-                            "Generated from a dataset-level "
-                            "layout_needs_verification query-planning repair "
-                            "group after storage access and physical layout "
-                            "were already verified."
-                        ),
-                        "review_recommendation": (
-                            "Apply only after confirming the selected "
-                            "dataset-owned path template matches the reviewed "
-                            f"{status_iri} evidence."
-                        ),
-                        "validation_scope": "all",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": dataset.iri,
+                            "predicate": "rc:layoutVerificationStatus",
+                            "object": status_curie,
+                            "object_kind": "iri",
+                            "change_kind": "replace",
+                            "graph": "map",
+                            "review_note": (
+                                "Generated from a dataset-level "
+                                "layout_needs_verification query-planning repair "
+                                "group after storage access and physical layout "
+                                "were already verified."
+                            ),
+                            "review_recommendation": (
+                                "Apply only after confirming the selected "
+                                "dataset-owned path template matches the reviewed "
+                                f"{status_iri} evidence."
+                            ),
+                            "validation_scope": "all",
+                        },
                     },
                     "condition": (
                         "Choose this status only after reviewing the evidence "
@@ -678,7 +687,7 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "remove_stale_physical_layout_link",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "reason": (
                         "Use after review confirms the selected direct-clean "
                         "query target and verified sibling layout supersede "
@@ -692,13 +701,16 @@ class QueryRepairMixin:
                         "sibling layout should be the planning route."
                     ),
                     "args": {
-                        "subject": dataset.iri,
-                        "predicate": "rc:hasPhysicalLayout",
-                        "object": layout.iri,
-                        "object_kind": "iri",
-                        "change_kind": "remove",
-                        "graph": "map",
-                        "validation_scope": "all",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": dataset.iri,
+                            "predicate": "rc:hasPhysicalLayout",
+                            "object": layout.iri,
+                            "object_kind": "iri",
+                            "change_kind": "remove",
+                            "graph": "map",
+                            "validation_scope": "all",
+                        },
                     },
                     "condition": (
                         "Only after review confirms this physical layout is a "
@@ -1268,7 +1280,7 @@ class QueryRepairMixin:
     ) -> dict[str, Any]:
         add_action = {
             "action_type": "add_reviewed_relation_template",
-            "tool": "doxabase.stage_map_assertion_change",
+            "tool": "doxabase.stage_revision",
             "source_subject_iri": source_resource.iri,
             "misplaced_template_subject_iri": source_resource.iri,
             "misplaced_template_source": template_source,
@@ -1279,12 +1291,15 @@ class QueryRepairMixin:
                 f"{storage_access.iri}."
             ),
             "arguments_template": {
-                "subject": storage_access.iri,
-                "predicate": "rc:pathTemplate",
-                "object": "<reviewed_database_relation_identifier>",
-                "object_kind": "literal",
-                "change_kind": "add",
-                "graph": "map",
+                "kind": "map_assertion",
+                "spec": {
+                    "subject": storage_access.iri,
+                    "predicate": "rc:pathTemplate",
+                    "object": "<reviewed_database_relation_identifier>",
+                    "object_kind": "literal",
+                    "change_kind": "add",
+                    "graph": "map",
+                },
             },
             "placeholder_fields": ["object"],
             "reviewed_value_fields": ["object"],
@@ -1295,7 +1310,7 @@ class QueryRepairMixin:
         }
         remove_action = {
             "action_type": "remove_misplaced_source_template",
-            "tool": "doxabase.stage_map_assertion_change",
+            "tool": "doxabase.stage_revision",
             "source_subject_iri": source_resource.iri,
             "misplaced_template_subject_iri": source_resource.iri,
             "misplaced_template_source": template_source,
@@ -1306,12 +1321,15 @@ class QueryRepairMixin:
                 "relation metadata."
             ),
             "args": {
-                "subject": source_resource.iri,
-                "predicate": "rc:pathTemplate",
-                "object": template,
-                "object_kind": "literal",
-                "change_kind": "remove",
-                "graph": "map",
+                "kind": "map_assertion",
+                "spec": {
+                    "subject": source_resource.iri,
+                    "predicate": "rc:pathTemplate",
+                    "object": template,
+                    "object_kind": "literal",
+                    "change_kind": "remove",
+                    "graph": "map",
+                },
             },
             "condition": (
                 "Only after review confirms the source template was "
@@ -1416,19 +1434,22 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "add_reviewed_relation_template",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
                         f"{storage_access.iri}."
                     ),
                     "arguments_template": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": "<reviewed_database_relation_identifier>",
-                        "object_kind": "literal",
-                        "change_kind": "add",
-                        "graph": "map",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": "<reviewed_database_relation_identifier>",
+                            "object_kind": "literal",
+                            "change_kind": "add",
+                            "graph": "map",
+                        },
                     },
                     "placeholder_fields": ["object"],
                     "reviewed_value_fields": ["object"],
@@ -1546,19 +1567,22 @@ class QueryRepairMixin:
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "set_reviewed_storage_protocol",
-                "tool": "doxabase.stage_map_assertion_change",
+                "tool": "doxabase.stage_revision",
                 "required_extra_arguments": ["rationale"],
                 "rationale_template": (
                     "Reviewed protocol for storage access "
                     f"{storage_access.iri}."
                 ),
                 "arguments_template": {
-                    "subject": storage_access.iri,
-                    "predicate": "rc:storageProtocol",
-                    "object": "<reviewed_rc_storage_protocol_iri>",
-                    "object_kind": "iri",
-                    "change_kind": "replace",
-                    "graph": "map",
+                    "kind": "map_assertion",
+                    "spec": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:storageProtocol",
+                        "object": "<reviewed_rc_storage_protocol_iri>",
+                        "object_kind": "iri",
+                        "change_kind": "replace",
+                        "graph": "map",
+                    },
                 },
                 "placeholder_fields": ["object"],
                 "reviewed_value_fields": ["object"],
@@ -1569,19 +1593,22 @@ class QueryRepairMixin:
             },
             {
                 "action_type": "set_reviewed_storage_root",
-                "tool": "doxabase.stage_map_assertion_change",
+                "tool": "doxabase.stage_revision",
                 "required_extra_arguments": ["rationale"],
                 "rationale_template": (
                     "Reviewed storage root or URL for storage access "
                     f"{storage_access.iri}."
                 ),
                 "arguments_template": {
-                    "subject": storage_access.iri,
-                    "predicate": "rc:storageRoot",
-                    "object": "<reviewed_protocol_appropriate_root_url_or_connection>",
-                    "object_kind": "literal",
-                    "change_kind": "replace",
-                    "graph": "map",
+                    "kind": "map_assertion",
+                    "spec": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:storageRoot",
+                        "object": "<reviewed_protocol_appropriate_root_url_or_connection>",
+                        "object_kind": "literal",
+                        "change_kind": "replace",
+                        "graph": "map",
+                    },
                 },
                 "placeholder_fields": ["object"],
                 "reviewed_value_fields": ["object"],
@@ -1597,19 +1624,22 @@ class QueryRepairMixin:
                 [
                     {
                         "action_type": "set_reviewed_bucket_name",
-                        "tool": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_revision",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed bucket name for storage access "
                             f"{storage_access.iri}."
                         ),
                         "arguments_template": {
-                            "subject": storage_access.iri,
-                            "predicate": "rc:bucketName",
-                            "object": "<reviewed_bucket_name>",
-                            "object_kind": "literal",
-                            "change_kind": "replace",
-                            "graph": "map",
+                            "kind": "map_assertion",
+                            "spec": {
+                                "subject": storage_access.iri,
+                                "predicate": "rc:bucketName",
+                                "object": "<reviewed_bucket_name>",
+                                "object_kind": "literal",
+                                "change_kind": "replace",
+                                "graph": "map",
+                            },
                         },
                         "placeholder_fields": ["object"],
                         "reviewed_value_fields": ["object"],
@@ -1621,19 +1651,22 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "set_reviewed_key_prefix",
-                        "tool": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_revision",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed key prefix for storage access "
                             f"{storage_access.iri}."
                         ),
                         "arguments_template": {
-                            "subject": storage_access.iri,
-                            "predicate": "rc:keyPrefix",
-                            "object": "<reviewed_key_prefix>",
-                            "object_kind": "literal",
-                            "change_kind": "replace",
-                            "graph": "map",
+                            "kind": "map_assertion",
+                            "spec": {
+                                "subject": storage_access.iri,
+                                "predicate": "rc:keyPrefix",
+                                "object": "<reviewed_key_prefix>",
+                                "object_kind": "literal",
+                                "change_kind": "replace",
+                                "graph": "map",
+                            },
                         },
                         "placeholder_fields": ["object"],
                         "reviewed_value_fields": ["object"],
@@ -1649,19 +1682,22 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "remove_conflicting_bucket_name",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed bucket metadata as inappropriate for storage "
                         f"access {storage_access.iri}."
                     ),
                     "args": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:bucketName",
-                        "object": storage_access.bucket_name,
-                        "object_kind": "literal",
-                        "change_kind": "remove",
-                        "graph": "map",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:bucketName",
+                            "object": storage_access.bucket_name,
+                            "object_kind": "literal",
+                            "change_kind": "remove",
+                            "graph": "map",
+                        },
                     },
                     "condition": (
                         "Only after review confirms bucket metadata is wrong for "
@@ -1673,19 +1709,22 @@ class QueryRepairMixin:
             actions.append(
                 {
                     "action_type": "remove_conflicting_key_prefix",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed key-prefix metadata as inappropriate for "
                         f"storage access {storage_access.iri}."
                     ),
                     "args": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:keyPrefix",
-                        "object": storage_access.key_prefix,
-                        "object_kind": "literal",
-                        "change_kind": "remove",
-                        "graph": "map",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:keyPrefix",
+                            "object": storage_access.key_prefix,
+                            "object_kind": "literal",
+                            "change_kind": "remove",
+                            "graph": "map",
+                        },
                     },
                     "condition": (
                         "Only after review confirms key-prefix metadata is wrong "
@@ -1698,19 +1737,22 @@ class QueryRepairMixin:
                 [
                     {
                         "action_type": "add_reviewed_path_template",
-                        "tool": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_revision",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed protocol-appropriate path template for "
                             f"{template_source_resource.iri}."
                         ),
                         "arguments_template": {
-                            "subject": template_source_resource.iri,
-                            "predicate": "rc:pathTemplate",
-                            "object": "<reviewed_protocol_appropriate_path_template>",
-                            "object_kind": "literal",
-                            "change_kind": "add",
-                            "graph": "map",
+                            "kind": "map_assertion",
+                            "spec": {
+                                "subject": template_source_resource.iri,
+                                "predicate": "rc:pathTemplate",
+                                "object": "<reviewed_protocol_appropriate_path_template>",
+                                "object_kind": "literal",
+                                "change_kind": "add",
+                                "graph": "map",
+                            },
                         },
                         "placeholder_fields": ["object"],
                         "reviewed_value_fields": ["object"],
@@ -1721,19 +1763,22 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "remove_conflicting_path_template",
-                        "tool": "doxabase.stage_map_assertion_change",
+                        "tool": "doxabase.stage_revision",
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed path template as conflicting with storage "
                             f"access {storage_access.iri}."
                         ),
                         "args": {
-                            "subject": template_source_resource.iri,
-                            "predicate": "rc:pathTemplate",
-                            "object": template,
-                            "object_kind": "literal",
-                            "change_kind": "remove",
-                            "graph": "map",
+                            "kind": "map_assertion",
+                            "spec": {
+                                "subject": template_source_resource.iri,
+                                "predicate": "rc:pathTemplate",
+                                "object": template,
+                                "object_kind": "literal",
+                                "change_kind": "remove",
+                                "graph": "map",
+                            },
                         },
                         "condition": (
                             "Only after review confirms this exact template is "
@@ -1847,19 +1892,22 @@ class QueryRepairMixin:
             "actions": [
                 {
                     "action_type": "add_reviewed_path_template",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed file/object path template for storage access "
                         f"{storage_access.iri}."
                     ),
                     "arguments_template": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": "<reviewed_relative_path_template>",
-                        "object_kind": "literal",
-                        "change_kind": "add",
-                        "graph": "map",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": "<reviewed_relative_path_template>",
+                            "object_kind": "literal",
+                            "change_kind": "add",
+                            "graph": "map",
+                        },
                     },
                     "placeholder_fields": ["object"],
                     "reviewed_value_fields": ["object"],
@@ -1870,19 +1918,22 @@ class QueryRepairMixin:
                 },
                 {
                     "action_type": "set_root_as_exact_object_location",
-                    "tool": "doxabase.stage_map_assertion_change",
+                    "tool": "doxabase.stage_revision",
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed storage root as the exact dataset object or "
                         f"location for {storage_access.iri}."
                     ),
                     "args": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:locationKind",
-                        "object": "object",
-                        "object_kind": "literal",
-                        "change_kind": set_object_change_kind,
-                        "graph": "map",
+                        "kind": "map_assertion",
+                        "spec": {
+                            "subject": storage_access.iri,
+                            "predicate": "rc:locationKind",
+                            "object": "object",
+                            "object_kind": "literal",
+                            "change_kind": set_object_change_kind,
+                            "graph": "map",
+                        },
                     },
                     "condition": (
                         "Use only when review shows the storage root itself "
@@ -1933,9 +1984,7 @@ class QueryRepairMixin:
                 "actions": [
                     {
                         "action_type": "stage_reviewed_physical_layout",
-                        "tool": (
-                            "doxabase.stage_query_physical_layout_repair"
-                        ),
+                        "tool": "doxabase.stage_revision",
                         "reason": (
                             "Use when review has identified the dataset's "
                             "physical layout, and the change should carry "
@@ -1948,19 +1997,22 @@ class QueryRepairMixin:
                             "rationale",
                         ],
                         "arguments_template": {
-                            "dataset_iri": dataset.iri,
-                            "layout_iri": "<reviewed physical layout IRI>",
-                            "file_format": "<reviewed rc:FileFormat IRI>",
-                            "rationale": (
-                                "<reviewed rationale for adding this layout>"
-                            ),
-                            "layout_verification_status": (
-                                "<reviewed rc:LayoutVerificationStatus IRI>"
-                            ),
-                            "layout_verification_note": (
-                                "<reviewed physical layout evidence note>"
-                            ),
-                            "validation_scope": "all",
+                            "kind": "query_physical_layout_repair",
+                            "spec": {
+                                "dataset_iri": dataset.iri,
+                                "layout_iri": "<reviewed physical layout IRI>",
+                                "file_format": "<reviewed rc:FileFormat IRI>",
+                                "rationale": (
+                                    "<reviewed rationale for adding this layout>"
+                                ),
+                                "layout_verification_status": (
+                                    "<reviewed rc:LayoutVerificationStatus IRI>"
+                                ),
+                                "layout_verification_note": (
+                                    "<reviewed physical layout evidence note>"
+                                ),
+                                "validation_scope": "all",
+                            },
                         },
                         "placeholder_fields": [
                             "layout_iri",
@@ -1983,11 +2035,11 @@ class QueryRepairMixin:
                             "when that matches the relation engine."
                         ),
                         "review_rationale_guidance": (
-                            "stage_query_physical_layout_repair records a "
-                            "reviewable graph revision that adds the physical "
-                            "layout resource and dataset link together. Check "
-                            "and apply the staged row before rerunning query "
-                            "planning."
+                            "stage_revision kind='query_physical_layout_repair' "
+                            "records a reviewable graph revision that adds the "
+                            "physical layout resource and dataset link "
+                            "together. Check and apply the staged row before "
+                            "rerunning query planning."
                         ),
                     },
                     {
@@ -2107,7 +2159,7 @@ class QueryRepairMixin:
         actions: list[dict[str, Any]] = [
             {
                 "action_type": "stage_reviewed_storage_access",
-                "tool": "doxabase.stage_query_storage_access_repair",
+                "tool": "doxabase.stage_revision",
                 "reason": (
                     "Use when review has identified the non-secret storage "
                     "protocol and location, and the change should carry "
@@ -2120,34 +2172,37 @@ class QueryRepairMixin:
                     "rationale",
                 ],
                 "arguments_template": {
-                    "dataset_iri": dataset.iri,
-                    "storage_access_iri": "<reviewed storage access IRI>",
-                    "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
-                    "storage_root": (
-                        "<reviewed root, URL, bucket URI, or connection>"
-                    ),
-                    "endpoint_profile": "<optional reviewed endpoint profile>",
-                    "bucket_name": "<optional reviewed S3 bucket name>",
-                    "key_prefix": "<optional reviewed S3 key prefix>",
-                    "region": "<optional reviewed S3 region>",
-                    "path_style_access": "<optional reviewed boolean>",
-                    "credential_reference": (
-                        "<optional non-secret credential reference>"
-                    ),
-                    "rationale": (
-                        "<reviewed rationale for adding this storage route>"
-                    ),
-                    "location_kind": "<reviewed object|directory|prefix|connection>",
-                    "path_templates": [
-                        "<optional storage-owned path or relation template>"
-                    ],
-                    "layout_verification_status": (
-                        "<reviewed rc:LayoutVerificationStatus IRI>"
-                    ),
-                    "layout_verification_note": (
-                        "<reviewed storage access evidence note>"
-                    ),
-                    "validation_scope": "all",
+                    "kind": "query_storage_access_repair",
+                    "spec": {
+                        "dataset_iri": dataset.iri,
+                        "storage_access_iri": "<reviewed storage access IRI>",
+                        "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
+                        "storage_root": (
+                            "<reviewed root, URL, bucket URI, or connection>"
+                        ),
+                        "endpoint_profile": "<optional reviewed endpoint profile>",
+                        "bucket_name": "<optional reviewed S3 bucket name>",
+                        "key_prefix": "<optional reviewed S3 key prefix>",
+                        "region": "<optional reviewed S3 region>",
+                        "path_style_access": "<optional reviewed boolean>",
+                        "credential_reference": (
+                            "<optional non-secret credential reference>"
+                        ),
+                        "rationale": (
+                            "<reviewed rationale for adding this storage route>"
+                        ),
+                        "location_kind": "<reviewed object|directory|prefix|connection>",
+                        "path_templates": [
+                            "<optional storage-owned path or relation template>"
+                        ],
+                        "layout_verification_status": (
+                            "<reviewed rc:LayoutVerificationStatus IRI>"
+                        ),
+                        "layout_verification_note": (
+                            "<reviewed storage access evidence note>"
+                        ),
+                        "validation_scope": "all",
+                    },
                 },
                 "placeholder_fields": [
                     "storage_access_iri",
@@ -2200,10 +2255,10 @@ class QueryRepairMixin:
                     ),
                 },
                 "review_rationale_guidance": (
-                    "stage_query_storage_access_repair records a reviewable graph "
-                    "revision that adds the storage access resource and dataset "
-                    "link together. Check and apply the staged row before "
-                    "rerunning query planning."
+                    "stage_revision kind='query_storage_access_repair' records "
+                    "a reviewable graph revision that adds the storage access "
+                    "resource and dataset link together. Check and apply the "
+                    "staged row before rerunning query planning."
                 ),
             },
             {
@@ -2279,16 +2334,17 @@ class QueryRepairMixin:
                     ),
                 },
                 "review_rationale_guidance": (
-                    "record_map_storage_access writes current-best map "
-                    "facts directly and does not record graph-revision "
-                    "rationale. Use stage_query_storage_access_repair when "
-                    "durable review history is needed for a new storage "
-                    "access and dataset link."
+                    "record_map_fact kind='storage_access' writes current-best "
+                    "map facts directly and does not record graph-revision "
+                    "rationale. Use stage_revision "
+                    "kind='query_storage_access_repair' when durable review "
+                    "history is needed for a new storage access and dataset "
+                    "link."
                 ),
             },
             {
                 "action_type": "stage_existing_storage_access_link",
-                "tool": "doxabase.stage_map_assertion_change",
+                "tool": "doxabase.stage_revision",
                 "reason": (
                     "Use when a suitable storage access resource already "
                     "exists and the dataset should link to it after "
@@ -2299,19 +2355,22 @@ class QueryRepairMixin:
                     "rationale",
                 ],
                 "arguments_template": {
-                    "subject": dataset.iri,
-                    "predicate": "rc:hasStorageAccess",
-                    "object": "<reviewed existing storage access IRI>",
-                    "object_kind": "iri",
-                    "change_kind": "add",
-                    "rationale": "<reviewed rationale>",
-                    "review_note": (
-                        "Generated from missing_storage_access query "
-                        "planning guidance; apply only after confirming "
-                        "the storage access is the intended non-secret "
-                        "route for this dataset."
-                    ),
-                    "validation_scope": "all",
+                    "kind": "map_assertion",
+                    "spec": {
+                        "subject": dataset.iri,
+                        "predicate": "rc:hasStorageAccess",
+                        "object": "<reviewed existing storage access IRI>",
+                        "object_kind": "iri",
+                        "change_kind": "add",
+                        "rationale": "<reviewed rationale>",
+                        "review_note": (
+                            "Generated from missing_storage_access query "
+                            "planning guidance; apply only after confirming "
+                            "the storage access is the intended non-secret "
+                            "route for this dataset."
+                        ),
+                        "validation_scope": "all",
+                    },
                 },
                 "placeholder_fields": ["object"],
                 "reviewed_value_fields": ["object"],
@@ -2450,8 +2509,8 @@ class QueryRepairMixin:
             details["repair_hint"]["database_relation_candidate_review_note"] = (
                 "These candidates are parsed from query-result scanned source "
                 "handles and remain review-only. Use them to fill reviewed "
-                "stage_query_storage_access_repair arguments; do not treat them "
-                "as applied map facts."
+                "stage_revision query_storage_access_repair arguments; do not "
+                "treat them as applied map facts."
             )
         if pending_candidate_repair_iris:
             details["repair_hint"]["already_pending_candidate_count"] = len(

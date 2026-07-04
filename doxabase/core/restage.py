@@ -268,13 +268,15 @@ class RestageMixin:
             )
         if (
             check.next_action is not None
-            and check.next_action.tool_name == "stage_map_assertion_change"
+            and check.next_action.tool_name == "stage_revision"
+            and check.next_action.arguments.get("kind") == "map_assertion"
         ):
             raise DoxaBaseError(
                 "restage_staged_revision will not create a mechanical restage "
                 "for a same-slot replacement conflict. Follow the suggested "
-                "stage_map_assertion_change replacement with restages_revision "
-                "so the refreshed proposal replaces the current value."
+                "stage_revision map_assertion replacement with "
+                "restages_revision so the refreshed proposal replaces the "
+                "current value."
             )
         if self._staged_apply_check_has_ambiguous_same_slot_review(check):
             raise DoxaBaseError(
@@ -288,9 +290,9 @@ class RestageMixin:
         ):
             raise DoxaBaseError(
                 "restage_staged_revision will not create a mechanical restage "
-                "for a mixed patch repair-plan conflict. Inspect "
-                "draft_staged_revision_rebase().apply_check.patch_repair_plan "
-                "and stage a complete repaired successor instead."
+                "for a mixed patch repair-plan conflict. Inspect the dry-run "
+                "rebase draft's apply_check.patch_repair_plan and stage a "
+                "complete repaired successor instead."
             )
         if (
             check.next_action is not None
@@ -453,9 +455,10 @@ class RestageMixin:
         return (
             "Repair-first warning: the source failed staged-time validation "
             f"and {current_note} routes to repair_or_replace. Inspect "
-            "validation_results or call draft_staged_revision_rebase before "
-            "restaging or applying; a same-payload mechanical restage may only "
-            "produce another repair candidate."
+            "validation_results or draft a dry-run rebase plan "
+            "(restage_staged_revision with dry_run=true) before restaging or "
+            "applying; a same-payload mechanical restage may only produce "
+            "another repair candidate."
         )
     def restage_staged_revisions(
         self,
@@ -564,8 +567,9 @@ class RestageMixin:
                 check.next_action
                 if (
                     check.next_action is not None
-                    and check.next_action.tool_name
-                    == "stage_map_assertion_change"
+                    and check.next_action.tool_name == "stage_revision"
+                    and check.next_action.arguments.get("kind")
+                    == "map_assertion"
                 )
                 else None
             )
@@ -771,7 +775,7 @@ class RestageMixin:
                     + " The current revision fails validation; inspect "
                     "validation_results and stage a repaired or alternative "
                     "candidate. For overlapping single-assertion failures, use "
-                    "a removal+addition patch or stage_map_assertion_change "
+                    "a removal+addition patch or stage_revision map_assertion "
                     "replacement instead of restaging the same patch again."
                 )
             if (
@@ -955,7 +959,7 @@ class RestageMixin:
                 arguments["validation_scope"] = validation_scope
             actions.append(
                 SuggestedNextAction(
-                    tool="doxabase.restage_staged_revisions",
+                    tool="doxabase.restage_staged_revision",
                     args=arguments,
                     reason="The dry run identified stale staged revisions that can "
                         "be mechanically restaged. Run the real batch after "
@@ -979,7 +983,8 @@ class RestageMixin:
     ) -> str:
         if (
             check.next_action is not None
-            and check.next_action.tool_name == "stage_map_assertion_change"
+            and check.next_action.tool_name == "stage_revision"
+            and check.next_action.arguments.get("kind") == "map_assertion"
         ):
             return "same_slot_replacement"
         if self._staged_apply_check_has_ambiguous_same_slot_review(check):

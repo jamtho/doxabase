@@ -854,7 +854,9 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert stale_summary.next_action is not None
     assert stale_summary.next_action.action_type == "restage_after_review"
     assert stale_summary.next_action.queue == "restage_after_review"
-    assert stale_summary.next_action.arguments == {"iri": staged.revision_iri}
+    assert stale_summary.next_action.arguments == {
+        "revision_iris": staged.revision_iri
+    }
     assert stale_summary.count_drifts[0].target_graph == "map"
     assert stale_summary.count_drifts[0].count_basis == "target_graph_only"
     assert stale_summary.snapshot_drifts[0].exact_changed_triples_available is True
@@ -912,7 +914,9 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.next_action.action_type == "restage_after_review"
     assert check.next_action.queue == "restage_after_review"
     assert check.next_action.tool_name == "restage_staged_revision"
-    assert check.next_action.arguments == {"iri": staged.revision_iri}
+    assert check.next_action.arguments == {
+        "revision_iris": staged.revision_iri
+    }
 
     with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)
@@ -1135,7 +1139,8 @@ def test_post_apply_recheck_preserves_staged_validation_repair_signal(
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "repair_or_replace"
     assert recheck.next_action.queue == "repair_or_replace"
-    assert recheck.next_action.tool_name == "draft_staged_revision_rebase"
+    assert recheck.next_action.tool_name == "restage_staged_revision"
+    assert recheck.next_action.arguments.get("dry_run") is True
 
 
 def test_post_apply_recheck_includes_validation_dependency_drift(
@@ -1491,7 +1496,7 @@ def test_post_apply_recheck_subset_does_not_replace_current_work_plan(
     )
     assert any(
         action.tool == "doxabase.restage_staged_revision"
-        and action.args == {"iri": second_map.revision_iri}
+        and action.args == {"revision_iris": second_map.revision_iri}
         for action in applied.suggested_next_actions
     )
 
@@ -1612,12 +1617,14 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     promotion_action = next(
         action
         for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
-        if action.tool == "doxabase.stage_pattern_promotion"
+        if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "pattern_promotion")
     )
-    metric_route_key = promotion_action.args["profile_route_sources"][0][
-        "route_group_key"
-    ]
-    metric_promotion = db.stage_pattern_promotion(**promotion_action.args)
+    metric_route_key = promotion_action.args["spec"][
+        "profile_route_sources"
+    ][0]["route_group_key"]
+    metric_promotion = db.stage_pattern_promotion(
+        **promotion_action.args["spec"]
+    )
     assert metric_promotion.profile_route_source_count == 1
     storage_access = "https://example.test/profile-review#SupportEventsStorage"
     query_repair_draft = db.stage_systematisation(
@@ -2241,7 +2248,7 @@ def test_export_profile_insight_review_bundle_recovers_applied_query_repair_rout
         for action in missing_storage.details["repair_hint"]["actions"]
         if action["action_type"] == "stage_existing_storage_access_link"
     )
-    arguments = dict(link_action["arguments_template"])
+    arguments = dict(link_action["arguments_template"]["spec"])
     arguments["object"] = storage.iri
     arguments["rationale"] = "Reviewed the Messages storage access for this profile."
     query_repair = db.stage_map_assertion_change(**arguments)

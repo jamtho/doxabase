@@ -160,7 +160,9 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "target_count_drift" in recheck["blocking_reasons"]
     assert recheck["next_action"]["action_type"] == "restage_after_review"
     assert recheck["next_action"]["tool_name"] == "restage_staged_revision"
-    assert recheck["next_action"]["arguments"] == {"iri": sibling["revision_iri"]}
+    assert recheck["next_action"]["arguments"] == {
+        "revision_iris": sibling["revision_iri"]
+    }
     assert recheck["suggested_next_actions"][-1]["tool"] == (
         "doxabase.restage_staged_revision"
     )
@@ -765,9 +767,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         for action in open_lanes["profile_type_review"]["remaining_actions"]
     } == set(open_lanes["profile_type_review"]["route_step_keys"])
     assert {
-        action["args"]["predicate"]
+        action["args"]["spec"]["predicate"]
         for action in open_lanes["profile_type_review"]["remaining_actions"]
-        if action["tool"] == "doxabase.stage_map_assertion_change"
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
     } == {"rc:valueType"}
     type_action_details = [
         action["target_detail"]
@@ -800,9 +802,9 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         for lane in result["executor_decision_summary"]["open_review_lanes"]
     }
     assert {
-        action["args"]["predicate"]
+        action["args"]["spec"]["predicate"]
         for action in executor_lanes["profile_type_review"]["remaining_actions"]
-        if action["tool"] == "doxabase.stage_map_assertion_change"
+        if (action["tool"], action["args"].get("kind")) == ("doxabase.stage_revision", "map_assertion")
     } == {"rc:valueType"}
 
     candidate_groups = {

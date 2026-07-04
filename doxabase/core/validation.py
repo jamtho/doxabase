@@ -292,7 +292,7 @@ class ValidationMixin:
                     "Keep exactly one of rc:EventRow, rc:SnapshotRow, "
                     "rc:AggregateRow, or rc:DimensionRow for rc:rowSemantics. "
                     "When changing an existing row-grain framing, use a "
-                    "removal+addition patch or stage_map_assertion_change "
+                    "removal+addition patch or stage_revision map_assertion "
                     "replacement rather than adding a second value."
                 )
             return (

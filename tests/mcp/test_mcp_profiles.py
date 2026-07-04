@@ -75,17 +75,17 @@ def test_query_context_keeps_query_overlay_with_profile_run_candidates(
     ]
     assert action_tools[:2] == [
         "describe_resource",
-        "draft_query_evidence_storage_overlay",
+        "stage_revision",
     ]
     overlay_actions = [
         action
         for action in context["suggested_next_actions"]
-        if action["tool"] == "doxabase.draft_query_evidence_storage_overlay"
+        if (action["tool"], action["args"].get("kind"), action["args"].get("dry_run")) == ("doxabase.stage_revision", "query_evidence_overlay", True)
     ]
     assert len(overlay_actions) == 1
     overlay_action = overlay_actions[0]
-    assert overlay_action["args"]["dataset_iri"] == dataset
-    assert overlay_action["args"]["evidence_iri"] == (
+    assert overlay_action["args"]["spec"]["dataset_iri"] == dataset
+    assert overlay_action["args"]["spec"]["evidence_iri"] == (
         query_result["evidence_iri"]
     )
 
@@ -522,10 +522,14 @@ def test_record_observation_tool_accepts_profile_type_findings(
     assert profile["observed_value_type"]["iri"] == value_type
     assert [
         action["tool"].removeprefix("doxabase.") for action in profile_run["suggested_next_actions"]
-    ] == ["draft_profile_map_updates"]
+    ] == ["stage_revision"]
     assert profile_run["suggested_next_actions"][0]["args"] == {
-        "dataset_iri": dataset,
-        "evidence_iri": result["evidence_iri"],
+        "kind": "profile_map_updates",
+        "dry_run": True,
+        "spec": {
+            "dataset_iri": dataset,
+            "evidence_iri": result["evidence_iri"],
+        },
     }
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
@@ -741,7 +745,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     ] == [
         "describe_dataset",
         "describe_resource",
-        "draft_profile_map_updates",
+        "stage_revision",
         "get_context_graph",
         "get_context_graph",
     ]
@@ -755,8 +759,12 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["handoff_entrypoints"]["suggested_next_actions"][2][
         "args"
     ] == {
-        "dataset_iri": table,
-        "evidence_iri": shared_evidence,
+        "kind": "profile_map_updates",
+        "dry_run": True,
+        "spec": {
+            "dataset_iri": table,
+            "evidence_iri": shared_evidence,
+        },
     }
     assert result["handoff_entrypoints"]["suggested_next_actions"][-1][
         "args"
@@ -919,7 +927,7 @@ def test_profile_type_review_tool_keeps_direct_map_undefined_value_type_visible(
     ] == [
         "get_context_graph",
         "record_pattern",
-        "stage_systematisation",
+        "stage_revision",
     ]
     grouped_actions = result["suggested_next_action_groups"]["profile_type_review"]
 
