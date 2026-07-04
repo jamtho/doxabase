@@ -1,5 +1,13 @@
 # Project Strategy
 
+> **SUSPENDED — Distillation Program active.** The build axes below
+> (`staged_conflict_rebase_versions`, `profile_metrics_and_joint_writes`,
+> `storage_aware_query_planning`) are suspended until the Distillation Program
+> in `doxabase_design_docs/07-distillation-program.md` exits. That document
+> governs all loop priorities; its Permanent Loop Rules (mirrored in
+> `AGENTS.md`) apply to every wave. The material below is retained for the
+> post-program resumption decision only.
+
 This doc is for autonomous repo-improvement loops. It is not capsule state, and
 it should not be folded into `project_brief`.
 

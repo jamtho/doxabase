@@ -26,29 +26,57 @@ something, or generally heading in a direction that may not serve the project.
 Avoid turning this guide into a rigid checklist. The point is to help humans and
 agents think together with less friction.
 
-## Autonomous Trial Loop
+## Active Program: Distillation (V1 → V1.5)
 
-When the user has asked for ongoing DoxaBase workflow improvement, work
-autonomously in a trial/improvement loop:
+**`doxabase_design_docs/07-distillation-program.md` is the active program and
+supersedes the build priorities in this file, `README.md`, `ARCHITECTURE.md`,
+and `docs/agent/project-strategy.md` until its exit criteria are met.** Read it
+(and the review it executes, doc 06) before starting any wave of work. The
+goal is the same capability at a small fraction of today's surface and context
+cost — distill, don't extend. During the program: no new MCP tools, no new
+response fields, no new agent-doc sections, no new helpers, except where a
+program phase item explicitly creates one.
 
-1. Run field trials, usually with sub-agents, and prefer several trials over
-   purely theoretical analysis.
-2. Let long-running sub-agents finish unless there is evidence of looping,
-   repeated command failure, or a real blocker. Quiet model time can be useful
-   reasoning time.
-3. After each useful trial, implement the sensible smallest justified fix. Small
-   is preferred, but make a larger move when that is the practical way out of a
-   pathological state.
-4. Use `docs/agent/project-strategy.md` when recent loops are dominated by one
-   local queue family or when choosing the next broad workflow trial axis.
-5. Update tests and agent docs with the behavior or lesson the trial revealed.
-6. Run focused checks first, then full `uv run pytest -q -n 16`,
-   `uv run python tools/validate_rdf.py`, and `git diff --check`.
-7. Commit coherent verified changes on a `codex/...` branch when the work is
-   ready, with a rationale-focused commit message.
-8. Preserve only trial artifacts that future agents can usefully learn from.
-   Raw scratch capsules and routine run logs should stay local; distilled trial
-   lessons belong in tracked docs when they change how agents should work.
+## Permanent Loop Rules
+
+These govern autonomous improvement work from now on, during the program and
+after it:
+
+1. **Scoreboard gate.** The pre-commit gate is `uv run pytest -q -n 16`,
+   `uv run python tools/validate_rdf.py`,
+   `uv run python tools/scoreboard.py --check`, and `git diff --check`. A
+   scoreboard regression blocks the commit. Budget ceilings only ratchet
+   downward; loosening any ceiling requires James.
+2. **Wave shape.** Every wave: pick the next program item → implement → full
+   gate → wave-journal entry (≤ 15 lines: what changed, measured effect on the
+   scoreboard, next item). Journal entries go in `docs/journal/waves.md`,
+   never in reference docs.
+3. **Subtraction quota.** During the program, every wave must leave the
+   scoreboard net-equal-or-better. After the program: any wave that adds a
+   tool, response field, or doc section must remove or shrink something
+   comparable, and must first show that improving an existing field or doc
+   could not close the same gap.
+4. **Trials measure tokens-to-outcome.** A trial's primary metrics are task
+   success against its rubric and total context cost (tool-schema chars + doc
+   chars fetched + response chars consumed, ÷4). A fix that removes a
+   confusion but raises cold-start cost is a regression.
+5. **No compatibility shims.** Pre-1.0 with zero external users: delete old
+   names outright — no aliases, no deprecation wrappers, no dual code paths.
+6. **No new routing fields.** When a trial agent gets lost, the allowed fixes
+   are, in order: better state presentation in an existing field; a rewritten
+   doc sentence; a merged/simplified response. A new field must replace at
+   least one old field.
+7. **Docs are reference, never journal.** No dated entries, timing
+   measurements, or trial narratives in `docs/agent/`; that material goes to
+   `docs/journal/`.
+8. **Escalate to James** (pause the loop, write a handoff) for: storage schema
+   changes; `rc:` ontology semantic changes; any budget loosening; a phase
+   gate failing twice; anything that would weaken privacy/validation/staged
+   conflict guarantees; anything irreversible.
+
+Self-check each wave against the named anti-patterns: the Additive Reflex,
+the Routing-Field Reflex, the Doc-Append Reflex, the Compat-Shim Reflex, the
+Self-Referential Trial, and the Smallest-Fix Trap (definitions in doc 07).
 
 Pause and report before broad storage migrations, public API breaks, surprising
 container data exposure, or large semantic direction changes. Read-only data
@@ -75,23 +103,18 @@ Use the DoxaBase MCP docs tools when available:
 
 ## Daily Commands
 
-Run the RDF asset validation script:
-
-```bash
-uv run python tools/validate_rdf.py
-```
-
-Run tests:
+The full pre-commit gate:
 
 ```bash
 uv run pytest -q -n 16
+uv run python tools/validate_rdf.py
+uv run python tools/scoreboard.py --check
+git diff --check
 ```
 
-For focused work, run the relevant pytest file first, then the full suite before
+For focused work, run the relevant pytest file first, then the full gate before
 finishing. Use serial pytest for one-off debugging when worker startup would
-obscure local output. On the current July 1, 2026 YOLO container, `-n 16`
-measured faster than `-n auto`; remeasure if the visible CPU count or cgroup
-limits change.
+obscure local output.
 
 ## Working In The Codebase
 
@@ -159,14 +182,12 @@ validation, or agent workflows.
 
 ## Current Build Priorities
 
-The near-term order is:
+Suspended. The distillation program
+(`doxabase_design_docs/07-distillation-program.md`) defines all build
+priorities until its exit criteria are met. The former build axes (staged
+conflict/rebase, richer profiling, query planning) resume, if at all, only
+after the program's retrospective.
 
-1. Add fuller staged conflict/rebase/version workflows.
-2. Add richer profile metrics and profiling helpers that can write map facts,
-   observations, and patterns together.
-3. Add query-planning helpers that consume storage access metadata.
-
-When extending promotion helpers, preserve agents' knowledge-graph reasoning. A
+When touching promotion helpers, preserve agents' knowledge-graph reasoning. A
 helper should draft and validate graph moves, not force every insight into an
-existing template. Test it with at least one awkward systematisation that may
-need a project vocabulary term, ontology extension, or competing RDF framings.
+existing template.
