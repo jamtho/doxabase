@@ -4469,7 +4469,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(mcp_tools, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     first = stage_graph_revision_tool(
         db,
@@ -4835,7 +4835,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(mcp_tools, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     staged = stage_graph_revision_tool(
         db,

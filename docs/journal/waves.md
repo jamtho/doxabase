@@ -44,3 +44,18 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   default_context), not our call sites → Phase 1 pins rdflib <8 + filters.
 - Scoreboard unchanged. Next: Phase 1 packaging (build-system, dev deps,
   entry point, gate.sh with wheel install smoke).
+
+## Wave 3 — 2026-07-04 — Phase 1: make it shippable
+
+- pyproject: hatchling build-system; version 0.2.0.dev0; pytest/xdist to dev
+  group; pyarrow behind `doxabase[parquet]`; rdflib pinned <8 (deprecations
+  are rdflib-internal; targeted pytest filters added); `doxabase-mcp` script.
+- Runtime data ships as `doxabase/_data/` via force-include mirroring the
+  repo layout; `core._data_root()` prefers it, so repo and wheel resolve
+  identically. `mcp_tools._resolve_path` now resolves user paths against cwd
+  (was repo ROOT) — 2 tests updated from ROOT-monkeypatch to chdir.
+- tools/gate.sh = full gate incl. `uv build` + clean-venv install smoke
+  (tools/install_smoke.py; smoke needed evidence on its observation — shapes
+  require observations link evidence). `.github/workflows/ci.yml` runs it.
+- Gate 1 PASSED: smoke loads 805 triples from packaged `_data`, 89 tools.
+- Scoreboard unchanged. Next: Phase 2 monolith split.

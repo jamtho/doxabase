@@ -38,7 +38,20 @@ GraphName = TypingLiteral[
 GraphStorageRow = tuple[str, str, str, str, str, str | None, str | None]
 StagedApplyCheckCacheKey = tuple[str, str | None]
 
-ROOT = Path(__file__).resolve().parents[1]
+def _data_root() -> Path:
+    """Root for shipped data: ontology seeds, agent docs, example fixtures.
+
+    An installed wheel carries them under ``doxabase/_data/`` mirroring the
+    repo-root layout (see pyproject force-include); a repo checkout uses the
+    repo root itself, so relative data paths are identical in both.
+    """
+    packaged = Path(__file__).resolve().parent / "_data"
+    if packaged.is_dir():
+        return packaged
+    return Path(__file__).resolve().parents[1]
+
+
+ROOT = _data_root()
 BASE_ONTOLOGY_PATH = ROOT / "ontology" / "rc_core.ttl"
 BASE_SHAPES_PATH = ROOT / "ontology" / "rc_shapes.ttl"
 SeedGraphCacheKey = tuple[str, str, int, int]

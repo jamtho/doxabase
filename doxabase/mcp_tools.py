@@ -2757,10 +2757,12 @@ def _pairs_to_dicts(pairs: list[tuple[str, int]], key_name: str) -> list[dict[st
 
 
 def _resolve_path(path: str) -> Path:
-    candidate = Path(path)
-    if candidate.is_absolute():
-        return candidate.resolve(strict=False)
-    return (ROOT / candidate).resolve(strict=False)
+    """Resolve a user-supplied file path against the current working directory.
+
+    User import/export paths must not resolve against the package data root:
+    an installed wheel's ROOT lives inside site-packages.
+    """
+    return Path(path).resolve(strict=False)
 
 
 def _history_revision_iris_in_trig(

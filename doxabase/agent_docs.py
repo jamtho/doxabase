@@ -5,7 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+# Installed wheels ship docs under doxabase/_data/ (see pyproject
+# force-include); repo checkouts read the repo's docs/agent directly.
+_PACKAGED_DATA = Path(__file__).resolve().parent / "_data"
+ROOT = _PACKAGED_DATA if _PACKAGED_DATA.is_dir() else Path(__file__).resolve().parents[1]
 DOCS_DIR = ROOT / "docs" / "agent"
 
 
