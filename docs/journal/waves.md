@@ -59,3 +59,26 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   require observations link evidence). `.github/workflows/ci.yml` runs it.
 - Gate 1 PASSED: smoke loads 805 triples from packaged `_data`, 89 tools.
 - Scoreboard unchanged. Next: Phase 2 monolith split.
+
+## Wave 4 — 2026-07-04 — Phase 2: monolith split (zero behavior change)
+
+- `doxabase/core.py` (74,667 lines) → `doxabase/core/` package: `_shared.py`
+  (prelude), `_types.py` (all 244 dataclasses, 4.1k lines), and 32 mixin
+  modules composing `DoxaBase` in `__init__.py`. Largest module now 4,903
+  lines (staging.py). Every name re-exported; no import site changed.
+- Split was script-generated (AST-based, methods verbatim): name-rule buckets
+  + majority-caller attribution for private helpers. Deviation from 2.1: the
+  decomposition table was iterated empirically against module-size reports
+  rather than fixed before moving code; final layout is the module list in
+  `doxabase/core/`. Splitter + original core.py preserved in session scratch.
+- Two mechanical fixes the split exposed: `_data_root()`/test-header ROOT
+  needed one more `parents[..]` level; runtime `DoxaBase._static(...)` and
+  `object.__new__(DoxaBase)` references need the facade bound into mixin
+  module globals post-composition (transitional loop in core/__init__.py —
+  Phase 3/4 should rewrite those call sites and delete it).
+- Tests: `test_doxabase_core.py` → `tests/core/` (15 files + support_core),
+  `test_mcp_tools.py` → `tests/mcp/` (16 files + support_mcp), tests verbatim.
+- Ceilings tightened: largest module and largest test module ≤ 5,000.
+- Gate 2 PASSED: 764 passed, wheel smoke green, all budgets green.
+- Next: Phase 3 token diet (to_jsonable envelope, RDF-first slices,
+  project_brief diet, SuggestedNextAction collapse).

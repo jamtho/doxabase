@@ -42,8 +42,8 @@ if str(ROOT) not in sys.path:
 BUDGETS: dict[str, int] = {
     "mcp_tool_count": 89,
     "mcp_schema_chars": 145_000,
-    "largest_module_lines": 76_000,
-    "largest_test_module_lines": 46_000,
+    "largest_module_lines": 5_000,
+    "largest_test_module_lines": 5_000,
     "project_brief_chars": 105_000,
     "describe_dataset_chars": 31_500,
     "describe_query_context_chars": 33_000,
