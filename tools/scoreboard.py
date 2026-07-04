@@ -40,8 +40,8 @@ if str(ROOT) not in sys.path:
 # ratchet starts immediately without failing. Phase items tighten these toward
 # the end-state targets recorded alongside.
 BUDGETS: dict[str, int] = {
-    "mcp_tool_count": 65,
-    "mcp_schema_chars": 86_000,
+    "mcp_tool_count": 48,
+    "mcp_schema_chars": 53_000,
     "largest_module_lines": 5_000,
     "largest_test_module_lines": 5_000,
     "project_brief_chars": 4_850,
