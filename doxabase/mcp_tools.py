@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from collections.abc import Iterable
 from pathlib import Path
@@ -915,9 +916,99 @@ def export_context_slice_tool(
     )
 
 
+def _dispatch_kind(
+    db: DoxaBase,
+    tool_label: str,
+    kinds: dict[str, Any],
+    kind: str,
+    spec: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Dispatch a kind-parameterized tool to its handler with targeted errors."""
+    handler = kinds.get(kind)
+    if handler is None:
+        raise DoxaBaseError(
+            f"{tool_label} kind must be one of {sorted(kinds)}; got {kind!r}"
+        )
+    spec = spec or {}
+    parameters = {
+        name: parameter
+        for name, parameter in inspect.signature(handler).parameters.items()
+        if name != "db"
+    }
+    unknown = sorted(set(spec) - set(parameters))
+    if unknown:
+        raise DoxaBaseError(
+            f"{tool_label} kind={kind!r} got unknown spec field(s) {unknown}; "
+            f"valid fields for this kind: {sorted(parameters)}"
+        )
+    missing = sorted(
+        name
+        for name, parameter in parameters.items()
+        if parameter.default is inspect.Parameter.empty and name not in spec
+    )
+    if missing:
+        raise DoxaBaseError(
+            f"{tool_label} kind={kind!r} is missing required spec field(s) "
+            f"{missing}; valid fields for this kind: {sorted(parameters)}"
+        )
+    return handler(db, **spec)
+
+
+def record_profile_tool(
+    db: DoxaBase,
+    kind: str,
+    spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Record profile evidence; kind picks the profile shape."""
+    return _dispatch_kind(
+        db,
+        "record_profile",
+        {
+            "dataset": record_dataset_profile_tool,
+            "column": record_column_profile_tool,
+            "bundle": record_profile_bundle_tool,
+            "domain_network": record_domain_network_profile_tool,
+        },
+        kind,
+        spec,
+    )
+
+
+def record_map_fact_tool(
+    db: DoxaBase,
+    kind: str,
+    spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Record current-best map facts; kind picks the fact family."""
+    return _dispatch_kind(
+        db,
+        "record_map_fact",
+        {
+            "dataset": record_map_dataset_tool,
+            "column": record_map_column_tool,
+            "caveat": record_map_caveat_tool,
+            "relationship": record_map_relationship_tool,
+            "storage_access": record_map_storage_access_tool,
+            "physical_layout": record_map_physical_layout_tool,
+            "partition_scheme": record_map_partition_scheme_tool,
+            "asset_transform": record_map_asset_transform_tool,
+            "analysis_view": record_map_analysis_view_tool,
+            "analysis_view_bundle": record_map_analysis_view_bundle_tool,
+            "table_bundle": record_map_table_bundle_tool,
+            "analysis_packet": record_analysis_packet_tool,
+            "profile_manifest": record_profile_to_capsule_manifest_tool,
+            "profiled_parquet_table": record_profiled_parquet_table_tool,
+        },
+        kind,
+        spec,
+    )
+
+
 def record_observation_tool(
     db: DoxaBase,
-    summary: str,
+    summary: str | None = None,
+    kind: str | None = None,
+    spec: dict[str, Any] | None = None,
     observation_type: str = "observation",
     observed_asset: str | None = None,
     observed_column: str | None = None,
@@ -937,6 +1028,34 @@ def record_observation_tool(
     observed_physical_type: str | None = None,
     observed_value_type: str | None = None,
 ) -> dict[str, Any]:
+    if kind in {"claim", "query_result"}:
+        handler = (
+            record_claim_observation_tool
+            if kind == "claim"
+            else record_query_result_tool
+        )
+        merged = dict(spec or {})
+        if summary is not None:
+            merged.setdefault("summary", summary)
+        return _dispatch_kind(
+            db,
+            "record_observation",
+            {kind: handler},
+            kind,
+            merged,
+        )
+    if kind is not None and kind not in {"observation", "profile"}:
+        raise DoxaBaseError(
+            "record_observation kind must be one of ['claim', 'observation', "
+            f"'profile', 'query_result']; got {kind!r}"
+        )
+    if kind is not None:
+        observation_type = kind
+    if summary is None:
+        raise DoxaBaseError(
+            "record_observation requires summary for "
+            "kind='observation'/'profile'"
+        )
     result = db.record_observation(
         summary=summary,
         observation_type=observation_type,  # type: ignore[arg-type]

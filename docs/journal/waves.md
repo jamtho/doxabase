@@ -211,3 +211,23 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   83 tools / 142,000 schema chars.
 - Next: wave R2, recording family (rows 10/13/14, −22 tools) via the
   kind-dispatch pattern with targeted per-kind validation errors.
+
+## Wave 12 — 2026-07-05 — Phase 4 wave R2: recording family (83 → 65 tools)
+
+- Doc 08 rows 10/13/14. New `record_profile` (kinds: dataset/column/bundle/
+  domain_network) and `record_map_fact` (14 kinds incl. analysis_packet,
+  profile_manifest, profiled_parquet_table); `record_observation` gained
+  kind= (claim/query_result dispatch via spec; observation/profile keep the
+  flat ergonomic fields). Twenty registrations deleted same-wave.
+- Mechanism: a generic `_dispatch_kind` validates spec against the handler
+  signature and raises targeted errors naming the valid and missing fields
+  for that kind — the trial-trap fix pattern from doc 08, tested behaviorally
+  (the sampled-snapshot gate test now asserts the error names the field).
+- The old `*_tool` functions survive as dispatch targets and for Python-side
+  tests; only the MCP doors merged. Repair-hint arguments_templates in
+  query_repair now emit {"kind": ..., "spec": {...}}.
+- Schema cost: 135,986 → 81,816 chars (the fattest schemas were all here).
+  Ceilings ratcheted: 65 tools / 86,000 chars. Suite 726 passed; gate green.
+- Next: R3 staging family (rows 16–19, −13), R4 revisions reads (rows
+  20–21, −9), R5 export/import (rows 22–24, −12), sweep (row 8 fold +
+  removals + docstring budget).

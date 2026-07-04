@@ -299,7 +299,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
     ]
     assert [action["tool"].removeprefix("doxabase.") for action in repair_actions] == [
         "stage_query_storage_access_repair",
-        "record_map_storage_access",
+        "record_map_fact",
         "stage_map_assertion_change",
     ]
     assert repair_actions[0]["required_extra_arguments"] == [
@@ -331,7 +331,8 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "storage_protocol",
         "storage_root",
     ]
-    assert repair_actions[1]["arguments_template"]["datasets"] == [dataset]
+    assert repair_actions[1]["arguments_template"]["kind"] == "storage_access"
+    assert repair_actions[1]["arguments_template"]["spec"]["datasets"] == [dataset]
     assert repair_actions[1]["placeholder_fields"] == [
         *optional_storage_fields,
         "path_templates",
@@ -434,7 +435,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool="doxabase.record_map_storage_access",
+        tool="doxabase.record_map_fact",
         required_extra_arguments=[
             "iri",
             "storage_protocol",
@@ -466,11 +467,12 @@ def test_describe_query_context_reports_missing_planning_metadata(
     ]
     assert [action["tool"].removeprefix("doxabase.") for action in repair_group.actions] == [
         "stage_query_storage_access_repair",
-        "record_map_storage_access",
+        "record_map_fact",
         "stage_map_assertion_change",
     ]
     assert repair_group.actions[0]["arguments_template"]["dataset_iri"] == dataset
-    assert repair_group.actions[1]["arguments_template"]["datasets"] == [dataset]
+    assert repair_group.actions[1]["arguments_template"]["kind"] == "storage_access"
+    assert repair_group.actions[1]["arguments_template"]["spec"]["datasets"] == [dataset]
     assert repair_group.actions[2]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
@@ -2296,7 +2298,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert relation_target.direct_review_required is False
     assert context.query_target_decision.candidate_index == relation_target_index
     flat_tools = {action.tool.removeprefix("doxabase.") for action in context.suggested_next_actions}
-    assert "record_map_storage_access" not in flat_tools
+    assert "record_map_fact" not in flat_tools
     assert "stage_map_assertion_change" not in flat_tools
     assert flat_tools == {"draft_query_plan"}
 

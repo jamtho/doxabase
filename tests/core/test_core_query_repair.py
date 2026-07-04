@@ -890,7 +890,7 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
         layout_option,
         action_index=1,
         action_type="record_reviewed_physical_layout",
-        tool="doxabase.record_map_physical_layout",
+        tool="doxabase.record_map_fact",
         required_extra_arguments=["iri", "file_format"],
         placeholder_fields=[
             "file_format",
@@ -922,9 +922,10 @@ def test_describe_query_context_suggests_missing_physical_layout_repair(
     )
     assert "rc:PostgreSQLTable" in action["condition"]
     direct_action = repair_group.actions[1]
-    assert direct_action["tool"] == "doxabase.record_map_physical_layout"
-    assert direct_action["arguments_template"]["datasets"] == [dataset]
-    assert direct_action["arguments_template"]["file_format"] == (
+    assert direct_action["tool"] == "doxabase.record_map_fact"
+    assert direct_action["arguments_template"]["kind"] == "physical_layout"
+    assert direct_action["arguments_template"]["spec"]["datasets"] == [dataset]
+    assert direct_action["arguments_template"]["spec"]["file_format"] == (
         "<reviewed rc:FileFormat IRI>"
     )
 
@@ -1133,7 +1134,7 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         pending_storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool="doxabase.record_map_storage_access",
+        tool="doxabase.record_map_fact",
         required_extra_arguments=[
             "iri",
             "storage_protocol",

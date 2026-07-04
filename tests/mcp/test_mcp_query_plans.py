@@ -804,7 +804,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         storage_option,
         action_index=1,
         action_type="record_reviewed_storage_access",
-        tool="doxabase.record_map_storage_access",
+        tool="doxabase.record_map_fact",
         required_extra_arguments=[
             "iri",
             "storage_protocol",

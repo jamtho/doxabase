@@ -301,7 +301,7 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         layout_option,
         action_index=1,
         action_type="record_reviewed_physical_layout",
-        tool="doxabase.record_map_physical_layout",
+        tool="doxabase.record_map_fact",
         required_extra_arguments=["iri", "file_format"],
         placeholder_fields=[
             "file_format",
@@ -332,8 +332,9 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
         "<reviewed rc:FileFormat IRI>"
     )
     direct_action = repair_group["actions"][1]
-    assert direct_action["tool"] == "doxabase.record_map_physical_layout"
-    assert direct_action["arguments_template"]["datasets"] == [dataset]
+    assert direct_action["tool"] == "doxabase.record_map_fact"
+    assert direct_action["arguments_template"]["kind"] == "physical_layout"
+    assert direct_action["arguments_template"]["spec"]["datasets"] == [dataset]
     staged = stage_query_physical_layout_repair_tool(
         db,
         dataset_iri=dataset,

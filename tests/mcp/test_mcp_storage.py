@@ -47,28 +47,10 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.start_staged_revision_recovery_session" in tool_names
     assert "doxabase.describe_staged_revision_recovery_session" in tool_names
     assert "doxabase.record_observation" in tool_names
-    assert "doxabase.record_query_result" in tool_names
-    assert "doxabase.record_claim_observation" in tool_names
+    assert "doxabase.record_profile" in tool_names
+    assert "doxabase.record_map_fact" in tool_names
     assert "doxabase.record_claim_reconsideration" in tool_names
-    assert "doxabase.record_column_profile" in tool_names
-    assert "doxabase.record_dataset_profile" in tool_names
-    assert "doxabase.record_profile_bundle" in tool_names
-    assert "doxabase.record_domain_network_profile" in tool_names
     assert "doxabase.record_pattern" in tool_names
-    assert "doxabase.record_map_dataset" in tool_names
-    assert "doxabase.record_map_analysis_view" in tool_names
-    assert "doxabase.record_map_analysis_view_bundle" in tool_names
-    assert "doxabase.record_analysis_packet" in tool_names
-    assert "doxabase.record_map_table_bundle" in tool_names
-    assert "doxabase.record_profiled_parquet_table" in tool_names
-    assert "doxabase.record_profile_to_capsule_manifest" in tool_names
-    assert "doxabase.record_map_column" in tool_names
-    assert "doxabase.record_map_caveat" in tool_names
-    assert "doxabase.record_map_storage_access" in tool_names
-    assert "doxabase.record_map_physical_layout" in tool_names
-    assert "doxabase.record_map_partition_scheme" in tool_names
-    assert "doxabase.record_map_relationship" in tool_names
-    assert "doxabase.record_map_asset_transform" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
     assert "doxabase.export_handoff_bundle" in tool_names
@@ -93,30 +75,10 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.validate_graph" in tool_names
 
     tool_by_name = {tool.name: tool for tool in tools}
-    storage_access_description = (
-        tool_by_name["doxabase.record_map_storage_access"].description or ""
-    )
-    assert "rc:DatabaseStorage" in storage_access_description
-    assert "database relation identifiers" in storage_access_description
-    assert "storage_root" in storage_access_description
-    assert 'location_kind="bucket"' in storage_access_description
-    assert "external:intentionally-unrecorded" in storage_access_description
-    relationship_description = (
-        tool_by_name["doxabase.record_map_relationship"].description or ""
-    )
-    assert "foreign_key" in relationship_description
-    assert "rc:ForeignKey" in relationship_description
-    assert "body -> body_top" in relationship_description
-    assert "source_columns" in relationship_description
-    assert "record_map_asset_transform" in relationship_description
-    asset_transform_description = (
-        tool_by_name["doxabase.record_map_asset_transform"].description or ""
-    )
-    assert "asset-level transform" in asset_transform_description
-    assert "rc:Aggregation" in asset_transform_description
-    assert "outputs[].target_dataset" in asset_transform_description
-    assert "body -> body_top" in asset_transform_description
-    assert "source_columns" in asset_transform_description
+    fact_description = tool_by_name["doxabase.record_map_fact"].description or ""
+    assert "storage_access" in fact_description
+    assert "relationship" in fact_description
+    assert "spec" in fact_description
 
 
 @pytest.mark.anyio

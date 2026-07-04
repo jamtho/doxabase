@@ -1992,22 +1992,25 @@ class QueryRepairMixin:
                     },
                     {
                         "action_type": "record_reviewed_physical_layout",
-                        "tool": "doxabase.record_map_physical_layout",
+                        "tool": "doxabase.record_map_fact",
                         "reason": (
                             "Use when review has identified the dataset's file "
                             "format or database table layout."
                         ),
                         "required_extra_arguments": ["iri", "file_format"],
                         "arguments_template": {
-                            "iri": "<reviewed physical layout IRI>",
-                            "datasets": [dataset.iri],
-                            "file_format": "<reviewed rc:FileFormat IRI>",
-                            "layout_verification_status": (
-                                "<reviewed rc:LayoutVerificationStatus IRI>"
-                            ),
-                            "layout_verification_note": (
-                                "<reviewed physical layout evidence note>"
-                            ),
+                            "kind": "physical_layout",
+                            "spec": {
+                                "iri": "<reviewed physical layout IRI>",
+                                "datasets": [dataset.iri],
+                                "file_format": "<reviewed rc:FileFormat IRI>",
+                                "layout_verification_status": (
+                                    "<reviewed rc:LayoutVerificationStatus IRI>"
+                                ),
+                                "layout_verification_note": (
+                                    "<reviewed physical layout evidence note>"
+                                ),
+                            },
                         },
                         "placeholder_fields": [
                             "file_format",
@@ -2205,7 +2208,7 @@ class QueryRepairMixin:
             },
             {
                 "action_type": "record_reviewed_storage_access",
-                "tool": "doxabase.record_map_storage_access",
+                "tool": "doxabase.record_map_fact",
                 "reason": (
                     "Use when review has identified the non-secret "
                     "storage protocol and location for this dataset."
@@ -2216,23 +2219,26 @@ class QueryRepairMixin:
                     "storage_root",
                 ],
                 "arguments_template": {
-                    "iri": "<reviewed storage access IRI>",
-                    "datasets": [dataset.iri],
-                    "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
-                    "storage_root": (
-                        "<reviewed root, URL, bucket URI, or connection>"
-                    ),
-                    "endpoint_profile": "<optional reviewed endpoint profile>",
-                    "bucket_name": "<optional reviewed S3 bucket name>",
-                    "key_prefix": "<optional reviewed S3 key prefix>",
-                    "region": "<optional reviewed S3 region>",
-                    "path_style_access": "<optional reviewed boolean>",
-                    "credential_reference": (
-                        "<optional non-secret credential reference>"
-                    ),
-                    "path_templates": [
-                        "<optional storage-owned path or relation template>"
-                    ],
+                    "kind": "storage_access",
+                    "spec": {
+                        "iri": "<reviewed storage access IRI>",
+                        "datasets": [dataset.iri],
+                        "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
+                        "storage_root": (
+                            "<reviewed root, URL, bucket URI, or connection>"
+                        ),
+                        "endpoint_profile": "<optional reviewed endpoint profile>",
+                        "bucket_name": "<optional reviewed S3 bucket name>",
+                        "key_prefix": "<optional reviewed S3 key prefix>",
+                        "region": "<optional reviewed S3 region>",
+                        "path_style_access": "<optional reviewed boolean>",
+                        "credential_reference": (
+                            "<optional non-secret credential reference>"
+                        ),
+                        "path_templates": [
+                            "<optional storage-owned path or relation template>"
+                        ],
+                    },
                 },
                 "placeholder_fields": [*optional_storage_fields, "path_templates"],
                 "reviewed_value_fields": [*optional_storage_fields, "path_templates"],

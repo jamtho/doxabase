@@ -7,18 +7,15 @@ from tests.mcp.support_mcp import *  # noqa: F401,F403
 async def test_profile_mcp_tools_expose_sampled_snapshot_gate(
     tmp_path: Path,
 ) -> None:
-    server = build_server(tmp_path / "mcp.sqlite")
-    tools = {tool.name: tool for tool in await server.list_tools()}
-
-    for tool_name in (
-        "doxabase.record_dataset_profile",
-        "doxabase.record_profile_bundle",
-    ):
-        properties = tools[tool_name].inputSchema["properties"]
-
-        assert "allow_sampled_row_count_snapshot" in properties
-        assert properties["allow_sampled_row_count_snapshot"]["default"] is False
-        assert properties["allow_sampled_row_count_snapshot"]["type"] == "boolean"
+    db = DoxaBase.create(tmp_path / "mcp.sqlite")
+    # The sampled-snapshot gate now lives behind record_profile's per-kind
+    # spec; the dispatcher's targeted errors must reveal it as a valid field
+    # for both kinds.
+    for kind in ("dataset", "bundle"):
+        with pytest.raises(DoxaBaseError) as excinfo:
+            record_profile_tool(db, kind=kind, spec={"bogus_field": 1})
+        assert "allow_sampled_row_count_snapshot" in str(excinfo.value)
+        assert "bogus_field" in str(excinfo.value)
 
 
 def test_query_context_keeps_query_overlay_with_profile_run_candidates(
