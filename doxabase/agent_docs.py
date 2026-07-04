@@ -40,6 +40,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "graph-roles.md",
     ),
     AgentDoc(
+        id="working_the_capsule",
+        title="Working The Capsule",
+        description="Judgement guide: gates, the epistemic ladder, profiles, query handoffs, staged revisions.",
+        path=DOCS_DIR / "working-the-capsule.md",
+    ),
+    AgentDoc(
         id="agent_workflow",
         title="Agent Workflow",
         description="Recommended first calls and graph placement rules for agents.",

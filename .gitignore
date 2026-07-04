@@ -14,3 +14,7 @@ wheels/
 
 # Codex run artifacts
 .codex-runs/
+
+# Local capsules (incl. pre-rename spelling)
+.doxabase.sqlite
+.doxybase.sqlite

@@ -82,3 +82,25 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Gate 2 PASSED: 764 passed, wheel smoke green, all budgets green.
 - Next: Phase 3 token diet (to_jsonable envelope, RDF-first slices,
   project_brief diet, SuggestedNextAction collapse).
+
+## Wave 5 — 2026-07-04 — Phase 3.1: envelope diet + doc 08 + journal extraction
+
+- `to_jsonable` now omits None/[]/{} entries (absent==null==empty convention,
+  documented in its docstring); hand-built envelopes in mcp_tools routed
+  through it. ~90 tests/mcp envelope assertions updated by sub-agent under
+  no-semantic-weakening rules; two judgement calls reviewed and accepted
+  (handoff manifest comparison normalized through to_dict — the on-disk
+  manifest keeps explicit nulls, it's a file format not a context payload;
+  blanket per-task field-presence checks in the brief test removed).
+- Scoreboard effect: project_brief 100,462→76,764; describe_dataset
+  30,023→23,017; describe_query_context 31,454→24,259; context slice
+  168,598→140,116. Ceilings ratcheted to actuals +≈5%.
+- Phase 4.1 mapping committed early: doxabase_design_docs/08-mcp-surface-v2.md
+  (89→25, all absorptions + trap fixes + wave order).
+- Phase 6.1 partial: 4,600-line trial journal extracted from field-trials.md
+  to docs/journal/trial-signals-history.md (4,995→401 lines).
+- Phase 5.2 done early (zero-conflict while tests were being fixed):
+  docs/agent/working-the-capsule.md written and registered.
+- Session continuation doc: handoff/distillation-session-2026-07-04.md
+  (includes the ProjectBrief v2 spec for the 3.3+5.1 rebuild).
+- Gate green (764 passed + wheel smoke). Next: 3.2 RDF-first context graph.
