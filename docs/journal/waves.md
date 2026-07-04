@@ -156,3 +156,28 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   globally in Phase 4's per-family merges.
 - response-conventions.md now states the exact tool/args/reason shape.
 - Next: 3.3+5.1 project_brief rebuild (spec in handoff step 3).
+
+## Wave 9 — 2026-07-04/05 — Phases 3.3 + 5.1: project_brief is state, not script
+
+- ProjectBrief rebuilt as the v2 shape from the handoff spec: key_counts,
+  dataset_count, dataset one-liners (iri/label/is_table/status/column_count/
+  caveat_count), gates (gate/blocks/detail/details_call), queues
+  (name/count/example_iri), ≤5 deduped suggestions, limit. DELETED: the
+  safety/frontier/unattended lanes, frontier_status + mutation_allowed_after,
+  expansion machinery, returned/omitted count triplets, per-dataset inlined
+  query/profile summaries, profile_candidate_limit parameter.
+- Gates derive from the proven health builders: stale_seed_recovery
+  (mutation), staged_revision_recovery (mutation, from overlapping recovery
+  sessions), privacy_export_review (export), export_validation_review
+  (export), query_fixture_staleness (none). Gate actions lead suggestions.
+- Recorded deviation: 3.3 and 5.1 executed as one rebuild (same code/tests);
+  internal derivations still call describe_dataset per dataset — the cost
+  center was inlined content, not compute; simplify later if profiling says.
+- brief.py 2,880 → 2,146 lines. Tests: 36 old core-brief machinery tests
+  deleted, 9 v2 tests written (all gate conditions covered incl. ordering
+  and clearing); mcp brief file rewritten (3 envelope tests); 11 scattered
+  assertions across recovery/restage/staging/query/map/profiles rewritten
+  to gates/queues semantics. Suite: 726 passed.
+- Scoreboard: project_brief 28,035 → 4,592 chars — under the 8,000 end-state
+  (baseline 100,462: a 22x reduction). Ceiling ratcheted to 4,850.
+- Next: 5.3 start-here rewrite (now truthful), then 3.5/3.6 + Gate 3 battery.

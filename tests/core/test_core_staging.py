@@ -2652,14 +2652,10 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     assert pending_add["pending_staged_repair_iris"] == [add_revision.revision_iri]
 
     pending_brief = db.project_brief(limit=3)
-    pending_query_task = next(
-        task
-        for task in pending_brief.recommended_next_tasks
-        if task.task_type == "query_repair_review"
+    assert any(
+        queue.name == "query_repair_review" and queue.count >= 1
+        for queue in pending_brief.queues
     )
-    assert pending_query_task.pending_staged_repair_iris == [
-        add_revision.revision_iri
-    ]
 
     db.apply_staged_revision(add_revision.revision_iri)
 

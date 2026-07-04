@@ -48,9 +48,9 @@ def test_context_slice_skips_query_context_action_for_non_tabular_seed(
     assert [
         action.tool.removeprefix("doxabase.") for action in slice_context.suggested_next_actions
     ] == []
-    assert brief.queue_counts == {"non_tabular_asset_review": 1}
-    assert "query_repair_review" not in brief.queue_counts
-    assert "query_context_review" not in brief.queue_counts
+    assert {queue.name: queue.count for queue in brief.queues} == {
+        "non_tabular_asset_review": 1
+    }
 
 
 def test_describe_assertion_support_suggests_dataset_context_for_relationships(
@@ -1018,14 +1018,12 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     }
 
     pending_brief = db.project_brief(limit=3)
-    pending_query_task = next(
-        task
-        for task in pending_brief.recommended_next_tasks
-        if task.task_type == "query_repair_review"
+    pending_queue = next(
+        queue
+        for queue in pending_brief.queues
+        if queue.name == "query_repair_review"
     )
-    assert pending_query_task.pending_staged_repair_iris == [
-        staged_protocol.revision_iri
-    ]
+    assert pending_queue.count >= 1
 
 
 def test_describe_query_context_warns_on_non_s3_bucket_prefix(

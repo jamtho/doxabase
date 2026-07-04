@@ -44,7 +44,7 @@ BUDGETS: dict[str, int] = {
     "mcp_schema_chars": 145_000,
     "largest_module_lines": 5_000,
     "largest_test_module_lines": 5_000,
-    "project_brief_chars": 29_500,
+    "project_brief_chars": 4_850,
     "describe_dataset_chars": 24_000,
     "describe_query_context_chars": 21_600,
     "context_slice_chars": 46_300,

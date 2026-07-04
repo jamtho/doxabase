@@ -86,16 +86,10 @@ def export_preflight_tool(
 def project_brief_tool(
     db: DoxaBase,
     limit: int = 20,
-    profile_candidate_limit: int = 2,
 ) -> dict[str, Any]:
-    """Return a read-only orientation brief over active project queues."""
+    """Return read-only capsule state: counts, datasets, gates, queues."""
 
-    return to_dict(
-        db.project_brief(
-            limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
-        )
-    )
+    return to_dict(db.project_brief(limit=limit))
 
 
 def list_entities_tool(

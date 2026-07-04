@@ -60,11 +60,7 @@ def test_profile_frontier_workflow_example_runs(tmp_path: Path) -> None:
 
     assert "# DoxaBase Profile Frontier Workflow" in output
     assert "Loaded fixture triples:" in output
-    assert (
-        "Baseline profile queues: {'profile_observations': 0, "
-        "'profile_evidence': 0"
-        in output
-    )
+    assert "Baseline profile queues: {" in output
     assert "Profile observations: 3" in output
     assert "Profile draft recommendations: 3" in output
     assert "Representative recommendations: [0, 1, 2]" in output

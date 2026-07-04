@@ -160,47 +160,45 @@ class ProjectBriefHealthTask:
 
 
 @dataclass(frozen=True)
-class ProjectBriefFrontierStatus:
-    is_complete: bool
-    hidden_task_count: int
-    hidden_profile_candidate_count: int
-    hidden_queue_types: list[str]
-    active_queue_types: list[str]
-    returned_queue_types: list[str]
-    first_unattended_source: str | None
-    mutation_allowed_after: str
-    note: str
+class ProjectBriefGate:
+    """A condition that blocks a class of action until deliberately cleared.
+
+    State, not script: the gate names what is blocked and the one call that
+    inspects it; the agent decides how to proceed.
+    """
+
+    gate: str
+    blocks: str  # "mutation" | "export" | "none"
+    detail: str
+    details_call: str
+
+
+@dataclass(frozen=True)
+class ProjectBriefQueue:
+    name: str
+    count: int
+    example_iri: str | None
+
+
+@dataclass(frozen=True)
+class ProjectBriefDataset:
+    iri: str
+    label: str | None
+    is_table: bool
+    status: str
+    column_count: int
+    caveat_count: int
 
 
 @dataclass(frozen=True)
 class ProjectBrief:
     key_counts: dict[str, int]
     dataset_count: int
-    returned_dataset_count: int
-    dataset_query_readiness_counts: dict[str, int]
-    returned_dataset_query_readiness_counts: dict[str, int]
-    profile_queue_counts: dict[str, int]
-    queue_counts: dict[str, int]
-    returned_queue_counts: dict[str, int]
-    omitted_queue_counts: dict[str, int]
-    active_queue_type_count: int
-    returned_queue_type_count: int
-    limit_crowded_queue_types: list[str]
-    health_tasks: list[ProjectBriefHealthTask]
-    next_best_expansion: ProjectBriefHealthTask | None
-    full_frontier_expansion: ProjectBriefHealthTask | None
-    safety_first_action: SuggestedNextAction | None
-    safety_first_source: str | None
-    frontier_first_action: SuggestedNextAction | None
-    frontier_first_source: str | None
-    first_unattended_action: SuggestedNextAction | None
-    first_unattended_source: str | None
-    frontier_status: ProjectBriefFrontierStatus
-    datasets: list[ProjectBriefDatasetSummary]
-    staged_review: ProjectBriefStagedReviewSummary
-    recommended_next_tasks: list[ProjectBriefRecommendedTask]
+    datasets: list[ProjectBriefDataset]
+    gates: list[ProjectBriefGate]
+    queues: list[ProjectBriefQueue]
+    suggested_next_actions: list[SuggestedNextAction]
     limit: int
-    profile_candidate_limit: int
 
 
 @dataclass(frozen=True)
@@ -4372,7 +4370,9 @@ __all__ = [
     "ProjectBriefStagedReviewSummary",
     "ProjectBriefRecommendedTask",
     "ProjectBriefHealthTask",
-    "ProjectBriefFrontierStatus",
+    "ProjectBriefGate",
+    "ProjectBriefQueue",
+    "ProjectBriefDataset",
     "ProjectBrief",
     "SensitiveLiteralMatch",
     "SensitiveLiteralScan",

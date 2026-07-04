@@ -2050,19 +2050,21 @@ def test_record_map_analysis_view_captures_logical_query_context(
     assert context.safe_inspection_action_indexes == [0, 1]
 
     brief = db.project_brief(limit=5)
-    view_tasks = [
-        task
-        for task in brief.recommended_next_tasks
-        if task.resource is not None and task.resource.iri == view
-    ]
-    assert len(view_tasks) == 1
-    assert view_tasks[0].task_type == "analysis_view_review"
-    assert view_tasks[0].source == "describe_analysis_view"
-    assert view_tasks[0].suggested_next_action is not None
-    assert view_tasks[0].suggested_next_action.tool == "doxabase.describe_analysis_view"
-    assert "query_context_review" not in [
-        task.task_type for task in view_tasks
-    ]
+    view_queue = next(
+        queue for queue in brief.queues if queue.name == "analysis_view_review"
+    )
+    assert view_queue.count == 1
+    assert view_queue.example_iri == view
+    view_action = next(
+        action
+        for action in brief.suggested_next_actions
+        if action.tool == "doxabase.describe_analysis_view"
+    )
+    assert view_action.args["iri"] == view
+    assert all(
+        queue.name != "query_context_review" or queue.example_iri != view
+        for queue in brief.queues
+    )
 
 
 def test_record_map_analysis_view_accepts_multiple_query_snippets(
@@ -2399,17 +2401,19 @@ def test_record_analysis_packet_preserves_views_artifacts_and_tasks(
     assert "read_parquet" in json.dumps(context)
     brief = db.project_brief(limit=10)
     assert brief.key_counts["analysis_packets"] == 1
-    assert brief.queue_counts["analysis_packet_review"] == 1
-    packet_task = next(
-        task
-        for task in brief.recommended_next_tasks
-        if task.task_type == "analysis_packet_review"
+    packet_queue = next(
+        queue
+        for queue in brief.queues
+        if queue.name == "analysis_packet_review"
     )
-    assert packet_task.resource is not None
-    assert packet_task.resource.iri == packet
-    assert packet_task.suggested_next_action is not None
-    assert packet_task.suggested_next_action.tool == "doxabase.get_context_graph"
-    assert packet_task.suggested_next_action.args == {
+    assert packet_queue.count == 1
+    assert packet_queue.example_iri == packet
+    packet_action = next(
+        action
+        for action in brief.suggested_next_actions
+        if action.tool == "doxabase.get_context_graph"
+    )
+    assert packet_action.args == {
         "seed_iris": [packet],
         "profile": "resource_brief",
     }

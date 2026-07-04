@@ -2838,30 +2838,26 @@ def test_handoff_import_preserves_mixed_semantic_gate_and_stale_restage(
     )
     manifest_resume_iri = imported.manifest["recovery_sessions"][0]["session_iri"]
     receiver_brief = receiver.project_brief(limit=10)
-    assert receiver_brief.queue_counts["staged_frontier_review"] == 1
-    assert receiver_brief.frontier_first_source == (
-        "recommended_next_tasks:staged_frontier_review"
+    frontier_queue = next(
+        queue
+        for queue in receiver_brief.queues
+        if queue.name == "staged_frontier_review"
     )
-    assert receiver_brief.frontier_first_action is not None
-    assert receiver_brief.frontier_first_action.tool == (
+    assert frontier_queue.count == 1
+    assert frontier_queue.example_iri == session.session_iri
+    recovery_gate = next(
+        gate
+        for gate in receiver_brief.gates
+        if gate.gate == "staged_revision_recovery"
+    )
+    assert recovery_gate.blocks == "mutation"
+    recovery_action = receiver_brief.suggested_next_actions[0]
+    assert recovery_action.tool == (
         "doxabase.describe_staged_revision_recovery_session"
     )
-    assert receiver_brief.frontier_first_action.args == {
+    assert recovery_action.args == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
-    }
-    assert receiver_brief.first_unattended_action == (
-        receiver_brief.frontier_first_action
-    )
-    frontier_task = receiver_brief.recommended_next_tasks[0]
-    assert frontier_task.task_type == "staged_frontier_review"
-    assert frontier_task.source == "staged_revision_recovery_session"
-    assert frontier_task.resource is not None
-    assert frontier_task.resource.iri == session.session_iri
-    assert frontier_task.task_group == {
-        "matching_recovery_session_count": 1,
-        "matching_recovery_session_iris": [session.session_iri],
-        "current_staged_revision_count": 2,
     }
     described_session = receiver.describe_staged_revision_recovery_session(
         manifest_resume_iri,

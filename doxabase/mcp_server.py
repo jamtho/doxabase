@@ -184,15 +184,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     @server.tool(name="doxabase.project_brief")
     def project_brief(
         limit: int = 20,
-        profile_candidate_limit: int = 2,
     ) -> dict[str, Any]:
-        """Return a read-only brief over active project work queues."""
+        """Return read-only capsule state: counts, dataset one-liners, gates
+        (what is blocked and the one call that inspects each blocker), queues
+        of pending work, and up to five suggested next actions."""
 
-        return project_brief_tool(
-            db,
-            limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
-        )
+        return project_brief_tool(db, limit=limit)
 
     @server.tool(name="doxabase.list_entities")
     def list_entities(

@@ -102,10 +102,9 @@ def test_profile_privacy_orientation_payloads_redact_sensitive_evidence_summarie
     )
     assert fake_secret in draft_payload
 
-    brief = db.project_brief(limit=10, profile_candidate_limit=5)
+    brief = db.project_brief(limit=10)
     brief_payload = json.dumps(to_jsonable(brief), sort_keys=True)
     assert fake_secret not in brief_payload
-    assert redacted in brief_payload
 
 
 def test_record_profiled_parquet_table_records_map_and_profile_context(

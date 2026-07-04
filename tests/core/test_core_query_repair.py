@@ -1895,16 +1895,18 @@ def test_storage_metadata_trial_repairs_cold_query_route_and_records_result(
     ] == [("query_repair_review", "missing_storage_access")]
 
     brief = db.project_brief(limit=20)
-    repair_task = next(
-        task
-        for task in brief.recommended_next_tasks
-        if task.task_type == "query_repair_review"
-        and task.suggested_next_action is not None
-        and task.suggested_next_action.args == {"iri": dataset}
+    repair_queue = next(
+        queue
+        for queue in brief.queues
+        if queue.name == "query_repair_review"
     )
-    assert repair_task.source == "describe_query_context"
-    assert repair_task.suggested_next_action is not None
-    assert repair_task.suggested_next_action.tool == "doxabase.describe_query_context"
+    assert repair_queue.count >= 1
+    repair_action = next(
+        action
+        for action in brief.suggested_next_actions
+        if action.tool == "doxabase.describe_query_context"
+        and action.args == {"iri": dataset}
+    )
 
     storage = db.stage_query_storage_access_repair(
         dataset_iri=dataset,

@@ -10,23 +10,19 @@ from doxabase.core._types import *  # noqa: F401,F403
 
 
 class BriefMixin:
-    def project_brief(
-        self,
-        *,
-        limit: int = 20,
-        profile_candidate_limit: int = 2,
-    ) -> ProjectBrief:
-        """Summarize current project work queues without mutating the capsule."""
+    def project_brief(self, *, limit: int = 20) -> ProjectBrief:
+        """Report capsule state: counts, dataset one-liners, gates, queues.
+
+        State, not script: gates name what is currently blocked (mutation,
+        export, or nothing) and the one call that inspects each blocker;
+        queues report pending work with counts and an example IRI; the agent
+        decides what to do next.
+        """
         if limit < 1:
             raise DoxaBaseError("limit must be at least 1")
-        if profile_candidate_limit < 0:
-            raise DoxaBaseError("profile_candidate_limit must be non-negative")
         if self._staged_apply_check_cache is None:
             with self._scoped_staged_apply_check_cache():
-                return self.project_brief(
-                    limit=limit,
-                    profile_candidate_limit=profile_candidate_limit,
-                )
+                return self.project_brief(limit=limit)
 
         overview = self.graph_overview(limit=limit)
         entity_scan_limit = max(
@@ -35,24 +31,23 @@ class BriefMixin:
             overview.key_counts.get("tables", 0),
         )
         dataset_entities = self._project_brief_dataset_entities(entity_scan_limit)
-        datasets: list[ProjectBriefDatasetSummary] = []
-        readiness_counts: dict[str, int] = {}
-        returned_readiness_counts: dict[str, int] = {}
-        recommended_tasks: list[ProjectBriefRecommendedTask] = []
-        all_dataset_summaries: list[ProjectBriefDatasetSummary] = []
+
         staged_review = self._project_brief_staged_review(limit=limit)
         pending_detection_staged_review = staged_review
         if staged_review.omitted_count:
             pending_detection_staged_review = self._project_brief_staged_review(
                 limit=staged_review.count
             )
+
+        tasks: list[ProjectBriefRecommendedTask] = []
         staged_frontier_task = self._project_brief_staged_frontier_task(
             staged_review
         )
         if staged_frontier_task is not None:
-            recommended_tasks.append(staged_frontier_task)
+            tasks.append(staged_frontier_task)
 
-        for entity_index, entity in enumerate(dataset_entities):
+        datasets: list[ProjectBriefDataset] = []
+        for entity in dataset_entities:
             description = self.describe_dataset(entity.iri)
             is_table = self._dataset_description_is_table(description)
             query_summary = (
@@ -60,12 +55,9 @@ class BriefMixin:
                 if is_table
                 else self._project_brief_non_tabular_query_summary()
             )
-            readiness_counts[query_summary.readiness] = (
-                readiness_counts.get(query_summary.readiness, 0) + 1
-            )
             profile_summary = self._project_brief_profile_summary(
                 description,
-                profile_candidate_limit=profile_candidate_limit,
+                profile_candidate_limit=2,
                 staged_review=pending_detection_staged_review,
             )
             dataset_summary = ProjectBriefDatasetSummary(
@@ -80,130 +72,48 @@ class BriefMixin:
                 query=query_summary,
                 profile=profile_summary,
             )
-            all_dataset_summaries.append(dataset_summary)
-            if entity_index < limit:
-                datasets.append(dataset_summary)
-                returned_readiness_counts[query_summary.readiness] = (
-                    returned_readiness_counts.get(query_summary.readiness, 0)
-                    + 1
-                )
-            recommended_tasks.extend(
+            tasks.extend(
                 self._project_brief_dataset_tasks(
                     dataset_summary,
                     staged_review=pending_detection_staged_review,
                 )
             )
+            if len(datasets) < limit:
+                datasets.append(
+                    ProjectBriefDataset(
+                        iri=dataset_summary.dataset.iri,
+                        label=dataset_summary.dataset.label,
+                        is_table=is_table,
+                        status=self._project_brief_dataset_status(
+                            is_table=is_table,
+                            query=query_summary,
+                            profile=profile_summary,
+                        ),
+                        column_count=len(description.columns),
+                        caveat_count=len(description.caveats),
+                    )
+                )
 
-        recommended_tasks.extend(
-            self._project_brief_staged_tasks(staged_review)
-        )
-        recommended_tasks.extend(
+        tasks.extend(self._project_brief_staged_tasks(staged_review))
+        tasks.extend(
             self._project_brief_analysis_packet_tasks(
                 overview.key_counts.get("analysis_packets", 0)
             )
         )
-        recommended_tasks.sort(key=lambda task: (task.priority, task.task_type))
-        selected_tasks = self._project_brief_select_recommended_tasks(
-            recommended_tasks,
-            limit=limit,
-        )
-        queue_counts = self._project_brief_task_type_counts(recommended_tasks)
+        tasks.sort(key=lambda task: (task.priority, task.task_type))
+
+        queue_counts = self._project_brief_task_type_counts(tasks)
         if staged_review.count:
             queue_counts["staged_review"] = max(
                 staged_review.count,
                 queue_counts.get("staged_review", 0),
             )
-        returned_queue_counts = self._project_brief_task_type_counts(selected_tasks)
-        omitted_queue_counts = {
-            task_type: count - returned_queue_counts.get(task_type, 0)
-            for task_type, count in queue_counts.items()
-            if count > returned_queue_counts.get(task_type, 0)
-        }
-        limit_crowded_queue_types = (
-            self._project_brief_limit_crowded_queue_types(
-                queue_counts,
-                returned_queue_counts,
-                limit=limit,
-            )
-        )
-        profile_queue_counts = self._project_brief_profile_queue_counts(
-            all_dataset_summaries
-        )
-        suggested_profile_candidate_limit = (
-            self._project_brief_suggested_profile_candidate_limit(
-                all_dataset_summaries,
-                profile_candidate_limit=profile_candidate_limit,
-            )
-        )
-        health_tasks = self._project_brief_health_tasks(
-            limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
-            profile_candidate_omitted_count=profile_queue_counts.get(
-                "profile_candidate_omitted",
-                0,
-            ),
-            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
-            active_queue_type_count=len(queue_counts),
-            omitted_queue_counts=omitted_queue_counts,
-            limit_crowded_queue_types=limit_crowded_queue_types,
-            total_queue_count=sum(queue_counts.values()),
-            current_staged_revision_count=staged_review.count,
+        gates, gate_actions = self._project_brief_gates(
+            staged_frontier_task=staged_frontier_task,
+            staged_review=staged_review,
             queue_counts=queue_counts,
             storage_access_count=overview.key_counts.get("storage_accesses", 0),
         )
-        selected_tasks = self._project_brief_attach_fixture_staleness_advisories(
-            selected_tasks,
-            all_tasks=recommended_tasks,
-            health_tasks=health_tasks,
-        )
-        next_best_expansion = self._project_brief_next_best_expansion(
-            health_tasks
-        )
-        full_frontier_expansion = self._project_brief_full_frontier_expansion(
-            limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
-            total_queue_count=sum(queue_counts.values()),
-            profile_candidate_omitted_count=profile_queue_counts.get(
-                "profile_candidate_omitted",
-                0,
-            ),
-            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
-            health_tasks=health_tasks,
-        )
-        safety_first_source, safety_first_action = (
-            self._project_brief_safety_first_action(health_tasks)
-        )
-        frontier_first_source, frontier_first_action = (
-            self._project_brief_frontier_first_action(
-                full_frontier_expansion=full_frontier_expansion,
-                next_best_expansion=next_best_expansion,
-                recommended_tasks=selected_tasks,
-            )
-        )
-        first_unattended_source, first_unattended_action = (
-            self._project_brief_first_unattended_action(
-                safety_first_source=safety_first_source,
-                safety_first_action=safety_first_action,
-                frontier_first_source=frontier_first_source,
-                frontier_first_action=frontier_first_action,
-            )
-        )
-        frontier_status = self._project_brief_frontier_status(
-            queue_counts=queue_counts,
-            returned_queue_counts=returned_queue_counts,
-            omitted_queue_counts=omitted_queue_counts,
-            hidden_profile_candidate_count=profile_queue_counts.get(
-                "profile_candidate_omitted",
-                0,
-            ),
-            next_best_expansion=next_best_expansion,
-            full_frontier_expansion=full_frontier_expansion,
-            safety_first_action=safety_first_action,
-            frontier_first_action=frontier_first_action,
-            first_unattended_source=first_unattended_source,
-            first_unattended_action=first_unattended_action,
-        )
-
         brief = ProjectBrief(
             key_counts=overview.key_counts,
             dataset_count=max(
@@ -211,33 +121,149 @@ class BriefMixin:
                 overview.key_counts.get("tables", 0),
                 len(dataset_entities),
             ),
-            returned_dataset_count=len(datasets),
-            dataset_query_readiness_counts=readiness_counts,
-            returned_dataset_query_readiness_counts=returned_readiness_counts,
-            profile_queue_counts=profile_queue_counts,
-            queue_counts=queue_counts,
-            returned_queue_counts=returned_queue_counts,
-            omitted_queue_counts=omitted_queue_counts,
-            active_queue_type_count=len(queue_counts),
-            returned_queue_type_count=len(returned_queue_counts),
-            limit_crowded_queue_types=limit_crowded_queue_types,
-            health_tasks=health_tasks,
-            next_best_expansion=next_best_expansion,
-            full_frontier_expansion=full_frontier_expansion,
-            safety_first_action=safety_first_action,
-            safety_first_source=safety_first_source,
-            frontier_first_action=frontier_first_action,
-            frontier_first_source=frontier_first_source,
-            first_unattended_action=first_unattended_action,
-            first_unattended_source=first_unattended_source,
-            frontier_status=frontier_status,
             datasets=datasets,
-            staged_review=staged_review,
-            recommended_next_tasks=selected_tasks,
+            gates=gates,
+            queues=self._project_brief_queues(tasks, queue_counts),
+            suggested_next_actions=self._project_brief_suggestions(
+                gate_actions, tasks
+            ),
             limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
         )
         return self._privacy_redacted_api_value(brief)
+
+    def _project_brief_gates(
+        self,
+        *,
+        staged_frontier_task: ProjectBriefRecommendedTask | None,
+        staged_review: ProjectBriefStagedReviewSummary,
+        queue_counts: dict[str, int],
+        storage_access_count: int,
+    ) -> tuple[list[ProjectBriefGate], list[SuggestedNextAction]]:
+        """Derive gates plus the inspection actions behind them.
+
+        A gate reports state; its details_call is the one tool that inspects
+        the blocker. Blocking semantics: a "mutation" gate should be
+        inspected before staging or applying project-graph changes; an
+        "export" gate before writing shareable artifacts; "none" gates are
+        capsule-health signals worth knowing about.
+        """
+        gates: list[ProjectBriefGate] = []
+        actions: list[SuggestedNextAction] = []
+
+        def add(task, gate: str, blocks: str) -> None:
+            if task is None:
+                return
+            action = task.suggested_next_action
+            gates.append(
+                ProjectBriefGate(
+                    gate=gate,
+                    blocks=blocks,
+                    detail=task.reason,
+                    details_call=action.tool if action is not None else "",
+                )
+            )
+            if action is not None:
+                actions.append(action)
+
+        add(
+            self._project_brief_seed_recovery_health_task(
+                current_staged_revision_count=staged_review.count
+            ),
+            "stale_seed_recovery",
+            "mutation",
+        )
+        if (
+            staged_frontier_task is not None
+            and staged_frontier_task.source == "staged_revision_recovery_session"
+        ):
+            add(staged_frontier_task, "staged_revision_recovery", "mutation")
+        export_arguments, export_preflight = (
+            self._project_brief_default_handoff_preflight()
+        )
+        add(
+            self._project_brief_privacy_health_task(
+                export_arguments, export_preflight
+            ),
+            "privacy_export_review",
+            "export",
+        )
+        add(
+            self._project_brief_export_validation_health_task(export_preflight),
+            "export_validation_review",
+            "export",
+        )
+        add(
+            self._project_brief_fixture_storage_health_task(
+                queue_counts=queue_counts,
+                storage_access_count=storage_access_count,
+            ),
+            "query_fixture_staleness",
+            "none",
+        )
+        return gates, actions
+
+    @staticmethod
+    def _project_brief_queues(
+        tasks: list[ProjectBriefRecommendedTask],
+        queue_counts: dict[str, int],
+    ) -> list[ProjectBriefQueue]:
+        example_by_type: dict[str, str] = {}
+        for task in tasks:
+            if task.resource is not None:
+                example_by_type.setdefault(task.task_type, task.resource.iri)
+        return [
+            ProjectBriefQueue(
+                name=name,
+                count=count,
+                example_iri=example_by_type.get(name),
+            )
+            for name, count in sorted(queue_counts.items())
+        ]
+
+    @staticmethod
+    def _project_brief_suggestions(
+        gate_actions: list[SuggestedNextAction],
+        tasks: list[ProjectBriefRecommendedTask],
+    ) -> list[SuggestedNextAction]:
+        """At most five suggestions: gate inspections first, then top tasks."""
+        suggestions: list[SuggestedNextAction] = []
+        seen: set[str] = set()
+
+        def add(action: SuggestedNextAction | None) -> None:
+            if action is None or len(suggestions) >= 5:
+                return
+            key = suggested_action_key(action)
+            if key in seen:
+                return
+            seen.add(key)
+            suggestions.append(action)
+
+        for action in gate_actions:
+            add(action)
+        for task in tasks:
+            add(task.suggested_next_action)
+        return suggestions
+
+    @staticmethod
+    def _project_brief_dataset_status(
+        *,
+        is_table: bool,
+        query: ProjectBriefDatasetQuerySummary,
+        profile: ProjectBriefDatasetProfileSummary,
+    ) -> str:
+        if not is_table:
+            return "non-tabular asset; inspect context rather than query lanes"
+        parts = [query.readiness]
+        if query.issue_codes:
+            parts.append(f"query issues: {', '.join(query.issue_codes[:3])}")
+        if profile.review_draft_count:
+            parts.append(
+                f"{profile.review_draft_count} profile draft(s) await review"
+            )
+        elif profile.profile_evidence_count == 0:
+            parts.append("no profile evidence recorded")
+        return "; ".join(parts)
+
     def _project_brief_dataset_entities(self, limit: int) -> list[EntityRow]:
         entities_by_iri: dict[str, EntityRow] = {}
         for type_iri in ("rc:Table", "rc:Dataset"):
@@ -536,23 +562,6 @@ class BriefMixin:
         evidence_iris.extend(profile_summary.shared_evidence_iris)
         evidence_iris.extend(profile_summary.evidence_iris)
         return list(dict.fromkeys(evidence_iris))
-    @staticmethod
-    def _project_brief_suggested_profile_candidate_limit(
-        datasets: list[ProjectBriefDatasetSummary],
-        *,
-        profile_candidate_limit: int,
-    ) -> int | None:
-        required_limit = max(
-            (
-                dataset.profile.draft_candidate_count
-                for dataset in datasets
-                if dataset.profile.profile_candidate_omitted_count > 0
-            ),
-            default=0,
-        )
-        if required_limit <= profile_candidate_limit:
-            return None
-        return required_limit
     def _project_brief_staged_frontier_task(
         self,
         staged_review: ProjectBriefStagedReviewSummary,
@@ -752,405 +761,6 @@ class BriefMixin:
                 "requires_recheck_after_each_apply before taking another graph "
                 "mutation.",
                )
-    def _project_brief_health_tasks(
-        self,
-        *,
-        limit: int,
-        profile_candidate_limit: int,
-        profile_candidate_omitted_count: int,
-        suggested_profile_candidate_limit: int | None,
-        active_queue_type_count: int,
-        omitted_queue_counts: dict[str, int],
-        limit_crowded_queue_types: list[str],
-        total_queue_count: int,
-        current_staged_revision_count: int,
-        queue_counts: dict[str, int],
-        storage_access_count: int,
-    ) -> list[ProjectBriefHealthTask]:
-        tasks: list[ProjectBriefHealthTask] = []
-        expand_task = self._project_brief_expand_health_task(
-            limit=limit,
-            profile_candidate_limit=profile_candidate_limit,
-            active_queue_type_count=active_queue_type_count,
-            omitted_queue_counts=omitted_queue_counts,
-            limit_crowded_queue_types=limit_crowded_queue_types,
-            total_queue_count=total_queue_count,
-        )
-        if expand_task is not None:
-            tasks.append(expand_task)
-
-        profile_candidate_task = (
-            self._project_brief_profile_candidate_limit_health_task(
-                limit=limit,
-                profile_candidate_omitted_count=(
-                    profile_candidate_omitted_count
-                ),
-                suggested_profile_candidate_limit=(
-                    suggested_profile_candidate_limit
-                ),
-            )
-        )
-        if profile_candidate_task is not None:
-            tasks.append(profile_candidate_task)
-
-        fixture_storage_task = self._project_brief_fixture_storage_health_task(
-            queue_counts=queue_counts,
-            storage_access_count=storage_access_count,
-        )
-        if fixture_storage_task is not None:
-            tasks.append(fixture_storage_task)
-
-        export_preflight_arguments, export_preflight = (
-            self._project_brief_default_handoff_preflight()
-        )
-        privacy_task = self._project_brief_privacy_health_task(
-            export_preflight_arguments,
-            export_preflight,
-        )
-        if privacy_task is not None:
-            tasks.append(privacy_task)
-
-        export_validation_task = self._project_brief_export_validation_health_task(
-            export_preflight,
-        )
-        if export_validation_task is not None:
-            tasks.append(export_validation_task)
-
-        seed_task = self._project_brief_seed_recovery_health_task(
-            current_staged_revision_count=current_staged_revision_count,
-        )
-        if seed_task is not None:
-            tasks.append(seed_task)
-
-        return sorted(tasks, key=lambda task: (task.priority, task.task_type))
-    @staticmethod
-    def _project_brief_next_best_expansion(
-        health_tasks: list[ProjectBriefHealthTask],
-    ) -> ProjectBriefHealthTask | None:
-        expansion_priority = (
-            "expand_project_brief",
-            "expand_profile_candidate_limit",
-        )
-        for task_type in expansion_priority:
-            for task in health_tasks:
-                if task.task_type == task_type:
-                    return task
-        return None
-    def _project_brief_full_frontier_expansion(
-        self,
-        *,
-        limit: int,
-        profile_candidate_limit: int,
-        total_queue_count: int,
-        profile_candidate_omitted_count: int,
-        suggested_profile_candidate_limit: int | None,
-        health_tasks: list[ProjectBriefHealthTask],
-    ) -> ProjectBriefHealthTask | None:
-        expansion_tasks = [
-            task
-            for task in health_tasks
-            if task.task_type in {
-                "expand_project_brief",
-                "expand_profile_candidate_limit",
-            }
-        ]
-        if not expansion_tasks:
-            return None
-
-        full_limit = max(limit, total_queue_count)
-        full_profile_candidate_limit = profile_candidate_limit
-        if (
-            suggested_profile_candidate_limit is not None
-            and profile_candidate_omitted_count > 0
-        ):
-            full_profile_candidate_limit = suggested_profile_candidate_limit
-            full_limit = max(
-                full_limit,
-                total_queue_count + profile_candidate_omitted_count,
-            )
-        if (
-            full_limit == limit
-            and full_profile_candidate_limit == profile_candidate_limit
-        ):
-            return None
-
-        arguments = {
-            "limit": full_limit,
-            "profile_candidate_limit": full_profile_candidate_limit,
-        }
-        action = SuggestedNextAction(
-                     tool="doxabase.project_brief",
-                     args=arguments,
-                     reason="Expose all currently counted recommended-task payloads and any "
-                "profile drafts hidden by profile_candidate_limit in one rerun.",
-                 )
-        queue_types: list[str] = []
-        omitted_queue_counts: dict[str, int] = {}
-        for task in expansion_tasks:
-            queue_types.extend(task.queue_types)
-            omitted_queue_counts.update(task.omitted_queue_counts)
-        return ProjectBriefHealthTask(
-            priority=9,
-            task_type="expand_full_project_brief",
-            source="project_brief",
-            reason=(
-                "The current bounded brief does not expose the full project "
-                "frontier; this synthesized action expands both task and profile "
-                "candidate limits together."
-            ),
-            suggested_next_action=action,
-            queue_types=list(dict.fromkeys(queue_types)),
-            omitted_queue_counts=omitted_queue_counts,
-            suggested_limit=full_limit,
-            exhaustive_suggested_limit=full_limit,
-            suggested_profile_candidate_limit=full_profile_candidate_limit,
-            profile_candidate_omitted_count=(
-                profile_candidate_omitted_count
-                if profile_candidate_omitted_count > 0
-                else None
-            ),
-        )
-    @staticmethod
-    def _project_brief_safety_first_action(
-        health_tasks: list[ProjectBriefHealthTask],
-    ) -> tuple[str | None, SuggestedNextAction | None]:
-        for task in health_tasks:
-            if (
-                task.task_type == "privacy_export_review"
-                and task.suggested_next_action is not None
-                and (task.sensitive_literal_count or 0) > 0
-            ):
-                return (
-                    "health_tasks:privacy_export_review",
-                    task.suggested_next_action,
-                )
-        for task in health_tasks:
-            if (
-                task.task_type == "seed_recovery_review"
-                and task.suggested_next_action is not None
-            ):
-                return (
-                    "health_tasks:seed_recovery_review",
-                    task.suggested_next_action,
-                )
-        for task in health_tasks:
-            if (
-                task.task_type == "export_validation_review"
-                and task.suggested_next_action is not None
-            ):
-                return (
-                    "health_tasks:export_validation_review",
-                    task.suggested_next_action,
-                )
-        return None, None
-    @staticmethod
-    def _project_brief_frontier_first_action(
-        *,
-        full_frontier_expansion: ProjectBriefHealthTask | None,
-        next_best_expansion: ProjectBriefHealthTask | None,
-        recommended_tasks: list[ProjectBriefRecommendedTask],
-    ) -> tuple[str | None, SuggestedNextAction | None]:
-        if (
-            full_frontier_expansion is not None
-            and full_frontier_expansion.suggested_next_action is not None
-        ):
-            return (
-                "full_frontier_expansion",
-                full_frontier_expansion.suggested_next_action,
-            )
-        if (
-            next_best_expansion is not None
-            and next_best_expansion.suggested_next_action is not None
-        ):
-            return "next_best_expansion", next_best_expansion.suggested_next_action
-        for task in recommended_tasks:
-            if (
-                task.task_type == "profile_review"
-                and task.inspection_next_action is not None
-            ):
-                return (
-                    f"recommended_next_tasks:{task.task_type}:inspection",
-                    task.inspection_next_action,
-                )
-            if task.suggested_next_action is not None:
-                return (
-                    f"recommended_next_tasks:{task.task_type}",
-                    task.suggested_next_action,
-                )
-        return None, None
-    @staticmethod
-    def _project_brief_first_unattended_action(
-        *,
-        safety_first_source: str | None,
-        safety_first_action: SuggestedNextAction | None,
-        frontier_first_source: str | None,
-        frontier_first_action: SuggestedNextAction | None,
-    ) -> tuple[str | None, SuggestedNextAction | None]:
-        if safety_first_action is not None:
-            return safety_first_source, safety_first_action
-        return frontier_first_source, frontier_first_action
-    @staticmethod
-    def _project_brief_frontier_status(
-        *,
-        queue_counts: dict[str, int],
-        returned_queue_counts: dict[str, int],
-        omitted_queue_counts: dict[str, int],
-        hidden_profile_candidate_count: int,
-        next_best_expansion: ProjectBriefHealthTask | None,
-        full_frontier_expansion: ProjectBriefHealthTask | None,
-        safety_first_action: SuggestedNextAction | None,
-        frontier_first_action: SuggestedNextAction | None,
-        first_unattended_source: str | None,
-        first_unattended_action: SuggestedNextAction | None,
-    ) -> ProjectBriefFrontierStatus:
-        hidden_task_count = sum(omitted_queue_counts.values())
-        hidden_queue_types = list(omitted_queue_counts)
-        if (
-            hidden_profile_candidate_count > 0
-            and "profile_review" not in hidden_queue_types
-        ):
-            hidden_queue_types.append("profile_review")
-        must_rerun_action = (
-            full_frontier_expansion.suggested_next_action
-            if full_frontier_expansion is not None
-            and full_frontier_expansion.suggested_next_action is not None
-            else (
-                next_best_expansion.suggested_next_action
-                if next_best_expansion is not None
-                else None
-            )
-        )
-        is_complete = (
-            hidden_task_count == 0
-            and hidden_profile_candidate_count == 0
-            and must_rerun_action is None
-        )
-        if safety_first_action is not None:
-            mutation_allowed_after = (
-                "safety_review_required_before_frontier_or_mutation"
-            )
-            note = (
-                "Run the safety-first action before frontier expansion, export, "
-                "or graph mutation."
-            )
-        elif must_rerun_action is not None:
-            mutation_allowed_after = "frontier_expansion_required_before_mutation"
-            note = (
-                "Rerun project_brief with the suggested expanded bounds before "
-                "choosing a mutation-oriented task."
-            )
-        elif frontier_first_action is not None:
-            mutation_allowed_after = "current_frontier_task_available"
-            note = (
-                "The bounded brief has no hidden counted frontier; review the "
-                "frontier-first task before mutating."
-            )
-        else:
-            mutation_allowed_after = "no_current_recommended_task"
-            note = (
-                "No safety-first, expansion, or recommended frontier action is "
-                "currently exposed by the brief."
-            )
-        return ProjectBriefFrontierStatus(
-            is_complete=is_complete,
-            hidden_task_count=hidden_task_count,
-            hidden_profile_candidate_count=hidden_profile_candidate_count,
-            hidden_queue_types=hidden_queue_types,
-            active_queue_types=list(queue_counts),
-            returned_queue_types=list(returned_queue_counts),
-            first_unattended_source=first_unattended_source,
-            mutation_allowed_after=mutation_allowed_after,
-            note=note,
-        )
-    def _project_brief_profile_candidate_limit_health_task(
-        self,
-        *,
-        limit: int,
-        profile_candidate_omitted_count: int,
-        suggested_profile_candidate_limit: int | None,
-    ) -> ProjectBriefHealthTask | None:
-        if (
-            profile_candidate_omitted_count <= 0
-            or suggested_profile_candidate_limit is None
-        ):
-            return None
-        arguments = {
-            "limit": limit,
-            "profile_candidate_limit": suggested_profile_candidate_limit,
-        }
-        action = SuggestedNextAction(
-                     tool="doxabase.project_brief",
-                     args=arguments,
-                     reason="Some profile evidence candidates were omitted before draft "
-                "queues were built; rerun project_brief with a larger "
-                "profile_candidate_limit before assuming profile_review is "
-                "exhausted.",
-                 )
-        return ProjectBriefHealthTask(
-            priority=10,
-            task_type="expand_profile_candidate_limit",
-            source="project_brief",
-            reason=(
-                "The current profile_candidate_limit hides profile draft "
-                "candidates before they can enter profile_review queues."
-            ),
-            suggested_next_action=action,
-            queue_types=["profile_review"],
-            suggested_limit=limit,
-            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
-            profile_candidate_omitted_count=profile_candidate_omitted_count,
-        )
-    def _project_brief_expand_health_task(
-        self,
-        *,
-        limit: int,
-        profile_candidate_limit: int,
-        active_queue_type_count: int,
-        omitted_queue_counts: dict[str, int],
-        limit_crowded_queue_types: list[str],
-        total_queue_count: int,
-    ) -> ProjectBriefHealthTask | None:
-        if not omitted_queue_counts and not limit_crowded_queue_types:
-            return None
-        suggested_limit = max(limit + 1, active_queue_type_count)
-        if omitted_queue_counts:
-            suggested_limit = max(
-                suggested_limit,
-                min(limit + sum(omitted_queue_counts.values()), limit * 2),
-            )
-        exhaustive_suggested_limit = max(suggested_limit, total_queue_count)
-        arguments = {
-            "limit": suggested_limit,
-            "profile_candidate_limit": profile_candidate_limit,
-        }
-        action = SuggestedNextAction(
-                     tool="doxabase.project_brief",
-                     args=arguments,
-                     reason="Some active queues were omitted from the bounded recommended "
-                "task slice; rerun project_brief with a larger limit before "
-                "repeating the same visible tasks. The suggested limit may be "
-                "iterative; use exhaustive_suggested_limit when you need one "
-                "rerun that exposes every currently counted task payload.",
-                 )
-        queue_types = list(
-            dict.fromkeys(
-                [*omitted_queue_counts.keys(), *limit_crowded_queue_types]
-            )
-        )
-        return ProjectBriefHealthTask(
-            priority=10,
-            task_type="expand_project_brief",
-            source="project_brief",
-            reason=(
-                "The current project_brief limit hides some concrete task "
-                "payloads from recommended_next_tasks."
-            ),
-            suggested_next_action=action,
-            queue_types=queue_types,
-            omitted_queue_counts=dict(omitted_queue_counts),
-            suggested_limit=suggested_limit,
-            exhaustive_suggested_limit=exhaustive_suggested_limit,
-        )
     def _project_brief_fixture_storage_health_task(
         self,
         *,
@@ -1211,80 +821,6 @@ class BriefMixin:
             known_fixture_table_iris=known_fixture_table_iris,
             storage_access_count=storage_access_count,
         )
-    def _project_brief_attach_fixture_staleness_advisories(
-        self,
-        selected_tasks: list[ProjectBriefRecommendedTask],
-        *,
-        all_tasks: list[ProjectBriefRecommendedTask],
-        health_tasks: list[ProjectBriefHealthTask],
-    ) -> list[ProjectBriefRecommendedTask]:
-        fixture_task = next(
-            (
-                task
-                for task in health_tasks
-                if task.task_type == "query_fixture_staleness_review"
-            ),
-            None,
-        )
-        if fixture_task is None or fixture_task.suggested_next_action is None:
-            return selected_tasks
-        known_fixture_iris = set(fixture_task.known_fixture_table_iris)
-        if not known_fixture_iris:
-            return selected_tasks
-
-        def is_affected_query_task(task: ProjectBriefRecommendedTask) -> bool:
-            return (
-                task.task_type == "query_repair_review"
-                and task.resource is not None
-                and task.resource.iri in known_fixture_iris
-            )
-
-        group_member_count = sum(1 for task in all_tasks if is_affected_query_task(task))
-        returned_group_member_count = sum(
-            1 for task in selected_tasks if is_affected_query_task(task)
-        )
-        if group_member_count <= 0:
-            return selected_tasks
-
-        suggested_next_action = to_jsonable(fixture_task.suggested_next_action)
-        advisory = {
-            "code": "query_fixture_staleness_review",
-            "severity": "warning",
-            "source": fixture_task.source,
-            "related_health_task_type": fixture_task.task_type,
-            "recommended_handling": "review_health_task_before_staging",
-            "reason": fixture_task.reason,
-            "suggested_next_action": suggested_next_action,
-            "fixture_names": list(fixture_task.fixture_names),
-            "known_fixture_table_iris": list(fixture_task.known_fixture_table_iris),
-            "storage_access_count": fixture_task.storage_access_count,
-        }
-        group = {
-            "group_key": (
-                "query_fixture_staleness_review:"
-                "known_fixture_tables_without_storage_accesses"
-            ),
-            "group_type": "query_fixture_staleness_review",
-            "group_member_count": group_member_count,
-            "returned_group_member_count": returned_group_member_count,
-            "suppression_policy": "review_group_before_member_mutation",
-            "representative_resource_iri": (
-                fixture_task.known_fixture_table_iris[0]
-                if fixture_task.known_fixture_table_iris
-                else None
-            ),
-        }
-
-        return [
-            replace(
-                task,
-                task_advisories=[*task.task_advisories, copy.deepcopy(advisory)],
-                task_group=copy.deepcopy(group),
-            )
-            if is_affected_query_task(task)
-            else task
-            for task in selected_tasks
-        ]
     @staticmethod
     def _project_brief_default_handoff_preflight_arguments() -> dict[str, Any]:
         return {
@@ -1861,51 +1397,6 @@ class BriefMixin:
         except DoxaBaseError:
             return None
     @staticmethod
-    def _project_brief_select_recommended_tasks(
-        tasks: list[ProjectBriefRecommendedTask],
-        *,
-        limit: int,
-    ) -> list[ProjectBriefRecommendedTask]:
-        selected: list[ProjectBriefRecommendedTask] = []
-        selected_indexes: set[int] = set()
-        seen_task_types: set[str] = set()
-        for index, task in enumerate(tasks):
-            if task.task_type in seen_task_types:
-                continue
-            representative_index = min(
-                (
-                    candidate_index
-                    for candidate_index, candidate in enumerate(tasks)
-                    if candidate.task_type == task.task_type
-                    and candidate_index not in selected_indexes
-                ),
-                key=lambda candidate_index: (
-                    DoxaBase._project_brief_representative_rank(
-                        tasks[candidate_index]
-                    ),
-                    candidate_index,
-                ),
-            )
-            selected.append(tasks[representative_index])
-            selected_indexes.add(representative_index)
-            seen_task_types.add(task.task_type)
-            if len(selected) >= limit:
-                return selected
-        for index, task in enumerate(tasks):
-            if index in selected_indexes:
-                continue
-            selected.append(task)
-            if len(selected) >= limit:
-                break
-        return selected
-    @staticmethod
-    def _project_brief_representative_rank(
-        task: ProjectBriefRecommendedTask,
-    ) -> int:
-        if task.pending_staged_repair_iris or task.pending_staged_profile_update_iris:
-            return 0
-        return 1
-    @staticmethod
     def _project_brief_task_type_counts(
         tasks: list[ProjectBriefRecommendedTask],
     ) -> dict[str, int]:
@@ -1913,68 +1404,6 @@ class BriefMixin:
         for task in tasks:
             counts[task.task_type] = counts.get(task.task_type, 0) + 1
         return counts
-    @staticmethod
-    def _project_brief_limit_crowded_queue_types(
-        queue_counts: dict[str, int],
-        returned_queue_counts: dict[str, int],
-        *,
-        limit: int,
-    ) -> list[str]:
-        if len(queue_counts) <= limit:
-            return []
-        return [
-            task_type
-            for task_type in queue_counts
-            if returned_queue_counts.get(task_type, 0) == 0
-        ]
-    @staticmethod
-    def _project_brief_profile_queue_counts(
-        datasets: list[ProjectBriefDatasetSummary],
-    ) -> dict[str, int]:
-        drafts = [
-            draft
-            for dataset in datasets
-            for draft in dataset.profile.drafts
-        ]
-        return {
-            "profile_observations": sum(
-                dataset.profile.total_profile_count for dataset in datasets
-            ),
-            "profile_evidence": sum(
-                dataset.profile.profile_evidence_count for dataset in datasets
-            ),
-            "profile_run_candidates": sum(
-                dataset.profile.profile_run_candidate_count
-                for dataset in datasets
-            ),
-            "profile_draft_candidates": sum(
-                dataset.profile.draft_candidate_count
-                for dataset in datasets
-            ),
-            "profile_candidate_omitted": sum(
-                dataset.profile.profile_candidate_omitted_count
-                for dataset in datasets
-            ),
-            "profile_drafts": len(drafts),
-            "profile_review_drafts": sum(
-                1 for draft in drafts if draft.requires_review
-            ),
-            "profile_completed_drafts": sum(
-                1 for draft in drafts if not draft.requires_review
-            ),
-            "profile_draft_recommendations": sum(
-                draft.recommendation_count for draft in drafts
-            ),
-            "profile_scalar_conflict_groups": sum(
-                draft.scalar_conflict_group_count for draft in drafts
-            ),
-            "profile_metric_advisories": sum(
-                draft.metric_advisory_count for draft in drafts
-            ),
-            "profile_type_advisories": sum(
-                draft.type_advisory_count for draft in drafts
-            ),
-        }
     def _project_brief_pending_staged_repair_iris(
         self,
         dataset_iri: str,

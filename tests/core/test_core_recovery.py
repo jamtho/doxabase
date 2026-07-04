@@ -608,18 +608,22 @@ def test_staged_revision_recovery_session_replans_live_state(
         "apply_staged_revision"
     )
     after_restage_brief = db.project_brief(limit=10)
-    assert after_restage_brief.frontier_first_action is not None
-    assert after_restage_brief.frontier_first_action.tool == (
+    recovery_gate = next(
+        gate
+        for gate in after_restage_brief.gates
+        if gate.gate == "staged_revision_recovery"
+    )
+    assert recovery_gate.blocks == "mutation"
+    assert recovery_gate.details_call == (
         "doxabase.describe_staged_revision_recovery_session"
     )
-    assert after_restage_brief.frontier_first_action.args == {
+    recovery_action = after_restage_brief.suggested_next_actions[0]
+    assert recovery_action.tool == (
+        "doxabase.describe_staged_revision_recovery_session"
+    )
+    assert recovery_action.args == {
         "session_iri": session.session_iri,
         "drift_detail": "exact",
-    }
-    assert after_restage_brief.recommended_next_tasks[0].task_group == {
-        "matching_recovery_session_count": 1,
-        "matching_recovery_session_iris": [session.session_iri],
-        "current_staged_revision_count": 1,
     }
 
     applied = db.apply_staged_revision(restaged.revision_iri)
