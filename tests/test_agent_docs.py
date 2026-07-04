@@ -36,18 +36,20 @@ def test_get_agent_doc_can_truncate_content() -> None:
     assert len(str(doc["content"])) == 20
 
 
-def test_start_here_names_exact_discovery_tools() -> None:
+def test_start_here_is_a_short_true_on_ramp() -> None:
     doc = get_agent_doc("start_here", max_chars=50_000)
     content = str(doc["content"])
 
-    assert "exact discovery" in content
-    assert "doxabase.get_doc" in content
-    assert "doxabase.list_entities" in content
+    assert content.count("\n") <= 120
+    assert "doxabase.project_brief" in content
+    assert "doxabase.search" in content
     assert "doxabase.get_context_graph" in content
-    assert "profiling" in content
-    assert "systematisation" in content
-    assert "Staged Handoff Recovery Cookbook" in content
-    assert "project_strategy" in content
+    assert "Graph Placement Cheat Sheet" in content
+    assert "working_the_capsule" in content
+    assert "response_conventions" in content
+    # journal material must not colonize the on-ramp
+    assert "2026-" not in content
+    assert "pytest" not in content
 
 
 def test_project_strategy_names_broad_trial_priorities() -> None:

@@ -181,3 +181,14 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Scoreboard: project_brief 28,035 → 4,592 chars — under the 8,000 end-state
   (baseline 100,462: a 22x reduction). Ceiling ratcheted to 4,850.
 - Next: 5.3 start-here rewrite (now truthful), then 3.5/3.6 + Gate 3 battery.
+
+## Wave 10 — 2026-07-05 — Phase 5.3: start-here rewritten
+
+- start-here.md: 346 → 69 lines, written fresh against the v2 surface:
+  what DoxaBase is, five first calls, gates posture, graph placement cheat
+  sheet, recording rules (incl. the record_pattern joint constraint),
+  topic-doc pointers. No timing diaries, no routing chains.
+- Content test rewritten to assert the on-ramp properties (≤120 lines,
+  first calls present, no dated journal material). start_here_lines
+  ceiling ratcheted 350 → 120.
+- Next: Phase 4 tool consolidation per doc 08 (wave R1: reads).

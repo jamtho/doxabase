@@ -52,7 +52,7 @@ BUDGETS: dict[str, int] = {
     "search_chars": 6_500,
     "list_entities_chars": 16_000,
     "agent_docs_bytes": 1_200_000,
-    "start_here_lines": 350,
+    "start_here_lines": 120,
 }
 
 # Where the program says each ceiling must end up (doc 07 budget table).
