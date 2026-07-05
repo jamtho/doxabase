@@ -359,7 +359,7 @@ Parameters:
 
 ## doxabase.record_claim_reconsideration
 
-Record that one claim weakens, contradicts, supersedes, or refines another.
+Record that a newer claim weakens, contradicts, supersedes, or refines an older one - reconsider, never delete. The tail (reconsidered_at/by, source spans, older_claim_status) goes in spec; targeted errors name the valid fields.
 
 Parameters:
 
@@ -368,20 +368,14 @@ Parameters:
 - `relation` (string, required)
 - `rationale` (string, required)
 - `summary` (string)
-- `reconsidered_at` (string)
-- `reconsidered_by` (string)
 - `evidence_summary` (string)
 - `evidence_sources` (array[string])
 - `source_path` (string)
-- `source_section` (string)
-- `start_line` (integer)
-- `end_line` (integer)
-- `source_kind` (string)
-- `older_claim_status` (string)
+- `spec` (object)
 
 ## doxabase.record_graph_revision
 
-Record graph revision metadata in the history graph.
+Record revision metadata into history for a change that already happened (staged work records its own). The tail (supporting observations/claims/patterns, anchors, evidence, export path, graph counts, validation fields, identity) goes in spec; targeted errors name the valid fields.
 
 Parameters:
 
@@ -389,20 +383,7 @@ Parameters:
 - `rationale` (string, required)
 - `changed_graphs` (array[string], required)
 - `revision_type` (string, default `"rc:ManualRevision"`)
-- `included_graphs` (array[string])
-- `revision_iri` (string)
-- `created_at` (string)
-- `created_by` (string)
-- `supporting_observations` (array[string])
-- `supporting_claims` (array[string])
-- `supporting_patterns` (array[string])
-- `revision_anchors` (array[string])
-- `evidence` (array[string])
-- `export_path` (string)
-- `graph_counts` (object)
-- `validation_scope` (string)
-- `validation_conforms` (boolean)
-- `validation_result_count` (integer)
+- `spec` (object)
 
 ## doxabase.record_map_fact
 
@@ -687,31 +668,19 @@ Parameters:
 
 ## doxabase.record_observation
 
-Record a point-in-time finding into observations+evidence. kind='observation' (default) or 'profile' use the flat fields; kind='claim' or 'query_result' take their fields in spec (targeted errors name the valid/missing fields). Observations must cite evidence (evidence_summary requires evidence_sources or a source path).
+Record a point-in-time finding into observations+evidence. kind='observation' (default) or 'profile' use the flat fields with the long tail (sample/profile metrics, physical/value types, ...) in spec; kind='claim' or 'query_result' take their fields in spec. Targeted errors name the valid spec fields. Observations must cite evidence (evidence_summary requires evidence_sources or a source path).
 
 Parameters:
 
 - `summary` (string)
 - `kind` (string)
 - `spec` (object)
-- `observation_type` (string, default `"observation"`)
 - `observed_asset` (string)
 - `observed_column` (string)
-- `observed_column_name` (string)
 - `observed_at` (string)
 - `observed_by` (string)
 - `evidence_summary` (string)
 - `evidence_sources` (array[string])
-- `sample_size` (integer)
-- `sample_scope` (string)
-- `sample_method` (string)
-- `row_count` (integer)
-- `null_count` (integer)
-- `distinct_count` (integer)
-- `value_frequencies` (array[object])
-- `profile_metrics` (array[object])
-- `observed_physical_type` (string)
-- `observed_value_type` (string)
 
 Kinds `observation` (default) and `profile` use the flat parameters above. Kinds `claim` and `query_result` take their fields in `spec` (top-level `summary` is merged in):
 
@@ -765,7 +734,7 @@ Kinds `observation` (default) and `profile` use the flat parameters above. Kinds
 
 ## doxabase.record_pattern
 
-Record a synthesis pattern linking observations or evidence to map targets.
+Synthesize related observations/claims into a pattern. The long tail (synthesis provenance, source spans, status/stability, IRIs) goes in spec; targeted errors name the valid fields. An evidence_summary requires evidence_sources or source_path.
 
 Parameters:
 
@@ -775,20 +744,12 @@ Parameters:
 - `pattern_targets` (array[string], required)
 - `supporting_observations` (array[string])
 - `supporting_claims` (array[string])
-- `synthesized_at` (string)
-- `synthesized_by` (string)
 - `evidence_summary` (string)
 - `evidence_sources` (array[string])
 - `source_path` (string)
-- `source_section` (string)
-- `start_line` (integer)
-- `end_line` (integer)
-- `source_kind` (string)
 - `confidence` (string | null, default `"rc:MediumConfidence"`)
-- `pattern_status` (string | null, default `"rc:Tentative"`)
-- `pattern_stability` (string | null, default `"rc:EmergingPattern"`)
 - `map_implications` (array[string])
-- `evidence_iri` (string)
+- `spec` (object)
 
 ## doxabase.record_profile
 

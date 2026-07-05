@@ -842,8 +842,8 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
         supporting_observations=(
             bundle["handoff_entrypoints"]["profile_observation_iris"]
         ),
-        evidence_iri=shared_evidence,
         map_implications=[project_metric],
+        spec={"evidence_iri": shared_evidence},
     )
 
     result = draft_profile_map_updates_tool(

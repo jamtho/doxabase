@@ -384,29 +384,18 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         summary: str | None = None,
         kind: str | None = None,
         spec: dict[str, Any] | None = None,
-        observation_type: str = "observation",
         observed_asset: str | None = None,
         observed_column: str | None = None,
-        observed_column_name: str | None = None,
         observed_at: str | None = None,
         observed_by: str | None = None,
         evidence_summary: str | None = None,
         evidence_sources: list[str] | None = None,
-        sample_size: int | None = None,
-        sample_scope: str | None = None,
-        sample_method: str | None = None,
-        row_count: int | None = None,
-        null_count: int | None = None,
-        distinct_count: int | None = None,
-        value_frequencies: list[dict[str, Any]] | None = None,
-        profile_metrics: list[dict[str, Any]] | None = None,
-        observed_physical_type: str | None = None,
-        observed_value_type: str | None = None,
     ) -> dict[str, Any]:
         """Record a point-in-time finding into observations+evidence.
-        kind='observation' (default) or 'profile' use the flat fields;
-        kind='claim' or 'query_result' take their fields in spec (targeted
-        errors name the valid/missing fields). Observations must cite
+        kind='observation' (default) or 'profile' use the flat fields with
+        the long tail (sample/profile metrics, physical/value types, ...) in
+        spec; kind='claim' or 'query_result' take their fields in spec.
+        Targeted errors name the valid spec fields. Observations must cite
         evidence (evidence_summary requires evidence_sources or a source
         path)."""
 
@@ -415,24 +404,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             summary=summary,
             kind=kind,
             spec=spec,
-            observation_type=observation_type,
             observed_asset=observed_asset,
             observed_column=observed_column,
-            observed_column_name=observed_column_name,
             observed_at=observed_at,
             observed_by=observed_by,
             evidence_summary=evidence_summary,
             evidence_sources=evidence_sources,
-            sample_size=sample_size,
-            sample_scope=sample_scope,
-            sample_method=sample_method,
-            row_count=row_count,
-            null_count=null_count,
-            distinct_count=distinct_count,
-            value_frequencies=value_frequencies,
-            profile_metrics=profile_metrics,
-            observed_physical_type=observed_physical_type,
-            observed_value_type=observed_value_type,
         )
 
     @server.tool(name="doxabase.record_profile")
@@ -469,22 +446,17 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         pattern_targets: list[str],
         supporting_observations: list[str] | None = None,
         supporting_claims: list[str] | None = None,
-        synthesized_at: str | None = None,
-        synthesized_by: str | None = None,
         evidence_summary: str | None = None,
         evidence_sources: list[str] | None = None,
         source_path: str | None = None,
-        source_section: str | None = None,
-        start_line: int | None = None,
-        end_line: int | None = None,
-        source_kind: str | None = None,
         confidence: str | None = "rc:MediumConfidence",
-        pattern_status: str | None = "rc:Tentative",
-        pattern_stability: str | None = "rc:EmergingPattern",
         map_implications: list[str] | None = None,
-        evidence_iri: str | None = None,
+        spec: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Record a synthesis pattern linking observations or evidence to map targets."""
+        """Synthesize related observations/claims into a pattern. The long
+        tail (synthesis provenance, source spans, status/stability, IRIs)
+        goes in spec; targeted errors name the valid fields. An
+        evidence_summary requires evidence_sources or source_path."""
 
         return record_pattern_tool(
             db,
@@ -494,20 +466,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_targets=pattern_targets,
             supporting_observations=supporting_observations,
             supporting_claims=supporting_claims,
-            synthesized_at=synthesized_at,
-            synthesized_by=synthesized_by,
             evidence_summary=evidence_summary,
             evidence_sources=evidence_sources,
             source_path=source_path,
-            source_section=source_section,
-            start_line=start_line,
-            end_line=end_line,
-            source_kind=source_kind,
             confidence=confidence,
-            pattern_status=pattern_status,
-            pattern_stability=pattern_stability,
             map_implications=map_implications,
-            evidence_iri=evidence_iri,
+            spec=spec,
         )
 
     @server.tool(name="doxabase.record_claim_reconsideration")
@@ -517,18 +481,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         relation: str,
         rationale: str,
         summary: str | None = None,
-        reconsidered_at: str | None = None,
-        reconsidered_by: str | None = None,
         evidence_summary: str | None = None,
         evidence_sources: list[str] | None = None,
         source_path: str | None = None,
-        source_section: str | None = None,
-        start_line: int | None = None,
-        end_line: int | None = None,
-        source_kind: str | None = None,
-        older_claim_status: str | None = None,
+        spec: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Record that one claim weakens, contradicts, supersedes, or refines another."""
+        """Record that a newer claim weakens, contradicts, supersedes, or
+        refines an older one - reconsider, never delete. The tail
+        (reconsidered_at/by, source spans, older_claim_status) goes in
+        spec; targeted errors name the valid fields."""
 
         return record_claim_reconsideration_tool(
             db,
@@ -537,16 +498,10 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             relation=relation,
             rationale=rationale,
             summary=summary,
-            reconsidered_at=reconsidered_at,
-            reconsidered_by=reconsidered_by,
             evidence_summary=evidence_summary,
             evidence_sources=evidence_sources,
             source_path=source_path,
-            source_section=source_section,
-            start_line=start_line,
-            end_line=end_line,
-            source_kind=source_kind,
-            older_claim_status=older_claim_status,
+            spec=spec,
         )
 
     @server.tool(name="doxabase.search")
@@ -610,22 +565,13 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         rationale: str,
         changed_graphs: list[str],
         revision_type: str = "rc:ManualRevision",
-        included_graphs: list[str] | None = None,
-        revision_iri: str | None = None,
-        created_at: str | None = None,
-        created_by: str | None = None,
-        supporting_observations: list[str] | None = None,
-        supporting_claims: list[str] | None = None,
-        supporting_patterns: list[str] | None = None,
-        revision_anchors: list[str] | None = None,
-        evidence: list[str] | None = None,
-        export_path: str | None = None,
-        graph_counts: dict[str, int] | None = None,
-        validation_scope: str | None = None,
-        validation_conforms: bool | None = None,
-        validation_result_count: int | None = None,
+        spec: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Record graph revision metadata in the history graph."""
+        """Record revision metadata into history for a change that already
+        happened (staged work records its own). The tail (supporting
+        observations/claims/patterns, anchors, evidence, export path, graph
+        counts, validation fields, identity) goes in spec; targeted errors
+        name the valid fields."""
 
         return record_graph_revision_tool(
             db,
@@ -633,20 +579,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             rationale=rationale,
             changed_graphs=changed_graphs,
             revision_type=revision_type,
-            included_graphs=included_graphs,
-            revision_iri=revision_iri,
-            created_at=created_at,
-            created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
-            revision_anchors=revision_anchors,
-            evidence=evidence,
-            export_path=export_path,
-            graph_counts=graph_counts,
-            validation_scope=validation_scope,
-            validation_conforms=validation_conforms,
-            validation_result_count=validation_result_count,
+            spec=spec,
         )
 
     @server.tool(name="doxabase.stage_revision")

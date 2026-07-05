@@ -15,6 +15,7 @@ This folder contains V1 implementation notes intended for a coding agent, especi
 - `07-distillation-program.md` — the active V1 → V1.5 distillation program: budgets, permanent loop rules, and phased work plan. Until its exit criteria are met, it supersedes the build priorities elsewhere in the repo.
 - `08-mcp-surface-v2.md` — the authoritative 89 → 25 MCP tool mapping for the program's Phase 4, with kind-dispatch conventions and the folds chosen under LATITUDE.
 - `09-distillation-retrospective.md` — the program's closing review: scoreboard before/after, battery deltas, LATITUDE decisions, the honest worse-list, and the open items for James.
+- `10-next-directions.md` — post-program direction proposal: recorded-trials/deferred-distiller loop, real-work field sessions, capsule report + worked examples, ontology-pack generalisation.
 
 ## Ontology Seed Files
 

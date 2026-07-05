@@ -424,7 +424,7 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         rationale="The map marks doc_id as the table column that participates in message identity.",
         pattern_targets=[column, relationship_result["iri"]],
         source_path="tests/test_mcp_tools.py",
-        source_kind="rc:DocumentationSource",
+        spec={"source_kind": "rc:DocumentationSource"},
     )
 
     assert table_result["resource_type"] == "https://richcanopy.org/ns/rc#Table"

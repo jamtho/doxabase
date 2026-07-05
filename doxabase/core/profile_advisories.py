@@ -1015,8 +1015,8 @@ class ProfileAdvisoriesMixin:
                 ),
                 "pattern_targets": [profile.observed_column.iri],
                 "supporting_observations": [profile.iri],
-                "evidence_iri": evidence_iri,
                 "map_implications": list(dict.fromkeys(type_implication_iris)),
+                "spec": {"evidence_iri": evidence_iri},
             },
             (
                 "Record a synthesis if this type finding needs semantic review "

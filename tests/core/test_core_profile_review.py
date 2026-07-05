@@ -764,8 +764,10 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         for action in advisory.suggested_next_actions
         if action.tool == "doxabase.record_pattern"
     ][0]
+    pattern_action_kwargs = dict(pattern_action.args)
+    pattern_action_kwargs.update(pattern_action_kwargs.pop("spec", {}))
     recorded_pattern = db.record_pattern(
-        **pattern_action.args,
+        **pattern_action_kwargs,
     )
     related_pattern = db.record_pattern(
         summary="Orders status type assertions already have nearby lore.",
@@ -878,8 +880,9 @@ def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
         if (action.tool, action.args.get("kind")) == ("doxabase.stage_revision", "map_assertion")
     )
     consumed_binding = _consumed_binding_for(stage_action)
-
-    recorded_pattern = db.record_pattern(**pattern_action.args)
+    pattern_action_kwargs = dict(pattern_action.args)
+    pattern_action_kwargs.update(pattern_action_kwargs.pop("spec", {}))
+    recorded_pattern = db.record_pattern(**pattern_action_kwargs)
     plan = db.plan_profile_followthrough(
         dataset,
         evidence,
@@ -1068,7 +1071,9 @@ def test_plan_profile_followthrough_batches_safe_missing_physical_type_assertion
             and stage_action.args["spec"]["subject"]
             in (action.args.get("pattern_targets") or [])
         )
-        pattern = db.record_pattern(**pattern_action.args)
+        pattern_action_kwargs = dict(pattern_action.args)
+        pattern_action_kwargs.update(pattern_action_kwargs.pop("spec", {}))
+        pattern = db.record_pattern(**pattern_action_kwargs)
         result_bindings[consumed["binding_key"]] = pattern.pattern_iri
 
     ready_plan = db.plan_profile_followthrough(
@@ -3991,7 +3996,9 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         for action in type_advisory.suggested_next_actions
         if action.tool == "doxabase.record_pattern"
     )
-    type_pattern = db.record_pattern(**type_pattern_action.args)
+    type_pattern_action_kwargs = dict(type_pattern_action.args)
+    type_pattern_action_kwargs.update(type_pattern_action_kwargs.pop("spec", {}))
+    type_pattern = db.record_pattern(**type_pattern_action_kwargs)
     physical_type_action = next(
         action
         for action in type_advisory.suggested_next_actions

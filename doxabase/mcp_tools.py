@@ -1471,6 +1471,42 @@ def export_context_slice_tool(
     )
 
 
+def _merge_spec_into_call(
+    tool_label: str,
+    handler: Any,
+    flats: dict[str, Any],
+    spec: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge a spec object into a flat call with targeted validation.
+
+    The core recording methods keep their full keyword surface; the MCP door
+    exposes the common fields flat and takes the long tail in ``spec``.
+    Unknown or flat-duplicated spec fields fail naming the valid set.
+    """
+    parameters = {
+        name
+        for name in inspect.signature(handler).parameters
+        if name not in {"self", "db"}
+    }
+    spec = dict(spec or {})
+    valid_spec_fields = sorted(parameters - set(flats))
+    unknown = sorted(set(spec) - parameters)
+    if unknown:
+        raise DoxaBaseError(
+            f"{tool_label} got unknown spec field(s) {unknown}; valid spec "
+            f"fields: {valid_spec_fields}"
+        )
+    duplicated = sorted(set(spec) & set(flats))
+    if duplicated:
+        raise DoxaBaseError(
+            f"{tool_label} spec duplicates flat parameter(s) {duplicated}; "
+            "pass each field exactly once"
+        )
+    merged = {k: v for k, v in flats.items() if v is not None}
+    merged.update(spec)
+    return merged
+
+
 def _dispatch_kind(
     db: DoxaBase,
     tool_label: str,
@@ -1532,33 +1568,35 @@ def record_observation_tool(
     summary: str | None = None,
     kind: str | None = None,
     spec: dict[str, Any] | None = None,
-    observation_type: str = "observation",
     observed_asset: str | None = None,
     observed_column: str | None = None,
-    observed_column_name: str | None = None,
     observed_at: str | None = None,
     observed_by: str | None = None,
     evidence_summary: str | None = None,
     evidence_sources: list[str] | None = None,
-    sample_size: int | None = None,
-    sample_scope: str | None = None,
-    sample_method: str | None = None,
-    row_count: int | None = None,
-    null_count: int | None = None,
-    distinct_count: int | None = None,
-    value_frequencies: list[dict[str, Any]] | None = None,
-    profile_metrics: list[dict[str, Any]] | None = None,
-    observed_physical_type: str | None = None,
-    observed_value_type: str | None = None,
 ) -> dict[str, Any]:
-    if kind in _RECORD_OBSERVATION_SPEC_KINDS:
+    """Record a finding. kind picks the shape; spec carries the long tail."""
+    if kind in {"claim", "query_result"}:
+        handler = (
+            record_claim_observation_tool
+            if kind == "claim"
+            else record_query_result_tool
+        )
         merged = dict(spec or {})
-        if summary is not None:
-            merged.setdefault("summary", summary)
+        for name, value in (
+            ("summary", summary),
+            ("observed_asset", observed_asset),
+            ("observed_at", observed_at),
+            ("observed_by", observed_by),
+            ("evidence_summary", evidence_summary),
+            ("evidence_sources", evidence_sources),
+        ):
+            if value is not None:
+                merged.setdefault(name, value)
         return _dispatch_kind(
             db,
             "record_observation",
-            {kind: _RECORD_OBSERVATION_SPEC_KINDS[kind]},
+            {kind: handler},
             kind,
             merged,
         )
@@ -1567,35 +1605,25 @@ def record_observation_tool(
             "record_observation kind must be one of ['claim', 'observation', "
             f"'profile', 'query_result']; got {kind!r}"
         )
-    if kind is not None:
-        observation_type = kind
     if summary is None:
         raise DoxaBaseError(
             "record_observation requires summary for "
             "kind='observation'/'profile'"
         )
-    result = db.record_observation(
-        summary=summary,
-        observation_type=observation_type,  # type: ignore[arg-type]
-        observed_asset=observed_asset,
-        observed_column=observed_column,
-        observed_column_name=observed_column_name,
-        observed_at=observed_at,
-        observed_by=observed_by,
-        evidence_summary=evidence_summary,
-        evidence_sources=evidence_sources,
-        sample_size=sample_size,
-        sample_scope=sample_scope,
-        sample_method=sample_method,
-        row_count=row_count,
-        null_count=null_count,
-        distinct_count=distinct_count,
-        value_frequencies=value_frequencies,
-        profile_metrics=profile_metrics,
-        observed_physical_type=observed_physical_type,
-        observed_value_type=observed_value_type,
+    flats = {
+        "summary": summary,
+        "observation_type": kind if kind is not None else "observation",
+        "observed_asset": observed_asset,
+        "observed_column": observed_column,
+        "observed_at": observed_at,
+        "observed_by": observed_by,
+        "evidence_summary": evidence_summary,
+        "evidence_sources": evidence_sources,
+    }
+    merged = _merge_spec_into_call(
+        "record_observation", db.record_observation, flats, spec
     )
-    return to_dict(result)
+    return to_dict(db.record_observation(**merged))
 
 
 def record_query_result_tool(
@@ -1706,44 +1734,34 @@ def record_pattern_tool(
     pattern_targets: list[str],
     supporting_observations: list[str] | None = None,
     supporting_claims: list[str] | None = None,
-    synthesized_at: str | None = None,
-    synthesized_by: str | None = None,
     evidence_summary: str | None = None,
     evidence_sources: list[str] | None = None,
     source_path: str | None = None,
-    source_section: str | None = None,
-    start_line: int | None = None,
-    end_line: int | None = None,
-    source_kind: str | None = None,
     confidence: str | None = "rc:MediumConfidence",
-    pattern_status: str | None = "rc:Tentative",
-    pattern_stability: str | None = "rc:EmergingPattern",
     map_implications: list[str] | None = None,
-    evidence_iri: str | None = None,
+    spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    result = db.record_pattern(
-        summary=summary,
-        pattern_text=pattern_text,
-        rationale=rationale,
-        pattern_targets=pattern_targets,
-        supporting_observations=supporting_observations,
-        supporting_claims=supporting_claims,
-        synthesized_at=synthesized_at,
-        synthesized_by=synthesized_by,
-        evidence_summary=evidence_summary,
-        evidence_sources=evidence_sources,
-        source_path=source_path,
-        source_section=source_section,
-        start_line=start_line,
-        end_line=end_line,
-        source_kind=source_kind,
-        confidence=confidence,
-        pattern_status=pattern_status,
-        pattern_stability=pattern_stability,
-        map_implications=map_implications,
-        evidence_iri=evidence_iri,
+    """Synthesize related findings into a pattern; spec carries the tail.
+
+    An evidence_summary requires evidence_sources or source_path.
+    """
+    flats = {
+        "summary": summary,
+        "pattern_text": pattern_text,
+        "rationale": rationale,
+        "pattern_targets": pattern_targets,
+        "supporting_observations": supporting_observations,
+        "supporting_claims": supporting_claims,
+        "evidence_summary": evidence_summary,
+        "evidence_sources": evidence_sources,
+        "source_path": source_path,
+        "confidence": confidence,
+        "map_implications": map_implications,
+    }
+    merged = _merge_spec_into_call(
+        "record_pattern", db.record_pattern, flats, spec
     )
-    return to_dict(result)
+    return to_dict(db.record_pattern(**merged))
 
 
 def record_dataset_profile_tool(
@@ -2027,35 +2045,29 @@ def record_claim_reconsideration_tool(
     relation: str,
     rationale: str,
     summary: str | None = None,
-    reconsidered_at: str | None = None,
-    reconsidered_by: str | None = None,
     evidence_summary: str | None = None,
     evidence_sources: list[str] | None = None,
     source_path: str | None = None,
-    source_section: str | None = None,
-    start_line: int | None = None,
-    end_line: int | None = None,
-    source_kind: str | None = None,
-    older_claim_status: str | None = None,
+    spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    result = db.record_claim_reconsideration(
-        newer_claim=newer_claim,
-        older_claim=older_claim,
-        relation=relation,
-        rationale=rationale,
-        summary=summary,
-        reconsidered_at=reconsidered_at,
-        reconsidered_by=reconsidered_by,
-        evidence_summary=evidence_summary,
-        evidence_sources=evidence_sources,
-        source_path=source_path,
-        source_section=source_section,
-        start_line=start_line,
-        end_line=end_line,
-        source_kind=source_kind,
-        older_claim_status=older_claim_status,
+    """Weaken, contradict, supersede, or refine a claim - never delete."""
+    flats = {
+        "newer_claim": newer_claim,
+        "older_claim": older_claim,
+        "relation": relation,
+        "rationale": rationale,
+        "summary": summary,
+        "evidence_summary": evidence_summary,
+        "evidence_sources": evidence_sources,
+        "source_path": source_path,
+    }
+    merged = _merge_spec_into_call(
+        "record_claim_reconsideration",
+        db.record_claim_reconsideration,
+        flats,
+        spec,
     )
-    return to_dict(result)
+    return to_dict(db.record_claim_reconsideration(**merged))
 
 
 def record_map_dataset_tool(
@@ -2861,42 +2873,19 @@ def record_graph_revision_tool(
     rationale: str,
     changed_graphs: list[str],
     revision_type: str = "rc:ManualRevision",
-    included_graphs: list[str] | None = None,
-    revision_iri: str | None = None,
-    created_at: str | None = None,
-    created_by: str | None = None,
-    supporting_observations: list[str] | None = None,
-    supporting_claims: list[str] | None = None,
-    supporting_patterns: list[str] | None = None,
-    revision_anchors: list[str] | None = None,
-    evidence: list[str] | None = None,
-    export_path: str | None = None,
-    graph_counts: dict[str, int] | None = None,
-    validation_scope: str | None = None,
-    validation_conforms: bool | None = None,
-    validation_result_count: int | None = None,
+    spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    result = db.record_graph_revision(
-        summary=summary,
-        rationale=rationale,
-        changed_graphs=changed_graphs,
-        revision_type=revision_type,
-        included_graphs=included_graphs,
-        revision_iri=revision_iri,
-        created_at=created_at,
-        created_by=created_by,
-        supporting_observations=supporting_observations,
-        supporting_claims=supporting_claims,
-        supporting_patterns=supporting_patterns,
-        revision_anchors=revision_anchors,
-        evidence=evidence,
-        export_path=export_path,
-        graph_counts=graph_counts,
-        validation_scope=validation_scope,
-        validation_conforms=validation_conforms,
-        validation_result_count=validation_result_count,
+    """Record revision metadata for a change that already happened."""
+    flats = {
+        "summary": summary,
+        "rationale": rationale,
+        "changed_graphs": changed_graphs,
+        "revision_type": revision_type,
+    }
+    merged = _merge_spec_into_call(
+        "record_graph_revision", db.record_graph_revision, flats, spec
     )
-    return to_dict(result)
+    return to_dict(db.record_graph_revision(**merged))
 
 
 def record_staged_revision_review_decision_tool(

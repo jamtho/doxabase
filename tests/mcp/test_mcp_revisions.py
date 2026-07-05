@@ -15,16 +15,10 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         summary="Fixture review bundle exported",
         rationale="The MCP wrapper test records why this review bundle exists.",
         changed_graphs=["observations", "patterns", "evidence"],
-        included_graphs=export_result["graphs"],
         revision_type="rc:ExportRevision",
-        revision_anchors=[
+        spec={"included_graphs": export_result["graphs"], "revision_anchors": [
             "https://richcanopy.org/example/manifest/ais#DailyIndex",
-        ],
-        export_path=export_result["path"],
-        graph_counts=export_result["graph_counts"],
-        validation_scope=validation["scope"],
-        validation_conforms=validation["conforms"],
-        validation_result_count=validation["result_count"],
+        ], "export_path": export_result["path"], "graph_counts": export_result["graph_counts"], "validation_scope": validation["scope"], "validation_conforms": validation["conforms"], "validation_result_count": validation["result_count"]},
     )
 
     assert result["revision_iri"].startswith(

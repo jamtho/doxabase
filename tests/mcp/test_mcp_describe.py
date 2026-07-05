@@ -335,7 +335,7 @@ def test_get_context_graph_tool_returns_json_like_payload(
         rationale="The fixture map describes snapshot rows, condition IDs, and hourly partitions together.",
         pattern_targets=[seed_iri],
         source_path="tests/test_mcp_tools.py",
-        source_kind="rc:DocumentationSource",
+        spec={"source_kind": "rc:DocumentationSource"},
     )
 
     result = get_context_graph_tool(

@@ -410,3 +410,39 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Version 0.2.0; tag v0.2.0. Feature development resumes only after James
   reviews the retrospective (doc 07 §7.4). The Permanent Loop Rules stay
   in force.
+
+## Wave 21 — 2026-07-05 — Post-program cleanup: core module splits to <=3,000
+
+- Every doxabase/core/ module now <=2,959 lines. Mechanical method-family
+  splits, methods verbatim, zero behavior change (d9cb165 precedent):
+  staging.py 4,829 -> 2,506 (+ staging_repairs 777, staging_export 1,571);
+  recovery.py 4,144 -> 2,665 (+ recovery_sessions 586, recovery_handoff 917);
+  query_plans.py 3,966 -> 2,679 (+ query_candidates 1,299); profiles.py
+  3,658 -> 2,658 (+ profile_patterns 677, profile_manifest 347); _types.py
+  4,599 -> 18-line aggregator over _types_revisions 2,533 +
+  _types_descriptions 2,077 (__all__ split with it, underscore names kept).
+- Seven new mixins added to the DoxaBase bases and the injection loop.
+- largest_module_lines budget 5,000 -> 3,800. The 3,000 end-state now
+  blocks solely on mcp_tools.py (3,7xx) — outside core/, next wave's item.
+
+## Wave 22 — 2026-07-05 — recorder spec migration + direction docs (James-approved)
+
+- The four flat recording tools now take core fields flat and the long tail
+  in spec (record_observation kind-unified; record_pattern keeps the
+  evidence joint-constraint trio visible; graph_revision core is
+  summary/rationale/changed_graphs/revision_type; reconsideration keeps the
+  relation + evidence fields). _merge_spec_into_call gives targeted errors
+  incl. flat/spec duplication. Schema 35,136 → 31,021; ceiling → 32,500.
+- BUDGET-CHANGE CASE for James (per the new proposal valve): set
+  mcp_schema_chars end-state to 31,000 (from 25,000). Evidence: remaining
+  chars are read-tool flat params that ARE the interface (aspect/mode
+  qualifiers on describe_resource/describe_revision/list_revisions/
+  plan_staged_revision_recovery); spec-ifying them saves ~2-3k while
+  making the most-used calls harder to call. Change not bundled here —
+  END_STATE untouched pending James.
+- AGENTS.md gains the proposal valve (argue for rule/budget changes in the
+  journal, never bundled with the change). Doc 10 (next directions) written:
+  recorded-trials/deferred-distiller loop, real-work session protocol,
+  capsule HTML report, worked-example doc, ontology packs later.
+- Suggestion emitters updated to the new door shape; core tests that
+  re-dispatch suggestions into Python methods unwrap spec first.

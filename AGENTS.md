@@ -74,6 +74,13 @@ after it:
    gate failing twice; anything that would weaken privacy/validation/staged
    conflict guarantees; anything irreversible.
 
+**Proposing rule or budget changes is welcome — silently bending them is
+not.** Any agent may make the case that a ceiling, an end-state target, or
+a rule itself should change: write the case as a journal entry (evidence
+across multiple trials, what it buys, what it risks), escalate to James,
+and never bundle the proposal with the change it argues for. The ratchet
+stays hard precisely so that arguments have to be good.
+
 Self-check each wave against the named anti-patterns: the Additive Reflex,
 the Routing-Field Reflex, the Doc-Append Reflex, the Compat-Shim Reflex, the
 Self-Referential Trial, and the Smallest-Fix Trap (definitions in doc 07).

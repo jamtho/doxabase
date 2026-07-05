@@ -500,14 +500,12 @@ def test_record_observation_tool_accepts_profile_type_findings(
     result = record_observation_tool(
         db,
         summary="MCP helper wrote a profile type finding.",
-        observation_type="profile",
+        kind="profile",
         observed_asset=dataset,
         observed_column=column,
-        observed_column_name="status",
-        observed_physical_type="rc:Integer",
-        observed_value_type=value_type,
         evidence_summary="Synthetic profile type evidence.",
         evidence_sources=["tests/test_mcp_tools.py"],
+        spec={"observed_column_name": "status", "observed_physical_type": "rc:Integer", "observed_value_type": value_type},
     )
 
     profile_run = describe_resource_tool(
@@ -854,7 +852,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         rationale="Both returned profile observations link to the same run evidence.",
         pattern_targets=[table, status_column],
         supporting_observations=profile_run["profile_observation_iris"],
-        evidence_iri=shared_evidence,
+        spec={"evidence_iri": shared_evidence},
     )
     assert pattern["evidence_iri"] == shared_evidence
     assert describe_resource_tool(

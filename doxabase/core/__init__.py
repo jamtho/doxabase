@@ -18,6 +18,8 @@ from doxabase.core.brief import BriefMixin
 from doxabase.core.observations import ObservationsMixin
 from doxabase.core.map_authoring import MapAuthoringMixin
 from doxabase.core.profiles import ProfilesMixin
+from doxabase.core.profile_patterns import ProfilePatternsMixin
+from doxabase.core.profile_manifest import ProfileManifestMixin
 from doxabase.core.profile_records import ProfileRecordsMixin
 from doxabase.core.profile_review import ProfileReviewMixin
 from doxabase.core.profile_promotion import ProfilePromotionMixin
@@ -27,16 +29,21 @@ from doxabase.core.analysis_views import AnalysisViewsMixin
 from doxabase.core.query_evidence import QueryEvidenceMixin
 from doxabase.core.query_repair import QueryRepairMixin
 from doxabase.core.query_plans import QueryPlansMixin
+from doxabase.core.query_candidates import QueryCandidatesMixin
 from doxabase.core.revision_snapshots import RevisionSnapshotsMixin
 from doxabase.core.lineage import LineageMixin
 from doxabase.core.query_planning import QueryPlanningMixin
 from doxabase.core.revisions import RevisionsMixin
 from doxabase.core.staging import StagingMixin
+from doxabase.core.staging_repairs import StagingRepairsMixin
+from doxabase.core.staging_export import StagingExportMixin
 from doxabase.core.staging_describe import StagingDescribeMixin
 from doxabase.core.staging_apply import StagingApplyMixin
 from doxabase.core.staging_review import StagingReviewMixin
 from doxabase.core.restage import RestageMixin
 from doxabase.core.recovery import RecoveryMixin
+from doxabase.core.recovery_sessions import RecoverySessionsMixin
+from doxabase.core.recovery_handoff import RecoveryHandoffMixin
 from doxabase.core.systematisation import SystematisationMixin
 from doxabase.core.exports import ExportsMixin
 from doxabase.core.privacy import PrivacyMixin
@@ -53,6 +60,8 @@ class DoxaBase(
     ObservationsMixin,
     MapAuthoringMixin,
     ProfilesMixin,
+    ProfilePatternsMixin,
+    ProfileManifestMixin,
     ProfileRecordsMixin,
     ProfileReviewMixin,
     ProfilePromotionMixin,
@@ -62,16 +71,21 @@ class DoxaBase(
     QueryEvidenceMixin,
     QueryRepairMixin,
     QueryPlansMixin,
+    QueryCandidatesMixin,
     RevisionSnapshotsMixin,
     LineageMixin,
     QueryPlanningMixin,
     RevisionsMixin,
     StagingMixin,
+    StagingRepairsMixin,
+    StagingExportMixin,
     StagingDescribeMixin,
     StagingApplyMixin,
     StagingReviewMixin,
     RestageMixin,
     RecoveryMixin,
+    RecoverySessionsMixin,
+    RecoveryHandoffMixin,
     SystematisationMixin,
     ExportsMixin,
     PrivacyMixin,
@@ -93,12 +107,15 @@ import sys as _sys  # noqa: E402
 
 for _mixin_module in (
     "storage", "search", "entities", "datasets", "slices", "brief",
-    "observations", "map_authoring", "profiles", "profile_records",
+    "observations", "map_authoring", "profiles", "profile_patterns",
+    "profile_manifest", "profile_records",
     "profile_review", "profile_promotion", "profile_advisories",
     "map_staging", "analysis_views", "query_evidence", "query_repair",
-    "query_plans", "revision_snapshots", "lineage", "query_planning",
-    "revisions", "staging", "staging_describe", "staging_apply",
-    "staging_review", "restage", "recovery", "systematisation", "exports",
+    "query_plans", "query_candidates", "revision_snapshots", "lineage",
+    "query_planning", "revisions", "staging", "staging_repairs",
+    "staging_export", "staging_describe", "staging_apply",
+    "staging_review", "restage", "recovery", "recovery_sessions",
+    "recovery_handoff", "systematisation", "exports",
     "privacy", "validation",
 ):
     _sys.modules[f"doxabase.core.{_mixin_module}"].DoxaBase = DoxaBase  # type: ignore[attr-defined]

@@ -714,8 +714,8 @@ def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
         supporting_observations=(
             latest_bundle["handoff_entrypoints"]["profile_observation_iris"]
         ),
-        evidence_iri=shared_evidence,
         map_implications=[project_metric, value_type],
+        spec={"evidence_iri": shared_evidence},
     )
     draft = draft_profile_map_updates_tool(
         db,

@@ -103,7 +103,7 @@ def test_record_claim_reconsideration_tool_returns_json_like_payload(
         rationale="The retrieved caveat makes the first hunch too strong.",
         evidence_sources=["DoxaBase search(\"MMSI vessel\")"],
         source_path="/tmp/doxabase-search-mmsi-vessel.json",
-        source_kind="rc:DoxaBaseAPISource",
+        spec={"source_kind": "rc:DoxaBaseAPISource"},
     )
 
     assert result["relation"] == "https://richcanopy.org/ns/rc#Weakening"
@@ -157,11 +157,8 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
         pattern_targets=["https://example.test/enron#eml_attachments_parent_doc_id"],
         supporting_claims=[claim["claim_iri"]],
         source_path="/home/james/github.com/jamtho/enron-emails/README.md",
-        source_section="Attachments",
-        source_kind="rc:DocumentationSource",
         confidence="rc:HighConfidence",
-        pattern_status="rc:Checked",
-        pattern_stability="rc:RepeatedPattern",
+        spec={"source_section": "Attachments", "source_kind": "rc:DocumentationSource", "pattern_status": "rc:Checked", "pattern_stability": "rc:RepeatedPattern"},
     )
     patterns = list_entities_tool(
         db,

@@ -1139,12 +1139,11 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
     observation = record_observation_tool(
         db,
         summary="Orders profile reviewed clean storage context.",
-        observation_type="profile",
+        kind="profile",
         observed_asset=dataset,
         evidence_summary="Synthetic scoped export regression evidence.",
         evidence_sources=["tests/test_mcp_tools.py"],
-        sample_size=12,
-        row_count=12,
+        spec={"sample_size": 12, "row_count": 12},
     )
     record_pattern_tool(
         db,
@@ -1154,7 +1153,7 @@ def test_context_slice_export_can_bypass_unrelated_sensitive_graph_siblings(
         pattern_targets=[dataset],
         supporting_observations=[observation["observation_iri"]],
         source_path="tests/test_mcp_tools.py",
-        source_kind="rc:DocumentationSource",
+        spec={"source_kind": "rc:DocumentationSource"},
     )
 
     broad_preflight = export_preflight_tool(
