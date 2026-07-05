@@ -1,42 +1,54 @@
 # DoxaBase
 
-DoxaBase is a local, agent-operated RDF memory capsule for data projects.
+Understanding of anything complex is built by a group, over time: many
+sessions of noticing, checking, being wrong, and slowly getting it right.
+Data work makes this acute — every serious dataset accumulates hard-won
+lore ("the MMSI column lies sometimes"; the join that looks right and
+isn't; the population you must exclude before any count is honest) — and
+that lore mostly lives in one person's head or a chat scrollback, and dies
+there. Now that AI agents do real analytical work, the group has grown and
+the memory has gotten worse: every new session starts naive and pays the
+same tuition again.
 
-The core idea is that useful knowledge about data rarely arrives fully
-systematised. Agents and humans notice things while working: row-count facts,
-schema caveats, source quirks, query results, suspected joins, broken
-assumptions, and interpretations that may or may not hold tomorrow. DoxaBase
-gives those claims somewhere durable to live as RDF, without requiring every
-claim to be promoted immediately into stable project structure.
+DoxaBase is the group's memory, with discipline. It is a local capsule —
+one SQLite file of RDF named graphs — where agents and humans record what
+they notice as **evidenced observations** *while they work*, synthesize
+recurring findings into **patterns**, and promote reviewed conclusions
+into a **current-best map** of the data. The point is not documentation
+after the fact: knowledge is encoded in a transferable form as it is being
+developed, so building understanding and sharing it become the same act.
+The handover conversation you wish came with every complex dataset stops
+being a conversation and becomes a file.
 
-It is built around an observation-pattern-map loop:
+The epistemics are what keep a shared memory trustworthy as it grows:
+observations must cite evidence; claims carry confidence and are never
+silently deleted — only weakened, contradicted, superseded, or refined;
+map changes go through staged review with rationale; and privacy gates
+treat "scanner-clean" as a review prompt, not export approval. Agents
+supply the judgement; DoxaBase supplies the mechanics that keep judgement
+honest. The next session — human or agent — opens the capsule and starts
+where the group left off.
+
+The loop, concretely:
 
 1. **Observation**: record point-in-time or source-scoped findings, with
    evidence, as RDF resources.
 2. **Pattern**: synthesize related findings into explicit rationale that can
    explain why something looks durable or important.
-3. **Systematisation**: consolidate useful patterns and findings into a more durable
-   project map, ontology terms, shapes, caveats, and revision history.
+3. **Systematisation**: consolidate useful patterns and findings into a more
+   durable project map, ontology terms, shapes, caveats, and revision
+   history.
 
-The graph is deliberately open-ended: projects can record arbitrary RDF claims
-about datasets. At the same time, DoxaBase ships a small Rich Canopy `rc:`
-ontology for common dataset concepts such as assets, tables, columns, physical
-layouts, caveats, observations, evidence, and provenance. That shared structure
-is meant to make knowledge portable across projects without forcing every
-project into a closed schema.
+The graph is deliberately open-ended: projects can record arbitrary RDF
+claims. DoxaBase ships a small Rich Canopy `rc:` ontology for common
+dataset concepts — assets, tables, columns, physical layouts, caveats,
+observations, evidence, provenance — so knowledge stays portable across
+projects without forcing any project into a closed schema.
 
-Another image for the project is the handover conversation you wish came with
-every complex dataset. When you inherit data, you need more than field names:
-you want the hidden facts, local caveats, awkward history, and the mindset
-behind how the dataset was created. DoxaBase tries to make that lore cheap to
-transfer one-to-many: once a human or agent has worked something out, the claim,
-evidence, caveat, and rationale can be recorded for every future reader.
+The implementation is intentionally small: a Python package backed by a
+local SQLite file, with RDFLib handling parsing and pySHACL handling
+explicit validation. There is no embedded LLM in the library.
 
-The implementation is intentionally small: a Python package backed by a local
-SQLite file, with RDFLib handling parsing and pySHACL handling explicit
-validation. There is no embedded LLM in the library. Agents supply semantic
-judgement; DoxaBase supplies graph mechanics, storage, retrieval affordances,
-and validation.
 ## Current Status: Distillation (V1 → V1.5)
 
 V1 was built fast by an autonomous improvement loop and works — the full
