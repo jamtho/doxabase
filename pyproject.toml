@@ -22,6 +22,7 @@ parquet = ["pyarrow>=17"]
 
 [project.scripts]
 doxabase-mcp = "doxabase.mcp_server:main"
+doxabase-report = "doxabase.report:main"
 
 [dependency-groups]
 dev = [

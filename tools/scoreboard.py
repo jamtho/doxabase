@@ -59,7 +59,7 @@ BUDGETS: dict[str, int] = {
 # Informational here; the ratchet moves BUDGETS toward these phase by phase.
 END_STATE: dict[str, int] = {
     "mcp_tool_count": 25,
-    "mcp_schema_chars": 25_000,
+    "mcp_schema_chars": 31_000,
     "largest_module_lines": 3_000,
     "largest_test_module_lines": 5_000,
     "project_brief_chars": 8_000,

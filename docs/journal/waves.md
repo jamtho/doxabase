@@ -463,3 +463,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   in draft plans (issues/review_reasons/direct_review_reasons) — needs a
   semantics read before consolidating; and the mcp_tools.py split (3,774).
 - Gate green (732 passed + smoke).
+
+## Wave 24 — 2026-07-05 — capsule HTML report + schema end-state sign-off
+
+- James signed off the wave-22 budget case: mcp_schema_chars END_STATE is
+  now 31,000 (was 25,000). Ceiling unchanged at 32,500.
+- New (James-requested, doc 10 §3a): doxabase/report.py + `doxabase-report`
+  console script — one self-contained HTML report per capsule: stat tiles,
+  gates/queues, dataset cards (columns/caveats with labelled severity
+  badges/storage/layout state), pattern cards with support & implication
+  counts, recent revisions. Carries the shareability banner + sensitive-
+  scan summary (it is an export artifact); dark/light via
+  prefers-color-scheme; palette per the validated dataviz reference;
+  everything graph-derived escaped (tested, incl. redaction pass-through
+  and a gate-visibility case). Charts deliberately deferred to v2 —
+  tiles/tables are the right v1 form.
+- Reports generated for James at /home/codex/doxabase-reports/
+  (fixture + Enron capsules).
