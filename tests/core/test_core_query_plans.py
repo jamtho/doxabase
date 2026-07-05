@@ -13,7 +13,7 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
         "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
     )
 
-    assert plan.helper == "draft_query_plan"
+    assert plan.helper == "describe_query_context(plan_candidate=...)"
     assert plan.mode == "non_executed_review_draft"
     assert plan.handoff_kind == "metadata_review_required"
     assert plan.engine.name == "duckdb"

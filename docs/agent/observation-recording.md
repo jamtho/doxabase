@@ -146,3 +146,8 @@ the RDF is still a draft, keep it in a scratch capsule until it validates.
 Python API note: the library exposes the pre-fold methods directly —
 `db.record_claim_observation(...)` and `db.record_query_result(...)` take as
 keywords what the MCP door takes in `spec`.
+
+Controlled-value strictness: `profile_metrics[].metric`,
+`observed_physical_type`, and `observed_value_type` take CURIEs or IRIs
+(`rc:...` or project-namespace terms), not prose; validation errors name
+the offending field.

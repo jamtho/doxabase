@@ -286,7 +286,7 @@ class QueryPlansMixin:
             caveats=context.caveats,
         )
         return DraftQueryPlan(
-            helper="draft_query_plan",
+            helper="describe_query_context(plan_candidate=...)",
             mode="non_executed_review_draft",
             handoff_kind=handoff_kind,
             handoff_summary=handoff_summary,
@@ -451,7 +451,7 @@ class QueryPlansMixin:
             caveats=context.caveats,
         )
         return DraftQueryPlan(
-            helper="draft_query_plan",
+            helper="describe_query_context(plan_candidate=...)",
             mode="non_executed_review_draft",
             handoff_kind="not_applicable_non_tabular_asset",
             handoff_summary=handoff_summary,

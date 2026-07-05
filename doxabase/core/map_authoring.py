@@ -608,6 +608,9 @@ class MapAuthoringMixin:
         impact: str | None = None,
         severity: str | None = None,
         targets: Iterable[str] | str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        evidence_iri: str | None = None,
     ) -> MapResourceRecord:
         caveat_iri = self._required_iri("iri", iri)
         description_value = description.strip()
@@ -669,6 +672,51 @@ class MapAuthoringMixin:
                     )
                 )
             triples += self._insert_graph("map", link_graph)
+        evidence_source_values = self._string_values(
+            "evidence_sources", evidence_sources
+        )
+        if evidence_summary is not None and not evidence_source_values:
+            raise DoxaBaseError(
+                "record_map_caveat evidence_summary requires evidence_sources"
+            )
+        if evidence_source_values:
+            evidence_subject = URIRef(
+                evidence_iri
+                if evidence_iri is not None
+                else self._mint_iri("evidence")
+            )
+            evidence_graph = Graph()
+            self._bind_prefixes(evidence_graph)
+            evidence_graph.add(
+                (
+                    evidence_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:Evidence")),
+                )
+            )
+            if evidence_summary:
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:summary")),
+                        Literal(evidence_summary),
+                    )
+                )
+            for source in evidence_source_values:
+                evidence_graph.add(
+                    (evidence_subject, DCTERMS.source, Literal(source))
+                )
+            triples += self._insert_graph("evidence", evidence_graph)
+            evidence_link = Graph()
+            self._bind_prefixes(evidence_link)
+            evidence_link.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:evidence")),
+                    evidence_subject,
+                )
+            )
+            triples += self._insert_graph("map", evidence_link)
         return MapResourceRecord(
             iri=caveat_iri,
             resource_type=self.expand_iri("rc:KnownCaveat"),

@@ -215,7 +215,7 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
         plan_candidate="auto",
     )
 
-    assert result["helper"] == "draft_query_plan"
+    assert result["helper"] == "describe_query_context(plan_candidate=...)"
     assert result["mode"] == "non_executed_review_draft"
     assert result["handoff_kind"] == "metadata_review_required"
     assert result["handoff_summary"]["handoff_kind"] == "metadata_review_required"

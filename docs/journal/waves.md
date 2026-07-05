@@ -446,3 +446,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   capsule HTML report, worked-example doc, ontology packs later.
 - Suggestion emitters updated to the new door shape; core tests that
   re-dispatch suggestions into Python methods unwrap spec first.
+
+## Wave 23 — 2026-07-05 — trial seeds (James-approved)
+
+- Caveat→evidence direct link: rc:evidence was already declared for
+  "an observation or assertion" — no ontology change. record_map_caveat
+  (and thus record_map_fact kind="caveat" spec) gains evidence_summary/
+  evidence_sources/evidence_iri, writing a linked rc:Evidence; validated.
+  Three independent trial sightings motivated this.
+- Doc sentences: CURIE-strictness of profile metric/type fields
+  (observation-recording); caveat targeting convention + the new evidence
+  option (map-authoring).
+- helper field on drafted plans now reads "describe_query_context(
+  plan_candidate=...)" instead of leaking the dead door name.
+- Deferred to a later wave with the distiller: review-reason triplication
+  in draft plans (issues/review_reasons/direct_review_reasons) — needs a
+  semantics read before consolidating; and the mcp_tools.py split (3,774).
+- Gate green (732 passed + smoke).

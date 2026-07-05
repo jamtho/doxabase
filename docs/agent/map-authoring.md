@@ -132,3 +132,11 @@ grain belongs on `asset_transform` outputs.
 
 Map helpers do not mint project IRIs; prefer stable project namespaces over
 generated IDs for durable resources.
+
+Caveat conventions: target the owning **dataset** even for column-specific
+caveats (`rc:hasKnownCaveat` is a dataset-level link; name the column in
+the description) — this matches every shipped fixture. A caveat may cite
+its support directly: `record_map_fact(kind="caveat")` accepts
+`evidence_summary` + `evidence_sources` (and optional `evidence_iri`) in
+spec, writing a linked `rc:Evidence` resource so "what's the evidence for
+this caveat?" is one hop, not an archaeology exercise.
