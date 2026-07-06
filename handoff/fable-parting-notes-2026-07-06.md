@@ -104,6 +104,12 @@ between their good and bad runs was almost entirely in the briefs:
    suggestion args into Python methods (they must unwrap `spec`);
    examples; the generated doc. Grep for the quoted `"doxabase.<name>"`
    string and expect ~10 distinct usage shapes.
+5b. **Trial environments pin their wheel.** Study venvs (`ais-study`,
+   the Enron study) install the wheel current at setup time; a product
+   fix does not reach them until you rebuild + reinstall. Session 3 hit a
+   "bug" that was actually wave-25's fix, undeployed. After any product
+   fix that a running study depends on: `uv build` and reinstall into the
+   study venv, and re-verify through the study's own bridge.
 6. **The wave-23 lesson, twice-paid**: adding parameters to a core method
    is not a feature until the MCP tool wrapper exposes them and the doc
    is regenerated. The first real field session found exactly this gap
