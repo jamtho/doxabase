@@ -36,8 +36,9 @@ The `mcp_tools` doc lists the exact spec fields.
 
 - One durable handoff node across populations, recipes, artifacts, and
   tasks → `kind="analysis_packet"`.
-- Only a set of logical views → `kind="analysis_view"` /
-  `kind="analysis_view_bundle"`.
+- Only logical views → `kind="analysis_view"` (one) or
+  `kind="analysis_view_bundle"` (several per call; a bulk write, not a
+  grouping resource).
 - A reviewed table/profile ingestion sidecar → `kind="profile_manifest"`
   (see `profiling`).
 - A single executed query attempt or failure →

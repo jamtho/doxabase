@@ -134,7 +134,10 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         limit: int = 25,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """List graph entities by RDF type, graph role, and optional text filter."""
+        """List graph entities by RDF type, graph role, and optional text
+        filter. graph defaults to 'map'; vocabulary terms (rc:PhysicalType,
+        rc:ValueType, confidence/severity levels, ...) need graph='ontology',
+        which includes the shipped base_ontology."""
 
         return list_entities_tool(
             db,
@@ -394,8 +397,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Record a point-in-time finding into observations+evidence.
         kind='observation' (default) or 'profile' use the flat fields with
         the long tail (sample/profile metrics, physical/value types, ...) in
-        spec; kind='claim' or 'query_result' take their fields in spec.
-        Targeted errors name the valid spec fields. Observations must cite
+        spec; kind='claim' or 'query_result' take their fields in spec
+        (flat fields are merged into spec for you). Targeted errors name
+        the required and optional spec fields. Observations must cite
         evidence (evidence_summary requires evidence_sources or a source
         path)."""
 

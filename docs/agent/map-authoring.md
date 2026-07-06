@@ -49,8 +49,10 @@ wrong field fails with a targeted error. The kinds:
   physical facts; field rules live in the `executable_catalog` doc.
 - `asset_transform` — dataset-level derivations/aggregations with endpoints,
   conditions, per-output formulas, and tuple grain.
-- `analysis_view`, `analysis_view_bundle` — named logical populations with
-  denominators and reviewed query snippets; see `analysis_packets`.
+- `analysis_view` — a named logical population with denominators and
+  reviewed query snippets; `analysis_view_bundle` writes several views in
+  one call (a bulk helper — no grouping resource is created). See
+  `analysis_packets`.
 - `table_bundle` — one no-I/O write for a reviewed table + columns +
   optional storage/layout. DoxaBase does not read files or infer types;
   supply reviewed values.

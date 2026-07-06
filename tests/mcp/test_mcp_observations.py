@@ -196,3 +196,86 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
+
+
+def test_dispatch_kind_errors_split_required_from_optional(tmp_path: Path) -> None:
+    """Targeted errors must say which fields are mandatory, not just valid
+    (AIS session 4: an agent could not see that spec.summary was required)."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError) as missing_error:
+        record_observation_tool(db, kind="claim", spec={})
+    message = str(missing_error.value)
+    assert "missing required spec field(s)" in message
+    assert (
+        "required fields for this kind: "
+        "['claim_kind', 'claim_targets', 'claim_text', 'summary']"
+    ) in message
+    assert "optional: [" in message
+
+    with pytest.raises(DoxaBaseError) as unknown_error:
+        record_observation_tool(
+            db,
+            kind="claim",
+            summary="A claim with a stray field.",
+            spec={"claim_text": "x", "bogus_field": 1},
+        )
+    message = str(unknown_error.value)
+    assert "unknown spec field(s) ['bogus_field']" in message
+    assert "required fields for this kind: [" in message
+    assert "optional: [" in message
+
+
+def test_merge_spec_error_marks_all_optional_fields(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError) as unknown_error:
+        record_observation_tool(
+            db,
+            summary="An observation with a stray spec field.",
+            evidence_summary="Evidence.",
+            evidence_sources=["tests/mcp/test_mcp_observations.py"],
+            spec={"bogus_field": 1},
+        )
+    message = str(unknown_error.value)
+    assert "unknown spec field(s) ['bogus_field']" in message
+    assert "valid spec fields (all optional): [" in message
+
+
+def test_record_observation_claim_merges_flat_observed_column(
+    tmp_path: Path,
+) -> None:
+    """Flat observed_column must reach kind='claim' instead of being
+    silently dropped; kinds that reject it must say so."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    column_iri = "https://example.test/enron#eml_messages_doc_id"
+
+    result = record_observation_tool(
+        db,
+        kind="claim",
+        summary="Claim recorded with a flat observed_column.",
+        observed_column=column_iri,
+        evidence_summary="README join section.",
+        evidence_sources=["README.md"],
+        spec={
+            "claim_text": "doc_id is the join column.",
+            "claim_kind": "rc:JoinClaim",
+            "claim_targets": [column_iri],
+        },
+    )
+    context = describe_resource_tool(
+        db, iri=result["observation_iri"], graph="observations"
+    )
+    assert any(
+        triple["predicate"] == "https://richcanopy.org/ns/rc#observedColumn"
+        and triple["object"] == column_iri
+        for triple in context["outgoing"]
+    )
+
+    with pytest.raises(DoxaBaseError, match=r"unknown spec field\(s\) \['observed_column'\]"):
+        record_observation_tool(
+            db,
+            kind="query_result",
+            summary="Query result with an unsupported flat field.",
+            observed_column=column_iri,
+        )

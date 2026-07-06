@@ -661,7 +661,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     assert target.get("relation_identifier") is None
     assert target["connection_reference"] == "warehouse-prod"
     assert target["candidate_path_status"] == "unresolved"
-    assert target["direct_review_reasons"][0]["code"] == (
+    assert target["review_reasons"][0]["code"] == (
         "database_relation_template_source_mismatch"
     )
     assert [action["tool"].removeprefix("doxabase.") for action in context["suggested_next_actions"]] == [

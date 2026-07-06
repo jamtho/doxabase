@@ -36,6 +36,15 @@ removes a confusion but raises cold-start cost is a regression.
 
 ## Runtime Notes
 
+Without an MCP mount, drive the tools through a small bridge script in the
+trial's study directory that dispatches via `build_server(capsule_path)`
+and `call_tool` — payloads stay byte-identical to the MCP wire, per-call
+request/response chars can be logged, and the tool-registry JSON is
+charged once per session. Have the bridge accept JSON arguments as a
+scratch payload file (`bridge.py call <tool> @args.json`), never inline in
+the shell command: shell quoting mangles apostrophes in free-text fields
+and has cost trial agents real calls.
+
 Reopen an existing capsule with `DoxaBase(path)`;
 `DoxaBase.open_readonly(path)` gives strict read-only inspection. For
 sub-agent runs, keep the harness explicit: a concrete artifact contract, a

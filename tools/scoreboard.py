@@ -46,7 +46,7 @@ BUDGETS: dict[str, int] = {
     "largest_test_module_lines": 5_000,
     "project_brief_chars": 4_850,
     "describe_dataset_chars": 16_000,
-    "describe_query_context_chars": 15_300,
+    "describe_query_context_chars": 13_300,
     "context_slice_chars": 34_500,
     "graph_overview_chars": 6_000,
     "search_chars": 6_500,

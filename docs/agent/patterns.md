@@ -70,6 +70,11 @@ Patterns are never promoted automatically.
 
 Pattern validation is intentionally stricter than map validation: summary,
 pattern text, rationale, at least one target, and support are all required.
+Support IRIs are not existence-checked at write time — recording is
+open-world, so a pattern may cite claims or observations recorded later —
+but a supporting claim that never materializes fails
+`validate_graph(scope="all")` (the shapes flag the dangling IRI), so
+validate after recording.
 Note that a staged `rc:Pattern` inside a systematisation framing must carry
 its support inside the framing Turtle itself (`rc:supportingObservation`,
 `rc:supportingClaim`, or `rc:evidence`) — revision-level support links do not

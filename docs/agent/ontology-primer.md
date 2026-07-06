@@ -17,6 +17,12 @@ Use `rc:` terms for shared structural concepts:
 - `rc:PhysicalLayout`, `rc:PartitionScheme`, `rc:RowOrdering`
 - `rc:LayoutVerificationStatus` for path/layout confidence and verification
 
+To list a controlled vocabulary's members (physical types, value types,
+confidence levels, statuses), call
+`list_entities(type="rc:PhysicalType", graph="ontology")` — the `ontology`
+selection includes the shipped `base_ontology`. The default `graph="map"`
+holds project facts, not vocabulary, so it returns 0 for these types.
+
 Use project namespaces for domain-specific ideas:
 
 - AIS value types can live under `ais:`.

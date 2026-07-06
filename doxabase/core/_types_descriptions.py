@@ -197,7 +197,14 @@ class QueryTargetCandidate:
     review_required: bool
     review_reasons: list[QueryPlanningIssue]
     direct_review_required: bool
-    direct_review_reasons: list[QueryPlanningIssue]
+    # Always review_reasons minus the synthesized
+    # "query_context_has_other_blockers" rollup issue; Python callers keep the
+    # convenience list, but the wire carries review_reasons +
+    # direct_review_required only (trial-measured triplication with
+    # context.issues).
+    direct_review_reasons: list[QueryPlanningIssue] = field(
+        metadata={"doxabase_internal": True}
+    )
     required_bindings: list[str] = field(default_factory=list)
     required_binding_details: list[dict[str, Any]] = field(default_factory=list, metadata={"doxabase_internal": True})
     binding_example: str | None = field(default=None, metadata={"doxabase_internal": True})

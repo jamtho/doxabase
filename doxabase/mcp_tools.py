@@ -4,7 +4,7 @@ import inspect
 import json
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from rdflib import Dataset, URIRef
 from rdflib.namespace import RDF
@@ -1471,6 +1471,24 @@ def export_context_slice_tool(
     )
 
 
+def _required_optional_note(
+    parameters: dict[str, inspect.Parameter],
+    *,
+    label: str,
+) -> str:
+    """Targeted-error suffix naming required vs optional fields: trial agents
+    self-correct in one step only when mandatoriness is stated."""
+    required = sorted(
+        name
+        for name, parameter in parameters.items()
+        if parameter.default is inspect.Parameter.empty
+    )
+    optional = sorted(set(parameters) - set(required))
+    if required:
+        return f"required {label}: {required}; optional: {optional}"
+    return f"valid {label} (all optional): {optional}"
+
+
 def _merge_spec_into_call(
     tool_label: str,
     handler: Any,
@@ -1483,18 +1501,25 @@ def _merge_spec_into_call(
     exposes the common fields flat and takes the long tail in ``spec``.
     Unknown or flat-duplicated spec fields fail naming the valid set.
     """
-    parameters = {
-        name
-        for name in inspect.signature(handler).parameters
+    signature_parameters = {
+        name: parameter
+        for name, parameter in inspect.signature(handler).parameters.items()
         if name not in {"self", "db"}
     }
+    parameters = set(signature_parameters)
     spec = dict(spec or {})
-    valid_spec_fields = sorted(parameters - set(flats))
     unknown = sorted(set(spec) - parameters)
     if unknown:
         raise DoxaBaseError(
-            f"{tool_label} got unknown spec field(s) {unknown}; valid spec "
-            f"fields: {valid_spec_fields}"
+            f"{tool_label} got unknown spec field(s) {unknown}; "
+            + _required_optional_note(
+                {
+                    name: parameter
+                    for name, parameter in signature_parameters.items()
+                    if name not in flats
+                },
+                label="spec fields",
+            )
         )
     duplicated = sorted(set(spec) & set(flats))
     if duplicated:
@@ -1530,7 +1555,7 @@ def _dispatch_kind(
     if unknown:
         raise DoxaBaseError(
             f"{tool_label} kind={kind!r} got unknown spec field(s) {unknown}; "
-            f"valid fields for this kind: {sorted(parameters)}"
+            + _required_optional_note(parameters, label="fields for this kind")
         )
     missing = sorted(
         name
@@ -1540,7 +1565,8 @@ def _dispatch_kind(
     if missing:
         raise DoxaBaseError(
             f"{tool_label} kind={kind!r} is missing required spec field(s) "
-            f"{missing}; valid fields for this kind: {sorted(parameters)}"
+            f"{missing}; "
+            + _required_optional_note(parameters, label="fields for this kind")
         )
     return handler(db, **spec)
 
@@ -1577,15 +1603,14 @@ def record_observation_tool(
 ) -> dict[str, Any]:
     """Record a finding. kind picks the shape; spec carries the long tail."""
     if kind in {"claim", "query_result"}:
-        handler = (
-            record_claim_observation_tool
-            if kind == "claim"
-            else record_query_result_tool
-        )
         merged = dict(spec or {})
+        # Every flat parameter except kind/spec merges into spec (explicit
+        # spec values win); fields a kind does not accept then fail with the
+        # targeted error instead of being silently dropped.
         for name, value in (
             ("summary", summary),
             ("observed_asset", observed_asset),
+            ("observed_column", observed_column),
             ("observed_at", observed_at),
             ("observed_by", observed_by),
             ("evidence_summary", evidence_summary),
@@ -1594,11 +1619,7 @@ def record_observation_tool(
             if value is not None:
                 merged.setdefault(name, value)
         return _dispatch_kind(
-            db,
-            "record_observation",
-            {kind: handler},
-            kind,
-            merged,
+            db, "record_observation", _RECORD_OBSERVATION_SPEC_KINDS, kind, merged
         )
     if kind is not None and kind not in {"observation", "profile"}:
         raise DoxaBaseError(
@@ -2903,7 +2924,7 @@ def record_graph_revision_tool(
 def record_staged_revision_review_decision_tool(
     db: DoxaBase,
     iri: str,
-    decision: str,
+    decision: Literal["accepted_elsewhere", "superseded", "discarded", "no_effective_change"],
     rationale: str,
     summary: str | None = None,
     resolution_revision_iri: str | None = None,

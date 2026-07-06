@@ -204,10 +204,14 @@ def test_describe_query_context_tool_returns_planning_projection(
     ] == "date"
     assert result["query_target_candidates"][0]["review_required"] is True
     assert result["query_target_candidates"][0]["direct_review_required"] is True
+    # direct_review_reasons is Python-API-only; the wire carries
+    # review_reasons (direct reasons plus at most the synthesized
+    # query_context_has_other_blockers rollup).
+    assert "direct_review_reasons" not in result["query_target_candidates"][0]
     assert {
         reason["code"]
-        for reason in result["query_target_candidates"][0]["direct_review_reasons"]
-    } == {
+        for reason in result["query_target_candidates"][0]["review_reasons"]
+    } - {"query_context_has_other_blockers"} == {
         "layout_needs_verification",
         "verification_status_not_recorded",
     }
@@ -740,9 +744,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert [
         reason["code"] for reason in s3_target["review_reasons"]
     ] == ["s3_credential_reference_not_recorded"]
-    assert [
-        reason["code"] for reason in s3_target["direct_review_reasons"]
-    ] == ["s3_credential_reference_not_recorded"]
+    assert "direct_review_reasons" not in s3_target
     assert any(
         issue["code"] == "s3_credential_reference_not_recorded"
         and issue["severity"] == "info"
@@ -848,7 +850,7 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     assert target.get("relation_identifier") is None
     assert target["connection_reference"] == "warehouse-prod"
     assert target["candidate_path_status"] == "orientation_only"
-    assert target["direct_review_reasons"][0]["code"] == (
+    assert target["review_reasons"][0]["code"] == (
         "database_relation_template_missing"
     )
     assert context["query_target_decision"]["status"] == "candidate_needs_review"
@@ -948,9 +950,6 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
     assert target["review_reasons"][0]["code"] == (
         "storage_location_kind_needs_path_template"
     )
-    assert target["direct_review_reasons"][0]["code"] == (
-        "storage_location_kind_needs_path_template"
-    )
     assert result["query_target_decision"]["status"] == "candidate_needs_review"
     assert result["query_target_decision"]["candidate_index"] == 0
     assert result["query_target_decision"]["candidate_path"] == storage_root
@@ -1007,7 +1006,6 @@ def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
     assert target["candidate_path_status"] == "ready"
     assert target.get("review_reasons", []) == []
     assert target["direct_review_required"] is False
-    assert target.get("direct_review_reasons", []) == []
     assert result["query_target_decision"]["status"] == "ready"
     assert result["query_target_decision"]["candidate_index"] == 0
     assert result["query_target_decision"]["candidate_path"] == (

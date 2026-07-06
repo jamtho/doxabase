@@ -288,7 +288,7 @@ Parameters:
 
 ## doxabase.list_entities
 
-List graph entities by RDF type, graph role, and optional text filter.
+List graph entities by RDF type, graph role, and optional text filter. graph defaults to 'map'; vocabulary terms (rc:PhysicalType, rc:ValueType, confidence/severity levels, ...) need graph='ontology', which includes the shipped base_ontology.
 
 Parameters:
 
@@ -700,7 +700,7 @@ Parameters:
 
 ## doxabase.record_observation
 
-Record a point-in-time finding into observations+evidence. kind='observation' (default) or 'profile' use the flat fields with the long tail (sample/profile metrics, physical/value types, ...) in spec; kind='claim' or 'query_result' take their fields in spec. Targeted errors name the valid spec fields. Observations must cite evidence (evidence_summary requires evidence_sources or a source path).
+Record a point-in-time finding into observations+evidence. kind='observation' (default) or 'profile' use the flat fields with the long tail (sample/profile metrics, physical/value types, ...) in spec; kind='claim' or 'query_result' take their fields in spec (flat fields are merged into spec for you). Targeted errors name the required and optional spec fields. Observations must cite evidence (evidence_summary requires evidence_sources or a source path).
 
 Parameters:
 
@@ -731,7 +731,7 @@ Kinds `observation` (default) and `profile` use the flat parameters above plus t
 - `observation_iri` (str)
 - `evidence_iri` (str)
 
-Kinds `claim` and `query_result` take their fields in `spec` (top-level summary/observed/evidence flats are merged in):
+Kinds `claim` and `query_result` dispatch on `spec`: pass the fields below inside `spec`. Every flat parameter above except `kind` and `spec` is merged into `spec` for you (an explicit spec value wins), so `summary` and the observed/evidence flats may sit at either level; `required` below is checked after the merge, and fields a kind does not accept fail with a targeted error:
 
 ### record_observation kind="claim"
 
@@ -1144,7 +1144,7 @@ Parameters:
 ### stage_revision kind="review_decision"
 
 - `iri` (str, required)
-- `decision` (str, required)
+- `decision` (Literal['accepted_elsewhere', 'superseded', 'discarded', 'no_effective_change'], required)
 - `rationale` (str, required)
 - `summary` (str)
 - `resolution_revision_iri` (str)

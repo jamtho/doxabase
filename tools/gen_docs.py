@@ -254,9 +254,13 @@ def generate() -> str:
             "",
             *_merged_spec_lines(_core.DoxaBase.record_observation, _OBS_FLATS),
             "",
-            "Kinds `claim` and `query_result` take their "
-            "fields in `spec` (top-level summary/observed/evidence flats "
-            "are merged in):",
+            "Kinds `claim` and `query_result` dispatch on `spec`: pass the "
+            "fields below inside `spec`. Every flat parameter above except "
+            "`kind` and `spec` is merged into `spec` for you (an explicit "
+            "spec value wins), so `summary` and the observed/evidence flats "
+            "may sit at either level; `required` below is checked after the "
+            "merge, and fields a kind does not accept fail with a targeted "
+            "error:",
             "",
             *_spec_kind_sections(
                 "doxabase.record_observation", "kind", mt._RECORD_OBSERVATION_SPEC_KINDS

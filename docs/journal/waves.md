@@ -493,3 +493,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Deferred to the distiller pass (design, not bugs): list_entities not
   reaching base_ontology vocabulary (vocab discoverability);
   analysis_view_bundle naming; pytz in study venvs.
+
+## Wave 26 — 2026-07-06 — Distiller pass 1 (doc 10 §1)
+
+- First deferred-action distiller pass over the whole trial record; six
+  multi-observation items; detail + deferrals in
+  docs/journal/distiller-pass-1.md.
+- Subtraction: QueryTargetCandidate.direct_review_reasons is Python-API-only
+  (always review_reasons minus the synthetic rollup issue) —
+  describe_query_context 14,732 → 12,761 chars; ceiling ratcheted 13,300.
+- Targeted _dispatch_kind/_merge_spec errors now split required vs optional;
+  record_observation claim/query_result path merges observed_column (was
+  silently dropped) and reuses the module dispatch table.
+- Docs truthful-now: list_entities vocab route (graph="ontology" reaches
+  base_ontology), review_decision enum in the generated doc, spec-merge
+  wording, analysis_view_bundle = bulk write, record_pattern open-world note,
+  bridge payload-file rule. History-repair design question → doc 04 backlog.
+- Gate green: 739 passed (+3 regression) + smoke; all budgets green.

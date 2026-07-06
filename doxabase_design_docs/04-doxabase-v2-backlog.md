@@ -30,6 +30,15 @@ commit_revision()
 - Validation failure graph.
 - Rollback API.
 - Migration support for ontology refactors.
+- A staged route for history-graph repair. Staged patches deliberately
+  cannot target `history`, so fixing corrupted revision metadata today
+  means raw TriG surgery with no preview/validate/apply loop (AIS session 5
+  repaired duplicated single-cardinality review-decision fields this way;
+  the minting bug that caused them is fixed, but the repair path stays
+  unguarded). Design question: does history repair get a narrow reviewed
+  door (dry-run diff + shapes check + snapshot row), or does history stay
+  append-only with corrections modeled as superseding records? Decide from
+  the next concrete corruption case, not a priori.
 
 ## RDF and Graph Backend
 
