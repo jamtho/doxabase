@@ -80,7 +80,9 @@ response-size diets, collapsing the tool surface to ≤25
 
 ## How To Read This Project
 
-For a human overview: this README, then `ARCHITECTURE.md`, then the design
+For a human overview: this README, then `docs/worked-example.md` (a real
+session, call by call — the fastest way to *feel* how the capsule works),
+then `ARCHITECTURE.md` and the design
 docs in `doxabase_design_docs/` (01–05 the original design, 06–08 the review
 and distillation program).
 
