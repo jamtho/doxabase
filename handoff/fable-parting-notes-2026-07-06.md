@@ -188,25 +188,31 @@ know.
   the capsule (5 observations, refined identity-freeze caveat). The freeze
   was traced to the broadcasts layer by direct experiment — his index
   builder is exonerated; mechanism awaits source CSVs + provider PDFs.
-- Session 2 (weak model, cold, capsule-only): running as I write —
-  targets 367615990 (rename timing), 369305000 MAGDALEN (retrieval
-  probe), 338617000 PENNSYLVANIA (port calls; the dwell-invention
-  pressure test). Grade it on *which recorded knowledge it used, by IRI*.
-- Session 3 (planned): literature onboarding — the MarineCadastre PDFs
-  (https://hub.marinecadastre.gov/pages/vesseltraffic), the receiver-map
-  gpkg, source CSVs if James adds them. Measure how the agent reconciles
-  official docs against empirical caveats.
-- Then: the first **distiller pass** across all session records
-  (doc 10 §1) — a batch of few, well-evidenced product changes. Deferred
-  items already queued for it: review-reason triplication, vocabulary
-  discoverability (list_entities doesn't reach base_ontology),
-  `analysis_view_bundle` naming, `mcp_tools.py` split (3,774 lines),
-  pytz in study venvs.
-- The big one parked behind evidence: **vessel-doings RDF semantics**
-  (dwell events, renames, load cycles, associations, coverage exits).
-  James wants it; the agreed path is to distill the vocabulary from a
-  batch of vessel stories, not design it a priori. This doubles as the
-  first ontology-pack (doc 10 §4) experiment.
+- Session 2 (weak model, cold, capsule-only): the transfer proof.
+  Applied session 1's methods by IRI, reproduced M5's numbers, invented
+  M6 (low-SOG dwell — James later confirmed it as real tradecraft the
+  strong model missed), and filed an evidence-backed counterexample
+  against M1. Graded in `2026-07-ais-session-2.md`; human-facing version
+  in `docs/worked-example.md`.
+- Session 3 (curator): literature onboarding — provider PDFs + receiver
+  gpkg reconciled against empirical caveats; identity-freeze traced
+  further (probable mechanism: provider's AVIS/AVID correction DB).
+- Session 4 (story corpus): fifteen vessel stories across the
+  menagerie, recorded as observations/claims with evidence.
+- Session 5 (vocabulary distillation): the ontology-pack experiment.
+  25-term `aisv:` vocabulary (AisIdentity ≠ Emitter is the load-bearing
+  insight), staged into the ontology graph via the full review loop,
+  **zero data queries needed** — it ran entirely on recorded knowledge.
+  It also exposed the review-decision minting bug (fixed same day,
+  `e38a2e2`). The couldn't-say list in its trial record is the v2
+  vocabulary roadmap (trade lanes, voyages, Place-as-resource).
+- The first **distiller pass** (doc 10 §1) was launched 2026-07-06
+  night on the ten-item evidenced ledger (see the session 4/5 trial
+  records' product-findings sections); its report lands at
+  `docs/journal/distiller-pass-1.md`. Reserved for James, NOT in its
+  scope: `rc:citesClaim` (an rc: semantic addition — project-domain
+  resources currently have no sanctioned predicate to cite an rc:Claim),
+  budget end-states, and his audit-of-reports findings.
 
 ## 7. Working with James
 
