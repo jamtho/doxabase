@@ -2309,3 +2309,46 @@ def test_export_profile_insight_review_bundle_recovers_applied_query_repair_rout
     assert f"## Revision 1: {candidate.summary}" in exported
     assert "query_context_review (direct_action)" in exported
 
+
+
+def test_review_decision_refuses_existing_resolution_revision_iri(
+    tmp_path: Path,
+) -> None:
+    """resolution_revision_iri mints a NEW history record; reusing an
+    existing revision IRI would append duplicate single-cardinality fields
+    onto that row (observed corrupting history in the AIS field study)."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Reviewable proposal.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.record_staged_revision_review_decision(
+            staged.revision_iri,
+            "discarded",
+            "collision test",
+            resolution_revision_iri=staged.revision_iri,
+            allow_mutation_target=True,
+        )
+    assert "already exists as a revision" in str(excinfo.value)
+    # a fresh, unused IRI is still accepted
+    record = db.record_staged_revision_review_decision(
+        staged.revision_iri,
+        "discarded",
+        "clean close",
+        resolution_revision_iri="https://example.test/project#resolution-1",
+        allow_mutation_target=True,
+    )
+    assert record.resolution_revision_iri == (
+        "https://example.test/project#resolution-1"
+    )

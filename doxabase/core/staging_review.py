@@ -33,6 +33,20 @@ class StagingReviewMixin:
         | None = None,
     ) -> StagedRevisionReviewDecisionRecord:
         staged = self.describe_staged_revision(iri)
+        if resolution_revision_iri is not None:
+            # The resolution IRI names the NEW history record this decision
+            # mints. Reusing an existing revision IRI would append duplicate
+            # single-cardinality fields onto that row (observed corrupting a
+            # history record in the AIS field study, session 5).
+            expanded_resolution = self.expand_iri(resolution_revision_iri)
+            if self._graph_revision_record_kind_for_iri(expanded_resolution) is not None:
+                raise DoxaBaseError(
+                    "resolution_revision_iri names the NEW revision record "
+                    "this decision creates; "
+                    f"'{resolution_revision_iri}' already exists as a "
+                    "revision. Omit the parameter to mint a fresh IRI, or "
+                    "pass an unused one."
+                )
         existing_resolution = self._staged_review_resolution_for_staged_iri(
             staged.iri
         )
