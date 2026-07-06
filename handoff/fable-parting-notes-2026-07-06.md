@@ -206,13 +206,14 @@ know.
   It also exposed the review-decision minting bug (fixed same day,
   `e38a2e2`). The couldn't-say list in its trial record is the v2
   vocabulary roadmap (trade lanes, voyages, Place-as-resource).
-- The first **distiller pass** (doc 10 §1) was launched 2026-07-06
-  night on the ten-item evidenced ledger (see the session 4/5 trial
-  records' product-findings sections); its report lands at
-  `docs/journal/distiller-pass-1.md`. Reserved for James, NOT in its
-  scope: `rc:citesClaim` (an rc: semantic addition — project-domain
-  resources currently have no sanctioned predicate to cite an rc:Claim),
-  budget end-states, and his audit-of-reports findings.
+- The first **distiller pass** (doc 10 §1) LANDED 2026-07-06
+  (`3d50141`; report and template: `docs/journal/distiller-pass-1.md`).
+  Six items, one wire field subtracted, zero added; the report's
+  "Template notes" section is how future passes should run. Still
+  reserved for James: `rc:citesClaim` (an rc: semantic addition —
+  project-domain resources currently have no sanctioned predicate to
+  cite an rc:Claim), budget end-states, and his audit-of-reports
+  findings (a second, smaller batch when they arrive).
 
 ## 7. Working with James
 
@@ -238,7 +239,9 @@ Surface them when the AIS study wraps a phase.
 - The **facade injection loop** (item 3.1) should be retired deliberately.
 - **staging.py / mcp_tools.py** are the next split candidates if the
   3,000-line end-state stands; don't split mcp_tools without deciding how
-  gen_docs introspects the result.
+  gen_docs introspects the result. Distiller pass 1 recorded the
+  recommended shape (an `mcp_tools/` package whose `__init__` re-exports
+  every name and dispatch table) — see its deferrals section.
 - **Response end-state gaps** (describe_dataset 15.4k vs 12k etc.) are
   itemized in waves.md wave 15; the remaining fat is relationship-endpoint
   triple-representation — a real consolidation, not a trim.
