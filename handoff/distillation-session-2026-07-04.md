@@ -8,6 +8,12 @@ re-deriving them. James wants fairly regular pushes to
 `origin/codex/distillation-program` so he can follow, and welcomes longer
 commit-message bodies.
 
+## SEE ALSO: `fable-parting-notes-2026-07-06.md`
+
+Judgement, traps, sub-agent method, trial probes, and the AIS study
+continuation — written for successors on Fable's last day. Read it before
+doing anything hard.
+
 ## PROGRAM COMPLETE (2026-07-05)
 
 All seven phases executed; `v0.2.0` tagged. Read
