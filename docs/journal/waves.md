@@ -480,3 +480,16 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   tiles/tables are the right v1 form.
 - Reports generated for James at /home/codex/doxabase-reports/
   (fixture + Enron capsules).
+
+## Wave 25 — 2026-07-06 — AIS session-1 bug fixes (doc/tool alignment)
+
+- Session-1 friction (docs/journal/trials pending): two doc-promised
+  parameter sets were missing from the MCP tool wrappers though the core
+  methods had them — record_map_caveat_tool (evidence_summary/sources/iri;
+  the wave-23 caveat-evidence feature was core-only) and
+  record_claim_observation_tool (observation_iri/claim_iri/evidence_iri).
+  Both aligned + mcp-tools.md regenerated; claims/caveats can now carry
+  stable project IRIs and caveat evidence through MCP.
+- Deferred to the distiller pass (design, not bugs): list_entities not
+  reaching base_ontology vocabulary (vocab discoverability);
+  analysis_view_bundle naming; pytz in study venvs.

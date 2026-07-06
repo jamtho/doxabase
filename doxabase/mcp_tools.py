@@ -1702,6 +1702,9 @@ def record_claim_observation_tool(
     confidence: str | None = "rc:MediumConfidence",
     observation_status: str | None = "rc:Tentative",
     proposed_assertions: list[str] | None = None,
+    observation_iri: str | None = None,
+    claim_iri: str | None = None,
+    evidence_iri: str | None = None,
 ) -> dict[str, Any]:
     result = db.record_claim_observation(
         summary=summary,
@@ -1722,6 +1725,9 @@ def record_claim_observation_tool(
         confidence=confidence,
         observation_status=observation_status,
         proposed_assertions=proposed_assertions,
+        observation_iri=observation_iri,
+        claim_iri=claim_iri,
+        evidence_iri=evidence_iri,
     )
     return to_dict(result)
 
@@ -2446,6 +2452,9 @@ def record_map_caveat_tool(
     impact: str | None = None,
     severity: str | None = None,
     targets: list[str] | None = None,
+    evidence_summary: str | None = None,
+    evidence_sources: list[str] | None = None,
+    evidence_iri: str | None = None,
 ) -> dict[str, Any]:
     result = db.record_map_caveat(
         iri=iri,
@@ -2454,6 +2463,9 @@ def record_map_caveat_tool(
         impact=impact,
         severity=severity,
         targets=targets,
+        evidence_summary=evidence_summary,
+        evidence_sources=evidence_sources,
+        evidence_iri=evidence_iri,
     )
     return to_dict(result)
 

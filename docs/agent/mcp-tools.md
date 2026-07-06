@@ -459,6 +459,9 @@ Parameters:
 - `impact` (str)
 - `severity` (str)
 - `targets` (list[str])
+- `evidence_summary` (str)
+- `evidence_sources` (list[str])
+- `evidence_iri` (str)
 
 ### record_map_fact kind="column"
 
@@ -704,6 +707,9 @@ Kinds `observation` (default) and `profile` use the flat parameters above. Kinds
 - `confidence` (str | None, default `'rc:MediumConfidence'`)
 - `observation_status` (str | None, default `'rc:Tentative'`)
 - `proposed_assertions` (list[str])
+- `observation_iri` (str)
+- `claim_iri` (str)
+- `evidence_iri` (str)
 
 ### record_observation kind="query_result"
 
