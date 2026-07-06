@@ -126,6 +126,21 @@ def _handler_spec_lines(handler: Any) -> list[str]:
     return lines
 
 
+def _merged_spec_lines(core_method: Any, flat_names: set[str]) -> list[str]:
+    """Spec fields for a flat+spec recorder: the core method's keyword surface
+    minus the tool's flat parameters (mirrors _merge_spec_into_call)."""
+    lines = []
+    for name, parameter in inspect.signature(core_method).parameters.items():
+        if name in {"self", "db"} or name in flat_names:
+            continue
+        annotation = parameter.annotation
+        rendered = annotation if isinstance(annotation, str) else "any"
+        if parameter.default is None:
+            rendered = rendered.removesuffix(" | None")
+        lines.append(f"- `{name}` ({rendered})")
+    return lines
+
+
 def _spec_kind_sections(tool_name: str, label: str, kinds: dict[str, Any]) -> list[str]:
     out = []
     for kind in sorted(kinds):
@@ -195,11 +210,53 @@ def generate() -> str:
         server = build_server(Path(tmp) / "unused.sqlite")
         tools = asyncio.run(server.list_tools())
 
+    _OBS_FLATS = {
+        "summary", "kind", "spec", "observed_asset", "observed_column",
+        "observed_at", "observed_by", "evidence_summary", "evidence_sources",
+    }
+    _PATTERN_FLATS = {
+        "summary", "pattern_text", "rationale", "pattern_targets",
+        "supporting_observations", "supporting_claims", "evidence_summary",
+        "evidence_sources", "source_path", "confidence", "map_implications",
+        "spec",
+    }
+    _GREV_FLATS = {"summary", "rationale", "changed_graphs", "revision_type", "spec"}
+    _RECON_FLATS = {
+        "newer_claim", "older_claim", "relation", "rationale", "summary",
+        "evidence_summary", "evidence_sources", "source_path", "spec",
+    }
+    import doxabase.core as _core
+
     extra_sections: dict[str, list[str]] = {
+        "doxabase.record_pattern": [
+            "Spec fields (long tail merged into the call; targeted errors "
+            "name these):",
+            "",
+            *_merged_spec_lines(_core.DoxaBase.record_pattern, _PATTERN_FLATS),
+        ],
+        "doxabase.record_graph_revision": [
+            "Spec fields:",
+            "",
+            *_merged_spec_lines(
+                _core.DoxaBase.record_graph_revision, _GREV_FLATS
+            ),
+        ],
+        "doxabase.record_claim_reconsideration": [
+            "Spec fields:",
+            "",
+            *_merged_spec_lines(
+                _core.DoxaBase.record_claim_reconsideration, _RECON_FLATS
+            ),
+        ],
         "doxabase.record_observation": [
             "Kinds `observation` (default) and `profile` use the flat "
-            "parameters above. Kinds `claim` and `query_result` take their "
-            "fields in `spec` (top-level `summary` is merged in):",
+            "parameters above plus these spec fields (merged into the call):",
+            "",
+            *_merged_spec_lines(_core.DoxaBase.record_observation, _OBS_FLATS),
+            "",
+            "Kinds `claim` and `query_result` take their "
+            "fields in `spec` (top-level summary/observed/evidence flats "
+            "are merged in):",
             "",
             *_spec_kind_sections(
                 "doxabase.record_observation", "kind", mt._RECORD_OBSERVATION_SPEC_KINDS

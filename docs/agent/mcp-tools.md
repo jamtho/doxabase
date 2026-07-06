@@ -373,6 +373,18 @@ Parameters:
 - `source_path` (string)
 - `spec` (object)
 
+Spec fields:
+
+- `reconsidered_at` (datetime | str)
+- `reconsidered_by` (str)
+- `source_section` (str)
+- `start_line` (int)
+- `end_line` (int)
+- `source_kind` (str)
+- `older_claim_status` (str)
+- `reconsideration_iri` (str)
+- `evidence_iri` (str)
+- `source_span_iri` (str)
 ## doxabase.record_graph_revision
 
 Record revision metadata into history for a change that already happened (staged work records its own). The tail (supporting observations/claims/patterns, anchors, evidence, export path, graph counts, validation fields, identity) goes in spec; targeted errors name the valid fields.
@@ -385,6 +397,23 @@ Parameters:
 - `revision_type` (string, default `"rc:ManualRevision"`)
 - `spec` (object)
 
+Spec fields:
+
+- `included_graphs` (Iterable[str] | str)
+- `revision_iri` (str)
+- `created_at` (datetime | str)
+- `created_by` (str)
+- `supporting_observations` (Iterable[str] | str)
+- `supporting_claims` (Iterable[str] | str)
+- `supporting_patterns` (Iterable[str] | str)
+- `revision_anchors` (Iterable[str] | str)
+- `evidence` (Iterable[str] | str)
+- `export_path` (str)
+- `graph_counts` (dict[str, int])
+- `validation_scope` (str)
+- `validation_conforms` (bool)
+- `validation_result_count` (int)
+- `validation_results` (Iterable[ValidationDiagnostic])
 ## doxabase.record_map_fact
 
 Record a current-best map fact. kind: 'dataset', 'column', 'caveat', 'relationship', 'storage_access', 'physical_layout', 'partition_scheme', 'asset_transform', 'analysis_view', 'analysis_view_bundle', 'table_bundle', 'analysis_packet', 'profile_manifest', or 'profiled_parquet_table'; spec carries that kind's fields (targeted errors name valid/missing fields; see get_doc('map_authoring')).
@@ -685,7 +714,24 @@ Parameters:
 - `evidence_summary` (string)
 - `evidence_sources` (array[string])
 
-Kinds `observation` (default) and `profile` use the flat parameters above. Kinds `claim` and `query_result` take their fields in `spec` (top-level `summary` is merged in):
+Kinds `observation` (default) and `profile` use the flat parameters above plus these spec fields (merged into the call):
+
+- `observation_type` (TypingLiteral['observation', 'profile'])
+- `observed_column_name` (str)
+- `sample_size` (int)
+- `sample_scope` (str)
+- `sample_method` (str)
+- `row_count` (int)
+- `null_count` (int)
+- `distinct_count` (int)
+- `value_frequencies` (Iterable[Mapping[str, Any]])
+- `profile_metrics` (Iterable[Mapping[str, Any]])
+- `observed_physical_type` (str)
+- `observed_value_type` (str)
+- `observation_iri` (str)
+- `evidence_iri` (str)
+
+Kinds `claim` and `query_result` take their fields in `spec` (top-level summary/observed/evidence flats are merged in):
 
 ### record_observation kind="claim"
 
@@ -757,6 +803,19 @@ Parameters:
 - `map_implications` (array[string])
 - `spec` (object)
 
+Spec fields (long tail merged into the call; targeted errors name these):
+
+- `synthesized_at` (datetime | str)
+- `synthesized_by` (str)
+- `source_section` (str)
+- `start_line` (int)
+- `end_line` (int)
+- `source_kind` (str)
+- `pattern_status` (str | None)
+- `pattern_stability` (str | None)
+- `pattern_iri` (str)
+- `evidence_iri` (str)
+- `source_span_iri` (str)
 ## doxabase.record_profile
 
 Record profile evidence. kind: 'dataset', 'column', 'bundle', or 'domain_network'; spec carries that kind's fields (validation errors name the valid and missing fields; see get_doc('profiling')).
