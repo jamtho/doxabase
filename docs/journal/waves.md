@@ -555,3 +555,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   (159 summary-only test sites to reconcile; needs a shapes-semantics
   read). Study capsule repaired via replace_graph_triples; conforms.
 - Gate green: 743 passed (+1) + smoke; all budgets green.
+
+## Wave 30 — 2026-07-08 — Session 7 lands: M7/M8 proven, layering confirmed quantitatively
+
+- Track-context session (commissioned from expert round 2) recorded:
+  docs/journal/trials/2026-07-ais-session-7.md. M7 track-state
+  classifier + M8 draft-change contextualizer proven against recorded
+  stories and recorded as patterns with executable SQL; dwell-attachment
+  share orders seven vessels monotonically with known cargo-story
+  cleanliness; track context resolves WHERE, not WHY (the expert's
+  fact-vs-interpretation layering, now with numbers).
+- Third sighting of MCP unknown-argument swallowing (get_doc id vs
+  doc_id returned the index silently, 2 wasted calls) — batch-2 ledger
+  item now has costs measured from both curator and trial-agent sides.
+- No repo code changes this wave; study capsule conforms (36 patterns).
