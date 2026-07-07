@@ -8,6 +8,28 @@ everything *else* — judgement, traps, and method that I'd otherwise take
 with me. It is long on purpose. Read the state documents first; read this
 before doing anything hard.
 
+## STATE AT HANDOVER (final update, 2026-07-07)
+
+Everything is committed and pushed to `master`; the gate is green
+(742 tests + smoke); nothing is half-done. The frontier:
+
+- **Waiting on James** (in order): his audit of the six AIS session
+  reports in `/home/codex/doxabase-reports/` (findings become distiller
+  batch 2, run per `docs/journal/distiller-pass-1.md`'s template); the
+  `rc:citesClaim` decision (§6); report shareability sign-off (all
+  reports are local-only pending his review); the wave-22 schema
+  end-state signature in waves.md if still unsigned.
+- **Open distiller-batch-2 ledger** beyond his audit: M-method upgrade
+  gaps (session-4 trial record), vocabulary-v2 couldn't-say evidence
+  (session 5 + 6 trial records — Voyage class leads), review-reason
+  wording items already resolved; check trial records' product-findings
+  sections for anything marked unfixed.
+- **His pipeline reminders** (memory `james-followups`): CET timestamp
+  bug, missing day 2024-08-26, source CSVs for the freeze question,
+  index-metric precompute ideas. Surface when he touches ais-noaa-fetch.
+- The study capsule (`/home/codex/ais-study/capsule.sqlite`) validates
+  clean, no orphaned staged rows; its venv wheel is current.
+
 ---
 
 ## 1. The one lesson above all others

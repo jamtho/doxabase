@@ -4,9 +4,9 @@
 request. **Audience**: whichever agent continues this work. James plans
 Opus-4.8-max / GPT-5.5-xhigh-class implementers, so assume capability —
 but the judgement calls are still written out so nothing rests on
-re-deriving them. James wants fairly regular pushes to
-`origin/codex/distillation-program` so he can follow, and welcomes longer
-commit-message bodies.
+re-deriving them. James wants fairly regular pushes (all work is on `master` since the
+2026-07-05 merge) so he can follow, and welcomes longer commit-message
+bodies.
 
 ## SEE ALSO: `fable-parting-notes-2026-07-06.md`
 
@@ -186,7 +186,8 @@ Permanent Loop Rules are in `AGENTS.md`; progress log is
   agent, and treat "how much does agent quality mask product friction?" as
   a question the study should answer, not noise.
 - **Commits**: authored as James, rationale-focused subject+body, no AI
-  attribution, on `codex/distillation-program`. Do not push without James.
+  attribution, on `master`. Push every green wave — James asked for
+  regular pushes so he can follow along.
 - **The original core.py** (pre-split) is recoverable from git history at
   `d9cb165^`; the split was AST-generated, methods verbatim.
 - `.doxybase.sqlite` (old spelling) at repo root is an old local capsule,
