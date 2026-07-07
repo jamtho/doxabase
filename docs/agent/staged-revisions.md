@@ -19,9 +19,10 @@ the kinds that have one (`map_assertion`, `profile_map_updates`,
 `systematisation` rerun, `query_evidence_overlay`) — same response shape,
 nothing written. The `mcp_tools` doc lists each kind's spec fields.
 
-For `kind="graph"`: additions/removals are Turtle payloads, each targeting
-exactly one mutable graph role other than `history` (staged metadata itself
-lands in `history`; use `record_graph_revision` for durable history notes).
+For `kind="graph"`: additions/removals are lists of patch dicts, each
+`{"graph": "<role>", "content": "<Turtle>"}`, targeting exactly one mutable
+graph role other than `history` (staged metadata itself lands in `history`;
+use `record_graph_revision` for durable history notes).
 The helper parses the RDF, rejects empty or malformed payloads, previews the
 patch in memory, runs SHACL over the preview scope, and records the staged
 row. Set `stance` to describe the thinking: `rc:ExploratoryHunch`,

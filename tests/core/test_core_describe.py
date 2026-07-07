@@ -1036,3 +1036,19 @@ def test_search_rejects_invalid_queries(tmp_path: Path) -> None:
         db.search("   ")
     with pytest.raises(DoxaBaseError, match="searchable token"):
         db.search("...")
+
+
+def test_list_entities_rejects_unregistered_curie_type(tmp_path: Path) -> None:
+    """An unexpanded CURIE type filter can never match stored full-IRI
+    types; silent [] misled an agent querying a project vocabulary
+    (AIS session 6). Full IRIs must keep working."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    with pytest.raises(DoxaBaseError, match="not a registered prefix"):
+        db.list_entities(type="aisv:AisIdentity", graph="map")
+
+    result = db.list_entities(
+        type="https://richcanopy.org/ns/rc#Table", graph="map", limit=20
+    )
+    assert result.entities

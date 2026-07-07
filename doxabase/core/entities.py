@@ -32,6 +32,22 @@ class EntitiesMixin:
 
         type_filter = ""
         if type:
+            expanded_type = self.expand_iri(type)
+            if (
+                expanded_type == type
+                and "://" not in type
+                and not type.startswith("urn:")
+                and ":" in type
+            ):
+                # Stored rdf:type objects are always full IRIs, so an
+                # unexpanded CURIE can never match; silence here cost an
+                # agent a real vocabulary lookup (AIS session 6).
+                prefix = type.split(":", 1)[0]
+                raise DoxaBaseError(
+                    f"type '{type}' uses prefix '{prefix}', which is not a "
+                    f"registered prefix ({sorted(PREFIXES)}); pass the full "
+                    "IRI for project-namespace types."
+                )
             type_filter = """
                 AND EXISTS (
                     SELECT 1
@@ -42,7 +58,7 @@ class EntitiesMixin:
                       AND qt.object = ?
                 )
             """
-            params.extend([str(RDF.type), self.expand_iri(type)])
+            params.extend([str(RDF.type), expanded_type])
 
         text_filter = ""
         if text:

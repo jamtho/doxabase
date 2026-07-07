@@ -526,3 +526,15 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   undocumented; project-namespace CURIE prefixes not registered for
   list_entities type expansion (aisv: returns [] silently).
 - Gate green: 741 passed (+1 regression) + smoke; all budgets green.
+
+## Wave 28 — 2026-07-07 — Session-6 ledger same-day pair
+
+- list_entities now rejects unregistered-prefix CURIE type filters with a
+  targeted error naming the known prefixes (stored rdf:type objects are
+  always full IRIs, so such a filter can never match; session 6 got a
+  silent [] for aisv:AisIdentity). Full-IRI filters unchanged;
+  regression test added.
+- staged-revisions doc now states the graph-patch dict shape
+  ({"graph": ..., "content": ...}) instead of "Turtle payloads" —
+  session 6 had to infer it from a shorthand plus a stored patch.
+- Gate green: 742 passed (+1) + smoke; all budgets green.
