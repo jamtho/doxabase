@@ -206,6 +206,15 @@ know.
   It also exposed the review-decision minting bug (fixed same day,
   `e38a2e2`). The couldn't-say list in its trial record is the v2
   vocabulary roadmap (trade lanes, voyages, Place-as-resource).
+- Session 6 (blind vocabulary-transfer probe, 2026-07-07): a cold weak
+  model, never told aisv: existed, found it via plain orientation, used
+  it with the intended restraint (Emitter only for the segregated
+  occupant), and inherited the seeAlso convention from session 5's
+  failed/repaired revisions in the history graph. The vocabulary
+  transfers; its couldn't-say additions are in the trial record. Two
+  same-day bug fixes came out of sessions 5–6: review-decision IRI
+  minting (e38a2e2) and review-resolved rows leaving the post-apply
+  recheck (aab0910).
 - The first **distiller pass** (doc 10 §1) LANDED 2026-07-06
   (`3d50141`; report and template: `docs/journal/distiller-pass-1.md`).
   Six items, one wire field subtracted, zero added; the report's
