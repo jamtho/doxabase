@@ -1052,3 +1052,38 @@ def test_list_entities_rejects_unregistered_curie_type(tmp_path: Path) -> None:
         type="https://richcanopy.org/ns/rc#Table", graph="map", limit=20
     )
     assert result.entities
+
+
+def test_observed_by_prose_with_colon_stays_literal(tmp_path: Path) -> None:
+    """A colon inside prose ("expert:james (round 2)") must not coerce the
+    value to a broken URIRef; whitespace disqualifies a string from being
+    an IRI (AIS expert-channel curation, 2026-07-07)."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    record = db.record_observation(
+        summary="Expert testimony with a colon-bearing attribution.",
+        observed_by="expert:james (conversation, round 2)",
+        evidence_summary="Digest file.",
+        evidence_sources=["notes/expert-round-2.md"],
+    )
+    context = db.describe_resource(record.observation_iri, graph="observations")
+    observed_by = next(
+        t
+        for t in context.outgoing
+        if t.predicate.endswith("observedBy")
+    )
+    assert observed_by.object_kind == "literal"
+    assert db.validate_graph(scope="all").conforms is True
+
+    iri_record = db.record_observation(
+        summary="Observer recorded as a real IRI stays a resource.",
+        observed_by="https://example.test/agent/analyst-1",
+        evidence_summary="Digest file.",
+        evidence_sources=["notes/expert-round-2.md"],
+    )
+    context = db.describe_resource(
+        iri_record.observation_iri, graph="observations"
+    )
+    observed_by = next(
+        t for t in context.outgoing if t.predicate.endswith("observedBy")
+    )
+    assert observed_by.object_kind == "uri"

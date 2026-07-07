@@ -2102,6 +2102,12 @@ class EntitiesMixin:
             iri,
         ) or self._local_name(iri)
     def _resource_or_literal(self, value: str) -> Identifier:
+        # Whitespace can never appear in a valid IRI; without this guard a
+        # colon-containing prose value ("expert:james (round 2)") became a
+        # broken URIRef that only failed at SHACL time (AIS expert-channel
+        # curation, 2026-07-07).
+        if any(ch.isspace() for ch in value):
+            return Literal(value)
         expanded = self.expand_iri(value)
         if "://" in expanded or expanded.startswith("urn:") or ":" in value:
             return URIRef(expanded)

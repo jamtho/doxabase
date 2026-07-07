@@ -538,3 +538,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   ({"graph": ..., "content": ...}) instead of "Turtle payloads" —
   session 6 had to infer it from a shorthand plus a stored patch.
 - Gate green: 742 passed (+1) + smoke; all budgets green.
+
+## Wave 29 — 2026-07-07 — Whitespace prose stops becoming broken URIs
+
+- Expert-channel round 2 curation hit a stacked silent-acceptance chain:
+  FastMCP dropped unknown top-level args (source_kind/path/section) →
+  evidence minted sourceless → _resource_or_literal coerced a
+  colon-bearing prose observed_by ("expert:james (round 2)") into an
+  invalid URIRef → all four failures surfaced only at validate_graph.
+- Fixed here: _resource_or_literal treats any whitespace-bearing value
+  as a literal (whitespace can never appear in a valid IRI); regression
+  test covers prose-with-colon → literal and real IRI → resource.
+- Distiller-batch-2 ledger: FastMCP unknown-argument swallowing (no SDK
+  strict switch; needs a wrapper-level check across all 25 tools) and
+  write-time evidence-source enforcement on the plain observation path
+  (159 summary-only test sites to reconcile; needs a shapes-semantics
+  read). Study capsule repaired via replace_graph_triples; conforms.
+- Gate green: 743 passed (+1) + smoke; all budgets green.
