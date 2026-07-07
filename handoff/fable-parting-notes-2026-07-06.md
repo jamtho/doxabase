@@ -8,10 +8,17 @@ everything *else* — judgement, traps, and method that I'd otherwise take
 with me. It is long on purpose. Read the state documents first; read this
 before doing anything hard.
 
-## STATE AT HANDOVER (final update, 2026-07-07)
+## STATE AT HANDOVER (updated 2026-07-07 night)
 
-Everything is committed and pushed to `master`; the gate is green
-(742 tests + smoke); nothing is half-done. The frontier:
+**Fable access extended ~5 days (to ~2026-07-12)**, so this is a living
+frontier again, not a last word. James began his review 2026-07-07
+night: his VOCAB-NOTE feedback = **expert round 2**, digested in
+`/home/codex/ais-study/expert-feedback-round-2.md` and recorded as four
+capsule observations; it opens the vocabulary-v2 ledger (layer-1 facts
+vs layer-2 inferences, naming humility for CargoOperation/OperationalTie,
+indexical assessment windows, the RDF-vs-parquet boundary). Everything
+is committed and pushed to `master`; the gate is green; nothing is
+half-done. The frontier:
 
 - **Waiting on James** (in order): his audit of the six AIS session
   reports in `/home/codex/doxabase-reports/` (findings become distiller
