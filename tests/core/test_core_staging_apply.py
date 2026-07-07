@@ -2352,3 +2352,55 @@ def test_review_decision_refuses_existing_resolution_revision_iri(
     assert record.resolution_revision_iri == (
         "https://example.test/project#resolution-1"
     )
+
+
+def test_post_apply_recheck_skips_review_resolved_siblings(
+    tmp_path: Path,
+) -> None:
+    """A sibling closed by a review decision is no longer actionable staged
+    work; the post-apply recheck must not flag it (AIS session 6: a
+    superseded row surfaced as a stale sibling while
+    plan_staged_revision_recovery correctly reported zero current work)."""
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    closed = db.stage_graph_revision(
+        summary="Stage messages dataset",
+        rationale="This row will be closed superseded before the apply.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_staged_revision_review_decision(
+        closed.revision_iri,
+        decision="superseded",
+        rationale="A repaired alternative replaces this proposal.",
+        allow_mutation_target=True,
+    )
+    sibling = db.stage_graph_revision(
+        summary="Stage shipments dataset",
+        rationale="Applying this row must not flag the closed sibling.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Shipments a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    applied = db.apply_staged_revision(sibling.revision_iri)
+
+    assert closed.revision_iri not in applied.post_apply_recheck_revision_iris
+    assert applied.post_apply_recheck_revisions == []
+    assert applied.warnings == []

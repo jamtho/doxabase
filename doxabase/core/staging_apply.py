@@ -803,6 +803,19 @@ class StagingApplyMixin:
                 is not None
             ):
                 continue
+            # Rows closed by a review decision (superseded/discarded/...)
+            # are no longer actionable staged work; flagging them post-apply
+            # contradicts plan_staged_revision_recovery, which already
+            # excludes them (observed misleading an agent, AIS session 6).
+            if (
+                self._first_subject(
+                    data_graphs,
+                    "rc:resolvesStagedRevision",
+                    revision_iri,
+                )
+                is not None
+            ):
+                continue
             if (
                 self._current_restage_successor_iri(
                     revision_iri,

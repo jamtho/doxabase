@@ -510,3 +510,19 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   wording, analysis_view_bundle = bulk write, record_pattern open-world note,
   bridge payload-file rule. History-repair design question → doc 04 backlog.
 - Gate green: 739 passed (+3 regression) + smoke; all budgets green.
+
+## Wave 27 — 2026-07-07 — Session 6 lands; review-resolved siblings leave the recheck
+
+- AIS session 6 (blind vocabulary-transfer probe) graded and recorded:
+  docs/journal/trials/2026-07-ais-session-6.md. The aisv: vocabulary
+  transferred to a cold weak model via plain orientation; the failed/
+  repaired session-5 revisions taught it the seeAlso convention from
+  history alone.
+- Fix: _post_apply_recheck_revisions now skips siblings closed by a
+  review decision (rc:resolvesStagedRevision), matching what
+  plan_staged_revision_recovery already does; regression test added
+  (session 6 saw a superseded row flagged as a stale sibling).
+- Distiller-2 ledger additions: stage_revision graph-patch dict shape
+  undocumented; project-namespace CURIE prefixes not registered for
+  list_entities type expansion (aisv: returns [] silently).
+- Gate green: 741 passed (+1 regression) + smoke; all budgets green.
