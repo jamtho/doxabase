@@ -11,13 +11,22 @@ before doing anything hard.
 ## STATE AT HANDOVER (updated 2026-07-07 night)
 
 **Fable access extended ~5 days (to ~2026-07-12)**, so this is a living
-frontier again, not a last word. James began his review 2026-07-07
-night: his VOCAB-NOTE feedback = **expert round 2**, digested in
-`/home/codex/ais-study/expert-feedback-round-2.md` and recorded as four
-capsule observations; it opens the vocabulary-v2 ledger (layer-1 facts
-vs layer-2 inferences, naming humility for CargoOperation/OperationalTie,
-indexical assessment windows, the RDF-vs-parquet boundary). Everything
-is committed and pushed to `master`; the gate is green; nothing is
+frontier again, not a last word. James's review is running as an active
+conversation: **expert round 2** (VOCAB-NOTE feedback + four addenda) is
+digested in `/home/codex/ais-study/expert-feedback-round-2.md` and
+recorded as nine capsule observations. Its yields so far: the
+vocabulary-v2 ledger (layer-1 facts vs layer-2 inferences, naming
+humility for CargoOperation/OperationalTie, indexical assessment
+windows, candidate/declared identity split with non-AIS anchors as the
+declaration threshold, the state-vs-ephemera architecture: populations
+in frames, methods+exemplars in graph); tradecraft (gear beacons
+broadcasting battery in COG, fine-grained histogram-shape study, SOG
+bimodality for data-derived thresholds); and two commissioned sessions —
+7 (M7/M8 track context, layering confirmed quantitatively) and 8 (M9
+shuttle census: 820 shuttles, 17 stopped = the economic-signal
+follow-up, session-9 candidate). Foursquare open places is the
+candidate reference dataset James may load to S3. Everything is
+committed and pushed to `master`; the gate is green; nothing is
 half-done. The frontier:
 
 - **Waiting on James** (in order): his audit of the six AIS session
