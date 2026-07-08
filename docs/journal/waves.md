@@ -597,3 +597,19 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Agent self-reported reading JOURNAL-8.md against the brief, assessed
   impact, re-derived data independently — posture recorded as exemplary.
 - No repo code changes; study capsule conforms.
+
+## Wave 33 — 2026-07-08 — Session 10 lands: vocabulary v2
+
+- Vocabulary v2 recorded: docs/journal/trials/2026-07-ais-session-10.md.
+  Expert round 2 executed through staged revisions: layering
+  (DraftChangeEvent/readings with readingBasis), declaration threshold
+  (declaredHullRecord, zero instances by design), indexicality
+  (assessedAt/assessmentDataWindow), ephemera hooks (derivedFromRun,
+  representsDetectorRows). Four v1 terms superseded-retained; GearBeacon
+  correctly rejected at the evidence bar; VOCAB-NOTE-V2.md written for
+  James.
+- Batch-2 ledger: no dry-run planner for stage_revision kind="graph";
+  no first-class term-supersession channel (comment conventions doing
+  structural work, 2 sessions of evidence); search tokenization misses
+  hyphenated prose terms.
+- No repo code changes; study capsule conforms (ontology 226 triples).
