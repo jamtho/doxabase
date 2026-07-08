@@ -22,10 +22,13 @@ declaration threshold, the state-vs-ephemera architecture: populations
 in frames, methods+exemplars in graph); tradecraft (gear beacons
 broadcasting battery in COG, fine-grained histogram-shape study, SOG
 bimodality for data-derived thresholds); and two commissioned sessions —
-7 (M7/M8 track context, layering confirmed quantitatively) and 8 (M9
-shuttle census: 820 shuttles, 17 stopped = the economic-signal
-follow-up, session-9 candidate). Foursquare open places is the
-candidate reference dataset James may load to S3. Everything is
+7 (M7/M8 track context, layering confirmed quantitatively), 8 (M9
+shuttle census: 820 shuttles), and 9 (all 17 stopped shuttles verified
+vessel-side — the honest negative; M10 stop-verification checklist
+recorded; economic-indicator thesis calibrated, its real test needs the
+~18 further years of data). Foursquare open places is the candidate
+reference dataset James may load to S3 — pilot target: the flagged
+endpoints from sessions 8/9. Everything is
 committed and pushed to `master`; the gate is green; nothing is
 half-done. The frontier:
 
