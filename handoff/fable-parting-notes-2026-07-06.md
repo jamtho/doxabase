@@ -26,9 +26,16 @@ bimodality for data-derived thresholds); and two commissioned sessions —
 shuttle census: 820 shuttles), and 9 (all 17 stopped shuttles verified
 vessel-side — the honest negative; M10 stop-verification checklist
 recorded; economic-indicator thesis calibrated, its real test needs the
-~18 further years of data). Foursquare open places is the candidate
-reference dataset James may load to S3 — pilot target: the flagged
-endpoints from sessions 8/9. Everything is
+~18 further years of data). Session 10 executed
+**vocabulary v2** on the recorded round-2 directives (layer-1 facts +
+readings with readingBasis, declaredHullRecord threshold with zero
+instances by design, assessedAt/assessmentDataWindow, derivedFromRun/
+representsDetectorRows ephemera hooks; four v1 terms
+superseded-retained; VOCAB-NOTE-V2.md awaits James). Batch-2 ledger
+grew two structural items: no dry-run planner for graph-kind staged
+revisions, and no first-class term-supersession channel. Foursquare
+open places is the candidate reference dataset James may load to S3 —
+pilot target: the flagged endpoints from sessions 8/9. Everything is
 committed and pushed to `master`; the gate is green; nothing is
 half-done. The frontier:
 
