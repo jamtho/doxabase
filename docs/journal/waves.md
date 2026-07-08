@@ -583,3 +583,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   (file verified clean on landing; same pattern as session 2).
   Methodology fix: brief template gains a harness-notices line.
 - No repo code changes; study capsule conforms.
+
+## Wave 32 — 2026-07-08 — Session 9 lands: the honest negative
+
+- Stopped-shuttle investigation recorded: docs/journal/trials/
+  2026-07-ais-session-9.md. All 17 stops verified vessel-side (4 left
+  region, 6 re-tasked, 6 lay-ups, 1 government); the economic-signal
+  shortlist is empty and the report says so plainly — endpoints stayed
+  busy; the pipeline proved itself by not manufacturing the signal.
+- M10 stop-verification checklist recorded; new terminal signature
+  (accelerating-offshore-through-strait = departure); third m2-gray-zone
+  failure mode documented. Zero broadcast queries all session.
+- Agent self-reported reading JOURNAL-8.md against the brief, assessed
+  impact, re-derived data independently — posture recorded as exemplary.
+- No repo code changes; study capsule conforms.
