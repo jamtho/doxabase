@@ -569,3 +569,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   doc_id returned the index silently, 2 wasted calls) — batch-2 ledger
   item now has costs measured from both curator and trial-agent sides.
 - No repo code changes this wave; study capsule conforms (36 patterns).
+
+## Wave 31 — 2026-07-08 — Session 8 lands: the shuttle census
+
+- Shuttle-survey session recorded: docs/journal/trials/
+  2026-07-ais-session-8.md. M9 detector on M7's dwell layer; 820 strict
+  shuttles from 111k dwelling MMSIs, class-split; 3 exemplar stories
+  promoted; population stayed in frames per the state-vs-ephemera
+  architecture from expert round 2; 17 stopped shuttles flagged as the
+  economic-signal follow-up.
+- Repeated trial phenomenon documented: agent misattributed harness
+  system notices to the brief file and reported an "injection test"
+  (file verified clean on landing; same pattern as session 2).
+  Methodology fix: brief template gains a harness-notices line.
+- No repo code changes; study capsule conforms.
