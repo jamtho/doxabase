@@ -613,3 +613,16 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   structural work, 2 sessions of evidence); search tokenization misses
   hyphenated prose terms.
 - No repo code changes; study capsule conforms (ontology 226 triples).
+
+## Wave 34 — 2026-07-09 — Session 11 lands: anchor vs berth, answered
+
+- First external research question answered: docs/journal/trials/
+  2026-07-ais-session-11.md. M11 physical berth-vs-anchor discriminator
+  recorded (swing geometry + heading concentration + crowd evidence);
+  >30x radius margin on the same-vessel showcase; NavStatus audited
+  (~97% reliable at berth for large ships, location-dependent at
+  anchor); mooring buoys, Class B silence, and engine-holding loiter
+  documented as the honest failure modes.
+- Study lesson: inherited story incidentals need verification —
+  date-stamp specifics or mark descriptions generic.
+- No repo code changes; study capsule conforms (45 patterns, M1-M11).
