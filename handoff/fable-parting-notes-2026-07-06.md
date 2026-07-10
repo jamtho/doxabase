@@ -60,6 +60,11 @@ half-done. The frontier:
   index-metric precompute ideas. Surface when he touches ais-noaa-fetch.
 - The study capsule (`/home/codex/ais-study/capsule.sqlite`) validates
   clean, no orphaned staged rows; its venv wheel is current.
+- The readable corpora are now IN THE REPO (2026-07-10, James-reviewed
+  shareability): AIS study briefs/journals/vocab notes/expert digests +
+  all rendered reports at `docs/journal/ais-study/`; the Enron handoff
+  corpus at `docs/journal/enron-study/`. Living capsules and regenerable
+  artifacts stay outside git at their original paths.
 
 ---
 
