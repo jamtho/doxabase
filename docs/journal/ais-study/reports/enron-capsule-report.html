@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DoxaBase capsule report — enron-emails</title>
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --hairline: #e1e0d9; --accent: #2a78d6;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --hairline: #2c2c2a; --accent: #3987e5;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+h1 { font-size: 22px; margin: 8px 0 2px; }
+h2 { font-size: 16px; margin: 36px 0 10px; border-bottom: 1px solid var(--hairline);
+     padding-bottom: 6px; }
+h3 { font-size: 14px; margin: 18px 0 6px; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.banner { background: var(--surface); border: 1px solid var(--warning);
+          border-radius: 8px; padding: 10px 14px; margin: 16px 0; font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+         gap: 10px; margin: 14px 0; }
+.tile { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; padding: 10px 12px; }
+.tile .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.tile .l { color: var(--ink-2); font-size: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px;
+        background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; overflow: hidden; }
+th { text-align: left; color: var(--ink-2); font-weight: 600; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--hairline);
+         vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.wrap { overflow-x: auto; }
+.card { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+.iri { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px;
+       word-break: break-all; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 9px;
+         font-size: 11.5px; font-weight: 600; border: 1.5px solid; }
+.badge.minor    { border-color: var(--good);    color: var(--good); }
+.badge.moderate { border-color: var(--serious); color: var(--serious); }
+.badge.severe   { border-color: var(--critical); color: var(--critical); }
+.badge.neutral  { border-color: var(--muted);   color: var(--ink-2); }
+.gate { border-left: 3px solid var(--critical); padding: 6px 12px; margin: 8px 0;
+        background: var(--surface); border-radius: 0 8px 8px 0; font-size: 13px; }
+.gate.none { border-left-color: var(--warning); }
+.ok { color: var(--good); font-weight: 600; }
+.pattern-links { color: var(--ink-2); font-size: 12.5px; margin: 4px 0 0 0; }
+footer { margin-top: 44px; color: var(--muted); font-size: 12px;
+         border-top: 1px solid var(--hairline); padding-top: 10px; }
+details > summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+</style></head>
+<body><main>
+<h1>Capsule report — enron-emails</h1>
+<div class="sub">generated 2026-07-05 22:39 UTC · SHACL: <span class="ok">conforms</span> · sensitive scan: scanner-clean</div>
+<div class="banner">&#9888; <strong>Local-only pending shareability review.</strong>
+This report reproduces graph literals faithfully. A clean sensitive-literal scan
+is a review prompt, not export approval — review before sharing.</div>
+
+<h2>At a glance</h2>
+<div class="tiles"><div class="tile"><div class="n">4</div><div class="l">datasets</div></div><div class="tile"><div class="n">60</div><div class="l">columns</div></div><div class="tile"><div class="n">112</div><div class="l">observations</div></div><div class="tile"><div class="n">22</div><div class="l">claims</div></div><div class="tile"><div class="n">19</div><div class="l">patterns</div></div><div class="tile"><div class="n">58</div><div class="l">evidence</div></div><div class="tile"><div class="n">4</div><div class="l">revisions</div></div><div class="tile"><div class="n">0</div><div class="l">analysis packets</div></div></div>
+<div class="sub">graphs: base_ontology 1424 · base_shapes 1407 · evidence 485 · history 322 · map 787 · observations 3786 · ontology 117 · patterns 345</div>
+
+<h2>Gates</h2>
+<div class="ok">No gates — nothing is blocked.</div>
+
+<h2>Queues</h2>
+<div class="wrap"><table><tr><th>queue</th><th style="width:70px">count</th><th>example</th></tr><tr><td>profile review</td><td>4</td><td class='iri'>https://example.test/enron-emails#eml_attachments</td></tr><tr><td>query plan handoff</td><td>4</td><td class='iri'>https://example.test/enron-emails#eml_attachments</td></tr></table></div>
+
+<h2>Datasets (4)</h2>
+<div class="card">
+<h3>EML attachments <span class='badge neutral'>table</span></h3>
+<div class="iri">https://example.test/enron-emails#eml_attachments</div>
+<div class="sub">storage: S3-compatible object storage s3://enron-emails/ · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>5 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>custodian</td><td>VARCHAR</td><td>enron:Custodian</td></tr><tr><td>filename</td><td>VARCHAR</td><td>enron:AttachmentFileName</td></tr><tr><td>mime_type</td><td>VARCHAR</td><td>enron:MimeType</td></tr><tr><td>parent_doc_id</td><td>VARCHAR</td><td>enron:DocumentId</td></tr><tr><td>size</td><td>UBIGINT</td><td>enron:FileSizeBytes</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Attachment extensions appear in mixed case and include empty strings. For example, EML has both doc/DOC and pdf/PDF buckets, and XML has 25,413 empty file_extension rows.<div class='sub'>Impact: Normalize extension case and handle blank extensions before file-type analysis.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both EML and XML attachment-row counts reach 260 attachments for one message. The p99 is 4 for EML and 5 for XML, p999 is 33 for both, and 4,525 messages have 10 or more attachments.<div class='sub'>Impact: Attachment analyses should use robust summaries and inspect high-attachment messages separately.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The EML attachment table has parent_doc_id, custodian, filename, mime_type, and size, but no separate attachment doc_id or native hash column in the observed schema.<div class='sub'>Impact: Use XML attachments when attachment-level identity, hashes, or native paths are needed.</div></td></tr></table></div>
+</div><div class="card">
+<h3>EML messages <span class='badge neutral'>table</span></h3>
+<div class="iri">https://example.test/enron-emails#eml_messages</div>
+<div class="sub">storage: S3-compatible object storage s3://enron-emails/ · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>25 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>attachment_count</td><td>INTEGER</td><td>enron:AttachmentCount</td></tr><tr><td>body</td><td>TEXT</td><td>enron:EmailBodyText</td></tr><tr><td>body_top</td><td>TEXT</td><td>enron:TopLevelEmailBodyText</td></tr><tr><td>cc_addrs</td><td>VARCHAR</td><td>enron:EmailAddressListString</td></tr><tr><td>cc_raw</td><td>VARCHAR</td><td>enron:RecipientListString</td></tr><tr><td>custodian</td><td>VARCHAR</td><td>enron:Custodian</td></tr><tr><td>date</td><td>TIMESTAMP WITH TIME ZONE</td><td>enron:MessageTimestamp</td></tr><tr><td>doc_id</td><td>VARCHAR</td><td>enron:DocumentId</td></tr><tr><td>folder</td><td>VARCHAR</td><td>enron:MailboxFolder</td></tr><tr><td>from_email</td><td>VARCHAR</td><td>enron:EmailAddress</td></tr><tr><td>from_name</td><td>VARCHAR</td><td>enron:PersonDisplayName</td></tr><tr><td>from_raw</td><td>VARCHAR</td><td>enron:SenderRawString</td></tr><tr><td>has_attachments</td><td>BOOLEAN</td><td>enron:HasAttachmentFlag</td></tr><tr><td>is_forward</td><td>BOOLEAN</td><td>enron:MessageForwardFlag</td></tr><tr><td>is_reply</td><td>BOOLEAN</td><td>enron:MessageReplyFlag</td></tr><tr><td>message_id</td><td>VARCHAR</td><td>enron:MessageId</td></tr><tr><td>native_path</td><td>VARCHAR</td><td>enron:NativeObjectPath</td></tr><tr><td>reply_depth</td><td>INTEGER</td><td>enron:ReplyDepth</td></tr><tr><td>source_file</td><td>VARCHAR</td><td>enron:SourceFileName</td></tr><tr><td>subject</td><td>VARCHAR</td><td>enron:EmailSubject</td></tr><tr><td>subject_clean</td><td>VARCHAR</td><td>enron:CleanEmailSubject</td></tr><tr><td>to_addrs</td><td>VARCHAR</td><td>enron:EmailAddressListString</td></tr><tr><td>to_raw</td><td>VARCHAR</td><td>enron:RecipientListString</td></tr><tr><td>x_sdoc</td><td>VARCHAR</td><td>enron:SourceDocumentCode</td></tr><tr><td>x_zlid</td><td>VARCHAR</td><td>enron:SourceLoadIdentifier</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Regex extraction finds useful domains but misses many populated sender/recipient strings. For example, EML to_addrs is populated on 652,110 rows but regex email tokens appear in only 215,775 rows; XML to is populated on 746,550 rows with regex tokens in 311,860 rows. Some fields contain Exchange/X.500-style markers.<div class='sub'>Impact: Network analysis needs a parser strategy and coverage audit, not raw string grouping alone.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Recommended logical populations include plausible-date EML messages (1,210,548 rows), plausible-date XML messages (1,203,416 rows), EML/XML overlap (1,227,255 rows), EML-only blank-source subset (7,132 rows), body-text rows (739,872), body_top-text rows (695,225), EML regex sender rows (97,929), and XML regex sender rows (198,050).<div class='sub'>Impact: Analysts should name and preserve the population definition behind every count, model, network, or NLP run.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both EML and XML attachment-row counts reach 260 attachments for one message. The p99 is 4 for EML and 5 for XML, p999 is 33 for both, and 4,525 messages have 10 or more attachments.<div class='sub'>Impact: Attachment analyses should use robust summaries and inspect high-attachment messages separately.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML body_top equals body for 1,025,481 rows and is shorter than body for 208,906 rows. It is useful for top-level-message analysis but should be treated as derived from body.<div class='sub'>Impact: Choose body or body_top deliberately for NLP and quote/context retrieval tasks.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Regex domain extraction yields useful domain-level matrices, but many rows have no regex sender or recipient domain. EML has 1,001,806 rows in the none-&gt;none sender/recipient class bucket; XML has 895,661. XML has stronger regex sender coverage than EML because XML from_ often embeds Enron addresses.<div class='sub'>Impact: Domain network analysis should report extractability and treat none-class rows as missing parser coverage, not absence of communication.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Message date fields contain outliers outside the usual Enron-era analysis window. EML has 23,463 rows before 1997, 115 rows after 2004, and 261 null dates; XML has 23,492 rows before 1997 and 347 rows after 2004, with extreme parsed years from 1316 to 9719.<div class='sub'>Impact: Time-series analysis should apply an explicit date window or outlier policy.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Duplicate EML message_id groups cross custodians in 7,490 groups and folders in 6,823 groups. Duplicate non-empty body groups cross custodians in 9,917 groups and folders in 121,335 groups. XML attachment native_hash duplicate groups cross custodians in 11,771 groups.<div class='sub'>Impact: Deduplication should be corpus-wide and should preserve custodian/folder provenance instead of deduplicating inside isolated slices only.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The 7,132 EML message rows absent from XML all have blank folder and blank source_file. They span 31 custodians, have dates from 2000-03-29 through 2002-01-07, and include 17 messages flagged with one attachment each.<div class='sub'>Impact: Treat EML-only rows as a special coverage subset before comparing EML and XML analyses.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Several EML string columns are physically non-null but contain empty strings: to_addrs 582,277 rows, cc_addrs 1,062,068 rows, subject 144,092 rows, body 494,515 rows, body_top 539,162 rows, and folder 114,683 rows.<div class='sub'>Impact: Normalize empty strings to missing values before completeness, recipient, subject, or body analyses.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML doc_id is unique and non-null, but message_id has 25,462 duplicate groups, 64,332 rows in duplicate groups, and up to 73 rows sharing one message_id.<div class='sub'>Impact: Use doc_id as the row key; use message_id only for conversation or duplicate analysis.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>A practical message-like population excludes calendar, contacts, and meetings after date filtering. That gives 980,561 EML rows, 714,325 EML rows with body text, 670,649 EML rows with body_top text, and 973,356 XML rows.<div class='sub'>Impact: NLP or network analyses over ordinary messages should cite whether these families were excluded.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The largest plausible-date month is 2002-11 with 134,027 EML rows and 134,027 XML rows, but the EML folder-family/month profile attributes 126,208 of those EML rows to calendar. Naive monthly message-volume plots will overstate ordinary communications in that month.<div class='sub'>Impact: Monthly time-series analysis should stratify by folder/location family and consider message-like exclusions.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>XML messages are a strict subset of EML by doc_id in the observed files. All 1,227,255 XML doc_ids appear in EML, while 7,132 EML rows, all with blank folder, do not appear in XML.<div class='sub'>Impact: Do not treat EML/XML row counts as interchangeable without choosing a representation.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML from_email is populated for only 98,103 of 1,234,387 rows, while XML from_ uses display-name style strings and is populated for 972,498 of 1,227,255 rows.<div class='sub'>Impact: Sender analytics need representation-specific parsing and should not simply join EML from_email to XML from_.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML x_sdoc and x_zlid each have 114,682 blank values, creating one large duplicate group. They are useful source metadata where populated but not universal keys.<div class='sub'>Impact: Use doc_id for identity and treat x_sdoc/x_zlid as optional source metadata.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML has 25,462 duplicate message_id groups, 121,584 duplicate non-empty subject_clean groups, 128,273 duplicate non-empty body groups, and 117,996 duplicate non-empty body_top groups. reply_depth ranges up to 56.<div class='sub'>Impact: Conversation or deduplication work should combine doc_id, message_id, subject_clean, reply_depth, folders, and text hashes.</div></td></tr></table></div>
+</div><div class="card">
+<h3>XML attachments <span class='badge neutral'>table</span></h3>
+<div class="iri">https://example.test/enron-emails#xml_attachments</div>
+<div class="sub">storage: S3-compatible object storage s3://enron-emails/ · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>12 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>custodian</td><td>VARCHAR</td><td>enron:Custodian</td></tr><tr><td>date_created</td><td>TIMESTAMP WITH TIME ZONE</td><td>enron:AttachmentTimestamp</td></tr><tr><td>date_modified</td><td>TIMESTAMP WITH TIME ZONE</td><td>enron:AttachmentTimestamp</td></tr><tr><td>doc_id</td><td>VARCHAR</td><td>enron:DocumentId</td></tr><tr><td>file_extension</td><td>VARCHAR</td><td>enron:AttachmentFileExtension</td></tr><tr><td>file_name</td><td>VARCHAR</td><td>enron:AttachmentFileName</td></tr><tr><td>file_size</td><td>UBIGINT</td><td>enron:FileSizeBytes</td></tr><tr><td>mime_type</td><td>VARCHAR</td><td>enron:MimeType</td></tr><tr><td>native_hash</td><td>VARCHAR</td><td>enron:NativeContentHash</td></tr><tr><td>native_path</td><td>VARCHAR</td><td>enron:NativeObjectPath</td></tr><tr><td>parent_doc_id</td><td>VARCHAR</td><td>enron:DocumentId</td></tr><tr><td>text_path</td><td>VARCHAR</td><td>enron:ExtractedTextPath</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Attachment extensions appear in mixed case and include empty strings. For example, EML has both doc/DOC and pdf/PDF buckets, and XML has 25,413 empty file_extension rows.<div class='sub'>Impact: Normalize extension case and handle blank extensions before file-type analysis.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>XML attachment native_hash has 67,685 duplicate groups covering 417,668 rows. The largest observed native_hash appears 1,063 times.<div class='sub'>Impact: Use XML native_hash for duplicate-content analysis, but expect many repeated attachments across custodians and messages.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both EML and XML attachment-row counts reach 260 attachments for one message. The p99 is 4 for EML and 5 for XML, p999 is 33 for both, and 4,525 messages have 10 or more attachments.<div class='sub'>Impact: Attachment analyses should use robust summaries and inspect high-attachment messages separately.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Duplicate EML message_id groups cross custodians in 7,490 groups and folders in 6,823 groups. Duplicate non-empty body groups cross custodians in 9,917 groups and folders in 121,335 groups. XML attachment native_hash duplicate groups cross custodians in 11,771 groups.<div class='sub'>Impact: Deduplication should be corpus-wide and should preserve custodian/folder provenance instead of deduplicating inside isolated slices only.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>XML has_attachments matches attachment-row presence, but attachment_count disagrees with counted xml_attachments rows for 3,128 messages; the maximum absolute delta is 109.<div class='sub'>Impact: For exact XML attachment counts, aggregate xml_attachments by parent_doc_id instead of trusting attachment_count alone.</div></td></tr></table></div>
+</div><div class="card">
+<h3>XML messages <span class='badge neutral'>table</span></h3>
+<div class="iri">https://example.test/enron-emails#xml_messages</div>
+<div class="sub">storage: S3-compatible object storage s3://enron-emails/ · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>18 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>attachment_count</td><td>INTEGER</td><td>enron:AttachmentCount</td></tr><tr><td>attachment_names</td><td>VARCHAR</td><td>enron:AttachmentNameListString</td></tr><tr><td>cc</td><td>VARCHAR</td><td>enron:RecipientListString</td></tr><tr><td>custodian</td><td>VARCHAR</td><td>enron:Custodian</td></tr><tr><td>custodian_raw</td><td>VARCHAR</td><td>enron:Custodian</td></tr><tr><td>date_sent</td><td>TIMESTAMP WITH TIME ZONE</td><td>enron:MessageTimestamp</td></tr><tr><td>doc_id</td><td>VARCHAR</td><td>enron:DocumentId</td></tr><tr><td>from_</td><td>VARCHAR</td><td>enron:SenderDisplayString</td></tr><tr><td>has_attachments</td><td>BOOLEAN</td><td>enron:HasAttachmentFlag</td></tr><tr><td>location_uri</td><td>VARCHAR</td><td>enron:MailboxLocationUri</td></tr><tr><td>native_file_size</td><td>INTEGER</td><td>enron:FileSizeBytes</td></tr><tr><td>native_hash</td><td>VARCHAR</td><td>enron:NativeContentHash</td></tr><tr><td>native_path</td><td>VARCHAR</td><td>enron:NativeObjectPath</td></tr><tr><td>subject</td><td>VARCHAR</td><td>enron:EmailSubject</td></tr><tr><td>text_path</td><td>VARCHAR</td><td>enron:ExtractedTextPath</td></tr><tr><td>to</td><td>VARCHAR</td><td>enron:RecipientListString</td></tr><tr><td>x_sdoc</td><td>VARCHAR</td><td>enron:SourceDocumentCode</td></tr><tr><td>x_zlid</td><td>VARCHAR</td><td>enron:SourceLoadIdentifier</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Regex extraction finds useful domains but misses many populated sender/recipient strings. For example, EML to_addrs is populated on 652,110 rows but regex email tokens appear in only 215,775 rows; XML to is populated on 746,550 rows with regex tokens in 311,860 rows. Some fields contain Exchange/X.500-style markers.<div class='sub'>Impact: Network analysis needs a parser strategy and coverage audit, not raw string grouping alone.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Recommended logical populations include plausible-date EML messages (1,210,548 rows), plausible-date XML messages (1,203,416 rows), EML/XML overlap (1,227,255 rows), EML-only blank-source subset (7,132 rows), body-text rows (739,872), body_top-text rows (695,225), EML regex sender rows (97,929), and XML regex sender rows (198,050).<div class='sub'>Impact: Analysts should name and preserve the population definition behind every count, model, network, or NLP run.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both EML and XML attachment-row counts reach 260 attachments for one message. The p99 is 4 for EML and 5 for XML, p999 is 33 for both, and 4,525 messages have 10 or more attachments.<div class='sub'>Impact: Attachment analyses should use robust summaries and inspect high-attachment messages separately.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Regex domain extraction yields useful domain-level matrices, but many rows have no regex sender or recipient domain. EML has 1,001,806 rows in the none-&gt;none sender/recipient class bucket; XML has 895,661. XML has stronger regex sender coverage than EML because XML from_ often embeds Enron addresses.<div class='sub'>Impact: Domain network analysis should report extractability and treat none-class rows as missing parser coverage, not absence of communication.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Message date fields contain outliers outside the usual Enron-era analysis window. EML has 23,463 rows before 1997, 115 rows after 2004, and 261 null dates; XML has 23,492 rows before 1997 and 347 rows after 2004, with extreme parsed years from 1316 to 9719.<div class='sub'>Impact: Time-series analysis should apply an explicit date window or outlier policy.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The 7,132 EML message rows absent from XML all have blank folder and blank source_file. They span 31 custodians, have dates from 2000-03-29 through 2002-01-07, and include 17 messages flagged with one attachment each.<div class='sub'>Impact: Treat EML-only rows as a special coverage subset before comparing EML and XML analyses.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>A practical message-like population excludes calendar, contacts, and meetings after date filtering. That gives 980,561 EML rows, 714,325 EML rows with body text, 670,649 EML rows with body_top text, and 973,356 XML rows.<div class='sub'>Impact: NLP or network analyses over ordinary messages should cite whether these families were excluded.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The largest plausible-date month is 2002-11 with 134,027 EML rows and 134,027 XML rows, but the EML folder-family/month profile attributes 126,208 of those EML rows to calendar. Naive monthly message-volume plots will overstate ordinary communications in that month.<div class='sub'>Impact: Monthly time-series analysis should stratify by folder/location family and consider message-like exclusions.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>XML messages are a strict subset of EML by doc_id in the observed files. All 1,227,255 XML doc_ids appear in EML, while 7,132 EML rows, all with blank folder, do not appear in XML.<div class='sub'>Impact: Do not treat EML/XML row counts as interchangeable without choosing a representation.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>EML from_email is populated for only 98,103 of 1,234,387 rows, while XML from_ uses display-name style strings and is populated for 972,498 of 1,227,255 rows.<div class='sub'>Impact: Sender analytics need representation-specific parsing and should not simply join EML from_email to XML from_.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>XML has_attachments matches attachment-row presence, but attachment_count disagrees with counted xml_attachments rows for 3,128 messages; the maximum absolute delta is 109.<div class='sub'>Impact: For exact XML attachment counts, aggregate xml_attachments by parent_doc_id instead of trusting attachment_count alone.</div></td></tr></table></div>
+</div>
+
+<h2>Patterns</h2>
+<div class="card"><h3>Basic cleaning choices materially affect downstream Enron analyses.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_analysis_hygiene_before_modeling</div>
+<div>Before modeling recipients, time series, attachment types, sender networks, or message text, normalize empty strings, date outliers, extension case, sender representations, and body/body_top selection.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 11 observation/claim(s)
+ · 6 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_attachment_extensions_case_empty, https://example.test/enron-emails#caveat_body_top_transformation, https://example.test/enron-emails#caveat_date_plausibility, https://example.test/enron-emails#caveat_empty_strings, https://example.test/enron-emails#caveat_sender_representation, https://example.test/enron-emails#caveat_xml_attachment_count_mismatch</div>
+</div><div class="card"><h3>Attachment analysis should use normalized extensions plus XML native hashes.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_attachment_analysis_prefers_xml_hashes</div>
+<div>EML and XML extension distributions are nearly parallel after normalization, but XML adds native_hash, native_path, and text_path fields needed for attachment identity and duplicate-content analysis.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_attachment_hash_duplicates</div>
+</div><div class="card"><h3>Custodian and folder/location family are primary analysis strata.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_custodian_folder_are_primary_strata</div>
+<div>Custodian and folder/location family strongly structure row counts, text readiness, attachment rates, and date quality. They should be first-class grouping variables in exploratory summaries.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 5 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_custodian_skew_and_body_coverage, https://example.test/enron-emails#caveat_folder_family_semantics</div>
+</div><div class="card"><h3>doc_id-first joins are the reliable starting point.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_doc_id_first_join_strategy</div>
+<div>Use doc_id for message identity and parent_doc_id-to-doc_id for attachment joins. Avoid using EML message_id, x_sdoc, or x_zlid as universal keys.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 4 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_message_id_not_key, https://example.test/enron-emails#caveat_source_codes_blank, https://example.test/enron-emails#relationship_eml_attachment_parent_doc_id_to_eml_doc_id, https://example.test/enron-emails#relationship_xml_attachment_parent_doc_id_to_xml_doc_id</div>
+</div><div class="card"><h3>The EML-only message gap is a coherent special subset.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_eml_only_subset_is_special_case</div>
+<div>The EML-only rows are not an arbitrary scatter: they all have blank source_file and folder, come from 31 custodians, and preserve only a small attachment footprint.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_eml_only_blank_source_subset</div>
+</div><div class="card"><h3>Deduplication should be global while preserving provenance.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_global_dedup_preserve_provenance</div>
+<div>Duplicate clusters cross custodians and folders often enough that local slice-by-slice deduplication can bias results. A safer path is corpus-wide clustering with custodian/folder provenance retained.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_attachment_heavy_tail, https://example.test/enron-emails#caveat_dedup_clusters_cross_context</div>
+</div><div class="card"><h3>Message-like views support NLP and communication-network workflows.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_message_like_views_support_nlp_and_networks</div>
+<div>Excluding calendar/contact/meeting families after the plausible-date filter creates a more appropriate denominator for ordinary message NLP and network analysis than the raw message tables.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_message_like_population</div>
+</div><div class="card"><h3>Named analysis views reduce ambiguity in downstream work.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_named_analysis_views_reduce_ambiguity</div>
+<div>Counts, models, and networks over this corpus should cite a named logical population, such as plausible-date EML, XML overlap, EML-only blank-source subset, body-text rows, or regex-sender rows.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_analysis_population_views</div>
+</div><div class="card"><h3>Network analysis requires address parsing and coverage reporting.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_network_analysis_requires_address_parsing_strategy</div>
+<div>Regex email extraction yields useful domain distributions, but populated XML and EML recipient fields often lack direct email tokens or contain Exchange-style names.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 8 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_address_regex_incomplete</div>
+</div><div class="card"><h3>Network analysis needs an extractability denominator.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_network_analysis_requires_extractability_denominator</div>
+<div>Domain matrices over this corpus are useful only when paired with sender and recipient regex coverage. The large none-class population should stay visible in network reports.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_communication_domain_coverage</div>
+</div><div class="card"><h3>EML and XML message tables are parallel representations with a subset relationship.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_parallel_message_representations</div>
+<div>EML is the broader message representation, XML is a strict doc_id subset with richer native-path/hash metadata and display-name sender fields. Analyses should choose the representation by task instead of assuming row-for-row interchangeability.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_parallel_representations, https://example.test/enron-emails#relationship_eml_xml_doc_id_shared_identifier</div>
+</div><div class="card"><h3>Cookbook queries provide a safe on-ramp for common analysis tasks.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_query_cookbook_as_onramp</div>
+<div>The generated cookbook routes analysts through table registration, representation choice, date hygiene, attachment joins, address-domain extraction, text-surface choice, threading, and attachment type analysis.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#storage_minio_s3_enron_emails</div>
+</div><div class="card"><h3>Temporal analysis must stratify calendar-heavy months.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_temporal_analysis_must_stratify_calendar</div>
+<div>Monthly row counts can be dominated by non-message folder families. November 2002 is the clearest example, where calendar rows account for nearly all of the top-month spike.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_message_like_population, https://example.test/enron-emails#caveat_monthly_calendar_spike</div>
+</div><div class="card"><h3>Message text surface choice is an analysis parameter.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_text_surface_choice_is_analysis_parameter</div>
+<div>body has better coverage and preserves quoted-history markers; body_top suppresses those markers but is blank more often and can remove context. The right field depends on the NLP task.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#ExtractTopLevelBodyText, https://example.test/enron-emails#caveat_text_surface_readiness</div>
+</div><div class="card"><h3>Threading and deduplication are multi-signal tasks.</h3>
+<div class="iri">https://example.test/enron-emails#pattern_threading_dedup_multi_signal</div>
+<div>message_id, subject_clean, reply_depth, body hashes, and body_top hashes each tell part of the story, but none is a reliable standalone conversation key.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#caveat_threading_and_deduplication</div>
+</div><div class="card"><h3>EML messages profile establishes full-scan table shape.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/2e328c66-c684-4d9d-80c1-889f43203030</div>
+<div>The profile for EML messages records row count, column count, null counts, distinct counts, physical types, and selected boolean distributions from one full scan.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 26 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#eml_messages</div>
+</div><div class="card"><h3>XML messages profile establishes full-scan table shape.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/3c7b7b18-a7e7-4b64-a057-8f0d64c01b4d</div>
+<div>The profile for XML messages records row count, column count, null counts, distinct counts, physical types, and selected boolean distributions from one full scan.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 19 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#xml_messages</div>
+</div><div class="card"><h3>XML attachments profile establishes full-scan table shape.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/98088596-a041-468b-9740-fa89cf780d51</div>
+<div>The profile for XML attachments records row count, column count, null counts, distinct counts, physical types, and selected boolean distributions from one full scan.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 13 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#xml_attachments</div>
+</div><div class="card"><h3>EML attachments profile establishes full-scan table shape.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/e0ce5151-66ec-41ff-8a7c-f09349fa0ca4</div>
+<div>The profile for EML attachments records row count, column count, null counts, distinct counts, physical types, and selected boolean distributions from one full scan.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 6 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://example.test/enron-emails#eml_attachments</div>
+</div>
+
+<h2>Recent revisions</h2>
+<div class="wrap"><table><tr><th style="width:160px">when</th><th>revision</th><th style='width:150px'>type</th></tr><tr><td class='sub'>2026-07-01T12:55:00</td><td>Augmented Enron store with network coverage and temporal population guidance.<div class='sub'></div></td><td class='sub'>ManualRevision</td></tr><tr><td class='sub'>2026-07-01T11:15:00</td><td>Augmented Enron store with analyst slicing and named-view guidance.<div class='sub'></div></td><td class='sub'>ManualRevision</td></tr><tr><td class='sub'>2026-07-01T10:45:00</td><td>Augmented Enron store with analysis-readiness findings and query cookbook.<div class='sub'></div></td><td class='sub'>ManualRevision</td></tr><tr><td class='sub'>2026-07-01T10:10:00</td><td>Built initial Enron emails knowledge store from S3 Parquet profiling.<div class='sub'></div></td><td class='sub'>ManualRevision</td></tr></table></div>
+
+<footer>DoxaBase capsule report · one static file, no external assets ·
+regenerate with <code>doxabase-report --capsule &lt;path&gt;</code></footer>
+</main></body></html>

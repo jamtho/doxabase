@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DoxaBase capsule report — bundled-fixtures</title>
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --hairline: #e1e0d9; --accent: #2a78d6;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --hairline: #2c2c2a; --accent: #3987e5;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+h1 { font-size: 22px; margin: 8px 0 2px; }
+h2 { font-size: 16px; margin: 36px 0 10px; border-bottom: 1px solid var(--hairline);
+     padding-bottom: 6px; }
+h3 { font-size: 14px; margin: 18px 0 6px; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.banner { background: var(--surface); border: 1px solid var(--warning);
+          border-radius: 8px; padding: 10px 14px; margin: 16px 0; font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+         gap: 10px; margin: 14px 0; }
+.tile { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; padding: 10px 12px; }
+.tile .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.tile .l { color: var(--ink-2); font-size: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px;
+        background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; overflow: hidden; }
+th { text-align: left; color: var(--ink-2); font-weight: 600; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--hairline);
+         vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.wrap { overflow-x: auto; }
+.card { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+.iri { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px;
+       word-break: break-all; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 9px;
+         font-size: 11.5px; font-weight: 600; border: 1.5px solid; }
+.badge.minor    { border-color: var(--good);    color: var(--good); }
+.badge.moderate { border-color: var(--serious); color: var(--serious); }
+.badge.severe   { border-color: var(--critical); color: var(--critical); }
+.badge.neutral  { border-color: var(--muted);   color: var(--ink-2); }
+.gate { border-left: 3px solid var(--critical); padding: 6px 12px; margin: 8px 0;
+        background: var(--surface); border-radius: 0 8px 8px 0; font-size: 13px; }
+.gate.none { border-left-color: var(--warning); }
+.ok { color: var(--good); font-weight: 600; }
+.pattern-links { color: var(--ink-2); font-size: 12.5px; margin: 4px 0 0 0; }
+footer { margin-top: 44px; color: var(--muted); font-size: 12px;
+         border-top: 1px solid var(--hairline); padding-top: 10px; }
+details > summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+</style></head>
+<body><main>
+<h1>Capsule report — bundled-fixtures</h1>
+<div class="sub">generated 2026-07-05 22:39 UTC · SHACL: <span class="ok">conforms</span> · sensitive scan: scanner-clean</div>
+<div class="banner">&#9888; <strong>Local-only pending shareability review.</strong>
+This report reproduces graph literals faithfully. A clean sensitive-literal scan
+is a review prompt, not export approval — review before sharing.</div>
+
+<h2>At a glance</h2>
+<div class="tiles"><div class="tile"><div class="n">7</div><div class="l">datasets</div></div><div class="tile"><div class="n">42</div><div class="l">columns</div></div><div class="tile"><div class="n">3</div><div class="l">observations</div></div><div class="tile"><div class="n">1</div><div class="l">claims</div></div><div class="tile"><div class="n">1</div><div class="l">patterns</div></div><div class="tile"><div class="n">3</div><div class="l">evidence</div></div><div class="tile"><div class="n">0</div><div class="l">revisions</div></div><div class="tile"><div class="n">0</div><div class="l">analysis packets</div></div></div>
+<div class="sub">graphs: base_ontology 1527 · base_shapes 1540 · evidence 9 · map 575 · observations 26 · ontology 181 · patterns 14</div>
+
+<h2>Gates</h2>
+<div class="ok">No gates — nothing is blocked.</div>
+
+<h2>Queues</h2>
+<div class="wrap"><table><tr><th>queue</th><th style="width:70px">count</th><th>example</th></tr><tr><td>query context review</td><td>2</td><td class='iri'>https://richcanopy.org/example/manifest/ais#DailyBroadcasts</td></tr><tr><td>query plan handoff</td><td>5</td><td class='iri'>https://richcanopy.org/example/manifest/polymarket#OrderbookSnapshots</td></tr></table></div>
+
+<h2>Datasets (7)</h2>
+<div class="card">
+<h3>AIS Daily Broadcast Positions <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/ais#DailyBroadcasts</div>
+<div class="sub">storage: S3-compatible object storage s3://ais-noaa/ · layout: Parquet · verification: not recorded</div>
+<details><summary>9 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>base_date_time</td><td>VARCHAR</td><td>Raw AIS Timestamp String</td></tr><tr><td>date</td><td>DATE</td><td>Partition Date</td></tr><tr><td>geometry</td><td>BLOB</td><td>Well-Known Binary Point Geometry</td></tr><tr><td>h3_res15</td><td>UBIGINT</td><td>H3 Cell Index at Resolution 15</td></tr><tr><td>latitude</td><td>DOUBLE</td><td>WGS84 Latitude</td></tr><tr><td>longitude</td><td>DOUBLE</td><td>WGS84 Longitude</td></tr><tr><td>mmsi</td><td>INTEGER</td><td>Maritime Mobile Service Identity</td></tr><tr><td>sog</td><td>DOUBLE</td><td>Speed Over Ground</td></tr><tr><td>timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>AIS Broadcast Timestamp</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Static vessel data is denormalized into position rows and may vary across broadcasts.<div class='sub'>Impact: Static fields in any single row may be stale or inconsistent with other rows.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Temporal gaps exist within vessel trajectories due to NOAA downsampling.<div class='sub'>Impact: Distance and duration calculations may underestimate true values.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>MMSI does not reliably identify a single vessel because of reuse, sharing, default values, and spoofing.<div class='sub'>Impact: Grouping by MMSI may conflate different vessels.</div></td></tr></table></div>
+</div><div class="card">
+<h3>AIS Daily Vessel Index <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/ais#DailyIndex</div>
+<div class="sub">storage: S3-compatible object storage s3://ais-noaa/ · layout: Parquet · verification: UnverifiedLayout</div>
+<details><summary>6 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>date</td><td>DATE</td><td>Partition Date</td></tr><tr><td>distance_m</td><td>DOUBLE</td><td>Distance in Metres</td></tr><tr><td>first_timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>AIS Broadcast Timestamp</td></tr><tr><td>last_timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>AIS Broadcast Timestamp</td></tr><tr><td>message_count</td><td>BIGINT</td><td>Count of AIS Messages</td></tr><tr><td>mmsi</td><td>INTEGER</td><td>Maritime Mobile Service Identity</td></tr></table></div></details>
+<div class="sub">No recorded caveats.</div>
+</div><div class="card">
+<h3>CLOB Orderbook Snapshots <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#OrderbookSnapshots</div>
+<div class="sub">storage: local filesystem data/parquet · layout: Parquet · verification: not recorded</div>
+<details><summary>4 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>_fetched_at</td><td>DOUBLE</td><td>Fetch Timestamp</td></tr><tr><td>asset_id</td><td>VARCHAR</td><td>CLOB Token ID</td></tr><tr><td>bids</td><td>VARCHAR</td><td>JSON-Serialized Array</td></tr><tr><td>market</td><td>VARCHAR</td><td>On-Chain Condition ID</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Several columns store structured data as JSON strings rather than native Parquet nested types.<div class='sub'>Impact: Consumers must parse JSON before use; nested fields cannot benefit from Parquet type checking.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Parquet schemas are inferred by Polars from JSON rather than declared.<div class='sub'>Impact: Column presence and physical types may vary between files.</div></td></tr></table></div>
+</div><div class="card">
+<h3>CLOB Price Snapshots <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#PriceSnapshots</div>
+<div class="sub">storage: local filesystem data/parquet · layout: Parquet · verification: not recorded</div>
+<details><summary>3 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>_fetched_at</td><td>DOUBLE</td><td>Fetch Timestamp</td></tr><tr><td>price</td><td>VARCHAR</td><td>Raw CLOB Price Payload</td></tr><tr><td>token_id</td><td>VARCHAR</td><td>CLOB Token ID</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The CLOB price column may contain either a float-like value or an API error object string.<div class='sub'>Impact: Price analysis must filter or coerce invalid rows.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Parquet schemas are inferred by Polars from JSON rather than declared.<div class='sub'>Impact: Column presence and physical types may vary between files.</div></td></tr></table></div>
+</div><div class="card">
+<h3>Gamma Market Snapshots <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#MarketSnapshots</div>
+<div class="sub">storage: local filesystem data/parquet · layout: Parquet · verification: not recorded</div>
+<details><summary>10 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>_fetched_at</td><td>DOUBLE</td><td>Fetch Timestamp</td></tr><tr><td>_source</td><td>VARCHAR</td><td>Data Source Label</td></tr><tr><td>bestAsk</td><td>DOUBLE</td><td>Probability</td></tr><tr><td>bestBid</td><td>DOUBLE</td><td>Probability</td></tr><tr><td>category</td><td>VARCHAR</td><td>Market Category</td></tr><tr><td>clobTokenIds</td><td>VARCHAR</td><td>JSON-Serialized Array</td></tr><tr><td>conditionId</td><td>VARCHAR</td><td>On-Chain Condition ID</td></tr><tr><td>id</td><td>VARCHAR</td><td>Polymarket Market ID</td></tr><tr><td>outcomes</td><td>VARCHAR</td><td>JSON-Serialized Array</td></tr><tr><td>spread</td><td>DOUBLE</td><td>Bid-Ask Spread</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Several columns store structured data as JSON strings rather than native Parquet nested types.<div class='sub'>Impact: Consumers must parse JSON before use; nested fields cannot benefit from Parquet type checking.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Parquet schemas are inferred by Polars from JSON rather than declared.<div class='sub'>Impact: Column presence and physical types may vary between files.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Snapshot datasets can contain repeated entity states within a single hourly file.<div class='sub'>Impact: Consumers must deduplicate by entity key plus fetch time for point-in-time snapshots.</div></td></tr></table></div>
+</div><div class="card">
+<h3>Token Holder Snapshots <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#HolderSnapshots</div>
+<div class="sub">storage: local filesystem data/parquet · layout: Parquet · verification: not recorded</div>
+<details><summary>4 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>_fetched_at</td><td>DOUBLE</td><td>Fetch Timestamp</td></tr><tr><td>condition_id</td><td>VARCHAR</td><td>On-Chain Condition ID</td></tr><tr><td>holders</td><td>VARCHAR</td><td>—</td></tr><tr><td>token</td><td>VARCHAR</td><td>CLOB Token ID</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Parquet schemas are inferred by Polars from JSON rather than declared.<div class='sub'>Impact: Column presence and physical types may vary between files.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Snapshot datasets can contain repeated entity states within a single hourly file.<div class='sub'>Impact: Consumers must deduplicate by entity key plus fetch time for point-in-time snapshots.</div></td></tr></table></div>
+</div><div class="card">
+<h3>Trade Events <span class='badge neutral'>table</span></h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#Trades</div>
+<div class="sub">storage: local filesystem data/parquet · layout: Parquet · verification: not recorded</div>
+<details><summary>6 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>_fetched_at</td><td>DOUBLE</td><td>Fetch Timestamp</td></tr><tr><td>asset</td><td>VARCHAR</td><td>CLOB Token ID</td></tr><tr><td>conditionId</td><td>VARCHAR</td><td>On-Chain Condition ID</td></tr><tr><td>price</td><td>DOUBLE</td><td>Probability</td></tr><tr><td>side</td><td>VARCHAR</td><td>Trade Side</td></tr><tr><td>transactionHash</td><td>VARCHAR</td><td>Transaction Hash</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Recent-trade polling windows can overlap, producing duplicate trades across polls.<div class='sub'>Impact: Consumers should deduplicate by transaction hash before aggregation.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Parquet schemas are inferred by Polars from JSON rather than declared.<div class='sub'>Impact: Column presence and physical types may vary between files.</div></td></tr></table></div>
+</div>
+
+<h2>Patterns</h2>
+<div class="card"><h3>CLOB price snapshots need a raw-payload boundary before probability analysis.</h3>
+<div class="iri">https://richcanopy.org/example/manifest/polymarket#pattern_price_payload_boundary</div>
+<div>The price snapshot column is modelled as raw payload text, not a clean probability, because error-object strings may appear in the same logical price lane.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/example/manifest/polymarket#caveat_mixed_type_price, https://richcanopy.org/example/manifest/polymarket#px_price</div>
+</div>
+
+<h2>Recent revisions</h2>
+<div class="sub">No revision history yet.</div>
+
+<footer>DoxaBase capsule report · one static file, no external assets ·
+regenerate with <code>doxabase-report --capsule &lt;path&gt;</code></footer>
+</main></body></html>
