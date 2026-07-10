@@ -1,0 +1,118 @@
+{
+  "artifact_kind": "handoff_bundle",
+  "artifacts": {
+    "revision_snapshots": {
+      "artifact_kind": "revision_snapshot_bundle",
+      "bytes_written": 10787273,
+      "format": "doxabase.revision_snapshot_bundle.v1",
+      "graph_roles": [
+        "base_ontology",
+        "base_shapes",
+        "evidence",
+        "history",
+        "map",
+        "observations",
+        "ontology",
+        "patterns",
+        "shapes"
+      ],
+      "importable": true,
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "privacy_warnings": [],
+      "quad_count": 29070,
+      "recommended_import_tool": "doxabase.import_revision_snapshots",
+      "recovery_complete": false,
+      "revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "sensitive_literal_count": 0,
+      "snapshot_count": 36
+    },
+    "trig": {
+      "artifact_kind": "handoff_trig",
+      "bytes_written": 455797,
+      "format": "trig",
+      "graph_counts": {
+        "evidence": 485,
+        "history": 322,
+        "map": 787,
+        "observations": 3786,
+        "ontology": 117,
+        "patterns": 345,
+        "shapes": 0
+      },
+      "graph_roles": [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history"
+      ],
+      "importable": true,
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+      "privacy_warnings": [],
+      "recommended_import_tool": "doxabase.import_trig",
+      "recovery_complete": false,
+      "sensitive_literal_count": 0,
+      "triples": 5842
+    }
+  },
+  "created_at": "2026-07-01T13:53:33.937335+00:00",
+  "decision": "clean_by_scanner_only",
+  "final_snapshot_evidence_status": "history_plus_snapshot_rows",
+  "format": "doxabase.handoff_bundle.v1",
+  "graph_sensitive_literal_count": 0,
+  "importable": true,
+  "json_first_status": "snapshot_rows_without_history",
+  "privacy_warnings": [],
+  "recommended_import_sequence": [
+    {
+      "expected_snapshot_evidence_status": "history_only_count_digest",
+      "mcp_tool_name": "doxabase.import_trig",
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+      "step": 1,
+      "tool_name": "import_trig"
+    },
+    {
+      "expected_snapshot_evidence_status": "history_plus_snapshot_rows",
+      "mcp_tool_name": "doxabase.import_revision_snapshots",
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "step": 2,
+      "tool_name": "import_revision_snapshots"
+    }
+  ],
+  "recommended_import_tool": "doxabase.import_handoff_bundle",
+  "recovery_complete": true,
+  "revision_iris": [
+    "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+    "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+    "https://example.test/enron-emails#history_initial_store_build",
+    "https://example.test/enron-emails#history_network_time_store_augmentation"
+  ],
+  "scanner_clean": true,
+  "scanner_note": "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts.",
+  "sensitive_literal_count": 0,
+  "shareability_review_required": true,
+  "shareability_review_status": "required_not_completed",
+  "snapshot_graph_roles": [
+    "base_ontology",
+    "base_shapes",
+    "evidence",
+    "history",
+    "map",
+    "observations",
+    "ontology",
+    "patterns",
+    "shapes"
+  ],
+  "snapshot_sensitive_literal_count": 0,
+  "warnings": [
+    "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts."
+  ],
+  "would_block_sensitive_export": false
+}

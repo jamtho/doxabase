@@ -1,0 +1,6103 @@
+{
+  "definition": {
+    "core_regex": "\\b(california|calif\\.?|cal-iso|caiso|ferc|price\\s+cap(s)?|mitigation|refund(s)?|proxy\\s+price|pg\\s*&\\s*e|pge|pacific\\s+gas|calpine|department\\s+of\\s+water\\s+resources|dwr|western\\s+(crisis|market|power)|west-wide|west\\s+wide)\\b",
+    "subtopics": {
+      "california_general": "\\b(california|calif\\.?|caISO|cal-iso|cal\\s+iso)\\b",
+      "ferc_regulatory": "\\b(ferc|federal\\s+energy\\s+regulatory)\\b",
+      "price_caps_mitigation": "\\b(price\\s+cap(s)?|mitigation|refund(s)?|proxy\\s+price|soft\\s+cap)\\b",
+      "pge_bankruptcy": "\\b(pg\\s*&\\s*e|pge|pacific\\s+gas|bankrupt(cy)?)\\b",
+      "calpine_counterparty": "\\bcalpine\\b",
+      "dwr_procurement": "\\b(department\\s+of\\s+water\\s+resources|dwr)\\b",
+      "iso_markets": "\\b(california\\s+iso|cal-iso|caiso|iso|hourahead|day\\s+ahead)\\b",
+      "western_market": "\\b(western\\s+(crisis|market|power)|west-wide|west\\s+wide)\\b"
+    },
+    "base_population": "EML plausible-date message-like rows, 1999-01 through 2002-03, excluding calendar/contacts/meetings folder families"
+  },
+  "summary": [
+    {
+      "rows": 107510,
+      "doc_ids": 107510,
+      "custodians": 149,
+      "subjects": 14340,
+      "first_date": "1999-01-12 10:24:00+01:00",
+      "last_date": "2002-03-31 23:59:55+02:00",
+      "rows_with_attachments": 34506,
+      "body_top_rows": 98830,
+      "body_rows": 103445,
+      "california_general_rows": 69538,
+      "ferc_regulatory_rows": 28121,
+      "price_caps_mitigation_rows": 13571,
+      "pge_bankruptcy_rows": 30026,
+      "calpine_counterparty_rows": 10754,
+      "dwr_procurement_rows": 5807,
+      "iso_markets_rows": 27335,
+      "western_market_rows": 1836
+    }
+  ],
+  "monthly_timeline": [
+    {
+      "month": "1999-01",
+      "rows": 21,
+      "custodians": 2,
+      "subjects": 3,
+      "rows_with_attachments": 0,
+      "california_general_rows": 8,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 13,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-02",
+      "rows": 17,
+      "custodians": 3,
+      "subjects": 5,
+      "rows_with_attachments": 0,
+      "california_general_rows": 4,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 13,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-03",
+      "rows": 4,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0,
+      "california_general_rows": 0,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 4,
+      "pge_bankruptcy_rows": 0,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-04",
+      "rows": 39,
+      "custodians": 2,
+      "subjects": 9,
+      "rows_with_attachments": 15,
+      "california_general_rows": 13,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 26,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-05",
+      "rows": 150,
+      "custodians": 8,
+      "subjects": 20,
+      "rows_with_attachments": 4,
+      "california_general_rows": 95,
+      "ferc_regulatory_rows": 14,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 36,
+      "calpine_counterparty_rows": 5,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-06",
+      "rows": 81,
+      "custodians": 8,
+      "subjects": 21,
+      "rows_with_attachments": 10,
+      "california_general_rows": 13,
+      "ferc_regulatory_rows": 14,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 39,
+      "calpine_counterparty_rows": 12,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 6,
+      "western_market_rows": 18
+    },
+    {
+      "month": "1999-07",
+      "rows": 78,
+      "custodians": 8,
+      "subjects": 16,
+      "rows_with_attachments": 24,
+      "california_general_rows": 16,
+      "ferc_regulatory_rows": 16,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 43,
+      "calpine_counterparty_rows": 3,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-08",
+      "rows": 58,
+      "custodians": 8,
+      "subjects": 13,
+      "rows_with_attachments": 19,
+      "california_general_rows": 11,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 46,
+      "calpine_counterparty_rows": 4,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-09",
+      "rows": 281,
+      "custodians": 7,
+      "subjects": 32,
+      "rows_with_attachments": 56,
+      "california_general_rows": 130,
+      "ferc_regulatory_rows": 105,
+      "price_caps_mitigation_rows": 4,
+      "pge_bankruptcy_rows": 120,
+      "calpine_counterparty_rows": 18,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 18,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-10",
+      "rows": 365,
+      "custodians": 7,
+      "subjects": 47,
+      "rows_with_attachments": 120,
+      "california_general_rows": 203,
+      "ferc_regulatory_rows": 46,
+      "price_caps_mitigation_rows": 16,
+      "pge_bankruptcy_rows": 148,
+      "calpine_counterparty_rows": 16,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 32,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-11",
+      "rows": 404,
+      "custodians": 9,
+      "subjects": 54,
+      "rows_with_attachments": 143,
+      "california_general_rows": 266,
+      "ferc_regulatory_rows": 26,
+      "price_caps_mitigation_rows": 4,
+      "pge_bankruptcy_rows": 142,
+      "calpine_counterparty_rows": 26,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 12,
+      "western_market_rows": 0
+    },
+    {
+      "month": "1999-12",
+      "rows": 542,
+      "custodians": 17,
+      "subjects": 65,
+      "rows_with_attachments": 144,
+      "california_general_rows": 214,
+      "ferc_regulatory_rows": 174,
+      "price_caps_mitigation_rows": 54,
+      "pge_bankruptcy_rows": 152,
+      "calpine_counterparty_rows": 45,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "month": "2000-01",
+      "rows": 663,
+      "custodians": 27,
+      "subjects": 109,
+      "rows_with_attachments": 190,
+      "california_general_rows": 159,
+      "ferc_regulatory_rows": 178,
+      "price_caps_mitigation_rows": 16,
+      "pge_bankruptcy_rows": 273,
+      "calpine_counterparty_rows": 96,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 37,
+      "western_market_rows": 4
+    },
+    {
+      "month": "2000-02",
+      "rows": 1471,
+      "custodians": 18,
+      "subjects": 131,
+      "rows_with_attachments": 341,
+      "california_general_rows": 274,
+      "ferc_regulatory_rows": 208,
+      "price_caps_mitigation_rows": 135,
+      "pge_bankruptcy_rows": 794,
+      "calpine_counterparty_rows": 175,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 41,
+      "western_market_rows": 16
+    },
+    {
+      "month": "2000-03",
+      "rows": 1168,
+      "custodians": 24,
+      "subjects": 176,
+      "rows_with_attachments": 499,
+      "california_general_rows": 323,
+      "ferc_regulatory_rows": 334,
+      "price_caps_mitigation_rows": 111,
+      "pge_bankruptcy_rows": 382,
+      "calpine_counterparty_rows": 226,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 26,
+      "western_market_rows": 0
+    },
+    {
+      "month": "2000-04",
+      "rows": 1523,
+      "custodians": 23,
+      "subjects": 165,
+      "rows_with_attachments": 642,
+      "california_general_rows": 556,
+      "ferc_regulatory_rows": 496,
+      "price_caps_mitigation_rows": 26,
+      "pge_bankruptcy_rows": 553,
+      "calpine_counterparty_rows": 168,
+      "dwr_procurement_rows": 6,
+      "iso_markets_rows": 107,
+      "western_market_rows": 10
+    },
+    {
+      "month": "2000-05",
+      "rows": 1170,
+      "custodians": 30,
+      "subjects": 164,
+      "rows_with_attachments": 492,
+      "california_general_rows": 332,
+      "ferc_regulatory_rows": 272,
+      "price_caps_mitigation_rows": 109,
+      "pge_bankruptcy_rows": 455,
+      "calpine_counterparty_rows": 232,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 92,
+      "western_market_rows": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 1832,
+      "custodians": 37,
+      "subjects": 232,
+      "rows_with_attachments": 667,
+      "california_general_rows": 664,
+      "ferc_regulatory_rows": 492,
+      "price_caps_mitigation_rows": 99,
+      "pge_bankruptcy_rows": 652,
+      "calpine_counterparty_rows": 332,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 125,
+      "western_market_rows": 5
+    },
+    {
+      "month": "2000-07",
+      "rows": 1991,
+      "custodians": 39,
+      "subjects": 224,
+      "rows_with_attachments": 783,
+      "california_general_rows": 759,
+      "ferc_regulatory_rows": 637,
+      "price_caps_mitigation_rows": 254,
+      "pge_bankruptcy_rows": 448,
+      "calpine_counterparty_rows": 188,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 199,
+      "western_market_rows": 15
+    },
+    {
+      "month": "2000-08",
+      "rows": 5068,
+      "custodians": 40,
+      "subjects": 468,
+      "rows_with_attachments": 2083,
+      "california_general_rows": 3398,
+      "ferc_regulatory_rows": 1431,
+      "price_caps_mitigation_rows": 1019,
+      "pge_bankruptcy_rows": 1110,
+      "calpine_counterparty_rows": 377,
+      "dwr_procurement_rows": 18,
+      "iso_markets_rows": 1075,
+      "western_market_rows": 146
+    },
+    {
+      "month": "2000-09",
+      "rows": 4983,
+      "custodians": 36,
+      "subjects": 544,
+      "rows_with_attachments": 1303,
+      "california_general_rows": 3036,
+      "ferc_regulatory_rows": 1649,
+      "price_caps_mitigation_rows": 608,
+      "pge_bankruptcy_rows": 1333,
+      "calpine_counterparty_rows": 474,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 688,
+      "western_market_rows": 15
+    },
+    {
+      "month": "2000-10",
+      "rows": 5025,
+      "custodians": 49,
+      "subjects": 577,
+      "rows_with_attachments": 1597,
+      "california_general_rows": 3015,
+      "ferc_regulatory_rows": 1939,
+      "price_caps_mitigation_rows": 920,
+      "pge_bankruptcy_rows": 1278,
+      "calpine_counterparty_rows": 558,
+      "dwr_procurement_rows": 7,
+      "iso_markets_rows": 1026,
+      "western_market_rows": 35
+    },
+    {
+      "month": "2000-11",
+      "rows": 7132,
+      "custodians": 52,
+      "subjects": 861,
+      "rows_with_attachments": 2434,
+      "california_general_rows": 4412,
+      "ferc_regulatory_rows": 3328,
+      "price_caps_mitigation_rows": 1571,
+      "pge_bankruptcy_rows": 1585,
+      "calpine_counterparty_rows": 971,
+      "dwr_procurement_rows": 3,
+      "iso_markets_rows": 1235,
+      "western_market_rows": 24
+    },
+    {
+      "month": "2000-12",
+      "rows": 6369,
+      "custodians": 75,
+      "subjects": 829,
+      "rows_with_attachments": 2110,
+      "california_general_rows": 3938,
+      "ferc_regulatory_rows": 2304,
+      "price_caps_mitigation_rows": 1224,
+      "pge_bankruptcy_rows": 1635,
+      "calpine_counterparty_rows": 755,
+      "dwr_procurement_rows": 5,
+      "iso_markets_rows": 1093,
+      "western_market_rows": 82
+    },
+    {
+      "month": "2001-01",
+      "rows": 5593,
+      "custodians": 58,
+      "subjects": 773,
+      "rows_with_attachments": 2090,
+      "california_general_rows": 3667,
+      "ferc_regulatory_rows": 1037,
+      "price_caps_mitigation_rows": 553,
+      "pge_bankruptcy_rows": 2289,
+      "calpine_counterparty_rows": 753,
+      "dwr_procurement_rows": 362,
+      "iso_markets_rows": 1140,
+      "western_market_rows": 96
+    },
+    {
+      "month": "2001-02",
+      "rows": 5836,
+      "custodians": 63,
+      "subjects": 831,
+      "rows_with_attachments": 2256,
+      "california_general_rows": 4066,
+      "ferc_regulatory_rows": 1119,
+      "price_caps_mitigation_rows": 506,
+      "pge_bankruptcy_rows": 1735,
+      "calpine_counterparty_rows": 661,
+      "dwr_procurement_rows": 792,
+      "iso_markets_rows": 1274,
+      "western_market_rows": 73
+    },
+    {
+      "month": "2001-03",
+      "rows": 8692,
+      "custodians": 66,
+      "subjects": 1334,
+      "rows_with_attachments": 2969,
+      "california_general_rows": 5953,
+      "ferc_regulatory_rows": 2142,
+      "price_caps_mitigation_rows": 1197,
+      "pge_bankruptcy_rows": 2677,
+      "calpine_counterparty_rows": 1200,
+      "dwr_procurement_rows": 971,
+      "iso_markets_rows": 2897,
+      "western_market_rows": 346
+    },
+    {
+      "month": "2001-04",
+      "rows": 15064,
+      "custodians": 85,
+      "subjects": 1676,
+      "rows_with_attachments": 6006,
+      "california_general_rows": 12773,
+      "ferc_regulatory_rows": 2017,
+      "price_caps_mitigation_rows": 1203,
+      "pge_bankruptcy_rows": 2888,
+      "calpine_counterparty_rows": 848,
+      "dwr_procurement_rows": 486,
+      "iso_markets_rows": 9197,
+      "western_market_rows": 281
+    },
+    {
+      "month": "2001-05",
+      "rows": 8057,
+      "custodians": 95,
+      "subjects": 1148,
+      "rows_with_attachments": 2656,
+      "california_general_rows": 5698,
+      "ferc_regulatory_rows": 1890,
+      "price_caps_mitigation_rows": 1230,
+      "pge_bankruptcy_rows": 2408,
+      "calpine_counterparty_rows": 749,
+      "dwr_procurement_rows": 719,
+      "iso_markets_rows": 996,
+      "western_market_rows": 172
+    },
+    {
+      "month": "2001-06",
+      "rows": 3490,
+      "custodians": 92,
+      "subjects": 717,
+      "rows_with_attachments": 1183,
+      "california_general_rows": 2153,
+      "ferc_regulatory_rows": 1129,
+      "price_caps_mitigation_rows": 706,
+      "pge_bankruptcy_rows": 1088,
+      "calpine_counterparty_rows": 385,
+      "dwr_procurement_rows": 404,
+      "iso_markets_rows": 545,
+      "western_market_rows": 196
+    },
+    {
+      "month": "2001-07",
+      "rows": 3067,
+      "custodians": 58,
+      "subjects": 649,
+      "rows_with_attachments": 984,
+      "california_general_rows": 2078,
+      "ferc_regulatory_rows": 1007,
+      "price_caps_mitigation_rows": 674,
+      "pge_bankruptcy_rows": 812,
+      "calpine_counterparty_rows": 359,
+      "dwr_procurement_rows": 844,
+      "iso_markets_rows": 481,
+      "western_market_rows": 109
+    },
+    {
+      "month": "2001-08",
+      "rows": 1652,
+      "custodians": 64,
+      "subjects": 467,
+      "rows_with_attachments": 376,
+      "california_general_rows": 948,
+      "ferc_regulatory_rows": 490,
+      "price_caps_mitigation_rows": 234,
+      "pge_bankruptcy_rows": 426,
+      "calpine_counterparty_rows": 135,
+      "dwr_procurement_rows": 236,
+      "iso_markets_rows": 296,
+      "western_market_rows": 26
+    },
+    {
+      "month": "2001-09",
+      "rows": 1824,
+      "custodians": 83,
+      "subjects": 493,
+      "rows_with_attachments": 451,
+      "california_general_rows": 1067,
+      "ferc_regulatory_rows": 541,
+      "price_caps_mitigation_rows": 184,
+      "pge_bankruptcy_rows": 525,
+      "calpine_counterparty_rows": 129,
+      "dwr_procurement_rows": 308,
+      "iso_markets_rows": 228,
+      "western_market_rows": 29
+    },
+    {
+      "month": "2001-10",
+      "rows": 4833,
+      "custodians": 124,
+      "subjects": 1120,
+      "rows_with_attachments": 697,
+      "california_general_rows": 2744,
+      "ferc_regulatory_rows": 1545,
+      "price_caps_mitigation_rows": 436,
+      "pge_bankruptcy_rows": 1118,
+      "calpine_counterparty_rows": 341,
+      "dwr_procurement_rows": 478,
+      "iso_markets_rows": 990,
+      "western_market_rows": 65
+    },
+    {
+      "month": "2001-11",
+      "rows": 2514,
+      "custodians": 120,
+      "subjects": 558,
+      "rows_with_attachments": 601,
+      "california_general_rows": 1356,
+      "ferc_regulatory_rows": 769,
+      "price_caps_mitigation_rows": 222,
+      "pge_bankruptcy_rows": 857,
+      "calpine_counterparty_rows": 222,
+      "dwr_procurement_rows": 139,
+      "iso_markets_rows": 229,
+      "western_market_rows": 42
+    },
+    {
+      "month": "2001-12",
+      "rows": 1129,
+      "custodians": 87,
+      "subjects": 167,
+      "rows_with_attachments": 177,
+      "california_general_rows": 804,
+      "ferc_regulatory_rows": 219,
+      "price_caps_mitigation_rows": 76,
+      "pge_bankruptcy_rows": 209,
+      "calpine_counterparty_rows": 54,
+      "dwr_procurement_rows": 7,
+      "iso_markets_rows": 518,
+      "western_market_rows": 11
+    },
+    {
+      "month": "2002-01",
+      "rows": 4179,
+      "custodians": 77,
+      "subjects": 186,
+      "rows_with_attachments": 274,
+      "california_general_rows": 3603,
+      "ferc_regulatory_rows": 338,
+      "price_caps_mitigation_rows": 94,
+      "pge_bankruptcy_rows": 1474,
+      "calpine_counterparty_rows": 139,
+      "dwr_procurement_rows": 9,
+      "iso_markets_rows": 2194,
+      "western_market_rows": 16
+    },
+    {
+      "month": "2002-02",
+      "rows": 945,
+      "custodians": 48,
+      "subjects": 123,
+      "rows_with_attachments": 99,
+      "california_general_rows": 683,
+      "ferc_regulatory_rows": 157,
+      "price_caps_mitigation_rows": 64,
+      "pge_bankruptcy_rows": 191,
+      "calpine_counterparty_rows": 80,
+      "dwr_procurement_rows": 10,
+      "iso_markets_rows": 503,
+      "western_market_rows": 4
+    },
+    {
+      "month": "2002-03",
+      "rows": 200,
+      "custodians": 17,
+      "subjects": 64,
+      "rows_with_attachments": 11,
+      "california_general_rows": 106,
+      "ferc_regulatory_rows": 58,
+      "price_caps_mitigation_rows": 18,
+      "pge_bankruptcy_rows": 53,
+      "calpine_counterparty_rows": 18,
+      "dwr_procurement_rows": 3,
+      "iso_markets_rows": 35,
+      "western_market_rows": 0
+    }
+  ],
+  "weekly_peak_windows": [
+    {
+      "week_start": "2001-04-23",
+      "rows": 4465,
+      "custodians": 60,
+      "subjects": 472,
+      "rows_with_attachments": 1867,
+      "california_general_rows": 3697,
+      "ferc_regulatory_rows": 727,
+      "price_caps_mitigation_rows": 454,
+      "pge_bankruptcy_rows": 664,
+      "calpine_counterparty_rows": 210,
+      "dwr_procurement_rows": 71,
+      "iso_markets_rows": 2669,
+      "western_market_rows": 87
+    },
+    {
+      "week_start": "2001-04-16",
+      "rows": 4035,
+      "custodians": 54,
+      "subjects": 405,
+      "rows_with_attachments": 1752,
+      "california_general_rows": 3620,
+      "ferc_regulatory_rows": 403,
+      "price_caps_mitigation_rows": 169,
+      "pge_bankruptcy_rows": 543,
+      "calpine_counterparty_rows": 154,
+      "dwr_procurement_rows": 160,
+      "iso_markets_rows": 3039,
+      "western_market_rows": 70
+    },
+    {
+      "week_start": "2001-04-09",
+      "rows": 3321,
+      "custodians": 50,
+      "subjects": 431,
+      "rows_with_attachments": 1242,
+      "california_general_rows": 2797,
+      "ferc_regulatory_rows": 417,
+      "price_caps_mitigation_rows": 351,
+      "pge_bankruptcy_rows": 823,
+      "calpine_counterparty_rows": 193,
+      "dwr_procurement_rows": 108,
+      "iso_markets_rows": 1974,
+      "western_market_rows": 78
+    },
+    {
+      "week_start": "2000-12-11",
+      "rows": 2759,
+      "custodians": 55,
+      "subjects": 343,
+      "rows_with_attachments": 868,
+      "california_general_rows": 1776,
+      "ferc_regulatory_rows": 1231,
+      "price_caps_mitigation_rows": 675,
+      "pge_bankruptcy_rows": 652,
+      "calpine_counterparty_rows": 292,
+      "dwr_procurement_rows": 3,
+      "iso_markets_rows": 515,
+      "western_market_rows": 57
+    },
+    {
+      "week_start": "2001-04-02",
+      "rows": 2512,
+      "custodians": 46,
+      "subjects": 340,
+      "rows_with_attachments": 840,
+      "california_general_rows": 2039,
+      "ferc_regulatory_rows": 373,
+      "price_caps_mitigation_rows": 159,
+      "pge_bankruptcy_rows": 759,
+      "calpine_counterparty_rows": 266,
+      "dwr_procurement_rows": 131,
+      "iso_markets_rows": 1028,
+      "western_market_rows": 25
+    },
+    {
+      "week_start": "2001-02-26",
+      "rows": 2427,
+      "custodians": 39,
+      "subjects": 318,
+      "rows_with_attachments": 1037,
+      "california_general_rows": 1749,
+      "ferc_regulatory_rows": 517,
+      "price_caps_mitigation_rows": 275,
+      "pge_bankruptcy_rows": 600,
+      "calpine_counterparty_rows": 251,
+      "dwr_procurement_rows": 323,
+      "iso_markets_rows": 1106,
+      "western_market_rows": 111
+    },
+    {
+      "week_start": "2001-03-19",
+      "rows": 2256,
+      "custodians": 41,
+      "subjects": 344,
+      "rows_with_attachments": 642,
+      "california_general_rows": 1394,
+      "ferc_regulatory_rows": 643,
+      "price_caps_mitigation_rows": 307,
+      "pge_bankruptcy_rows": 763,
+      "calpine_counterparty_rows": 351,
+      "dwr_procurement_rows": 280,
+      "iso_markets_rows": 533,
+      "western_market_rows": 73
+    },
+    {
+      "week_start": "2001-05-07",
+      "rows": 2029,
+      "custodians": 57,
+      "subjects": 292,
+      "rows_with_attachments": 598,
+      "california_general_rows": 1466,
+      "ferc_regulatory_rows": 397,
+      "price_caps_mitigation_rows": 339,
+      "pge_bankruptcy_rows": 669,
+      "calpine_counterparty_rows": 145,
+      "dwr_procurement_rows": 151,
+      "iso_markets_rows": 260,
+      "western_market_rows": 28
+    },
+    {
+      "week_start": "2001-03-12",
+      "rows": 2017,
+      "custodians": 43,
+      "subjects": 310,
+      "rows_with_attachments": 643,
+      "california_general_rows": 1496,
+      "ferc_regulatory_rows": 591,
+      "price_caps_mitigation_rows": 402,
+      "pge_bankruptcy_rows": 698,
+      "calpine_counterparty_rows": 260,
+      "dwr_procurement_rows": 151,
+      "iso_markets_rows": 453,
+      "western_market_rows": 120
+    },
+    {
+      "week_start": "2001-05-14",
+      "rows": 1983,
+      "custodians": 54,
+      "subjects": 264,
+      "rows_with_attachments": 675,
+      "california_general_rows": 1393,
+      "ferc_regulatory_rows": 367,
+      "price_caps_mitigation_rows": 141,
+      "pge_bankruptcy_rows": 482,
+      "calpine_counterparty_rows": 204,
+      "dwr_procurement_rows": 281,
+      "iso_markets_rows": 148,
+      "western_market_rows": 39
+    },
+    {
+      "week_start": "2001-03-05",
+      "rows": 1951,
+      "custodians": 41,
+      "subjects": 327,
+      "rows_with_attachments": 741,
+      "california_general_rows": 1454,
+      "ferc_regulatory_rows": 254,
+      "price_caps_mitigation_rows": 155,
+      "pge_bankruptcy_rows": 514,
+      "calpine_counterparty_rows": 256,
+      "dwr_procurement_rows": 278,
+      "iso_markets_rows": 945,
+      "western_market_rows": 24
+    },
+    {
+      "week_start": "2001-05-21",
+      "rows": 1928,
+      "custodians": 64,
+      "subjects": 294,
+      "rows_with_attachments": 653,
+      "california_general_rows": 1303,
+      "ferc_regulatory_rows": 512,
+      "price_caps_mitigation_rows": 307,
+      "pge_bankruptcy_rows": 565,
+      "calpine_counterparty_rows": 158,
+      "dwr_procurement_rows": 142,
+      "iso_markets_rows": 230,
+      "western_market_rows": 28
+    },
+    {
+      "week_start": "2000-11-06",
+      "rows": 1891,
+      "custodians": 33,
+      "subjects": 206,
+      "rows_with_attachments": 633,
+      "california_general_rows": 1092,
+      "ferc_regulatory_rows": 1119,
+      "price_caps_mitigation_rows": 468,
+      "pge_bankruptcy_rows": 405,
+      "calpine_counterparty_rows": 154,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 339,
+      "western_market_rows": 21
+    },
+    {
+      "week_start": "2002-01-28",
+      "rows": 1880,
+      "custodians": 48,
+      "subjects": 48,
+      "rows_with_attachments": 69,
+      "california_general_rows": 1736,
+      "ferc_regulatory_rows": 99,
+      "price_caps_mitigation_rows": 19,
+      "pge_bankruptcy_rows": 1232,
+      "calpine_counterparty_rows": 37,
+      "dwr_procurement_rows": 9,
+      "iso_markets_rows": 497,
+      "western_market_rows": 7
+    },
+    {
+      "week_start": "2001-04-30",
+      "rows": 1816,
+      "custodians": 59,
+      "subjects": 288,
+      "rows_with_attachments": 682,
+      "california_general_rows": 1349,
+      "ferc_regulatory_rows": 434,
+      "price_caps_mitigation_rows": 301,
+      "pge_bankruptcy_rows": 425,
+      "calpine_counterparty_rows": 156,
+      "dwr_procurement_rows": 112,
+      "iso_markets_rows": 632,
+      "western_market_rows": 64
+    },
+    {
+      "week_start": "2000-11-27",
+      "rows": 1775,
+      "custodians": 41,
+      "subjects": 252,
+      "rows_with_attachments": 554,
+      "california_general_rows": 1268,
+      "ferc_regulatory_rows": 600,
+      "price_caps_mitigation_rows": 343,
+      "pge_bankruptcy_rows": 503,
+      "calpine_counterparty_rows": 362,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 281,
+      "western_market_rows": 0
+    },
+    {
+      "week_start": "2000-08-28",
+      "rows": 1734,
+      "custodians": 24,
+      "subjects": 170,
+      "rows_with_attachments": 529,
+      "california_general_rows": 1220,
+      "ferc_regulatory_rows": 498,
+      "price_caps_mitigation_rows": 374,
+      "pge_bankruptcy_rows": 338,
+      "calpine_counterparty_rows": 172,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 339,
+      "western_market_rows": 0
+    },
+    {
+      "week_start": "2001-01-22",
+      "rows": 1715,
+      "custodians": 41,
+      "subjects": 273,
+      "rows_with_attachments": 629,
+      "california_general_rows": 1094,
+      "ferc_regulatory_rows": 236,
+      "price_caps_mitigation_rows": 127,
+      "pge_bankruptcy_rows": 688,
+      "calpine_counterparty_rows": 154,
+      "dwr_procurement_rows": 92,
+      "iso_markets_rows": 329,
+      "western_market_rows": 39
+    },
+    {
+      "week_start": "2000-11-13",
+      "rows": 1677,
+      "custodians": 38,
+      "subjects": 220,
+      "rows_with_attachments": 632,
+      "california_general_rows": 932,
+      "ferc_regulatory_rows": 578,
+      "price_caps_mitigation_rows": 285,
+      "pge_bankruptcy_rows": 343,
+      "calpine_counterparty_rows": 225,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 261,
+      "western_market_rows": 3
+    },
+    {
+      "week_start": "2001-10-22",
+      "rows": 1625,
+      "custodians": 116,
+      "subjects": 356,
+      "rows_with_attachments": 236,
+      "california_general_rows": 897,
+      "ferc_regulatory_rows": 482,
+      "price_caps_mitigation_rows": 127,
+      "pge_bankruptcy_rows": 308,
+      "calpine_counterparty_rows": 100,
+      "dwr_procurement_rows": 153,
+      "iso_markets_rows": 306,
+      "western_market_rows": 24
+    }
+  ],
+  "custodian_roles": [
+    {
+      "custodian": "dasovich-j",
+      "rows": 28182,
+      "subjects": 4613,
+      "first_date": "1999-02-04 16:00:00+01:00",
+      "last_date": "2002-01-03 01:44:24+01:00",
+      "rows_with_attachments": 8375,
+      "california_general_rows": 20594,
+      "ferc_regulatory_rows": 6718,
+      "price_caps_mitigation_rows": 4351,
+      "pge_bankruptcy_rows": 9118,
+      "calpine_counterparty_rows": 3469,
+      "dwr_procurement_rows": 3072,
+      "iso_markets_rows": 4469,
+      "western_market_rows": 582
+    },
+    {
+      "custodian": "kean-s",
+      "rows": 23045,
+      "subjects": 1293,
+      "first_date": "1999-01-25 14:30:00+01:00",
+      "last_date": "2001-12-31 11:30:00+01:00",
+      "rows_with_attachments": 9033,
+      "california_general_rows": 15113,
+      "ferc_regulatory_rows": 8597,
+      "price_caps_mitigation_rows": 4555,
+      "pge_bankruptcy_rows": 7374,
+      "calpine_counterparty_rows": 2052,
+      "dwr_procurement_rows": 1627,
+      "iso_markets_rows": 4080,
+      "western_market_rows": 642
+    },
+    {
+      "custodian": "guzman-m",
+      "rows": 4599,
+      "subjects": 794,
+      "first_date": "2000-09-21 09:23:00+02:00",
+      "last_date": "2001-05-01 20:44:08+02:00",
+      "rows_with_attachments": 2130,
+      "california_general_rows": 4392,
+      "ferc_regulatory_rows": 115,
+      "price_caps_mitigation_rows": 106,
+      "pge_bankruptcy_rows": 145,
+      "calpine_counterparty_rows": 12,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 4210,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "linder-e",
+      "rows": 4071,
+      "subjects": 638,
+      "first_date": "2001-03-13 17:17:00+01:00",
+      "last_date": "2001-05-01 20:44:08+02:00",
+      "rows_with_attachments": 1995,
+      "california_general_rows": 4032,
+      "ferc_regulatory_rows": 3,
+      "price_caps_mitigation_rows": 6,
+      "pge_bankruptcy_rows": 42,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 3999,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "shapiro-r",
+      "rows": 2822,
+      "subjects": 518,
+      "first_date": "2000-04-19 17:30:00+02:00",
+      "last_date": "2001-12-28 18:45:34+01:00",
+      "rows_with_attachments": 742,
+      "california_general_rows": 1592,
+      "ferc_regulatory_rows": 1201,
+      "price_caps_mitigation_rows": 464,
+      "pge_bankruptcy_rows": 605,
+      "calpine_counterparty_rows": 167,
+      "dwr_procurement_rows": 225,
+      "iso_markets_rows": 360,
+      "western_market_rows": 43
+    },
+    {
+      "custodian": "scott-s",
+      "rows": 2373,
+      "subjects": 320,
+      "first_date": "1999-12-02 05:32:00+01:00",
+      "last_date": "2002-03-25 15:17:32+01:00",
+      "rows_with_attachments": 778,
+      "california_general_rows": 791,
+      "ferc_regulatory_rows": 851,
+      "price_caps_mitigation_rows": 151,
+      "pge_bankruptcy_rows": 837,
+      "calpine_counterparty_rows": 673,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 11,
+      "western_market_rows": 9
+    },
+    {
+      "custodian": "farmer-d",
+      "rows": 2251,
+      "subjects": 176,
+      "first_date": "1999-12-14 16:17:00+01:00",
+      "last_date": "2002-01-10 17:06:02+01:00",
+      "rows_with_attachments": 1524,
+      "california_general_rows": 28,
+      "ferc_regulatory_rows": 58,
+      "price_caps_mitigation_rows": 22,
+      "pge_bankruptcy_rows": 642,
+      "calpine_counterparty_rows": 1528,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 3,
+      "western_market_rows": 5
+    },
+    {
+      "custodian": "merris-s",
+      "rows": 1977,
+      "subjects": 328,
+      "first_date": "2001-03-13 17:17:00+01:00",
+      "last_date": "2001-05-01 20:44:08+02:00",
+      "rows_with_attachments": 951,
+      "california_general_rows": 1941,
+      "ferc_regulatory_rows": 3,
+      "price_caps_mitigation_rows": 6,
+      "pge_bankruptcy_rows": 39,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 1911,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "kaminski-v",
+      "rows": 1903,
+      "subjects": 279,
+      "first_date": "1999-12-16 09:02:00+01:00",
+      "last_date": "2002-01-30 23:26:13+01:00",
+      "rows_with_attachments": 610,
+      "california_general_rows": 1302,
+      "ferc_regulatory_rows": 463,
+      "price_caps_mitigation_rows": 286,
+      "pge_bankruptcy_rows": 302,
+      "calpine_counterparty_rows": 124,
+      "dwr_procurement_rows": 26,
+      "iso_markets_rows": 203,
+      "western_market_rows": 34
+    },
+    {
+      "custodian": "hain-m",
+      "rows": 1901,
+      "subjects": 494,
+      "first_date": "2000-06-21 07:45:00+02:00",
+      "last_date": "2001-07-08 19:31:00+02:00",
+      "rows_with_attachments": 664,
+      "california_general_rows": 872,
+      "ferc_regulatory_rows": 1221,
+      "price_caps_mitigation_rows": 270,
+      "pge_bankruptcy_rows": 463,
+      "calpine_counterparty_rows": 124,
+      "dwr_procurement_rows": 79,
+      "iso_markets_rows": 702,
+      "western_market_rows": 45
+    },
+    {
+      "custodian": "williams-b",
+      "rows": 1743,
+      "subjects": 137,
+      "first_date": "2001-04-03 06:47:00+02:00",
+      "last_date": "2002-02-07 08:38:17+01:00",
+      "rows_with_attachments": 92,
+      "california_general_rows": 1465,
+      "ferc_regulatory_rows": 96,
+      "price_caps_mitigation_rows": 72,
+      "pge_bankruptcy_rows": 75,
+      "calpine_counterparty_rows": 13,
+      "dwr_procurement_rows": 26,
+      "iso_markets_rows": 1547,
+      "western_market_rows": 16
+    },
+    {
+      "custodian": "symes-k",
+      "rows": 1613,
+      "subjects": 324,
+      "first_date": "2000-10-10 18:54:00+02:00",
+      "last_date": "2001-05-02 19:37:00+02:00",
+      "rows_with_attachments": 365,
+      "california_general_rows": 1084,
+      "ferc_regulatory_rows": 341,
+      "price_caps_mitigation_rows": 253,
+      "pge_bankruptcy_rows": 512,
+      "calpine_counterparty_rows": 257,
+      "dwr_procurement_rows": 81,
+      "iso_markets_rows": 669,
+      "western_market_rows": 51
+    },
+    {
+      "custodian": "lokay-m",
+      "rows": 1450,
+      "subjects": 346,
+      "first_date": "2000-06-14 14:09:00+02:00",
+      "last_date": "2002-03-22 16:22:48+01:00",
+      "rows_with_attachments": 134,
+      "california_general_rows": 938,
+      "ferc_regulatory_rows": 451,
+      "price_caps_mitigation_rows": 103,
+      "pge_bankruptcy_rows": 633,
+      "calpine_counterparty_rows": 122,
+      "dwr_procurement_rows": 6,
+      "iso_markets_rows": 87,
+      "western_market_rows": 45
+    },
+    {
+      "custodian": "steffes-j",
+      "rows": 1433,
+      "subjects": 548,
+      "first_date": "2001-06-20 07:01:00+02:00",
+      "last_date": "2001-12-28 22:55:15+01:00",
+      "rows_with_attachments": 355,
+      "california_general_rows": 607,
+      "ferc_regulatory_rows": 753,
+      "price_caps_mitigation_rows": 228,
+      "pge_bankruptcy_rows": 369,
+      "calpine_counterparty_rows": 55,
+      "dwr_procurement_rows": 160,
+      "iso_markets_rows": 220,
+      "western_market_rows": 27
+    },
+    {
+      "custodian": "lay-k",
+      "rows": 1391,
+      "subjects": 45,
+      "first_date": "1999-10-13 22:23:00+02:00",
+      "last_date": "2002-01-30 20:48:06+01:00",
+      "rows_with_attachments": 48,
+      "california_general_rows": 1330,
+      "ferc_regulatory_rows": 41,
+      "price_caps_mitigation_rows": 54,
+      "pge_bankruptcy_rows": 1177,
+      "calpine_counterparty_rows": 6,
+      "dwr_procurement_rows": 12,
+      "iso_markets_rows": 22,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "sager-e",
+      "rows": 1379,
+      "subjects": 351,
+      "first_date": "1999-05-13 18:19:00+02:00",
+      "last_date": "2002-01-02 16:15:10+01:00",
+      "rows_with_attachments": 630,
+      "california_general_rows": 497,
+      "ferc_regulatory_rows": 287,
+      "price_caps_mitigation_rows": 81,
+      "pge_bankruptcy_rows": 630,
+      "calpine_counterparty_rows": 137,
+      "dwr_procurement_rows": 41,
+      "iso_markets_rows": 216,
+      "western_market_rows": 34
+    },
+    {
+      "custodian": "fossum-d",
+      "rows": 1321,
+      "subjects": 272,
+      "first_date": "1999-12-16 18:34:00+01:00",
+      "last_date": "2001-04-04 22:09:00+02:00",
+      "rows_with_attachments": 483,
+      "california_general_rows": 366,
+      "ferc_regulatory_rows": 910,
+      "price_caps_mitigation_rows": 95,
+      "pge_bankruptcy_rows": 329,
+      "calpine_counterparty_rows": 45,
+      "dwr_procurement_rows": 3,
+      "iso_markets_rows": 31,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "jones-t",
+      "rows": 1112,
+      "subjects": 265,
+      "first_date": "1999-05-12 12:56:00+02:00",
+      "last_date": "2001-12-31 18:52:41+01:00",
+      "rows_with_attachments": 204,
+      "california_general_rows": 218,
+      "ferc_regulatory_rows": 541,
+      "price_caps_mitigation_rows": 7,
+      "pge_bankruptcy_rows": 274,
+      "calpine_counterparty_rows": 117,
+      "dwr_procurement_rows": 6,
+      "iso_markets_rows": 18,
+      "western_market_rows": 16
+    },
+    {
+      "custodian": "haedicke-m",
+      "rows": 1082,
+      "subjects": 268,
+      "first_date": "1999-06-28 11:00:00+02:00",
+      "last_date": "2001-12-31 23:36:08+01:00",
+      "rows_with_attachments": 174,
+      "california_general_rows": 751,
+      "ferc_regulatory_rows": 278,
+      "price_caps_mitigation_rows": 127,
+      "pge_bankruptcy_rows": 369,
+      "calpine_counterparty_rows": 54,
+      "dwr_procurement_rows": 26,
+      "iso_markets_rows": 134,
+      "western_market_rows": 36
+    },
+    {
+      "custodian": "sanders-r",
+      "rows": 970,
+      "subjects": 402,
+      "first_date": "2000-03-20 10:52:00+01:00",
+      "last_date": "2001-06-29 06:00:00+02:00",
+      "rows_with_attachments": 368,
+      "california_general_rows": 637,
+      "ferc_regulatory_rows": 410,
+      "price_caps_mitigation_rows": 148,
+      "pge_bankruptcy_rows": 244,
+      "calpine_counterparty_rows": 42,
+      "dwr_procurement_rows": 24,
+      "iso_markets_rows": 282,
+      "western_market_rows": 4
+    },
+    {
+      "custodian": "whalley-g",
+      "rows": 806,
+      "subjects": 148,
+      "first_date": "2000-01-12 11:30:00+01:00",
+      "last_date": "2001-11-27 23:07:32+01:00",
+      "rows_with_attachments": 214,
+      "california_general_rows": 512,
+      "ferc_regulatory_rows": 128,
+      "price_caps_mitigation_rows": 98,
+      "pge_bankruptcy_rows": 281,
+      "calpine_counterparty_rows": 42,
+      "dwr_procurement_rows": 20,
+      "iso_markets_rows": 18,
+      "western_market_rows": 10
+    },
+    {
+      "custodian": "meyers-a",
+      "rows": 798,
+      "subjects": 15,
+      "first_date": "2001-05-07 14:59:18+02:00",
+      "last_date": "2002-02-07 04:37:34+01:00",
+      "rows_with_attachments": 0,
+      "california_general_rows": 754,
+      "ferc_regulatory_rows": 0,
+      "price_caps_mitigation_rows": 0,
+      "pge_bankruptcy_rows": 5,
+      "calpine_counterparty_rows": 3,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 787,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "solberg-g",
+      "rows": 741,
+      "subjects": 9,
+      "first_date": "2001-04-07 09:41:00+02:00",
+      "last_date": "2002-02-07 11:38:16+01:00",
+      "rows_with_attachments": 3,
+      "california_general_rows": 736,
+      "ferc_regulatory_rows": 1,
+      "price_caps_mitigation_rows": 1,
+      "pge_bankruptcy_rows": 5,
+      "calpine_counterparty_rows": 2,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 728,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "campbell-l",
+      "rows": 719,
+      "subjects": 205,
+      "first_date": "1999-04-02 10:06:00+02:00",
+      "last_date": "2002-01-02 00:19:23+01:00",
+      "rows_with_attachments": 270,
+      "california_general_rows": 219,
+      "ferc_regulatory_rows": 147,
+      "price_caps_mitigation_rows": 150,
+      "pge_bankruptcy_rows": 349,
+      "calpine_counterparty_rows": 12,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 63,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "dean-c2",
+      "rows": 662,
+      "subjects": 368,
+      "first_date": "2001-09-18 18:06:18+02:00",
+      "last_date": "2002-02-07 11:38:16+01:00",
+      "rows_with_attachments": 5,
+      "california_general_rows": 595,
+      "ferc_regulatory_rows": 3,
+      "price_caps_mitigation_rows": 1,
+      "pge_bankruptcy_rows": 29,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 597,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "kitchen-l",
+      "rows": 650,
+      "subjects": 241,
+      "first_date": "2001-02-08 21:21:00+01:00",
+      "last_date": "2002-02-07 01:02:18+01:00",
+      "rows_with_attachments": 117,
+      "california_general_rows": 359,
+      "ferc_regulatory_rows": 215,
+      "price_caps_mitigation_rows": 92,
+      "pge_bankruptcy_rows": 227,
+      "calpine_counterparty_rows": 119,
+      "dwr_procurement_rows": 93,
+      "iso_markets_rows": 54,
+      "western_market_rows": 26
+    },
+    {
+      "custodian": "nemec-g",
+      "rows": 605,
+      "subjects": 154,
+      "first_date": "1999-06-03 10:40:00+02:00",
+      "last_date": "2002-01-02 21:07:46+01:00",
+      "rows_with_attachments": 236,
+      "california_general_rows": 199,
+      "ferc_regulatory_rows": 171,
+      "price_caps_mitigation_rows": 41,
+      "pge_bankruptcy_rows": 204,
+      "calpine_counterparty_rows": 143,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 6
+    },
+    {
+      "custodian": "germany-c",
+      "rows": 532,
+      "subjects": 95,
+      "first_date": "2000-01-12 10:46:00+01:00",
+      "last_date": "2002-03-27 20:09:06+01:00",
+      "rows_with_attachments": 96,
+      "california_general_rows": 246,
+      "ferc_regulatory_rows": 176,
+      "price_caps_mitigation_rows": 27,
+      "pge_bankruptcy_rows": 327,
+      "calpine_counterparty_rows": 8,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "mann-k",
+      "rows": 520,
+      "subjects": 95,
+      "first_date": "2000-06-02 15:46:00+02:00",
+      "last_date": "2001-12-19 19:38:13+01:00",
+      "rows_with_attachments": 145,
+      "california_general_rows": 81,
+      "ferc_regulatory_rows": 154,
+      "price_caps_mitigation_rows": 299,
+      "pge_bankruptcy_rows": 48,
+      "calpine_counterparty_rows": 38,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 33,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "badeer-r",
+      "rows": 494,
+      "subjects": 154,
+      "first_date": "2000-05-30 10:57:00+02:00",
+      "last_date": "2002-03-07 18:09:15+01:00",
+      "rows_with_attachments": 203,
+      "california_general_rows": 257,
+      "ferc_regulatory_rows": 83,
+      "price_caps_mitigation_rows": 88,
+      "pge_bankruptcy_rows": 70,
+      "calpine_counterparty_rows": 26,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 405,
+      "western_market_rows": 9
+    },
+    {
+      "custodian": "taylor-m",
+      "rows": 486,
+      "subjects": 136,
+      "first_date": "1999-01-12 10:24:00+01:00",
+      "last_date": "2001-12-25 10:59:08+01:00",
+      "rows_with_attachments": 137,
+      "california_general_rows": 212,
+      "ferc_regulatory_rows": 109,
+      "price_caps_mitigation_rows": 42,
+      "pge_bankruptcy_rows": 162,
+      "calpine_counterparty_rows": 8,
+      "dwr_procurement_rows": 2,
+      "iso_markets_rows": 17,
+      "western_market_rows": 26
+    },
+    {
+      "custodian": "watson-k",
+      "rows": 458,
+      "subjects": 123,
+      "first_date": "2000-08-23 02:27:00+02:00",
+      "last_date": "2002-03-26 04:03:11+01:00",
+      "rows_with_attachments": 81,
+      "california_general_rows": 251,
+      "ferc_regulatory_rows": 146,
+      "price_caps_mitigation_rows": 24,
+      "pge_bankruptcy_rows": 178,
+      "calpine_counterparty_rows": 73,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 28,
+      "western_market_rows": 1
+    },
+    {
+      "custodian": "delainey-d",
+      "rows": 443,
+      "subjects": 67,
+      "first_date": "2000-05-17 22:35:00+02:00",
+      "last_date": "2001-12-13 17:23:13+01:00",
+      "rows_with_attachments": 124,
+      "california_general_rows": 195,
+      "ferc_regulatory_rows": 127,
+      "price_caps_mitigation_rows": 100,
+      "pge_bankruptcy_rows": 56,
+      "calpine_counterparty_rows": 96,
+      "dwr_procurement_rows": 4,
+      "iso_markets_rows": 75,
+      "western_market_rows": 8
+    },
+    {
+      "custodian": "shackleton-s",
+      "rows": 420,
+      "subjects": 119,
+      "first_date": "1999-05-12 17:44:00+02:00",
+      "last_date": "2002-03-22 10:02:31+01:00",
+      "rows_with_attachments": 118,
+      "california_general_rows": 209,
+      "ferc_regulatory_rows": 29,
+      "price_caps_mitigation_rows": 27,
+      "pge_bankruptcy_rows": 173,
+      "calpine_counterparty_rows": 19,
+      "dwr_procurement_rows": 6,
+      "iso_markets_rows": 8,
+      "western_market_rows": 2
+    },
+    {
+      "custodian": "rogers-b",
+      "rows": 414,
+      "subjects": 72,
+      "first_date": "1999-12-20 09:09:00+01:00",
+      "last_date": "2002-03-01 00:47:17+01:00",
+      "rows_with_attachments": 82,
+      "california_general_rows": 75,
+      "ferc_regulatory_rows": 56,
+      "price_caps_mitigation_rows": 24,
+      "pge_bankruptcy_rows": 104,
+      "calpine_counterparty_rows": 191,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 12,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "skilling-j",
+      "rows": 399,
+      "subjects": 45,
+      "first_date": "2000-01-31 17:45:00+01:00",
+      "last_date": "2001-11-16 21:10:39+01:00",
+      "rows_with_attachments": 88,
+      "california_general_rows": 332,
+      "ferc_regulatory_rows": 46,
+      "price_caps_mitigation_rows": 42,
+      "pge_bankruptcy_rows": 60,
+      "calpine_counterparty_rows": 15,
+      "dwr_procurement_rows": 5,
+      "iso_markets_rows": 10,
+      "western_market_rows": 7
+    },
+    {
+      "custodian": "lavorato-j",
+      "rows": 388,
+      "subjects": 56,
+      "first_date": "1999-12-12 12:33:00+01:00",
+      "last_date": "2002-01-22 21:05:02+01:00",
+      "rows_with_attachments": 69,
+      "california_general_rows": 211,
+      "ferc_regulatory_rows": 101,
+      "price_caps_mitigation_rows": 111,
+      "pge_bankruptcy_rows": 88,
+      "calpine_counterparty_rows": 11,
+      "dwr_procurement_rows": 17,
+      "iso_markets_rows": 55,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "stokley-c",
+      "rows": 381,
+      "subjects": 141,
+      "first_date": "2001-02-12 23:31:49+01:00",
+      "last_date": "2001-10-25 02:27:14+02:00",
+      "rows_with_attachments": 118,
+      "california_general_rows": 243,
+      "ferc_regulatory_rows": 77,
+      "price_caps_mitigation_rows": 46,
+      "pge_bankruptcy_rows": 63,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 13,
+      "iso_markets_rows": 308,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "ward-k",
+      "rows": 374,
+      "subjects": 123,
+      "first_date": "2000-12-11 13:19:00+01:00",
+      "last_date": "2001-12-28 00:49:59+01:00",
+      "rows_with_attachments": 120,
+      "california_general_rows": 180,
+      "ferc_regulatory_rows": 9,
+      "price_caps_mitigation_rows": 27,
+      "pge_bankruptcy_rows": 205,
+      "calpine_counterparty_rows": 12,
+      "dwr_procurement_rows": 23,
+      "iso_markets_rows": 18,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "allen-p",
+      "rows": 368,
+      "subjects": 77,
+      "first_date": "2000-01-05 22:24:00+01:00",
+      "last_date": "2001-12-28 00:49:59+01:00",
+      "rows_with_attachments": 124,
+      "california_general_rows": 178,
+      "ferc_regulatory_rows": 130,
+      "price_caps_mitigation_rows": 84,
+      "pge_bankruptcy_rows": 90,
+      "calpine_counterparty_rows": 26,
+      "dwr_procurement_rows": 17,
+      "iso_markets_rows": 45,
+      "western_market_rows": 18
+    },
+    {
+      "custodian": "grigsby-m",
+      "rows": 348,
+      "subjects": 84,
+      "first_date": "2000-09-04 16:33:00+02:00",
+      "last_date": "2001-12-31 20:25:03+01:00",
+      "rows_with_attachments": 21,
+      "california_general_rows": 157,
+      "ferc_regulatory_rows": 61,
+      "price_caps_mitigation_rows": 27,
+      "pge_bankruptcy_rows": 196,
+      "calpine_counterparty_rows": 12,
+      "dwr_procurement_rows": 5,
+      "iso_markets_rows": 16,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "tholt-j",
+      "rows": 344,
+      "subjects": 93,
+      "first_date": "2000-06-12 15:54:00+02:00",
+      "last_date": "2002-01-01 03:37:59+01:00",
+      "rows_with_attachments": 107,
+      "california_general_rows": 145,
+      "ferc_regulatory_rows": 136,
+      "price_caps_mitigation_rows": 20,
+      "pge_bankruptcy_rows": 115,
+      "calpine_counterparty_rows": 16,
+      "dwr_procurement_rows": 4,
+      "iso_markets_rows": 2,
+      "western_market_rows": 4
+    },
+    {
+      "custodian": "horton-s",
+      "rows": 321,
+      "subjects": 99,
+      "first_date": "2000-01-11 10:00:00+01:00",
+      "last_date": "2001-12-31 16:43:09+01:00",
+      "rows_with_attachments": 58,
+      "california_general_rows": 93,
+      "ferc_regulatory_rows": 159,
+      "price_caps_mitigation_rows": 15,
+      "pge_bankruptcy_rows": 106,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 10,
+      "western_market_rows": 6
+    },
+    {
+      "custodian": "hyatt-k",
+      "rows": 288,
+      "subjects": 122,
+      "first_date": "2001-01-22 23:15:00+01:00",
+      "last_date": "2002-03-24 21:36:14+01:00",
+      "rows_with_attachments": 56,
+      "california_general_rows": 133,
+      "ferc_regulatory_rows": 159,
+      "price_caps_mitigation_rows": 16,
+      "pge_bankruptcy_rows": 58,
+      "calpine_counterparty_rows": 34,
+      "dwr_procurement_rows": 8,
+      "iso_markets_rows": 12,
+      "western_market_rows": 2
+    },
+    {
+      "custodian": "salisbury-h",
+      "rows": 270,
+      "subjects": 95,
+      "first_date": "2001-04-04 00:02:00+02:00",
+      "last_date": "2002-02-05 01:17:26+01:00",
+      "rows_with_attachments": 34,
+      "california_general_rows": 207,
+      "ferc_regulatory_rows": 19,
+      "price_caps_mitigation_rows": 25,
+      "pge_bankruptcy_rows": 45,
+      "calpine_counterparty_rows": 3,
+      "dwr_procurement_rows": 3,
+      "iso_markets_rows": 68,
+      "western_market_rows": 4
+    },
+    {
+      "custodian": "corman-s",
+      "rows": 251,
+      "subjects": 49,
+      "first_date": "2000-12-12 15:27:00+01:00",
+      "last_date": "2002-03-22 20:59:25+01:00",
+      "rows_with_attachments": 29,
+      "california_general_rows": 71,
+      "ferc_regulatory_rows": 175,
+      "price_caps_mitigation_rows": 32,
+      "pge_bankruptcy_rows": 32,
+      "calpine_counterparty_rows": 11,
+      "dwr_procurement_rows": 2,
+      "iso_markets_rows": 30,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "hyvl-d",
+      "rows": 238,
+      "subjects": 48,
+      "first_date": "1999-05-26 17:36:00+02:00",
+      "last_date": "2001-06-12 16:16:00+02:00",
+      "rows_with_attachments": 110,
+      "california_general_rows": 82,
+      "ferc_regulatory_rows": 36,
+      "price_caps_mitigation_rows": 12,
+      "pge_bankruptcy_rows": 115,
+      "calpine_counterparty_rows": 17,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "beck-s",
+      "rows": 237,
+      "subjects": 43,
+      "first_date": "2000-01-25 16:08:00+01:00",
+      "last_date": "2002-01-18 17:13:27+01:00",
+      "rows_with_attachments": 98,
+      "california_general_rows": 60,
+      "ferc_regulatory_rows": 19,
+      "price_caps_mitigation_rows": 45,
+      "pge_bankruptcy_rows": 82,
+      "calpine_counterparty_rows": 59,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "buy-r",
+      "rows": 230,
+      "subjects": 46,
+      "first_date": "2000-01-31 16:00:00+01:00",
+      "last_date": "2002-01-29 17:51:14+01:00",
+      "rows_with_attachments": 18,
+      "california_general_rows": 160,
+      "ferc_regulatory_rows": 3,
+      "price_caps_mitigation_rows": 6,
+      "pge_bankruptcy_rows": 77,
+      "calpine_counterparty_rows": 1,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 3,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "ermis-f",
+      "rows": 219,
+      "subjects": 57,
+      "first_date": "2000-01-31 17:37:00+01:00",
+      "last_date": "2001-12-28 16:57:20+01:00",
+      "rows_with_attachments": 51,
+      "california_general_rows": 133,
+      "ferc_regulatory_rows": 74,
+      "price_caps_mitigation_rows": 11,
+      "pge_bankruptcy_rows": 120,
+      "calpine_counterparty_rows": 1,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 6,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "tycholiz-b",
+      "rows": 218,
+      "subjects": 71,
+      "first_date": "2000-11-23 16:51:00+01:00",
+      "last_date": "2001-12-22 00:04:20+01:00",
+      "rows_with_attachments": 52,
+      "california_general_rows": 59,
+      "ferc_regulatory_rows": 44,
+      "price_caps_mitigation_rows": 5,
+      "pge_bankruptcy_rows": 101,
+      "calpine_counterparty_rows": 37,
+      "dwr_procurement_rows": 53,
+      "iso_markets_rows": 3,
+      "western_market_rows": 2
+    },
+    {
+      "custodian": "lewis-a",
+      "rows": 218,
+      "subjects": 20,
+      "first_date": "2000-11-11 09:55:00+01:00",
+      "last_date": "2002-02-06 23:24:19+01:00",
+      "rows_with_attachments": 88,
+      "california_general_rows": 188,
+      "ferc_regulatory_rows": 4,
+      "price_caps_mitigation_rows": 15,
+      "pge_bankruptcy_rows": 16,
+      "calpine_counterparty_rows": 2,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 6,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "arnold-j",
+      "rows": 204,
+      "subjects": 40,
+      "first_date": "2000-10-24 19:21:00+02:00",
+      "last_date": "2002-01-01 03:22:42+01:00",
+      "rows_with_attachments": 26,
+      "california_general_rows": 159,
+      "ferc_regulatory_rows": 29,
+      "price_caps_mitigation_rows": 18,
+      "pge_bankruptcy_rows": 60,
+      "calpine_counterparty_rows": 29,
+      "dwr_procurement_rows": 9,
+      "iso_markets_rows": 9,
+      "western_market_rows": 2
+    },
+    {
+      "custodian": "hayslett-r",
+      "rows": 193,
+      "subjects": 57,
+      "first_date": "2000-04-18 20:12:00+02:00",
+      "last_date": "2001-11-28 21:42:46+01:00",
+      "rows_with_attachments": 65,
+      "california_general_rows": 48,
+      "ferc_regulatory_rows": 104,
+      "price_caps_mitigation_rows": 15,
+      "pge_bankruptcy_rows": 58,
+      "calpine_counterparty_rows": 0,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 1,
+      "western_market_rows": 2
+    },
+    {
+      "custodian": "presto-k",
+      "rows": 165,
+      "subjects": 54,
+      "first_date": "2000-12-07 12:00:00+01:00",
+      "last_date": "2002-02-06 03:16:03+01:00",
+      "rows_with_attachments": 25,
+      "california_general_rows": 39,
+      "ferc_regulatory_rows": 100,
+      "price_caps_mitigation_rows": 22,
+      "pge_bankruptcy_rows": 21,
+      "calpine_counterparty_rows": 24,
+      "dwr_procurement_rows": 2,
+      "iso_markets_rows": 32,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "scholtes-d",
+      "rows": 164,
+      "subjects": 68,
+      "first_date": "2001-04-04 03:02:00+02:00",
+      "last_date": "2002-02-06 22:17:39+01:00",
+      "rows_with_attachments": 39,
+      "california_general_rows": 56,
+      "ferc_regulatory_rows": 57,
+      "price_caps_mitigation_rows": 37,
+      "pge_bankruptcy_rows": 82,
+      "calpine_counterparty_rows": 6,
+      "dwr_procurement_rows": 8,
+      "iso_markets_rows": 36,
+      "western_market_rows": 18
+    },
+    {
+      "custodian": "baughman-d",
+      "rows": 163,
+      "subjects": 27,
+      "first_date": "2000-12-08 16:01:00+01:00",
+      "last_date": "2002-02-06 06:19:55+01:00",
+      "rows_with_attachments": 47,
+      "california_general_rows": 64,
+      "ferc_regulatory_rows": 85,
+      "price_caps_mitigation_rows": 16,
+      "pge_bankruptcy_rows": 41,
+      "calpine_counterparty_rows": 6,
+      "dwr_procurement_rows": 4,
+      "iso_markets_rows": 29,
+      "western_market_rows": 3
+    },
+    {
+      "custodian": "platter-p",
+      "rows": 160,
+      "subjects": 29,
+      "first_date": "2001-04-04 00:02:00+02:00",
+      "last_date": "2002-02-05 01:17:26+01:00",
+      "rows_with_attachments": 23,
+      "california_general_rows": 108,
+      "ferc_regulatory_rows": 21,
+      "price_caps_mitigation_rows": 7,
+      "pge_bankruptcy_rows": 17,
+      "calpine_counterparty_rows": 5,
+      "dwr_procurement_rows": 4,
+      "iso_markets_rows": 117,
+      "western_market_rows": 4
+    },
+    {
+      "custodian": "lenhart-m",
+      "rows": 153,
+      "subjects": 25,
+      "first_date": "2000-06-02 10:18:00+02:00",
+      "last_date": "2001-11-27 23:31:37+01:00",
+      "rows_with_attachments": 31,
+      "california_general_rows": 64,
+      "ferc_regulatory_rows": 14,
+      "price_caps_mitigation_rows": 7,
+      "pge_bankruptcy_rows": 108,
+      "calpine_counterparty_rows": 2,
+      "dwr_procurement_rows": 1,
+      "iso_markets_rows": 3,
+      "western_market_rows": 0
+    },
+    {
+      "custodian": "keavey-p",
+      "rows": 147,
+      "subjects": 26,
+      "first_date": "2000-08-15 16:55:00+02:00",
+      "last_date": "2001-11-27 19:00:06+01:00",
+      "rows_with_attachments": 30,
+      "california_general_rows": 117,
+      "ferc_regulatory_rows": 11,
+      "price_caps_mitigation_rows": 6,
+      "pge_bankruptcy_rows": 15,
+      "calpine_counterparty_rows": 4,
+      "dwr_procurement_rows": 0,
+      "iso_markets_rows": 0,
+      "western_market_rows": 0
+    }
+  ],
+  "subtopic_by_custodian_top": {
+    "california_general": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 20594,
+        "subjects": 3348,
+        "first_date": "1999-07-28 10:00:00+02:00",
+        "last_date": "2002-01-03 01:44:24+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 15113,
+        "subjects": 836,
+        "first_date": "1999-04-26 15:00:00+02:00",
+        "last_date": "2001-12-31 11:30:00+01:00"
+      },
+      {
+        "custodian": "guzman-m",
+        "rows": 4392,
+        "subjects": 738,
+        "first_date": "2000-10-23 17:53:00+02:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "linder-e",
+        "rows": 4032,
+        "subjects": 625,
+        "first_date": "2001-03-13 17:17:00+01:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "merris-s",
+        "rows": 1941,
+        "subjects": 316,
+        "first_date": "2001-03-13 17:17:00+01:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 1592,
+        "subjects": 307,
+        "first_date": "2000-05-22 12:00:00+02:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "williams-b",
+        "rows": 1465,
+        "subjects": 61,
+        "first_date": "2001-04-13 04:13:00+02:00",
+        "last_date": "2002-02-07 08:38:17+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 1330,
+        "subjects": 32,
+        "first_date": "1999-10-13 22:23:00+02:00",
+        "last_date": "2002-01-30 20:48:06+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 1302,
+        "subjects": 181,
+        "first_date": "1999-12-16 18:02:00+01:00",
+        "last_date": "2002-01-30 23:26:13+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 1084,
+        "subjects": 211,
+        "first_date": "2000-10-27 11:50:00+02:00",
+        "last_date": "2001-05-02 19:37:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 938,
+        "subjects": 236,
+        "first_date": "2000-06-14 18:27:00+02:00",
+        "last_date": "2002-03-22 16:22:48+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 872,
+        "subjects": 233,
+        "first_date": "2000-06-21 07:45:00+02:00",
+        "last_date": "2001-07-08 19:31:00+02:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 791,
+        "subjects": 109,
+        "first_date": "1999-12-28 15:03:00+01:00",
+        "last_date": "2002-03-25 15:17:32+01:00"
+      },
+      {
+        "custodian": "meyers-a",
+        "rows": 754,
+        "subjects": 5,
+        "first_date": "2001-11-19 21:50:08+01:00",
+        "last_date": "2002-02-07 04:37:34+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 751,
+        "subjects": 192,
+        "first_date": "1999-10-19 18:43:00+02:00",
+        "last_date": "2001-12-31 23:36:08+01:00"
+      },
+      {
+        "custodian": "solberg-g",
+        "rows": 736,
+        "subjects": 5,
+        "first_date": "2001-05-18 11:40:58+02:00",
+        "last_date": "2002-02-07 11:38:16+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 637,
+        "subjects": 254,
+        "first_date": "2000-03-20 10:52:00+01:00",
+        "last_date": "2001-06-11 20:06:00+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 607,
+        "subjects": 193,
+        "first_date": "2001-06-20 19:09:00+02:00",
+        "last_date": "2001-12-28 22:55:15+01:00"
+      }
+    ],
+    "ferc_regulatory": [
+      {
+        "custodian": "kean-s",
+        "rows": 8597,
+        "subjects": 513,
+        "first_date": "1999-09-09 17:30:00+02:00",
+        "last_date": "2001-12-28 22:17:15+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 6718,
+        "subjects": 1167,
+        "first_date": "1999-10-04 21:08:00+02:00",
+        "last_date": "2002-01-01 00:37:14+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 1221,
+        "subjects": 320,
+        "first_date": "2000-08-31 21:14:00+02:00",
+        "last_date": "2001-06-29 15:13:00+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 1201,
+        "subjects": 224,
+        "first_date": "2000-04-21 14:29:00+02:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "fossum-d",
+        "rows": 910,
+        "subjects": 185,
+        "first_date": "1999-12-16 18:34:00+01:00",
+        "last_date": "2001-04-03 06:28:00+02:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 851,
+        "subjects": 121,
+        "first_date": "1999-12-22 15:26:00+01:00",
+        "last_date": "2001-10-26 23:23:39+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 753,
+        "subjects": 314,
+        "first_date": "2001-06-20 19:09:00+02:00",
+        "last_date": "2001-12-28 21:31:14+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 541,
+        "subjects": 130,
+        "first_date": "1999-05-12 12:56:00+02:00",
+        "last_date": "2001-11-17 00:22:05+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 463,
+        "subjects": 66,
+        "first_date": "1999-12-16 18:02:00+01:00",
+        "last_date": "2002-01-30 21:01:29+01:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 451,
+        "subjects": 103,
+        "first_date": "2000-06-15 13:10:00+02:00",
+        "last_date": "2002-03-20 21:38:51+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 410,
+        "subjects": 162,
+        "first_date": "2000-07-11 12:24:00+02:00",
+        "last_date": "2001-06-11 16:53:00+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 341,
+        "subjects": 83,
+        "first_date": "2000-10-10 18:54:00+02:00",
+        "last_date": "2001-04-27 02:57:00+02:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 287,
+        "subjects": 80,
+        "first_date": "1999-05-13 18:19:00+02:00",
+        "last_date": "2002-01-02 16:15:10+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 278,
+        "subjects": 68,
+        "first_date": "1999-06-28 11:00:00+02:00",
+        "last_date": "2001-12-31 23:36:08+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 215,
+        "subjects": 76,
+        "first_date": "2001-02-22 05:47:00+01:00",
+        "last_date": "2002-02-06 03:16:03+01:00"
+      },
+      {
+        "custodian": "germany-c",
+        "rows": 176,
+        "subjects": 35,
+        "first_date": "2000-01-12 10:46:00+01:00",
+        "last_date": "2002-03-21 19:17:15+01:00"
+      },
+      {
+        "custodian": "corman-s",
+        "rows": 175,
+        "subjects": 33,
+        "first_date": "2000-12-12 15:27:00+01:00",
+        "last_date": "2002-03-19 20:24:24+01:00"
+      },
+      {
+        "custodian": "nemec-g",
+        "rows": 171,
+        "subjects": 42,
+        "first_date": "1999-06-03 10:40:00+02:00",
+        "last_date": "2002-01-02 21:07:46+01:00"
+      }
+    ],
+    "price_caps_mitigation": [
+      {
+        "custodian": "kean-s",
+        "rows": 4555,
+        "subjects": 253,
+        "first_date": "1999-12-15 09:20:00+01:00",
+        "last_date": "2001-12-26 16:33:24+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 4351,
+        "subjects": 741,
+        "first_date": "1999-10-04 21:08:00+02:00",
+        "last_date": "2001-12-19 18:47:18+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 464,
+        "subjects": 97,
+        "first_date": "2000-06-26 13:30:00+02:00",
+        "last_date": "2001-12-26 16:33:24+01:00"
+      },
+      {
+        "custodian": "mann-k",
+        "rows": 299,
+        "subjects": 51,
+        "first_date": "2000-06-02 15:46:00+02:00",
+        "last_date": "2001-12-19 19:38:13+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 286,
+        "subjects": 47,
+        "first_date": "2000-01-07 14:56:00+01:00",
+        "last_date": "2002-01-30 18:38:12+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 270,
+        "subjects": 83,
+        "first_date": "2000-10-27 14:15:00+02:00",
+        "last_date": "2001-05-08 16:14:00+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 253,
+        "subjects": 71,
+        "first_date": "2000-10-26 01:55:00+02:00",
+        "last_date": "2001-05-01 12:53:00+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 228,
+        "subjects": 86,
+        "first_date": "2001-06-20 19:09:00+02:00",
+        "last_date": "2001-12-19 19:41:23+01:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 151,
+        "subjects": 25,
+        "first_date": "1999-12-02 05:32:00+01:00",
+        "last_date": "2002-03-21 19:03:04+01:00"
+      },
+      {
+        "custodian": "campbell-l",
+        "rows": 150,
+        "subjects": 48,
+        "first_date": "1999-09-23 19:25:00+02:00",
+        "last_date": "2001-12-31 07:16:57+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 148,
+        "subjects": 61,
+        "first_date": "2000-06-27 20:39:00+02:00",
+        "last_date": "2001-06-11 20:06:00+02:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 127,
+        "subjects": 32,
+        "first_date": "2000-05-24 20:05:00+02:00",
+        "last_date": "2001-12-27 17:06:46+01:00"
+      },
+      {
+        "custodian": "lavorato-j",
+        "rows": 111,
+        "subjects": 10,
+        "first_date": "1999-12-12 12:33:00+01:00",
+        "last_date": "2002-01-22 21:05:02+01:00"
+      },
+      {
+        "custodian": "guzman-m",
+        "rows": 106,
+        "subjects": 26,
+        "first_date": "2000-10-27 09:01:00+02:00",
+        "last_date": "2001-04-30 13:22:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 103,
+        "subjects": 23,
+        "first_date": "2000-07-12 11:03:00+02:00",
+        "last_date": "2002-03-22 03:39:44+01:00"
+      },
+      {
+        "custodian": "delainey-d",
+        "rows": 100,
+        "subjects": 15,
+        "first_date": "2000-05-17 22:35:00+02:00",
+        "last_date": "2001-02-05 17:36:00+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 98,
+        "subjects": 14,
+        "first_date": "2000-03-15 09:51:00+01:00",
+        "last_date": "2001-10-19 18:05:46+02:00"
+      },
+      {
+        "custodian": "fossum-d",
+        "rows": 95,
+        "subjects": 26,
+        "first_date": "2000-02-29 11:01:00+01:00",
+        "last_date": "2001-02-06 18:49:00+01:00"
+      }
+    ],
+    "pge_bankruptcy": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 9118,
+        "subjects": 1568,
+        "first_date": "1999-02-04 16:00:00+01:00",
+        "last_date": "2002-01-01 00:37:14+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 7374,
+        "subjects": 422,
+        "first_date": "1999-01-25 14:30:00+01:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 1177,
+        "subjects": 8,
+        "first_date": "1999-10-16 04:23:00+02:00",
+        "last_date": "2002-01-30 20:48:06+01:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 837,
+        "subjects": 107,
+        "first_date": "1999-12-16 16:54:00+01:00",
+        "last_date": "2002-02-20 17:13:25+01:00"
+      },
+      {
+        "custodian": "farmer-d",
+        "rows": 642,
+        "subjects": 133,
+        "first_date": "1999-12-22 08:02:00+01:00",
+        "last_date": "2002-01-10 17:06:02+01:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 633,
+        "subjects": 172,
+        "first_date": "2000-06-14 14:09:00+02:00",
+        "last_date": "2002-03-22 16:22:48+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 630,
+        "subjects": 160,
+        "first_date": "1999-05-24 16:00:00+02:00",
+        "last_date": "2001-12-19 16:16:54+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 605,
+        "subjects": 114,
+        "first_date": "2000-04-19 17:30:00+02:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 512,
+        "subjects": 126,
+        "first_date": "2000-11-08 15:43:00+01:00",
+        "last_date": "2001-05-02 15:51:00+02:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 463,
+        "subjects": 119,
+        "first_date": "2000-06-21 07:45:00+02:00",
+        "last_date": "2001-05-07 14:15:00+02:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 369,
+        "subjects": 92,
+        "first_date": "1999-07-01 14:33:00+02:00",
+        "last_date": "2001-12-31 23:36:08+01:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 369,
+        "subjects": 129,
+        "first_date": "2001-06-22 22:02:00+02:00",
+        "last_date": "2001-12-20 00:01:49+01:00"
+      },
+      {
+        "custodian": "campbell-l",
+        "rows": 349,
+        "subjects": 90,
+        "first_date": "1999-04-02 10:06:00+02:00",
+        "last_date": "2002-01-02 00:19:23+01:00"
+      },
+      {
+        "custodian": "fossum-d",
+        "rows": 329,
+        "subjects": 68,
+        "first_date": "2000-01-04 11:18:00+01:00",
+        "last_date": "2001-03-29 20:54:00+02:00"
+      },
+      {
+        "custodian": "germany-c",
+        "rows": 327,
+        "subjects": 51,
+        "first_date": "2000-03-15 10:54:00+01:00",
+        "last_date": "2002-03-27 20:09:06+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 302,
+        "subjects": 65,
+        "first_date": "1999-12-16 09:02:00+01:00",
+        "last_date": "2002-01-29 23:35:26+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 281,
+        "subjects": 48,
+        "first_date": "2000-01-12 11:30:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 274,
+        "subjects": 63,
+        "first_date": "1999-05-12 17:56:00+02:00",
+        "last_date": "2001-11-15 00:18:02+01:00"
+      }
+    ],
+    "calpine_counterparty": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 3469,
+        "subjects": 577,
+        "first_date": "1999-10-01 18:58:00+02:00",
+        "last_date": "2001-12-27 02:25:34+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 2052,
+        "subjects": 136,
+        "first_date": "2000-03-09 12:51:00+01:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      },
+      {
+        "custodian": "farmer-d",
+        "rows": 1528,
+        "subjects": 35,
+        "first_date": "1999-12-14 16:17:00+01:00",
+        "last_date": "2001-11-22 02:37:47+01:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 673,
+        "subjects": 78,
+        "first_date": "2000-01-04 13:54:00+01:00",
+        "last_date": "2001-06-18 16:05:03+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 257,
+        "subjects": 58,
+        "first_date": "2000-11-10 11:59:00+01:00",
+        "last_date": "2001-04-20 03:14:00+02:00"
+      },
+      {
+        "custodian": "rogers-b",
+        "rows": 191,
+        "subjects": 35,
+        "first_date": "2000-02-15 17:14:00+01:00",
+        "last_date": "2002-02-22 18:18:30+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 167,
+        "subjects": 35,
+        "first_date": "2001-02-20 13:52:00+01:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      },
+      {
+        "custodian": "nemec-g",
+        "rows": 143,
+        "subjects": 45,
+        "first_date": "1999-08-12 18:35:00+02:00",
+        "last_date": "2001-11-13 19:56:23+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 137,
+        "subjects": 35,
+        "first_date": "1999-05-26 18:11:00+02:00",
+        "last_date": "2001-12-07 22:37:03+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 124,
+        "subjects": 20,
+        "first_date": "2000-03-17 17:26:00+01:00",
+        "last_date": "2002-01-25 00:00:02+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 124,
+        "subjects": 38,
+        "first_date": "2000-07-09 22:49:00+02:00",
+        "last_date": "2001-05-07 14:15:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 122,
+        "subjects": 30,
+        "first_date": "2000-06-26 16:24:00+02:00",
+        "last_date": "2002-03-22 03:39:44+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 119,
+        "subjects": 38,
+        "first_date": "2001-02-13 04:59:00+01:00",
+        "last_date": "2002-01-04 18:52:54+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 117,
+        "subjects": 27,
+        "first_date": "2000-03-07 11:04:00+01:00",
+        "last_date": "2001-11-22 02:37:47+01:00"
+      },
+      {
+        "custodian": "delainey-d",
+        "rows": 96,
+        "subjects": 13,
+        "first_date": "2000-06-08 10:55:00+02:00",
+        "last_date": "2001-12-03 14:31:13+01:00"
+      },
+      {
+        "custodian": "watson-k",
+        "rows": 73,
+        "subjects": 23,
+        "first_date": "2001-08-03 16:44:46+02:00",
+        "last_date": "2002-03-01 18:09:10+01:00"
+      },
+      {
+        "custodian": "beck-s",
+        "rows": 59,
+        "subjects": 10,
+        "first_date": "2000-08-25 20:26:00+02:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      },
+      {
+        "custodian": "schoolcraft-d",
+        "rows": 56,
+        "subjects": 26,
+        "first_date": "2001-05-24 20:07:00+02:00",
+        "last_date": "2002-03-19 13:56:40+01:00"
+      }
+    ],
+    "dwr_procurement": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 3072,
+        "subjects": 575,
+        "first_date": "2001-01-10 10:02:00+01:00",
+        "last_date": "2001-12-20 20:42:41+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 1627,
+        "subjects": 102,
+        "first_date": "2000-08-01 15:25:00+02:00",
+        "last_date": "2001-10-25 16:44:55+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 225,
+        "subjects": 59,
+        "first_date": "2001-04-06 19:26:00+02:00",
+        "last_date": "2001-11-19 23:35:24+01:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 160,
+        "subjects": 65,
+        "first_date": "2001-06-20 07:01:00+02:00",
+        "last_date": "2001-12-07 16:36:55+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 93,
+        "subjects": 47,
+        "first_date": "2001-02-08 21:21:00+01:00",
+        "last_date": "2001-12-04 16:21:19+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 81,
+        "subjects": 16,
+        "first_date": "2001-01-19 10:27:17+01:00",
+        "last_date": "2001-03-23 00:03:00+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 79,
+        "subjects": 19,
+        "first_date": "2001-03-08 15:53:00+01:00",
+        "last_date": "2001-04-16 10:27:00+02:00"
+      },
+      {
+        "custodian": "tycholiz-b",
+        "rows": 53,
+        "subjects": 22,
+        "first_date": "2001-08-16 19:55:56+02:00",
+        "last_date": "2001-11-06 14:42:43+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 41,
+        "subjects": 18,
+        "first_date": "2001-02-09 16:55:00+01:00",
+        "last_date": "2001-11-19 21:31:47+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 26,
+        "subjects": 6,
+        "first_date": "2000-10-30 15:41:00+01:00",
+        "last_date": "2001-11-29 18:47:30+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 26,
+        "subjects": 6,
+        "first_date": "2000-12-12 15:52:00+01:00",
+        "last_date": "2001-11-27 02:14:26+01:00"
+      },
+      {
+        "custodian": "williams-b",
+        "rows": 26,
+        "subjects": 11,
+        "first_date": "2001-06-14 20:29:04+02:00",
+        "last_date": "2002-02-05 17:57:10+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 24,
+        "subjects": 11,
+        "first_date": "2000-12-18 16:55:00+01:00",
+        "last_date": "2001-05-24 13:29:00+02:00"
+      },
+      {
+        "custodian": "ward-k",
+        "rows": 23,
+        "subjects": 8,
+        "first_date": "2001-02-08 08:00:00+01:00",
+        "last_date": "2001-09-25 23:06:43+02:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 20,
+        "subjects": 4,
+        "first_date": "2001-06-08 09:43:00+02:00",
+        "last_date": "2001-10-19 18:05:46+02:00"
+      },
+      {
+        "custodian": "allen-p",
+        "rows": 17,
+        "subjects": 6,
+        "first_date": "2001-01-16 08:25:00+01:00",
+        "last_date": "2001-10-19 20:07:20+02:00"
+      },
+      {
+        "custodian": "lavorato-j",
+        "rows": 17,
+        "subjects": 6,
+        "first_date": "2001-01-23 16:15:00+01:00",
+        "last_date": "2001-10-24 00:52:56+02:00"
+      },
+      {
+        "custodian": "stokley-c",
+        "rows": 13,
+        "subjects": 8,
+        "first_date": "2001-05-01 04:49:00+02:00",
+        "last_date": "2001-10-03 19:46:31+02:00"
+      }
+    ],
+    "iso_markets": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 4469,
+        "subjects": 779,
+        "first_date": "1999-10-04 21:08:00+02:00",
+        "last_date": "2002-01-01 00:37:14+01:00"
+      },
+      {
+        "custodian": "guzman-m",
+        "rows": 4210,
+        "subjects": 696,
+        "first_date": "2000-09-21 09:23:00+02:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 4080,
+        "subjects": 239,
+        "first_date": "1999-09-21 17:20:00+02:00",
+        "last_date": "2001-11-27 17:15:13+01:00"
+      },
+      {
+        "custodian": "linder-e",
+        "rows": 3999,
+        "subjects": 615,
+        "first_date": "2001-03-30 15:42:00+02:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "merris-s",
+        "rows": 1911,
+        "subjects": 307,
+        "first_date": "2001-04-12 10:27:00+02:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "williams-b",
+        "rows": 1547,
+        "subjects": 76,
+        "first_date": "2001-04-17 02:17:00+02:00",
+        "last_date": "2002-02-07 08:38:17+01:00"
+      },
+      {
+        "custodian": "meyers-a",
+        "rows": 787,
+        "subjects": 7,
+        "first_date": "2001-05-07 14:59:18+02:00",
+        "last_date": "2002-02-07 04:37:34+01:00"
+      },
+      {
+        "custodian": "solberg-g",
+        "rows": 728,
+        "subjects": 3,
+        "first_date": "2001-05-30 22:41:00+02:00",
+        "last_date": "2002-02-07 11:38:16+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 702,
+        "subjects": 186,
+        "first_date": "2000-06-21 07:45:00+02:00",
+        "last_date": "2001-04-19 12:50:00+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 669,
+        "subjects": 133,
+        "first_date": "2000-10-27 11:50:00+02:00",
+        "last_date": "2001-04-30 12:04:00+02:00"
+      },
+      {
+        "custodian": "dean-c2",
+        "rows": 597,
+        "subjects": 340,
+        "first_date": "2001-09-18 18:06:18+02:00",
+        "last_date": "2002-02-07 11:38:16+01:00"
+      },
+      {
+        "custodian": "badeer-r",
+        "rows": 405,
+        "subjects": 126,
+        "first_date": "2000-05-30 10:57:00+02:00",
+        "last_date": "2000-08-29 20:11:00+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 360,
+        "subjects": 77,
+        "first_date": "2000-12-12 23:22:00+01:00",
+        "last_date": "2001-11-27 17:15:13+01:00"
+      },
+      {
+        "custodian": "stokley-c",
+        "rows": 308,
+        "subjects": 103,
+        "first_date": "2001-02-12 23:31:49+01:00",
+        "last_date": "2001-10-25 02:27:14+02:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 282,
+        "subjects": 107,
+        "first_date": "2000-07-11 12:24:00+02:00",
+        "last_date": "2001-06-11 13:23:00+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 220,
+        "subjects": 83,
+        "first_date": "2001-06-21 04:36:00+02:00",
+        "last_date": "2001-12-26 23:55:36+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 216,
+        "subjects": 55,
+        "first_date": "1999-06-25 11:14:00+02:00",
+        "last_date": "2001-12-21 23:17:49+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 203,
+        "subjects": 37,
+        "first_date": "2000-01-04 08:17:00+01:00",
+        "last_date": "2002-01-25 23:31:18+01:00"
+      }
+    ],
+    "western_market": [
+      {
+        "custodian": "kean-s",
+        "rows": 642,
+        "subjects": 36,
+        "first_date": "2000-08-04 17:13:00+02:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 582,
+        "subjects": 108,
+        "first_date": "2000-08-04 05:48:00+02:00",
+        "last_date": "2001-12-29 02:48:20+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 51,
+        "subjects": 12,
+        "first_date": "2000-12-12 23:48:52+01:00",
+        "last_date": "2001-04-05 22:31:49+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 45,
+        "subjects": 10,
+        "first_date": "2000-06-26 16:58:00+02:00",
+        "last_date": "2001-01-26 18:56:00+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 45,
+        "subjects": 11,
+        "first_date": "2000-11-06 10:05:00+01:00",
+        "last_date": "2001-05-15 11:37:00+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 43,
+        "subjects": 9,
+        "first_date": "2001-05-01 12:05:00+02:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 36,
+        "subjects": 14,
+        "first_date": "2001-03-05 21:21:00+01:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 34,
+        "subjects": 10,
+        "first_date": "1999-06-01 17:20:00+02:00",
+        "last_date": "2001-11-20 12:10:25+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 34,
+        "subjects": 9,
+        "first_date": "2000-01-21 08:16:00+01:00",
+        "last_date": "2002-01-25 00:00:02+01:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 27,
+        "subjects": 18,
+        "first_date": "2001-06-20 19:09:00+02:00",
+        "last_date": "2001-11-27 17:39:40+01:00"
+      },
+      {
+        "custodian": "taylor-m",
+        "rows": 26,
+        "subjects": 5,
+        "first_date": "1999-06-01 14:24:00+02:00",
+        "last_date": "2001-03-14 11:14:00+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 26,
+        "subjects": 13,
+        "first_date": "2001-02-09 23:12:00+01:00",
+        "last_date": "2001-11-30 16:27:03+01:00"
+      },
+      {
+        "custodian": "allen-p",
+        "rows": 18,
+        "subjects": 5,
+        "first_date": "2000-12-13 15:04:00+01:00",
+        "last_date": "2001-10-25 18:50:18+02:00"
+      },
+      {
+        "custodian": "scholtes-d",
+        "rows": 18,
+        "subjects": 4,
+        "first_date": "2001-04-11 02:16:00+02:00",
+        "last_date": "2001-12-29 23:52:35+01:00"
+      },
+      {
+        "custodian": "williams-b",
+        "rows": 16,
+        "subjects": 8,
+        "first_date": "2001-04-11 02:16:00+02:00",
+        "last_date": "2002-01-29 17:18:17+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 16,
+        "subjects": 5,
+        "first_date": "2000-04-19 12:57:00+02:00",
+        "last_date": "2001-03-13 17:17:00+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 10,
+        "subjects": 3,
+        "first_date": "2001-05-09 12:05:00+02:00",
+        "last_date": "2001-10-17 23:39:11+02:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 9,
+        "subjects": 2,
+        "first_date": "2000-09-28 12:32:00+02:00",
+        "last_date": "2000-12-11 13:32:00+01:00"
+      }
+    ]
+  },
+  "subtopic_overlap": [
+    {
+      "california_general_rows": 69538,
+      "ferc_regulatory_rows": 28121,
+      "price_caps_mitigation_rows": 13571,
+      "pge_bankruptcy_rows": 30026,
+      "calpine_counterparty_rows": 10754,
+      "dwr_procurement_rows": 5807,
+      "iso_markets_rows": 27335,
+      "western_market_rows": 1836,
+      "california_ferc_rows": 13102,
+      "california_price_cap_rows": 8614,
+      "ferc_price_cap_rows": 7866,
+      "pge_ferc_rows": 6584,
+      "california_pge_rows": 15687,
+      "california_iso_rows": 23035
+    }
+  ],
+  "top_subjects": [
+    {
+      "subject_clean": "calpine daily gas nomination",
+      "rows": 1185,
+      "custodians": 1,
+      "first_date": "1999-12-14 16:17:00+01:00",
+      "last_date": "2001-04-09 21:08:00+02:00",
+      "rows_with_attachments": 1179
+    },
+    {
+      "subject_clean": "enron mentions",
+      "rows": 700,
+      "custodians": 4,
+      "first_date": "2000-09-20 11:48:00+02:00",
+      "last_date": "2001-07-31 09:57:00+02:00",
+      "rows_with_attachments": 2
+    },
+    {
+      "subject_clean": "re:",
+      "rows": 642,
+      "custodians": 42,
+      "first_date": "1999-10-20 16:30:00+02:00",
+      "last_date": "2002-01-08 16:51:28+01:00",
+      "rows_with_attachments": 48
+    },
+    {
+      "subject_clean": "schedule crawler: hourahead failure <codesite>",
+      "rows": 629,
+      "custodians": 4,
+      "first_date": "2001-03-06 12:39:00+01:00",
+      "last_date": "2001-10-27 06:44:34+02:00",
+      "rows_with_attachments": 294
+    },
+    {
+      "subject_clean": "fyi - p kaufman weekly call w/ regulatory re sale of pge call in 503-464-7737",
+      "rows": 611,
+      "custodians": 1,
+      "first_date": "2000-02-07 12:00:00+01:00",
+      "last_date": "2000-08-21 13:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "energy issues",
+      "rows": 429,
+      "custodians": 3,
+      "first_date": "2001-02-28 14:52:00+01:00",
+      "last_date": "2001-07-31 16:23:00+02:00",
+      "rows_with_attachments": 52
+    },
+    {
+      "subject_clean": "fyi - weekly california conf call w/ ees, ena & attys",
+      "rows": 360,
+      "custodians": 1,
+      "first_date": "2001-04-02 12:30:00+02:00",
+      "last_date": "2001-12-31 11:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "california power issue",
+      "rows": 267,
+      "custodians": 2,
+      "first_date": "2000-08-10 16:55:00+02:00",
+      "last_date": "2000-09-11 18:30:00+02:00",
+      "rows_with_attachments": 259
+    },
+    {
+      "subject_clean": "california",
+      "rows": 246,
+      "custodians": 4,
+      "first_date": "1999-05-20 10:00:00+02:00",
+      "last_date": "2001-06-27 13:01:00+02:00",
+      "rows_with_attachments": 175
+    },
+    {
+      "subject_clean": "project california daily conf call",
+      "rows": 221,
+      "custodians": 1,
+      "first_date": "2000-06-26 12:00:00+02:00",
+      "last_date": "2000-07-14 12:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "pg&e",
+      "rows": 149,
+      "custodians": 13,
+      "first_date": "1999-07-20 15:00:00+02:00",
+      "last_date": "2002-02-15 15:56:20+01:00",
+      "rows_with_attachments": 71
+    },
+    {
+      "subject_clean": "entouch newsletter",
+      "rows": 137,
+      "custodians": 19,
+      "first_date": "2000-11-29 19:31:00+01:00",
+      "last_date": "2001-08-24 08:10:43+02:00",
+      "rows_with_attachments": 1
+    },
+    {
+      "subject_clean": "re: hello from vince kaminski at enron",
+      "rows": 132,
+      "custodians": 1,
+      "first_date": "2000-08-08 13:50:00+02:00",
+      "last_date": "2000-09-19 02:06:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "calpine daily gas nomination (weekend)",
+      "rows": 129,
+      "custodians": 1,
+      "first_date": "1999-12-17 16:18:00+01:00",
+      "last_date": "2001-02-09 08:18:00+01:00",
+      "rows_with_attachments": 129
+    },
+    {
+      "subject_clean": "weekly ferc electric report",
+      "rows": 113,
+      "custodians": 3,
+      "first_date": "2000-02-23 18:43:00+01:00",
+      "last_date": "2001-03-29 15:42:00+02:00",
+      "rows_with_attachments": 113
+    },
+    {
+      "subject_clean": "re: california power crisis",
+      "rows": 105,
+      "custodians": 2,
+      "first_date": "2001-02-13 18:04:00+01:00",
+      "last_date": "2001-05-14 16:58:00+02:00",
+      "rows_with_attachments": 31
+    },
+    {
+      "subject_clean": "re: california",
+      "rows": 101,
+      "custodians": 5,
+      "first_date": "2000-06-29 20:52:00+02:00",
+      "last_date": "2001-11-27 19:06:02+01:00",
+      "rows_with_attachments": 38
+    },
+    {
+      "subject_clean": "re: financial analysis of pg&e and proposed terms for settlement",
+      "rows": 96,
+      "custodians": 3,
+      "first_date": "2001-01-12 10:12:00+01:00",
+      "last_date": "2001-01-13 10:06:00+01:00",
+      "rows_with_attachments": 66
+    },
+    {
+      "subject_clean": "re: message points",
+      "rows": 96,
+      "custodians": 2,
+      "first_date": "2000-10-26 10:12:00+02:00",
+      "last_date": "2000-11-01 18:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: enron response to san diego request for gas price caps",
+      "rows": 93,
+      "custodians": 3,
+      "first_date": "2000-12-13 11:27:00+01:00",
+      "last_date": "2000-12-13 14:26:00+01:00",
+      "rows_with_attachments": 61
+    },
+    {
+      "subject_clean": "re: comments on ferc november 1 order",
+      "rows": 93,
+      "custodians": 2,
+      "first_date": "2000-11-13 08:51:00+01:00",
+      "last_date": "2000-11-16 20:34:00+01:00",
+      "rows_with_attachments": 85
+    },
+    {
+      "subject_clean": "re: california lawmakers vote to limit power costs - wsj",
+      "rows": 93,
+      "custodians": 2,
+      "first_date": "2000-09-01 12:30:00+02:00",
+      "last_date": "2000-09-01 18:45:00+02:00",
+      "rows_with_attachments": 65
+    },
+    {
+      "subject_clean": "fyi",
+      "rows": 86,
+      "custodians": 7,
+      "first_date": "1999-06-01 14:24:00+02:00",
+      "last_date": "2001-05-11 11:16:00+02:00",
+      "rows_with_attachments": 14
+    },
+    {
+      "subject_clean": "wkly conf. call re:sale of pge   1-800-283-1805 (per lysa akin)",
+      "rows": 84,
+      "custodians": 1,
+      "first_date": "2000-05-23 11:00:00+02:00",
+      "last_date": "2000-12-19 10:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "[fwd: direct access coalition media plan]",
+      "rows": 80,
+      "custodians": 2,
+      "first_date": "2001-02-28 10:00:00+01:00",
+      "last_date": "2001-08-01 04:17:00+02:00",
+      "rows_with_attachments": 80
+    },
+    {
+      "subject_clean": "re: western wholesale activities - gas & power conf. call",
+      "rows": 79,
+      "custodians": 7,
+      "first_date": "2001-04-11 18:29:00+02:00",
+      "last_date": "2001-07-25 18:42:00+02:00",
+      "rows_with_attachments": 65
+    },
+    {
+      "subject_clean": "re: draft talking points about california gas market",
+      "rows": 79,
+      "custodians": 3,
+      "first_date": "2000-12-12 11:22:00+01:00",
+      "last_date": "2000-12-13 11:12:00+01:00",
+      "rows_with_attachments": 71
+    },
+    {
+      "subject_clean": "talking points re \"reregulation\" in california",
+      "rows": 79,
+      "custodians": 2,
+      "first_date": "2000-08-14 19:42:00+02:00",
+      "last_date": "2000-08-24 14:49:00+02:00",
+      "rows_with_attachments": 79
+    },
+    {
+      "subject_clean": "presentation to faculty and students at berkeley",
+      "rows": 78,
+      "custodians": 3,
+      "first_date": "2000-09-18 15:26:00+02:00",
+      "last_date": "2001-07-20 02:54:00+02:00",
+      "rows_with_attachments": 6
+    },
+    {
+      "subject_clean": "california crisis update 1-800-998-2462 / pin # 4912753",
+      "rows": 78,
+      "custodians": 1,
+      "first_date": "2001-01-12 09:30:00+01:00",
+      "last_date": "2001-05-21 10:30:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "project california conf. call  1-888-422-7132  part. code 353470",
+      "rows": 76,
+      "custodians": 1,
+      "first_date": "2000-06-26 12:00:00+02:00",
+      "last_date": "2000-07-27 12:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "ferc staff investigations on midwest and southeast bulk power systems",
+      "rows": 75,
+      "custodians": 6,
+      "first_date": "2000-11-10 14:46:00+01:00",
+      "last_date": "2000-11-15 17:20:00+01:00",
+      "rows_with_attachments": 75
+    },
+    {
+      "subject_clean": "weekly report",
+      "rows": 73,
+      "custodians": 1,
+      "first_date": "2000-07-28 18:31:00+02:00",
+      "last_date": "2000-09-29 17:13:00+02:00",
+      "rows_with_attachments": 19
+    },
+    {
+      "subject_clean": "re: e220 case #1",
+      "rows": 72,
+      "custodians": 1,
+      "first_date": "2000-09-07 18:56:00+02:00",
+      "last_date": "2000-09-10 21:52:00+02:00",
+      "rows_with_attachments": 40
+    },
+    {
+      "subject_clean": "project california daily conf. call  1-888-422-7132 pincode 353470",
+      "rows": 72,
+      "custodians": 1,
+      "first_date": "2000-06-05 12:00:00+02:00",
+      "last_date": "2000-06-23 12:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: final late exhibit draft",
+      "rows": 72,
+      "custodians": 1,
+      "first_date": "2000-06-16 01:08:00+02:00",
+      "last_date": "2000-06-20 14:25:00+02:00",
+      "rows_with_attachments": 38
+    },
+    {
+      "subject_clean": "ferc presentation on california/west wholesale market",
+      "rows": 70,
+      "custodians": 3,
+      "first_date": "2000-08-29 20:11:00+02:00",
+      "last_date": "2000-10-02 18:59:00+02:00",
+      "rows_with_attachments": 70
+    },
+    {
+      "subject_clean": "california energy crisis",
+      "rows": 66,
+      "custodians": 19,
+      "first_date": "2001-03-13 17:17:00+01:00",
+      "last_date": "2001-03-23 09:43:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "ca supply realities",
+      "rows": 65,
+      "custodians": 3,
+      "first_date": "2001-02-22 15:55:00+01:00",
+      "last_date": "2001-02-28 15:23:00+01:00",
+      "rows_with_attachments": 65
+    },
+    {
+      "subject_clean": "charts",
+      "rows": 64,
+      "custodians": 4,
+      "first_date": "2000-12-22 14:39:00+01:00",
+      "last_date": "2001-04-09 13:24:00+02:00",
+      "rows_with_attachments": 64
+    },
+    {
+      "subject_clean": "re: some background on california gas price spikes--the other side of the story",
+      "rows": 64,
+      "custodians": 3,
+      "first_date": "2001-04-25 11:13:00+02:00",
+      "last_date": "2001-04-30 09:42:00+02:00",
+      "rows_with_attachments": 64
+    },
+    {
+      "subject_clean": "re-alignment",
+      "rows": 63,
+      "custodians": 15,
+      "first_date": "2000-12-21 03:02:00+01:00",
+      "last_date": "2000-12-21 09:10:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "open enrollment 2001",
+      "rows": 62,
+      "custodians": 12,
+      "first_date": "2000-10-12 20:23:00+02:00",
+      "last_date": "2000-10-27 19:01:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: brief summary of today's activities in california (at least thus far)",
+      "rows": 62,
+      "custodians": 1,
+      "first_date": "2001-01-04 17:08:00+01:00",
+      "last_date": "2001-01-04 20:17:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: lay/skilling talking points for bush admin meetings and calls",
+      "rows": 61,
+      "custodians": 2,
+      "first_date": "2001-04-04 15:07:00+02:00",
+      "last_date": "2001-04-05 12:16:00+02:00",
+      "rows_with_attachments": 50
+    },
+    {
+      "subject_clean": "re: draft talking points for california puc hearings on the 27th/28th",
+      "rows": 61,
+      "custodians": 2,
+      "first_date": "2000-12-26 18:25:00+01:00",
+      "last_date": "2000-12-27 12:07:00+01:00",
+      "rows_with_attachments": 55
+    },
+    {
+      "subject_clean": "ferc",
+      "rows": 59,
+      "custodians": 4,
+      "first_date": "2000-11-01 18:43:00+01:00",
+      "last_date": "2001-12-19 10:00:00+01:00",
+      "rows_with_attachments": 8
+    },
+    {
+      "subject_clean": "great news ****ferc order on morgan stanley complaint against iso",
+      "rows": 59,
+      "custodians": 3,
+      "first_date": "2000-08-01 05:07:00+02:00",
+      "last_date": "2000-08-01 11:39:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: charts",
+      "rows": 58,
+      "custodians": 2,
+      "first_date": "2000-12-22 14:46:00+01:00",
+      "last_date": "2001-01-02 14:00:00+01:00",
+      "rows_with_attachments": 58
+    },
+    {
+      "subject_clean": "re: data on monthly generation for sce",
+      "rows": 58,
+      "custodians": 1,
+      "first_date": "2000-12-07 08:16:00+01:00",
+      "last_date": "2000-12-11 11:31:00+01:00",
+      "rows_with_attachments": 16
+    },
+    {
+      "subject_clean": "re: tw",
+      "rows": 57,
+      "custodians": 2,
+      "first_date": "2000-12-06 10:20:00+01:00",
+      "last_date": "2000-12-08 18:23:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "transwestern weekly report",
+      "rows": 57,
+      "custodians": 1,
+      "first_date": "2000-08-25 11:29:00+02:00",
+      "last_date": "2000-12-08 11:35:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "enron energy services: with dereg under fire,enron calif elec business heats up",
+      "rows": 56,
+      "custodians": 2,
+      "first_date": "2000-09-14 20:09:00+02:00",
+      "last_date": "2000-09-15 20:38:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "california lawmakers vote to limit power costs - wsj",
+      "rows": 56,
+      "custodians": 2,
+      "first_date": "2000-09-01 09:57:00+02:00",
+      "last_date": "2000-09-01 10:28:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "fw: notification to px participants",
+      "rows": 55,
+      "custodians": 4,
+      "first_date": "2001-01-30 01:43:05+01:00",
+      "last_date": "2001-01-30 12:29:00+01:00",
+      "rows_with_attachments": 26
+    },
+    {
+      "subject_clean": "order issued by ferc , el00-95-000",
+      "rows": 55,
+      "custodians": 3,
+      "first_date": "2000-11-01 12:14:00+01:00",
+      "last_date": "2000-12-01 08:55:00+01:00",
+      "rows_with_attachments": 55
+    },
+    {
+      "subject_clean": "calif crisis conference call   eb04701",
+      "rows": 55,
+      "custodians": 1,
+      "first_date": "2001-01-12 11:30:00+01:00",
+      "last_date": "2001-01-26 11:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "california power markets",
+      "rows": 54,
+      "custodians": 2,
+      "first_date": "2001-03-02 13:04:00+01:00",
+      "last_date": "2001-07-20 02:54:00+02:00",
+      "rows_with_attachments": 54
+    },
+    {
+      "subject_clean": "re: ferc investigation in ca - what should they be looking for?",
+      "rows": 54,
+      "custodians": 1,
+      "first_date": "2000-08-17 09:34:00+02:00",
+      "last_date": "2000-08-24 10:41:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: assignment of regulatory risk responsibility for current assets",
+      "rows": 54,
+      "custodians": 1,
+      "first_date": "2000-02-09 16:02:00+01:00",
+      "last_date": "2000-02-10 10:17:00+01:00",
+      "rows_with_attachments": 54
+    },
+    {
+      "subject_clean": "calpine",
+      "rows": 53,
+      "custodians": 10,
+      "first_date": "1999-12-31 16:48:00+01:00",
+      "last_date": "2001-12-04 16:20:59+01:00",
+      "rows_with_attachments": 20
+    },
+    {
+      "subject_clean": "meeting with governor davis, need for additional comments/suggestions",
+      "rows": 52,
+      "custodians": 3,
+      "first_date": "2000-12-28 22:19:00+01:00",
+      "last_date": "2001-01-03 14:26:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "tax review of california assembly bill no. 128",
+      "rows": 52,
+      "custodians": 3,
+      "first_date": "2001-05-09 17:01:00+02:00",
+      "last_date": "2001-05-10 11:20:00+02:00",
+      "rows_with_attachments": 52
+    },
+    {
+      "subject_clean": "p kaufman weekly call w/ regulatory re sale of pge call in 503-464-7737",
+      "rows": 52,
+      "custodians": 1,
+      "first_date": "2000-01-10 12:00:00+01:00",
+      "last_date": "2000-01-31 12:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "governor davis calls on federal energy regulatory commission to order consumer",
+      "rows": 51,
+      "custodians": 2,
+      "first_date": "2000-11-14 17:20:00+01:00",
+      "last_date": "2000-11-15 12:36:00+01:00",
+      "rows_with_attachments": 51
+    },
+    {
+      "subject_clean": "chairman's award nominations",
+      "rows": 50,
+      "custodians": 17,
+      "first_date": "2000-11-13 19:42:00+01:00",
+      "last_date": "2000-11-14 12:07:00+01:00",
+      "rows_with_attachments": 50
+    },
+    {
+      "subject_clean": "price caps",
+      "rows": 50,
+      "custodians": 4,
+      "first_date": "2000-10-27 17:40:00+02:00",
+      "last_date": "2001-01-02 10:48:00+01:00",
+      "rows_with_attachments": 47
+    },
+    {
+      "subject_clean": "re: urgent - steve kean to testify at senate hearing, need info",
+      "rows": 50,
+      "custodians": 2,
+      "first_date": "2001-01-26 14:05:00+01:00",
+      "last_date": "2001-01-30 11:44:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: summary of today's call/agenda for tomorrow's call",
+      "rows": 50,
+      "custodians": 2,
+      "first_date": "2001-05-15 09:34:00+02:00",
+      "last_date": "2001-05-15 21:28:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: enfolio master firm purchase/sale agreement",
+      "rows": 50,
+      "custodians": 2,
+      "first_date": "2001-03-02 14:43:00+01:00",
+      "last_date": "2001-04-09 11:42:00+02:00",
+      "rows_with_attachments": 20
+    },
+    {
+      "subject_clean": "re: i'm leaving enron",
+      "rows": 50,
+      "custodians": 1,
+      "first_date": "2001-03-23 11:37:00+01:00",
+      "last_date": "2001-03-28 20:25:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: cal-iso wants pwr generators to forward bid 70% -sources",
+      "rows": 50,
+      "custodians": 1,
+      "first_date": "2000-10-24 13:47:00+02:00",
+      "last_date": "2000-10-24 18:57:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "hoecker letter",
+      "rows": 48,
+      "custodians": 3,
+      "first_date": "2000-10-31 09:34:00+01:00",
+      "last_date": "2000-10-31 14:12:00+01:00",
+      "rows_with_attachments": 48
+    },
+    {
+      "subject_clean": "individual.com - news from a friend!",
+      "rows": 48,
+      "custodians": 1,
+      "first_date": "2000-11-15 18:32:00+01:00",
+      "last_date": "2000-12-11 11:21:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "ehs weekly report",
+      "rows": 48,
+      "custodians": 1,
+      "first_date": "2000-10-27 11:58:00+02:00",
+      "last_date": "2000-12-15 14:09:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "white house writers group proposal",
+      "rows": 48,
+      "custodians": 1,
+      "first_date": "2000-12-05 18:42:00+01:00",
+      "last_date": "2000-12-29 09:56:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "pg&e bankruptcy case-- important",
+      "rows": 47,
+      "custodians": 14,
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-11 10:35:00+02:00",
+      "rows_with_attachments": 47
+    },
+    {
+      "subject_clean": "california update",
+      "rows": 46,
+      "custodians": 4,
+      "first_date": "2000-08-09 11:05:00+02:00",
+      "last_date": "2001-09-27 00:13:38+02:00",
+      "rows_with_attachments": 41
+    },
+    {
+      "subject_clean": "dow jones reports that pg&e buys forward for 5.6 cents for two years",
+      "rows": 46,
+      "custodians": 2,
+      "first_date": "2000-10-13 19:10:00+02:00",
+      "last_date": "2000-10-16 11:55:00+02:00",
+      "rows_with_attachments": 46
+    },
+    {
+      "subject_clean": "ferc staff report on northeast markets",
+      "rows": 46,
+      "custodians": 2,
+      "first_date": "2000-11-13 11:53:00+01:00",
+      "last_date": "2000-11-13 12:31:00+01:00",
+      "rows_with_attachments": 46
+    }
+  ],
+  "broadcast_body_hashes": [
+    {
+      "body_top_md5": "1807c31f2b5e494e05e765c786512ea7",
+      "example_subject": "",
+      "rows": 38,
+      "custodians": 32,
+      "subjects": 2,
+      "first_date": "2001-06-08 05:04:06+02:00",
+      "last_date": "2001-06-14 02:46:57+02:00",
+      "example_chars": 787
+    },
+    {
+      "body_top_md5": "4e4be7214263fd54a34dd073b503777b",
+      "example_subject": "california department of water resources",
+      "rows": 18,
+      "custodians": 18,
+      "subjects": 1,
+      "first_date": "2001-11-19 21:25:26+01:00",
+      "last_date": "2001-11-19 21:25:26+01:00",
+      "example_chars": 154
+    },
+    {
+      "body_top_md5": "183592cac1c3d332e1b8e94291003eeb",
+      "example_subject": "california energy crisis",
+      "rows": 51,
+      "custodians": 17,
+      "subjects": 1,
+      "first_date": "2001-03-13 17:17:00+01:00",
+      "last_date": "2001-03-13 17:17:00+01:00",
+      "example_chars": 8292
+    },
+    {
+      "body_top_md5": "fd7cb001de0c660ff44b195ad80625fc",
+      "example_subject": "chairman's award nominations",
+      "rows": 49,
+      "custodians": 16,
+      "subjects": 1,
+      "first_date": "2000-11-13 19:42:00+01:00",
+      "last_date": "2000-11-13 19:42:00+01:00",
+      "example_chars": 2709
+    },
+    {
+      "body_top_md5": "9c0846954b524d43fa2c90a945ff2e97",
+      "example_subject": "re-alignment",
+      "rows": 52,
+      "custodians": 14,
+      "subjects": 1,
+      "first_date": "2000-12-21 03:02:00+01:00",
+      "last_date": "2000-12-21 03:02:00+01:00",
+      "example_chars": 12019
+    },
+    {
+      "body_top_md5": "706d0fa6a134c67619f7a7d69a404a83",
+      "example_subject": "entouch newsletter",
+      "rows": 38,
+      "custodians": 13,
+      "subjects": 1,
+      "first_date": "2000-11-29 19:31:00+01:00",
+      "last_date": "2000-11-29 19:31:00+01:00",
+      "example_chars": 8427
+    },
+    {
+      "body_top_md5": "37141dd9338293a8f3d7c407c95344d3",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "rows": 37,
+      "custodians": 13,
+      "subjects": 1,
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-11 10:35:00+02:00",
+      "example_chars": 805
+    },
+    {
+      "body_top_md5": "f88bc57d0cd8e8d3faf0d8a28f5ed076",
+      "example_subject": "introducing the 2nd issue of the new enron business!",
+      "rows": 35,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-04-29 19:13:00+02:00",
+      "last_date": "2001-04-29 19:13:00+02:00",
+      "example_chars": 964
+    },
+    {
+      "body_top_md5": "3b68a5454d198c2133d24ca00ec9c1e8",
+      "example_subject": "",
+      "rows": 14,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-09-28 04:18:56+02:00",
+      "last_date": "2001-09-28 04:18:58+02:00",
+      "example_chars": 14771
+    },
+    {
+      "body_top_md5": "099f8d0792a23510ea32ec299f47aa02",
+      "example_subject": "",
+      "rows": 12,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-11-21 19:00:05+01:00",
+      "last_date": "2001-11-21 19:00:05+01:00",
+      "example_chars": 26786
+    },
+    {
+      "body_top_md5": "0e874d3e09aed56b45adf60cf754504b",
+      "example_subject": "\"take this job and shovel it\"",
+      "rows": 34,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-04-29 19:01:00+02:00",
+      "last_date": "2001-04-29 19:01:00+02:00",
+      "example_chars": 459
+    },
+    {
+      "body_top_md5": "2a89118e83f5af1e60f439bae401f806",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-11-27 19:00:06+01:00",
+      "last_date": "2001-11-27 19:00:06+01:00",
+      "example_chars": 26786
+    },
+    {
+      "body_top_md5": "db7d0728c66ff7e6b5d8561c4f7a46ae",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-11-19 19:00:05+01:00",
+      "last_date": "2001-11-19 19:00:05+01:00",
+      "example_chars": 26786
+    },
+    {
+      "body_top_md5": "0139654e529e2835d874d8caf825dd05",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-23 01:36:13+02:00",
+      "last_date": "2001-10-23 01:36:13+02:00",
+      "example_chars": 354
+    },
+    {
+      "body_top_md5": "46d350f276672dc71c9f260d64aff5d7",
+      "example_subject": "",
+      "rows": 10,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-26 19:00:04+02:00",
+      "last_date": "2001-10-26 19:00:04+02:00",
+      "example_chars": 26786
+    },
+    {
+      "body_top_md5": "02088d0d56b53f9e46719f635f8d1484",
+      "example_subject": "",
+      "rows": 10,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-29 19:00:05+01:00",
+      "last_date": "2001-10-29 19:00:05+01:00",
+      "example_chars": 26786
+    },
+    {
+      "body_top_md5": "cea55e342d463502cc0ab39147a94eb7",
+      "example_subject": "world wide announcement",
+      "rows": 41,
+      "custodians": 9,
+      "subjects": 1,
+      "first_date": "2000-10-26 01:55:00+02:00",
+      "last_date": "2000-10-26 01:55:00+02:00",
+      "example_chars": 1218
+    },
+    {
+      "body_top_md5": "1ce1f6e03d013e9aae244d6a88686588",
+      "example_subject": "open enrollment 2001",
+      "rows": 28,
+      "custodians": 8,
+      "subjects": 1,
+      "first_date": "2000-10-12 20:23:00+02:00",
+      "last_date": "2000-10-12 20:23:00+02:00",
+      "example_chars": 2405
+    },
+    {
+      "body_top_md5": "9b0eb3b0667454cfbd7c05ae366fc6b7",
+      "example_subject": "japan, india and california, too?",
+      "rows": 24,
+      "custodians": 8,
+      "subjects": 1,
+      "first_date": "2000-11-02 19:53:00+01:00",
+      "last_date": "2000-11-02 19:53:00+01:00",
+      "example_chars": 298
+    },
+    {
+      "body_top_md5": "99b3cea2f61bc04b1e9d7fa9f4476979",
+      "example_subject": "is new york going the way of california?",
+      "rows": 18,
+      "custodians": 7,
+      "subjects": 1,
+      "first_date": "2001-03-19 23:57:00+01:00",
+      "last_date": "2001-03-19 23:57:00+01:00",
+      "example_chars": 306
+    },
+    {
+      "body_top_md5": "ca2d27bf1e3699e100bdcdc83cdd0447",
+      "example_subject": "tax review of california senate bill no. 1",
+      "rows": 36,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2001-05-17 17:21:00+02:00",
+      "last_date": "2001-05-17 17:21:00+02:00",
+      "example_chars": 927
+    },
+    {
+      "body_top_md5": "d7c4259e11ab4e858314d7d373544ab9",
+      "example_subject": "px credits & schedule f in the pg&e bankruptcy",
+      "rows": 30,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2001-05-23 17:01:00+02:00",
+      "last_date": "2001-05-23 17:01:00+02:00",
+      "example_chars": 756
+    },
+    {
+      "body_top_md5": "b01089e3d493506b372baeb1e7f34a5a",
+      "example_subject": "the chairman's reward",
+      "rows": 25,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2000-12-15 19:33:00+01:00",
+      "last_date": "2000-12-15 19:34:00+01:00",
+      "example_chars": 420
+    },
+    {
+      "body_top_md5": "9f1ac8a44b9be29fcaacd824d8f1ad7b",
+      "example_subject": "entouch newsletter",
+      "rows": 19,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2001-03-09 09:21:00+01:00",
+      "last_date": "2001-03-09 09:21:00+01:00",
+      "example_chars": 5789
+    },
+    {
+      "body_top_md5": "b9b323785984a8be9aa2270dff598078",
+      "example_subject": "entouch newsletter",
+      "rows": 18,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2001-02-02 00:49:00+01:00",
+      "last_date": "2001-02-02 00:49:00+01:00",
+      "example_chars": 6877
+    },
+    {
+      "body_top_md5": "1feffec0a66fcd679c23cf421e47a9fa",
+      "example_subject": "there's changes in the ferc",
+      "rows": 16,
+      "custodians": 6,
+      "subjects": 1,
+      "first_date": "2001-04-17 03:08:00+02:00",
+      "last_date": "2001-04-17 03:08:00+02:00",
+      "example_chars": 352
+    },
+    {
+      "body_top_md5": "1518dbcd65b365aced0b330dccc12eea",
+      "example_subject": "regulatory filing summary",
+      "rows": 22,
+      "custodians": 5,
+      "subjects": 1,
+      "first_date": "2000-12-05 11:45:00+01:00",
+      "last_date": "2000-12-05 11:45:00+01:00",
+      "example_chars": 327
+    },
+    {
+      "body_top_md5": "03e60fac490ec86ae323ad4024ac1553",
+      "example_subject": "entouch newsletter",
+      "rows": 18,
+      "custodians": 5,
+      "subjects": 1,
+      "first_date": "2000-12-21 01:18:00+01:00",
+      "last_date": "2000-12-21 01:18:00+01:00",
+      "example_chars": 2536
+    },
+    {
+      "body_top_md5": "82782001662ef2dfaa1f92523ac38057",
+      "example_subject": "final filed version",
+      "rows": 36,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2000-12-13 17:39:00+01:00",
+      "last_date": "2000-12-13 17:39:00+01:00",
+      "example_chars": 504
+    },
+    {
+      "body_top_md5": "3e72877e32fdce9610c037e890ac7370",
+      "example_subject": "fw: notification to px participants",
+      "rows": 29,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-01-30 01:43:05+01:00",
+      "last_date": "2001-01-30 01:43:05+01:00",
+      "example_chars": 1364
+    },
+    {
+      "body_top_md5": "8a7f59469b8718be3a4ac792877850f1",
+      "example_subject": "california crisis contact list",
+      "rows": 22,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-01-12 18:19:00+01:00",
+      "last_date": "2001-01-12 18:19:00+01:00",
+      "example_chars": 77
+    },
+    {
+      "body_top_md5": "fca805c06e7e591eb2bd74ecbda85e4d",
+      "example_subject": "briefing paper- ferc's june 19 west-wide price mitigation order",
+      "rows": 20,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-06-21 17:34:00+02:00",
+      "last_date": "2001-06-21 17:34:00+02:00",
+      "example_chars": 85
+    },
+    {
+      "body_top_md5": "947bb72cf14f983c45058cb2103ad31d",
+      "example_subject": "easier for epmi/ees to purchase from industrials",
+      "rows": 16,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-04-30 16:20:00+02:00",
+      "last_date": "2001-04-30 16:20:00+02:00",
+      "example_chars": 2185
+    },
+    {
+      "body_top_md5": "74b66c88e2ab23af29a325080ec71d0b",
+      "example_subject": "ferc inquiry into electronic trading (&eol)",
+      "rows": 15,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-05-23 13:19:00+02:00",
+      "last_date": "2001-05-23 13:19:00+02:00",
+      "example_chars": 647
+    },
+    {
+      "body_top_md5": "5f7d664586f20f4102a33793f8d21395",
+      "example_subject": "re: px credits & schedule f in the pg&e bankruptcy",
+      "rows": 15,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-05-23 19:39:00+02:00",
+      "last_date": "2001-05-23 19:39:00+02:00",
+      "example_chars": 134
+    },
+    {
+      "body_top_md5": "02e753b037467fa56e071d0e072351f8",
+      "example_subject": "re: px credits & schedule f in the pg&e bankruptcy",
+      "rows": 15,
+      "custodians": 4,
+      "subjects": 1,
+      "first_date": "2001-05-23 19:32:00+02:00",
+      "last_date": "2001-05-23 19:32:00+02:00",
+      "example_chars": 74
+    },
+    {
+      "body_top_md5": "b97f7c3086161a169e99dc614090ac14",
+      "example_subject": "important- please read - california energy prices - legal issues",
+      "rows": 32,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-12-05 14:29:00+01:00",
+      "last_date": "2000-12-05 14:29:00+01:00",
+      "example_chars": 363
+    },
+    {
+      "body_top_md5": "058dbedb4cfdc2743f24b9ab76369257",
+      "example_subject": "outrageous statement by ca's attorney general",
+      "rows": 32,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-07 23:50:00+02:00",
+      "last_date": "2001-04-07 23:58:00+02:00",
+      "example_chars": 3662
+    },
+    {
+      "body_top_md5": "7291191988524bf60988cc094d21f449",
+      "example_subject": "re: enron response to san diego request for gas price caps",
+      "rows": 28,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-12-13 14:26:00+01:00",
+      "last_date": "2000-12-13 14:26:00+01:00",
+      "example_chars": 909
+    },
+    {
+      "body_top_md5": "73fbbb460dcc618bad420f148d43fb3b",
+      "example_subject": "enron response to san diego request for gas price caps",
+      "rows": 28,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-12-13 11:17:00+01:00",
+      "last_date": "2000-12-13 11:17:00+01:00",
+      "example_chars": 342
+    },
+    {
+      "body_top_md5": "3d9fac55827d1f86b202c1ad2d12c5f9",
+      "example_subject": "east power rto strategy - 2001",
+      "rows": 27,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-12-12 23:22:00+01:00",
+      "last_date": "2000-12-12 23:22:00+01:00",
+      "example_chars": 8663
+    },
+    {
+      "body_top_md5": "efe1c801050b176d5502357766fc8a12",
+      "example_subject": "tax review of california assembly bill no. 128",
+      "rows": 26,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-09 17:01:00+02:00",
+      "last_date": "2001-05-09 17:01:00+02:00",
+      "example_chars": 1137
+    },
+    {
+      "body_top_md5": "433f4d81d78dfca1c188fb8ec68608ce",
+      "example_subject": "the final version of the section 206 white paper",
+      "rows": 23,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-10-19 18:00:00+02:00",
+      "last_date": "2000-10-19 18:18:00+02:00",
+      "example_chars": 189
+    },
+    {
+      "body_top_md5": "01b26c8d537ffb2f7f30e3b8f0c9adb7",
+      "example_subject": "presentation for k. lay to ceos re: proposal k. lay's been making in california",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-10 14:20:00+02:00",
+      "last_date": "2001-05-10 14:20:00+02:00",
+      "example_chars": 485
+    },
+    {
+      "body_top_md5": "99bf3905d948c1e498910b9f96901cb3",
+      "example_subject": "solution for california document",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-01 21:56:00+02:00",
+      "last_date": "2001-05-01 21:56:00+02:00",
+      "example_chars": 156
+    },
+    {
+      "body_top_md5": "367e84985456fb9afcb4ffb9ab1325b8",
+      "example_subject": "press release on pg&e bankruptcy",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-06 14:01:00+02:00",
+      "last_date": "2001-04-06 14:01:00+02:00",
+      "example_chars": 161
+    },
+    {
+      "body_top_md5": "88049388c9c3208d2dca554dab3c4a52",
+      "example_subject": "more follow-up with hertzberg et. al.",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-22 14:42:00+02:00",
+      "last_date": "2001-05-22 14:42:00+02:00",
+      "example_chars": 1002
+    },
+    {
+      "body_top_md5": "6afc6fc8bf1e169ffa50a1ce28603abb",
+      "example_subject": "fw: enron proposals regarding document subpoenas",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-10-06 19:06:00+02:00",
+      "last_date": "2000-10-06 19:06:00+02:00",
+      "example_chars": 489
+    },
+    {
+      "body_top_md5": "94bc08f5fb24fc5be80b0cbc208d4fb3",
+      "example_subject": "follow-up with hertzberg on core/noncore",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-21 22:02:00+02:00",
+      "last_date": "2001-05-21 22:02:00+02:00",
+      "example_chars": 1622
+    },
+    {
+      "body_top_md5": "f2985c11f2637e6fd5dccab20a6f84ac",
+      "example_subject": "calif consumer responds to enron's 3q earnings",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-10-18 14:17:00+02:00",
+      "last_date": "2000-10-18 14:17:00+02:00",
+      "example_chars": 1289
+    },
+    {
+      "body_top_md5": "9919ecca8a3be7bf2a24a235032030fe",
+      "example_subject": "ferc summary",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-10 15:50:00+02:00",
+      "last_date": "2001-05-10 15:50:00+02:00",
+      "example_chars": 610
+    },
+    {
+      "body_top_md5": "98ab840b3c843cda49bfb353d52f3cc0",
+      "example_subject": "political issues raised at meeting with cpuc re subpoenas issued to enron",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-09-29 18:26:00+02:00",
+      "last_date": "2000-09-29 18:26:00+02:00",
+      "example_chars": 2460
+    },
+    {
+      "body_top_md5": "85e60d242ec85a5aa6152427f394ad60",
+      "example_subject": "",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-21 12:17:00+02:00",
+      "last_date": "2001-05-21 12:17:00+02:00",
+      "example_chars": 495
+    },
+    {
+      "body_top_md5": "e901b189ad93426b67ce86401753d1bc",
+      "example_subject": "former gov. wilson criticizes gov. davis - editorial from sacramento bee, sunday\r\n\t june 3, 2001",
+      "rows": 22,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-06-04 15:14:00+02:00",
+      "last_date": "2001-06-04 15:14:00+02:00",
+      "example_chars": 8505
+    },
+    {
+      "body_top_md5": "ff910f9e8114466699c71b0c5404ce18",
+      "example_subject": "*pg&e <pcg.n> says pacific g&e filed for chapter 11 voluntary",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-06 13:47:00+02:00",
+      "last_date": "2001-04-06 13:47:00+02:00",
+      "example_chars": 1890
+    },
+    {
+      "body_top_md5": "0374f2beff3d6fcc392866dc3ce93f9b",
+      "example_subject": "summary of today's call/agenda for tomorrow's call",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-14 22:50:00+02:00",
+      "last_date": "2001-05-14 22:50:00+02:00",
+      "example_chars": 4482
+    },
+    {
+      "body_top_md5": "6e003dfb56db5d7bcc76ca1763ed68a5",
+      "example_subject": "iso proposes unit-specific cost-based rates and requirements to sell in state",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-03-08 11:40:00+01:00",
+      "last_date": "2001-03-08 11:40:00+01:00",
+      "example_chars": 6146
+    },
+    {
+      "body_top_md5": "a85583540ee81c64245875247c5cc113",
+      "example_subject": "follow-up meeting this morning w/cma",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-10 14:48:00+02:00",
+      "last_date": "2001-05-10 14:48:00+02:00",
+      "example_chars": 2071
+    },
+    {
+      "body_top_md5": "3757e1b84109438c353a7d67b60a4405",
+      "example_subject": "recent ferc interconnection orders",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-01-26 17:29:00+01:00",
+      "last_date": "2001-01-26 17:29:00+01:00",
+      "example_chars": 3555
+    },
+    {
+      "body_top_md5": "d87be6a8e9a964257c1bf86d1ddffa38",
+      "example_subject": "ferc/republicans",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-15 21:20:00+02:00",
+      "last_date": "2001-05-15 21:20:00+02:00",
+      "example_chars": 1981
+    },
+    {
+      "body_top_md5": "28cdc0dfd9bea744c1ca3a3699d45fb3",
+      "example_subject": "fwd: calif. regulators propose tiered electric rate rise",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-09 18:33:00+02:00",
+      "last_date": "2001-05-09 18:33:00+02:00",
+      "example_chars": 3467
+    },
+    {
+      "body_top_md5": "c11b3d868c7e699b2b531b8dadca4c58",
+      "example_subject": "kevin's rto ideas for east",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-03-02 10:46:00+01:00",
+      "last_date": "2001-03-02 10:46:00+01:00",
+      "example_chars": 3403
+    },
+    {
+      "body_top_md5": "8529f5258060857a9b4e0cf12dc106a5",
+      "example_subject": "others reactions to pg&e bankruptcy",
+      "rows": 21,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-06 19:26:00+02:00",
+      "last_date": "2001-04-06 19:26:00+02:00",
+      "example_chars": 16989
+    },
+    {
+      "body_top_md5": "6d66b6187c850c9e1567b07896e907e5",
+      "example_subject": "sbx2 27 - direct access",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-24 10:46:00+02:00",
+      "last_date": "2001-05-24 10:46:00+02:00",
+      "example_chars": 315
+    },
+    {
+      "body_top_md5": "2827e974f18b9c624dec70a60897d2cc",
+      "example_subject": "california messaging",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00",
+      "example_chars": 999
+    },
+    {
+      "body_top_md5": "d8d9de345e593574dbd9057242ed7662",
+      "example_subject": "white paper on why price caps are bad",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-27 10:45:00+02:00",
+      "last_date": "2001-04-27 10:45:00+02:00",
+      "example_chars": 322
+    },
+    {
+      "body_top_md5": "7e53087bafc45fe036eb8af890c00e77",
+      "example_subject": "scope of ferc jurisdiction over state-owned utility",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-02-21 14:03:00+01:00",
+      "last_date": "2001-02-21 14:03:00+01:00",
+      "example_chars": 832
+    },
+    {
+      "body_top_md5": "48315aa73d6d5a4e2f004c0ed9588354",
+      "example_subject": "california energy prices",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2000-11-28 10:09:00+01:00",
+      "last_date": "2000-11-28 10:09:00+01:00",
+      "example_chars": 3678
+    },
+    {
+      "body_top_md5": "6d4628ce2c55971e73c03e9762b92b20",
+      "example_subject": "burton presentation and press conference",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-22 21:48:00+02:00",
+      "last_date": "2001-05-22 21:48:00+02:00",
+      "example_chars": 8630
+    },
+    {
+      "body_top_md5": "e4e2f530a7635ca58843ec0f5dc32c9e",
+      "example_subject": "edison deal sets high legislative hurdle for davis",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-15 18:58:00+02:00",
+      "last_date": "2001-05-15 18:58:00+02:00",
+      "example_chars": 2496
+    },
+    {
+      "body_top_md5": "e4355ee868c65751ef42212798995fd4",
+      "example_subject": "california update 5/11/01",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-11 17:00:00+02:00",
+      "last_date": "2001-05-11 17:00:00+02:00",
+      "example_chars": 2430
+    },
+    {
+      "body_top_md5": "c613e8f8acb799fbbe8277c4d21451a7",
+      "example_subject": "electronic copy of ferc complaint against px",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-02-08 11:41:00+01:00",
+      "last_date": "2001-02-08 11:41:00+01:00",
+      "example_chars": 45
+    },
+    {
+      "body_top_md5": "bd0c88597ae9b8e69544ff42c3d520bf",
+      "example_subject": "california update 5/22/01",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 2,
+      "first_date": "2001-05-22 14:33:00+02:00",
+      "last_date": "2001-05-22 16:02:00+02:00",
+      "example_chars": 1673
+    },
+    {
+      "body_top_md5": "6de26d8f5be86fcba62a33fb342066df",
+      "example_subject": "material on px purchasing and contracting for california senate hearing",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-01-29 13:48:00+01:00",
+      "last_date": "2001-01-29 13:48:00+01:00",
+      "example_chars": 901
+    },
+    {
+      "body_top_md5": "fe0425d81b71b680d391833fa4b37e55",
+      "example_subject": "california update 4/27/01",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-27 18:25:00+02:00",
+      "last_date": "2001-04-27 18:25:00+02:00",
+      "example_chars": 6440
+    },
+    {
+      "body_top_md5": "60038455c88391e35434d60aea107cd9",
+      "example_subject": "response statements for pg&e exposure",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-04-11 18:50:00+02:00",
+      "last_date": "2001-04-11 18:57:00+02:00",
+      "example_chars": 1424
+    },
+    {
+      "body_top_md5": "34757da845099c33b1cac4e5e4d5f295",
+      "example_subject": "enron mentions",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-15 19:17:00+02:00",
+      "last_date": "2001-05-15 19:17:00+02:00",
+      "example_chars": 21156
+    },
+    {
+      "body_top_md5": "06626082daba0dc929c1eebc09c303a8",
+      "example_subject": "burton presentation and press conference",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-22 19:27:00+02:00",
+      "last_date": "2001-05-22 19:27:00+02:00",
+      "example_chars": 7544
+    },
+    {
+      "body_top_md5": "4d69a93a2fba5df8fe4d025f2a081c0e",
+      "example_subject": "sbx 6",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-16 17:19:00+02:00",
+      "last_date": "2001-05-16 17:19:00+02:00",
+      "example_chars": 458
+    },
+    {
+      "body_top_md5": "f9505078c802b82b4bf74f35fb1c8fb9",
+      "example_subject": "",
+      "rows": 19,
+      "custodians": 3,
+      "subjects": 1,
+      "first_date": "2001-05-11 10:35:00+02:00",
+      "last_date": "2001-05-11 10:35:00+02:00",
+      "example_chars": 1261
+    }
+  ],
+  "attachment_hash_diffusion": [
+    {
+      "native_hash": "C2E64A5217518FD9E91FF81B7B1FCE11",
+      "attachment_rows": 94,
+      "messages": 94,
+      "custodians": 44,
+      "example_extension": "doc",
+      "example_subject": "fw: pg&e bankruptcy case",
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00"
+    },
+    {
+      "native_hash": "241856455D8F27081E1DF6F88ED7C9D0",
+      "attachment_rows": 94,
+      "messages": 94,
+      "custodians": 44,
+      "example_extension": "doc",
+      "example_subject": "fw: pg&e bankruptcy case",
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00"
+    },
+    {
+      "native_hash": "7122E0607FD46D01C1CA3118FD8C82F3",
+      "attachment_rows": 24,
+      "messages": 24,
+      "custodians": 19,
+      "example_extension": "doc",
+      "example_subject": "enron's ferc filing opposing icap",
+      "first_date": "2001-10-17 23:28:41+02:00",
+      "last_date": "2001-10-17 23:54:37+02:00"
+    },
+    {
+      "native_hash": "B22F90B6155D529BF01521821E9DE820",
+      "attachment_rows": 24,
+      "messages": 24,
+      "custodians": 19,
+      "example_extension": "doc",
+      "example_subject": "enron's ferc filing opposing icap",
+      "first_date": "2001-10-17 23:28:41+02:00",
+      "last_date": "2001-10-17 23:54:37+02:00"
+    },
+    {
+      "native_hash": "A8C5A85ECAC0847C221719764AC0AFB2",
+      "attachment_rows": 26,
+      "messages": 26,
+      "custodians": 10,
+      "example_extension": "doc",
+      "example_subject": "briefing paper- ferc's june 19 west-wide price mitigation order",
+      "first_date": "2001-06-21 17:34:00+02:00",
+      "last_date": "2001-06-25 19:54:56+02:00"
+    },
+    {
+      "native_hash": "ED11829BF689786484E911A1ED599424",
+      "attachment_rows": 39,
+      "messages": 39,
+      "custodians": 8,
+      "example_extension": "doc",
+      "example_subject": "tax review of california senate bill no. 1",
+      "first_date": "2001-05-17 17:21:00+02:00",
+      "last_date": "2001-05-18 03:21:00+02:00"
+    },
+    {
+      "native_hash": "C85E285D7FCD5AF6088B219D0F9F6A65",
+      "attachment_rows": 39,
+      "messages": 39,
+      "custodians": 8,
+      "example_extension": "doc",
+      "example_subject": "tax review of california senate bill no. 1",
+      "first_date": "2001-05-17 17:21:00+02:00",
+      "last_date": "2001-05-18 03:21:00+02:00"
+    },
+    {
+      "native_hash": "7F070802E1E7EFDBD2822F1C8A0E4B81",
+      "attachment_rows": 211,
+      "messages": 211,
+      "custodians": 7,
+      "example_extension": "pdf",
+      "example_subject": "(has tva info) ferc staff investigations on midwest and southeast bulk power   systems",
+      "first_date": "2000-11-08 10:39:00+01:00",
+      "last_date": "2000-12-06 10:03:00+01:00"
+    },
+    {
+      "native_hash": "17130CADC85D6B8A8419BFA44F7823E1",
+      "attachment_rows": 211,
+      "messages": 211,
+      "custodians": 7,
+      "example_extension": "pdf",
+      "example_subject": "(has tva info) ferc staff investigations on midwest and southeast bulk power   systems",
+      "first_date": "2000-11-08 10:39:00+01:00",
+      "last_date": "2000-12-06 10:03:00+01:00"
+    },
+    {
+      "native_hash": "A586DAAFCE5C9816C2372DD2FECB12CD",
+      "attachment_rows": 10,
+      "messages": 10,
+      "custodians": 7,
+      "example_extension": "xls",
+      "example_subject": "pg&e 2001 capacity release transactions on transwestern pipeline",
+      "first_date": "2001-10-29 23:38:57+01:00",
+      "last_date": "2001-10-31 15:22:06+01:00"
+    },
+    {
+      "native_hash": "4761E1E4976CFEC408678A0C56015C92",
+      "attachment_rows": 65,
+      "messages": 65,
+      "custodians": 6,
+      "example_extension": "doc",
+      "example_subject": "tax review of california assembly bill no. 128",
+      "first_date": "2001-05-09 17:01:00+02:00",
+      "last_date": "2001-05-16 02:47:00+02:00"
+    },
+    {
+      "native_hash": "E70FB827143B46B81569194FFC3B5848",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 6,
+      "example_extension": "pdf",
+      "example_subject": "california assembly releases \"modified mou\" for edison",
+      "first_date": "2001-07-13 19:11:00+02:00",
+      "last_date": "2001-07-14 05:11:00+02:00"
+    },
+    {
+      "native_hash": "F7A6EADA0F5142B03BB416FCFE10C04F",
+      "attachment_rows": 13,
+      "messages": 13,
+      "custodians": 6,
+      "example_extension": "wpd",
+      "example_subject": "summary- judge's recommendation re retroactive refunds",
+      "first_date": "2001-07-12 20:26:00+02:00",
+      "last_date": "2001-07-13 07:01:26+02:00"
+    },
+    {
+      "native_hash": "E8230A082B8BC45D9BEB9038605363E6",
+      "attachment_rows": 8,
+      "messages": 8,
+      "custodians": 6,
+      "example_extension": "doc",
+      "example_subject": "fw: transwestern's reporting requirements under ferc order on reporting ca   gas sales",
+      "first_date": "2001-07-26 15:51:46+02:00",
+      "last_date": "2001-08-03 04:53:16+02:00"
+    },
+    {
+      "native_hash": "13E9DD053BCAC6673D7B668FD0671015",
+      "attachment_rows": 8,
+      "messages": 8,
+      "custodians": 6,
+      "example_extension": "doc",
+      "example_subject": "ferc refund investigation into pacific northwest spot power sales",
+      "first_date": "2001-09-27 21:07:48+02:00",
+      "last_date": "2001-10-03 12:50:24+02:00"
+    },
+    {
+      "native_hash": "C4E54B4630333EC5CB803C4454B648C9",
+      "attachment_rows": 7,
+      "messages": 7,
+      "custodians": 6,
+      "example_extension": "doc",
+      "example_subject": "conference call today with ferc staff",
+      "first_date": "2001-10-18 23:51:19+02:00",
+      "last_date": "2001-10-18 23:51:19+02:00"
+    },
+    {
+      "native_hash": "5A5BD24481A9205AB648D95A43A948CA",
+      "attachment_rows": 7,
+      "messages": 7,
+      "custodians": 6,
+      "example_extension": "doc",
+      "example_subject": "ferc initial decision in hearing on tw negotiated rate deals",
+      "first_date": "2001-10-25 00:52:39+02:00",
+      "last_date": "2001-10-25 16:34:04+02:00"
+    },
+    {
+      "native_hash": "7BF07AC66DF09C4EB39217335B86966C",
+      "attachment_rows": 42,
+      "messages": 42,
+      "custodians": 5,
+      "example_extension": "doc",
+      "example_subject": "summary of ferc's 12- 15 order on california markets",
+      "first_date": "2000-12-17 18:20:00+01:00",
+      "last_date": "2000-12-18 18:19:00+01:00"
+    },
+    {
+      "native_hash": "25621C506C1FB818EB92D85398336464",
+      "attachment_rows": 40,
+      "messages": 40,
+      "custodians": 5,
+      "example_extension": "doc",
+      "example_subject": "california order",
+      "first_date": "2000-11-02 11:10:00+01:00",
+      "last_date": "2000-11-03 10:55:00+01:00"
+    },
+    {
+      "native_hash": "D75991BBDF36A817B273D4F17B926DA3",
+      "attachment_rows": 30,
+      "messages": 30,
+      "custodians": 5,
+      "example_extension": "pdf",
+      "example_subject": "fwd: california - march 9 order addressing refunds for jan. 2001 sales",
+      "first_date": "2001-03-12 09:50:00+01:00",
+      "last_date": "2001-03-12 09:55:00+01:00"
+    },
+    {
+      "native_hash": "D1632CAD2878BA3B80FFD62A5F059892",
+      "attachment_rows": 26,
+      "messages": 26,
+      "custodians": 5,
+      "example_extension": "doc",
+      "example_subject": "ferc staff concerns on the gas side",
+      "first_date": "2001-06-07 14:26:00+02:00",
+      "last_date": "2001-06-08 12:00:00+02:00"
+    },
+    {
+      "native_hash": "E684A37862C64AB84A555222566CAA9F",
+      "attachment_rows": 26,
+      "messages": 26,
+      "custodians": 5,
+      "example_extension": "doc",
+      "example_subject": "ferc staff concerns on the gas side",
+      "first_date": "2001-06-07 14:26:00+02:00",
+      "last_date": "2001-06-08 12:00:00+02:00"
+    },
+    {
+      "native_hash": "39AEA386C987450E1445CF62D2F1E728",
+      "attachment_rows": 18,
+      "messages": 18,
+      "custodians": 5,
+      "example_extension": "ppt",
+      "example_subject": "fw:  dwr report released today",
+      "first_date": "2001-06-07 13:53:00+02:00",
+      "last_date": "2001-06-08 14:43:47+02:00"
+    },
+    {
+      "native_hash": "051DD42637ED0615A9FC84DCF0929D00",
+      "attachment_rows": 6,
+      "messages": 6,
+      "custodians": 5,
+      "example_extension": "xls",
+      "example_subject": "fw: pg&e settlement offer",
+      "first_date": "2001-11-16 22:30:27+01:00",
+      "last_date": "2001-11-17 00:25:47+01:00"
+    },
+    {
+      "native_hash": "14942B5C952362990314543177624781",
+      "attachment_rows": 5,
+      "messages": 5,
+      "custodians": 5,
+      "example_extension": "htm",
+      "example_subject": "thestreet.com the latest california power craze a windfall profits tax bill.htm",
+      "first_date": "2001-05-10 19:34:24+02:00",
+      "last_date": "2001-05-10 19:55:28+02:00"
+    },
+    {
+      "native_hash": "9CFC52D143756E14B89D81D49486677A",
+      "attachment_rows": 116,
+      "messages": 116,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "re: draft talking points about california gas market",
+      "first_date": "2000-12-12 10:58:00+01:00",
+      "last_date": "2000-12-12 22:38:00+01:00"
+    },
+    {
+      "native_hash": "3C266B81BE5E0864A1F8C1AC496D27FC",
+      "attachment_rows": 71,
+      "messages": 71,
+      "custodians": 4,
+      "example_extension": "1",
+      "example_subject": "order issued by ferc , el00-95-000",
+      "first_date": "2000-11-01 12:14:00+01:00",
+      "last_date": "2000-12-01 08:55:00+01:00"
+    },
+    {
+      "native_hash": "78DC37CC062DE9CA15F25E39ACB8C679",
+      "attachment_rows": 70,
+      "messages": 70,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "enron response to san diego request for gas price caps",
+      "first_date": "2000-12-13 10:12:00+01:00",
+      "last_date": "2000-12-13 12:28:00+01:00"
+    },
+    {
+      "native_hash": "715B7887E415E28D60415D68CA094EAD",
+      "attachment_rows": 25,
+      "messages": 25,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "california crisis contact list",
+      "first_date": "2001-01-12 18:19:00+01:00",
+      "last_date": "2001-01-12 18:19:00+01:00"
+    },
+    {
+      "native_hash": "1ABB9292F6B2FE2766C82CA72431CC47",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 4,
+      "example_extension": "tif",
+      "example_subject": "caiso list of market abusers",
+      "first_date": "2001-03-27 13:29:00+02:00",
+      "last_date": "2001-03-28 01:23:00+02:00"
+    },
+    {
+      "native_hash": "8BA3C212D760191A38D130334ED2C5F0",
+      "attachment_rows": 20,
+      "messages": 20,
+      "custodians": 4,
+      "example_extension": "xls",
+      "example_subject": "dwr stranded costs: $21 billion",
+      "first_date": "2001-06-19 21:01:00+02:00",
+      "last_date": "2001-06-20 19:30:00+02:00"
+    },
+    {
+      "native_hash": "1DD564C2035B9605185F3407BA5F1D27",
+      "attachment_rows": 20,
+      "messages": 20,
+      "custodians": 4,
+      "example_extension": "pdf",
+      "example_subject": "dwr presentation (see page 11)",
+      "first_date": "2001-06-22 11:04:00+02:00",
+      "last_date": "2001-06-23 12:13:00+02:00"
+    },
+    {
+      "native_hash": "6AF208C27B5E30399AEB290D2830CEA0",
+      "attachment_rows": 13,
+      "messages": 13,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "draft responses to ferc staff",
+      "first_date": "2001-06-22 14:14:00+02:00",
+      "last_date": "2001-06-25 23:58:00+02:00"
+    },
+    {
+      "native_hash": "8E40485C73DB642DADD5B994D2A84316",
+      "attachment_rows": 11,
+      "messages": 11,
+      "custodians": 4,
+      "example_extension": "pdf",
+      "example_subject": "pg&e plan of reorganization",
+      "first_date": "2001-09-22 02:07:54+02:00",
+      "last_date": "2001-09-25 18:04:39+02:00"
+    },
+    {
+      "native_hash": "7876A74B5BBD9A3D15414BB5279628EB",
+      "attachment_rows": 10,
+      "messages": 10,
+      "custodians": 4,
+      "example_extension": "xls",
+      "example_subject": "fw: dwr stranded cost update",
+      "first_date": "2001-07-11 19:03:00+02:00",
+      "last_date": "2001-07-14 01:57:50+02:00"
+    },
+    {
+      "native_hash": "77A281DD780F83C6C76E7D0131992FFA",
+      "attachment_rows": 7,
+      "messages": 7,
+      "custodians": 4,
+      "example_extension": "htm",
+      "example_subject": "fw: ferc alj initial decision on el paso affiliate abuse",
+      "first_date": "2001-10-09 23:16:10+02:00",
+      "last_date": "2001-10-11 00:32:01+02:00"
+    },
+    {
+      "native_hash": "0979C9F6EE9CD6844E3F9EB3B3089C06",
+      "attachment_rows": 6,
+      "messages": 6,
+      "custodians": 4,
+      "example_extension": "ppt",
+      "example_subject": "california proposed projects",
+      "first_date": "2001-11-26 17:49:54+01:00",
+      "last_date": "2001-11-26 19:45:40+01:00"
+    },
+    {
+      "native_hash": "FF2027357871F2982AC32659E1DADDC6",
+      "attachment_rows": 6,
+      "messages": 6,
+      "custodians": 4,
+      "example_extension": "xls",
+      "example_subject": "transwestern ferc california monthly report - january 2002 (preliminary)",
+      "first_date": "2002-02-13 23:47:00+01:00",
+      "last_date": "2002-02-26 17:42:23+01:00"
+    },
+    {
+      "native_hash": "7EB22DBC8E7CB116FD1AE42DA6898311",
+      "attachment_rows": 5,
+      "messages": 5,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "ferc approval of the nyiso virtual bidding proposal",
+      "first_date": "2001-10-26 20:46:10+02:00",
+      "last_date": "2001-10-26 21:53:33+02:00"
+    },
+    {
+      "native_hash": "64D61F91FFBED59F6CAE163610D68B1A",
+      "attachment_rows": 5,
+      "messages": 5,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "teams for upcoming ferc proceedings",
+      "first_date": "2001-10-03 17:37:26+02:00",
+      "last_date": "2001-10-03 18:01:26+02:00"
+    },
+    {
+      "native_hash": "AC33B1E91CA0863DD7509EA61F99E4C6",
+      "attachment_rows": 5,
+      "messages": 5,
+      "custodians": 4,
+      "example_extension": "xls",
+      "example_subject": "mark to market of dwr contracts",
+      "first_date": "2001-10-03 19:46:31+02:00",
+      "last_date": "2001-11-03 22:53:02+01:00"
+    },
+    {
+      "native_hash": "50595E46B5BDCD28EBD646C37594CD8F",
+      "attachment_rows": 5,
+      "messages": 5,
+      "custodians": 4,
+      "example_extension": "doc",
+      "example_subject": "ferc reporting requirements for california natural gas sales",
+      "first_date": "2001-08-20 18:44:59+02:00",
+      "last_date": "2001-08-22 01:56:55+02:00"
+    },
+    {
+      "native_hash": "EFE6F68AC7FEAA869765A3383273179B",
+      "attachment_rows": 150,
+      "messages": 150,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "**for the ferc staff lunch 12/7--ferc investigation summaries",
+      "first_date": "2000-11-08 10:39:00+01:00",
+      "last_date": "2000-12-06 10:03:00+01:00"
+    },
+    {
+      "native_hash": "E953D0D1E7B8886FCEC5E88009E09130",
+      "attachment_rows": 128,
+      "messages": 128,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "re: comments on ferc november 1 order",
+      "first_date": "2000-11-09 18:19:00+01:00",
+      "last_date": "2000-11-16 18:18:00+01:00"
+    },
+    {
+      "native_hash": "8266E6867F03FF5EE90C7A10F8E46875",
+      "attachment_rows": 104,
+      "messages": 104,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "some background on california gas price spikes--the other side of the story",
+      "first_date": "2001-04-24 20:33:00+02:00",
+      "last_date": "2001-04-30 09:42:00+02:00"
+    },
+    {
+      "native_hash": "2C479471F03D6CE58C4A4E02CEFB8AA1",
+      "attachment_rows": 85,
+      "messages": 85,
+      "custodians": 3,
+      "example_extension": "ppt",
+      "example_subject": "ferc presentation on california/west wholesale market",
+      "first_date": "2000-08-29 20:11:00+02:00",
+      "last_date": "2000-10-02 18:59:00+02:00"
+    },
+    {
+      "native_hash": "7C782A3AE9B259B960779118F6FD23D0",
+      "attachment_rows": 85,
+      "messages": 85,
+      "custodians": 3,
+      "example_extension": "ppt",
+      "example_subject": "ferc presentation on california/west wholesale market",
+      "first_date": "2000-08-29 20:11:00+02:00",
+      "last_date": "2000-10-02 18:59:00+02:00"
+    },
+    {
+      "native_hash": "64238731D802B1DFC30A5BD6B7E76F86",
+      "attachment_rows": 56,
+      "messages": 56,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "ferc notice of public conference in san diego",
+      "first_date": "2000-11-07 17:18:00+01:00",
+      "last_date": "2000-11-13 13:52:00+01:00"
+    },
+    {
+      "native_hash": "04BDEE5CC03E7665B4163C05D371400C",
+      "attachment_rows": 49,
+      "messages": 49,
+      "custodians": 3,
+      "example_extension": "xls",
+      "example_subject": "price caps",
+      "first_date": "2000-10-27 17:40:00+02:00",
+      "last_date": "2000-11-01 16:40:00+01:00"
+    },
+    {
+      "native_hash": "339EC308B8E687B02677524772EADC44",
+      "attachment_rows": 47,
+      "messages": 47,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "re: enron response to san diego request for gas price caps",
+      "first_date": "2000-12-13 13:04:00+01:00",
+      "last_date": "2000-12-13 14:26:00+01:00"
+    },
+    {
+      "native_hash": "993A05AC94392580D5EC4D6C5CD82FCD",
+      "attachment_rows": 46,
+      "messages": 46,
+      "custodians": 3,
+      "example_extension": "txt",
+      "example_subject": "scope of ferc jurisdiction over state-owned utility",
+      "first_date": "2001-02-21 14:03:00+01:00",
+      "last_date": "2001-02-22 16:17:00+01:00"
+    },
+    {
+      "native_hash": "00519002040392DB211DD0F30348ACCE",
+      "attachment_rows": 46,
+      "messages": 46,
+      "custodians": 3,
+      "example_extension": "01",
+      "example_subject": "scope of ferc jurisdiction over state-owned utility",
+      "first_date": "2001-02-21 14:03:00+01:00",
+      "last_date": "2001-02-22 16:17:00+01:00"
+    },
+    {
+      "native_hash": "610978170732149BF11E838D07FD7246",
+      "attachment_rows": 46,
+      "messages": 46,
+      "custodians": 3,
+      "example_extension": "txt",
+      "example_subject": "scope of ferc jurisdiction over state-owned utility",
+      "first_date": "2001-02-21 14:03:00+01:00",
+      "last_date": "2001-02-22 16:17:00+01:00"
+    },
+    {
+      "native_hash": "0A72EFB287DF6B789B1CF54149F293F2",
+      "attachment_rows": 43,
+      "messages": 43,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "enron talking points on ferc decision",
+      "first_date": "2000-11-02 19:12:00+01:00",
+      "last_date": "2000-11-03 10:55:00+01:00"
+    },
+    {
+      "native_hash": "30183E4C82CFA3FA122D489212FB6FE7",
+      "attachment_rows": 42,
+      "messages": 42,
+      "custodians": 3,
+      "example_extension": "xls",
+      "example_subject": "re: financial analysis of pg&e and proposed terms for settlement",
+      "first_date": "2001-01-11 23:42:00+01:00",
+      "last_date": "2001-01-12 11:12:00+01:00"
+    },
+    {
+      "native_hash": "557A1762E4431C483916A8B398698729",
+      "attachment_rows": 42,
+      "messages": 42,
+      "custodians": 3,
+      "example_extension": "xls",
+      "example_subject": "re: financial analysis of pg&e and proposed terms for settlement",
+      "first_date": "2001-01-11 23:42:00+01:00",
+      "last_date": "2001-01-12 11:12:00+01:00"
+    },
+    {
+      "native_hash": "456B16C499FDA2ADD52011637F9A98C4",
+      "attachment_rows": 42,
+      "messages": 42,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "re: financial analysis of pg&e and proposed terms for settlement",
+      "first_date": "2001-01-11 23:42:00+01:00",
+      "last_date": "2001-01-12 11:12:00+01:00"
+    },
+    {
+      "native_hash": "CE607ABB0374035FE6691E7AE2527625",
+      "attachment_rows": 41,
+      "messages": 41,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "please take a look--draft slides for monday talk in new york on california   crisis",
+      "first_date": "2001-01-26 13:22:00+01:00",
+      "last_date": "2001-07-10 02:24:00+02:00"
+    },
+    {
+      "native_hash": "A8B9FB955EBA50D3BA468EB6FD659DAC",
+      "attachment_rows": 31,
+      "messages": 31,
+      "custodians": 3,
+      "example_extension": "ppt",
+      "example_subject": "presentation for k. lay to ceos re: proposal k. lay's been making in california",
+      "first_date": "2001-05-10 14:20:00+02:00",
+      "last_date": "2001-05-10 14:32:00+02:00"
+    },
+    {
+      "native_hash": "48A69BC4ABD410BB3EE42CD7B04C82A5",
+      "attachment_rows": 29,
+      "messages": 29,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "layman's summary of epmi's ferc white paper",
+      "first_date": "2000-10-20 16:33:00+02:00",
+      "last_date": "2000-10-24 15:26:00+02:00"
+    },
+    {
+      "native_hash": "617D9A67DD822BBA66FC67140FE23DC2",
+      "attachment_rows": 29,
+      "messages": 29,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california energy crisis timeline",
+      "first_date": "2001-05-03 17:50:00+02:00",
+      "last_date": "2001-05-04 18:27:00+02:00"
+    },
+    {
+      "native_hash": "305B5A30B16AC98D9EB79A0DBA1276CA",
+      "attachment_rows": 29,
+      "messages": 29,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "ferc summary",
+      "first_date": "2001-05-09 17:30:00+02:00",
+      "last_date": "2001-05-10 15:50:00+02:00"
+    },
+    {
+      "native_hash": "31BA0C725F4850043E3E9BAD3047F771",
+      "attachment_rows": 27,
+      "messages": 27,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "today's iso filings in response to ferc staff's mitigation plan",
+      "first_date": "2001-03-22 16:02:00+01:00",
+      "last_date": "2001-03-22 17:58:00+01:00"
+    },
+    {
+      "native_hash": "D5A3EE5A1AA01F410A1BE1D9AFC201B7",
+      "attachment_rows": 27,
+      "messages": 27,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "today's iso filings in response to ferc staff's mitigation plan",
+      "first_date": "2001-03-22 16:02:00+01:00",
+      "last_date": "2001-03-22 17:58:00+01:00"
+    },
+    {
+      "native_hash": "3EFAB815BB423C1BEC13118CB77AD03A",
+      "attachment_rows": 27,
+      "messages": 27,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "today's iso filings in response to ferc staff's mitigation plan",
+      "first_date": "2001-03-22 16:02:00+01:00",
+      "last_date": "2001-03-22 17:58:00+01:00"
+    },
+    {
+      "native_hash": "38ABB3D4F050CF4982E80DD7B7618EC3",
+      "attachment_rows": 27,
+      "messages": 27,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "today's iso filings in response to ferc staff's mitigation plan",
+      "first_date": "2001-03-22 16:02:00+01:00",
+      "last_date": "2001-03-22 17:58:00+01:00"
+    },
+    {
+      "native_hash": "60B7BD73A3C3F3BBD47B458B1C611C32",
+      "attachment_rows": 27,
+      "messages": 27,
+      "custodians": 3,
+      "example_extension": "pdf",
+      "example_subject": "today's iso filings in response to ferc staff's mitigation plan",
+      "first_date": "2001-03-22 16:02:00+01:00",
+      "last_date": "2001-03-22 17:58:00+01:00"
+    },
+    {
+      "native_hash": "2C5A8D0B1506C17BE539D158DBE81E4B",
+      "attachment_rows": 26,
+      "messages": 26,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "do not distribute!!! white paper on why price caps are bad",
+      "first_date": "2001-04-27 10:45:00+02:00",
+      "last_date": "2001-04-27 12:22:00+02:00"
+    },
+    {
+      "native_hash": "6CEB7E89ADAD01E8C6AD9635C8B1D76B",
+      "attachment_rows": 25,
+      "messages": 25,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "solution for california document",
+      "first_date": "2001-05-01 21:56:00+02:00",
+      "last_date": "2001-05-01 21:56:00+02:00"
+    },
+    {
+      "native_hash": "D1CC122BB86FDC008F706151EC5449B0",
+      "attachment_rows": 25,
+      "messages": 25,
+      "custodians": 3,
+      "example_extension": "htm",
+      "example_subject": "press release on pg&e bankruptcy",
+      "first_date": "2001-04-06 14:01:00+02:00",
+      "last_date": "2001-04-06 14:01:00+02:00"
+    },
+    {
+      "native_hash": "B0987A8E56036E893996BC7E73F55D5A",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "442C0DAB45AAA85364B53776AD03C577",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "re: scope of ferc jurisdiction over state-owned utility",
+      "first_date": "2001-02-22 09:45:00+01:00",
+      "last_date": "2001-02-22 16:17:00+01:00"
+    },
+    {
+      "native_hash": "F6B592DF1C4409DEFC4609B2CABB8E85",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "08499D010C4428D06F54D8EE7530651B",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "610A3C92C93CDC06EB85CF7E04FBF218",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "DB75E8BBA757168FD7D43BDA47FC5401",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "xls",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "BF08CEE71260C7032F19B1D0DEDCA224",
+      "attachment_rows": 23,
+      "messages": 23,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "california messaging",
+      "first_date": "2001-03-20 10:50:00+01:00",
+      "last_date": "2001-03-20 10:50:00+01:00"
+    },
+    {
+      "native_hash": "3597BB6CFBB95A2821C6DA8007CA6074",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "electronic copy of ferc complaint against px",
+      "first_date": "2001-02-08 11:41:00+01:00",
+      "last_date": "2001-02-08 11:41:00+01:00"
+    },
+    {
+      "native_hash": "559DC7927BE42E3BF7EBC4E99284CD0E",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "material on px purchasing and contracting for california senate hearing",
+      "first_date": "2001-01-29 13:48:00+01:00",
+      "last_date": "2001-01-29 13:48:00+01:00"
+    },
+    {
+      "native_hash": "80BCE937E087F4CC6D10C2DB423FC508",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 3,
+      "example_extension": "doc",
+      "example_subject": "ferc's 4/26/01 order on california price mitigation",
+      "first_date": "2001-04-26 19:16:00+02:00",
+      "last_date": "2001-04-27 19:05:00+02:00"
+    }
+  ],
+  "sender_domain_coverage": [
+    {
+      "rows": 107510,
+      "sender_regex_rows": 25856,
+      "sender_domains": 527
+    }
+  ],
+  "top_sender_domains": [
+    {
+      "sender_domain": "enron.com",
+      "rows": 10583,
+      "custodians": 11,
+      "first_date": "2000-08-22 02:47:00+02:00",
+      "last_date": "2001-12-28 21:38:15+01:00"
+    },
+    {
+      "sender_domain": "calpine.com",
+      "rows": 1550,
+      "custodians": 11,
+      "first_date": "1999-12-14 16:17:00+01:00",
+      "last_date": "2002-03-25 15:12:33+01:00"
+    },
+    {
+      "sender_domain": "haas.berkeley.edu",
+      "rows": 1019,
+      "custodians": 1,
+      "first_date": "1999-09-22 06:55:00+02:00",
+      "last_date": "2001-12-19 20:25:55+01:00"
+    },
+    {
+      "sender_domain": "pge.com",
+      "rows": 627,
+      "custodians": 8,
+      "first_date": "1999-09-24 21:04:00+02:00",
+      "last_date": "2001-12-18 17:12:02+01:00"
+    },
+    {
+      "sender_domain": "worldnet.att.net",
+      "rows": 554,
+      "custodians": 3,
+      "first_date": "2000-12-08 00:53:16+01:00",
+      "last_date": "2001-05-06 13:37:00+02:00"
+    },
+    {
+      "sender_domain": "bracepatt.com",
+      "rows": 460,
+      "custodians": 8,
+      "first_date": "1999-06-25 19:52:00+02:00",
+      "last_date": "2001-07-23 18:12:00+02:00"
+    },
+    {
+      "sender_domain": "caiso.com",
+      "rows": 435,
+      "custodians": 8,
+      "first_date": "2000-05-30 10:57:00+02:00",
+      "last_date": "2002-02-07 02:52:12+01:00"
+    },
+    {
+      "sender_domain": "gmssr.com",
+      "rows": 419,
+      "custodians": 7,
+      "first_date": "1999-09-24 01:40:00+02:00",
+      "last_date": "2001-12-21 19:15:23+01:00"
+    },
+    {
+      "sender_domain": "govadv.com",
+      "rows": 358,
+      "custodians": 4,
+      "first_date": "2000-02-10 15:11:00+01:00",
+      "last_date": "2001-12-20 20:42:41+01:00"
+    },
+    {
+      "sender_domain": "svmg.org",
+      "rows": 298,
+      "custodians": 1,
+      "first_date": "2001-02-08 15:40:00+01:00",
+      "last_date": "2002-01-03 00:19:23+01:00"
+    },
+    {
+      "sender_domain": "scientech.com",
+      "rows": 295,
+      "custodians": 5,
+      "first_date": "2000-09-26 13:30:00+02:00",
+      "last_date": "2001-06-21 15:03:00+02:00"
+    },
+    {
+      "sender_domain": "asm.ca.gov",
+      "rows": 292,
+      "custodians": 2,
+      "first_date": "2001-05-03 17:50:00+02:00",
+      "last_date": "2001-11-06 23:33:26+01:00"
+    },
+    {
+      "sender_domain": "duke-energy.com",
+      "rows": 283,
+      "custodians": 4,
+      "first_date": "2000-02-04 22:07:00+01:00",
+      "last_date": "2001-04-25 16:36:00+02:00"
+    },
+    {
+      "sender_domain": "iepa.com",
+      "rows": 278,
+      "custodians": 1,
+      "first_date": "2000-08-31 20:29:00+02:00",
+      "last_date": "2001-04-16 20:52:00+02:00"
+    },
+    {
+      "sender_domain": "aol.com",
+      "rows": 230,
+      "custodians": 17,
+      "first_date": "2000-01-05 22:24:00+01:00",
+      "last_date": "2002-03-06 01:11:41+01:00"
+    },
+    {
+      "sender_domain": "watsonwyatt.com",
+      "rows": 229,
+      "custodians": 1,
+      "first_date": "2001-01-23 16:04:00+01:00",
+      "last_date": "2001-05-01 12:49:00+02:00"
+    },
+    {
+      "sender_domain": "mcnallytemple.com",
+      "rows": 192,
+      "custodians": 1,
+      "first_date": "2001-04-09 10:23:00+02:00",
+      "last_date": "2001-07-31 11:19:00+02:00"
+    },
+    {
+      "sender_domain": "sempra.com",
+      "rows": 181,
+      "custodians": 4,
+      "first_date": "1999-10-20 16:30:00+02:00",
+      "last_date": "2002-02-20 16:09:50+01:00"
+    },
+    {
+      "sender_domain": "brobeck.com",
+      "rows": 169,
+      "custodians": 3,
+      "first_date": "2000-10-02 14:52:00+02:00",
+      "last_date": "2001-09-04 04:04:33+02:00"
+    },
+    {
+      "sender_domain": "firstworld.net",
+      "rows": 137,
+      "custodians": 3,
+      "first_date": "2000-08-04 05:46:00+02:00",
+      "last_date": "2001-04-07 08:02:00+02:00"
+    },
+    {
+      "sender_domain": "neg.pge.com",
+      "rows": 124,
+      "custodians": 13,
+      "first_date": "2000-08-15 10:23:00+02:00",
+      "last_date": "2002-01-15 23:45:05+01:00"
+    },
+    {
+      "sender_domain": "idt.net",
+      "rows": 121,
+      "custodians": 2,
+      "first_date": "2000-08-04 05:48:00+02:00",
+      "last_date": "2000-08-28 18:06:00+02:00"
+    },
+    {
+      "sender_domain": "earthlink.net",
+      "rows": 119,
+      "custodians": 7,
+      "first_date": "1999-11-16 23:29:00+01:00",
+      "last_date": "2002-02-04 18:42:57+01:00"
+    },
+    {
+      "sender_domain": "arterhadden.com",
+      "rows": 111,
+      "custodians": 2,
+      "first_date": "2000-08-25 02:21:00+02:00",
+      "last_date": "2001-09-17 21:50:51+02:00"
+    },
+    {
+      "sender_domain": "williams.com",
+      "rows": 108,
+      "custodians": 12,
+      "first_date": "2000-05-18 12:55:00+02:00",
+      "last_date": "2001-12-31 20:25:03+01:00"
+    },
+    {
+      "sender_domain": "calpx.com",
+      "rows": 106,
+      "custodians": 3,
+      "first_date": "2000-08-18 18:23:00+02:00",
+      "last_date": "2001-05-16 16:41:00+02:00"
+    },
+    {
+      "sender_domain": "velaw.com",
+      "rows": 102,
+      "custodians": 3,
+      "first_date": "2000-03-21 14:25:00+01:00",
+      "last_date": "2001-06-05 23:08:00+02:00"
+    },
+    {
+      "sender_domain": "kdscommunications.com",
+      "rows": 98,
+      "custodians": 3,
+      "first_date": "2001-02-28 17:40:00+01:00",
+      "last_date": "2001-07-31 14:30:00+02:00"
+    },
+    {
+      "sender_domain": "lists.thebiz.net",
+      "rows": 97,
+      "custodians": 1,
+      "first_date": "2000-11-27 09:22:00+01:00",
+      "last_date": "2001-05-22 12:36:00+02:00"
+    },
+    {
+      "sender_domain": "pjm.com",
+      "rows": 96,
+      "custodians": 3,
+      "first_date": "2000-07-10 11:49:00+02:00",
+      "last_date": "2002-01-08 21:21:47+01:00"
+    },
+    {
+      "sender_domain": "epsa.org",
+      "rows": 95,
+      "custodians": 4,
+      "first_date": "2001-03-16 13:39:00+01:00",
+      "last_date": "2001-10-31 16:28:06+01:00"
+    },
+    {
+      "sender_domain": "whwg.com",
+      "rows": 93,
+      "custodians": 1,
+      "first_date": "2000-12-05 18:42:00+01:00",
+      "last_date": "2001-01-31 10:39:00+01:00"
+    },
+    {
+      "sender_domain": "igservice.com",
+      "rows": 89,
+      "custodians": 4,
+      "first_date": "2000-04-27 16:53:00+02:00",
+      "last_date": "2001-11-02 19:54:45+01:00"
+    },
+    {
+      "sender_domain": "mgfairfax.rr.com",
+      "rows": 82,
+      "custodians": 2,
+      "first_date": "2000-12-13 09:16:00+01:00",
+      "last_date": "2001-04-27 00:24:00+02:00"
+    },
+    {
+      "sender_domain": "crossborderenergy.com",
+      "rows": 79,
+      "custodians": 2,
+      "first_date": "2000-05-19 12:32:00+02:00",
+      "last_date": "2001-10-23 18:55:19+02:00"
+    },
+    {
+      "sender_domain": "venturewire.com",
+      "rows": 76,
+      "custodians": 1,
+      "first_date": "2000-11-15 07:32:00+01:00",
+      "last_date": "2001-11-27 13:56:00+01:00"
+    },
+    {
+      "sender_domain": "llgm.com",
+      "rows": 75,
+      "custodians": 7,
+      "first_date": "2000-06-12 16:34:00+02:00",
+      "last_date": "2001-06-05 23:42:00+02:00"
+    },
+    {
+      "sender_domain": "energyattorney.com",
+      "rows": 75,
+      "custodians": 2,
+      "first_date": "2001-06-03 11:38:00+02:00",
+      "last_date": "2001-12-27 02:25:34+01:00"
+    },
+    {
+      "sender_domain": "wine.m0.net",
+      "rows": 72,
+      "custodians": 1,
+      "first_date": "2000-11-30 11:26:00+01:00",
+      "last_date": "2001-03-29 08:22:00+02:00"
+    },
+    {
+      "sender_domain": "eei.org",
+      "rows": 71,
+      "custodians": 6,
+      "first_date": "2000-02-08 16:50:00+01:00",
+      "last_date": "2001-06-07 08:54:00+02:00"
+    }
+  ],
+  "folder_family_distribution": [
+    {
+      "folder_family": "all documents",
+      "rows": 31544,
+      "custodians": 101,
+      "subjects": 10567,
+      "first_date": "1999-01-12 10:24:00+01:00",
+      "last_date": "2001-12-31 11:30:00+01:00"
+    },
+    {
+      "folder_family": "blank",
+      "rows": 19287,
+      "custodians": 142,
+      "subjects": 989,
+      "first_date": "2000-10-06 16:03:06+02:00",
+      "last_date": "2002-03-31 09:24:00+02:00"
+    },
+    {
+      "folder_family": "discussion threads",
+      "rows": 12182,
+      "custodians": 86,
+      "subjects": 5217,
+      "first_date": "1999-01-25 14:30:00+01:00",
+      "last_date": "2001-12-31 11:30:00+01:00"
+    },
+    {
+      "folder_family": "notes inbox",
+      "rows": 10733,
+      "custodians": 69,
+      "subjects": 5332,
+      "first_date": "1999-12-02 05:32:00+01:00",
+      "last_date": "2001-11-27 14:51:00+01:00"
+    },
+    {
+      "folder_family": "sent",
+      "rows": 9550,
+      "custodians": 74,
+      "subjects": 3194,
+      "first_date": "1999-01-12 10:24:00+01:00",
+      "last_date": "2001-11-26 19:10:00+01:00"
+    },
+    {
+      "folder_family": "archiving",
+      "rows": 6180,
+      "custodians": 1,
+      "subjects": 1248,
+      "first_date": "1999-01-25 14:30:00+01:00",
+      "last_date": "2001-12-31 11:30:00+01:00"
+    },
+    {
+      "folder_family": "sent items",
+      "rows": 2963,
+      "custodians": 112,
+      "subjects": 2238,
+      "first_date": "2000-11-14 02:54:00+01:00",
+      "last_date": "2002-03-31 23:59:55+02:00"
+    },
+    {
+      "folder_family": "'sent mail",
+      "rows": 2001,
+      "custodians": 59,
+      "subjects": 1241,
+      "first_date": "1999-12-12 12:33:00+01:00",
+      "last_date": "2001-11-27 07:10:00+01:00"
+    },
+    {
+      "folder_family": "california",
+      "rows": 1575,
+      "custodians": 6,
+      "subjects": 583,
+      "first_date": "2000-05-30 10:57:00+02:00",
+      "last_date": "2001-11-10 04:01:59+01:00"
+    },
+    {
+      "folder_family": "inbox",
+      "rows": 1039,
+      "custodians": 74,
+      "subjects": 882,
+      "first_date": "2001-04-04 00:02:00+02:00",
+      "last_date": "2002-03-26 23:43:59+01:00"
+    },
+    {
+      "folder_family": "heat wave",
+      "rows": 800,
+      "custodians": 1,
+      "subjects": 137,
+      "first_date": "2000-07-19 06:59:00+02:00",
+      "last_date": "2000-12-12 16:07:00+01:00"
+    },
+    {
+      "folder_family": "deleted items",
+      "rows": 663,
+      "custodians": 85,
+      "subjects": 528,
+      "first_date": "2001-01-22 23:15:00+01:00",
+      "last_date": "2002-03-26 23:43:59+01:00"
+    },
+    {
+      "folder_family": "attachments",
+      "rows": 592,
+      "custodians": 1,
+      "subjects": 464,
+      "first_date": "1999-12-13 18:15:00+01:00",
+      "last_date": "2001-07-19 16:16:00+02:00"
+    },
+    {
+      "folder_family": "jdasovic (non-privileged)",
+      "rows": 563,
+      "custodians": 1,
+      "subjects": 415,
+      "first_date": "2001-07-18 08:30:00+02:00",
+      "last_date": "2001-10-30 01:55:35+01:00"
+    },
+    {
+      "folder_family": "ferc",
+      "rows": 478,
+      "custodians": 5,
+      "subjects": 124,
+      "first_date": "2000-03-15 16:37:00+01:00",
+      "last_date": "2001-10-31 16:28:06+01:00"
+    },
+    {
+      "folder_family": "logistics",
+      "rows": 439,
+      "custodians": 1,
+      "subjects": 67,
+      "first_date": "1999-12-14 16:17:00+01:00",
+      "last_date": "2001-04-09 20:26:00+02:00"
+    },
+    {
+      "folder_family": "tw-commercial group",
+      "rows": 322,
+      "custodians": 1,
+      "subjects": 199,
+      "first_date": "2000-06-14 14:09:00+02:00",
+      "last_date": "2002-03-15 15:53:48+01:00"
+    },
+    {
+      "folder_family": "gir",
+      "rows": 240,
+      "custodians": 1,
+      "subjects": 88,
+      "first_date": "2000-03-30 11:51:00+02:00",
+      "last_date": "2000-11-27 16:52:00+01:00"
+    },
+    {
+      "folder_family": "'americas",
+      "rows": 219,
+      "custodians": 1,
+      "subjects": 200,
+      "first_date": "2001-02-08 21:21:00+01:00",
+      "last_date": "2001-10-31 18:12:43+01:00"
+    },
+    {
+      "folder_family": "iso_ pricecaps",
+      "rows": 219,
+      "custodians": 1,
+      "subjects": 209,
+      "first_date": "2000-07-07 13:24:00+02:00",
+      "last_date": "2001-06-04 03:26:00+02:00"
+    },
+    {
+      "folder_family": "online trading",
+      "rows": 166,
+      "custodians": 2,
+      "subjects": 82,
+      "first_date": "1999-09-27 17:23:00+02:00",
+      "last_date": "2001-03-02 10:25:00+01:00"
+    },
+    {
+      "folder_family": "articles",
+      "rows": 148,
+      "custodians": 2,
+      "subjects": 90,
+      "first_date": "2000-06-15 13:10:00+02:00",
+      "last_date": "2002-01-31 23:53:18+01:00"
+    },
+    {
+      "folder_family": "california crisis--press",
+      "rows": 148,
+      "custodians": 1,
+      "subjects": 26,
+      "first_date": "2000-08-09 18:23:00+02:00",
+      "last_date": "2000-11-02 19:12:00+01:00"
+    },
+    {
+      "folder_family": "eci",
+      "rows": 143,
+      "custodians": 1,
+      "subjects": 32,
+      "first_date": "1999-10-22 17:35:00+02:00",
+      "last_date": "2001-01-20 18:48:00+01:00"
+    },
+    {
+      "folder_family": "pge",
+      "rows": 141,
+      "custodians": 1,
+      "subjects": 30,
+      "first_date": "2000-03-08 16:57:00+01:00",
+      "last_date": "2001-10-09 15:08:43+02:00"
+    },
+    {
+      "folder_family": "industrials",
+      "rows": 132,
+      "custodians": 1,
+      "subjects": 13,
+      "first_date": "2000-02-29 08:17:00+01:00",
+      "last_date": "2001-04-09 21:08:00+02:00"
+    },
+    {
+      "folder_family": "personal",
+      "rows": 122,
+      "custodians": 18,
+      "subjects": 55,
+      "first_date": "1999-09-22 01:50:00+02:00",
+      "last_date": "2002-01-22 18:55:16+01:00"
+    },
+    {
+      "folder_family": "power marketer",
+      "rows": 105,
+      "custodians": 1,
+      "subjects": 104,
+      "first_date": "2000-12-08 01:53:00+01:00",
+      "last_date": "2001-05-01 03:35:00+02:00"
+    },
+    {
+      "folder_family": "california - working group",
+      "rows": 102,
+      "custodians": 1,
+      "subjects": 30,
+      "first_date": "2001-05-10 14:20:00+02:00",
+      "last_date": "2001-07-19 08:18:00+02:00"
+    },
+    {
+      "folder_family": "federal legislation",
+      "rows": 99,
+      "custodians": 1,
+      "subjects": 26,
+      "first_date": "2000-03-14 12:43:00+01:00",
+      "last_date": "2001-09-27 15:51:22+02:00"
+    },
+    {
+      "folder_family": "mba--macroeconomics",
+      "rows": 96,
+      "custodians": 1,
+      "subjects": 24,
+      "first_date": "1999-10-12 22:50:00+02:00",
+      "last_date": "1999-12-13 19:03:00+01:00"
+    },
+    {
+      "folder_family": "environmental issues",
+      "rows": 89,
+      "custodians": 1,
+      "subjects": 16,
+      "first_date": "2000-07-21 15:20:00+02:00",
+      "last_date": "2001-07-03 01:14:00+02:00"
+    },
+    {
+      "folder_family": "pan energy swap",
+      "rows": 89,
+      "custodians": 1,
+      "subjects": 63,
+      "first_date": "2000-02-04 22:07:00+01:00",
+      "last_date": "2001-03-01 16:20:00+01:00"
+    },
+    {
+      "folder_family": "connect deletes",
+      "rows": 86,
+      "custodians": 1,
+      "subjects": 25,
+      "first_date": "2000-12-04 19:28:00+01:00",
+      "last_date": "2001-05-22 10:40:00+02:00"
+    },
+    {
+      "folder_family": "mba program",
+      "rows": 84,
+      "custodians": 1,
+      "subjects": 21,
+      "first_date": "1999-09-22 06:55:00+02:00",
+      "last_date": "2000-04-19 23:35:00+02:00"
+    },
+    {
+      "folder_family": "rto",
+      "rows": 84,
+      "custodians": 1,
+      "subjects": 21,
+      "first_date": "2000-10-17 17:33:00+02:00",
+      "last_date": "2001-07-14 06:44:00+02:00"
+    },
+    {
+      "folder_family": "mba--quant",
+      "rows": 84,
+      "custodians": 1,
+      "subjects": 17,
+      "first_date": "2000-03-23 12:33:00+01:00",
+      "last_date": "2000-05-13 04:32:00+02:00"
+    },
+    {
+      "folder_family": "deal communication",
+      "rows": 72,
+      "custodians": 1,
+      "subjects": 65,
+      "first_date": "2000-11-07 17:27:00+01:00",
+      "last_date": "2001-04-17 17:58:00+02:00"
+    },
+    {
+      "folder_family": "interconnection",
+      "rows": 69,
+      "custodians": 2,
+      "subjects": 15,
+      "first_date": "1999-10-07 13:56:00+02:00",
+      "last_date": "2000-09-08 17:50:00+02:00"
+    },
+    {
+      "folder_family": "natural gas strategy",
+      "rows": 68,
+      "custodians": 1,
+      "subjects": 16,
+      "first_date": "2000-04-11 23:08:00+02:00",
+      "last_date": "2000-08-31 19:32:00+02:00"
+    }
+  ],
+  "candidate_document_events": [
+    {
+      "event_type": "attachment_hash",
+      "event_id": "241856455D8F27081E1DF6F88ED7C9D0",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "rows": 94,
+      "custodians": 44,
+      "subjects": 2,
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "C2E64A5217518FD9E91FF81B7B1FCE11",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "rows": 94,
+      "custodians": 44,
+      "subjects": 2,
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "1807c31f2b5e494e05e765c786512ea7",
+      "example_subject": "",
+      "rows": 38,
+      "custodians": 32,
+      "subjects": 2,
+      "first_date": "2001-06-08 05:04:06+02:00",
+      "last_date": "2001-06-14 02:46:57+02:00",
+      "example_chars": 787,
+      "example_extension": null
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "B22F90B6155D529BF01521821E9DE820",
+      "example_subject": "fw: enron's ferc filing opposing icap",
+      "rows": 24,
+      "custodians": 19,
+      "subjects": 2,
+      "first_date": "2001-10-17 23:28:41+02:00",
+      "last_date": "2001-10-17 23:54:37+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "7122E0607FD46D01C1CA3118FD8C82F3",
+      "example_subject": "fw: enron's ferc filing opposing icap",
+      "rows": 24,
+      "custodians": 19,
+      "subjects": 2,
+      "first_date": "2001-10-17 23:28:41+02:00",
+      "last_date": "2001-10-17 23:54:37+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "4e4be7214263fd54a34dd073b503777b",
+      "example_subject": "california department of water resources",
+      "rows": 18,
+      "custodians": 18,
+      "subjects": 1,
+      "first_date": "2001-11-19 21:25:26+01:00",
+      "last_date": "2001-11-19 21:25:26+01:00",
+      "example_chars": 154,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "183592cac1c3d332e1b8e94291003eeb",
+      "example_subject": "california energy crisis",
+      "rows": 51,
+      "custodians": 17,
+      "subjects": 1,
+      "first_date": "2001-03-13 17:17:00+01:00",
+      "last_date": "2001-03-13 17:17:00+01:00",
+      "example_chars": 8292,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "fd7cb001de0c660ff44b195ad80625fc",
+      "example_subject": "chairman's award nominations",
+      "rows": 49,
+      "custodians": 16,
+      "subjects": 1,
+      "first_date": "2000-11-13 19:42:00+01:00",
+      "last_date": "2000-11-13 19:42:00+01:00",
+      "example_chars": 2709,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "9c0846954b524d43fa2c90a945ff2e97",
+      "example_subject": "re-alignment",
+      "rows": 52,
+      "custodians": 14,
+      "subjects": 1,
+      "first_date": "2000-12-21 03:02:00+01:00",
+      "last_date": "2000-12-21 03:02:00+01:00",
+      "example_chars": 12019,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "706d0fa6a134c67619f7a7d69a404a83",
+      "example_subject": "entouch newsletter",
+      "rows": 38,
+      "custodians": 13,
+      "subjects": 1,
+      "first_date": "2000-11-29 19:31:00+01:00",
+      "last_date": "2000-11-29 19:31:00+01:00",
+      "example_chars": 8427,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "37141dd9338293a8f3d7c407c95344d3",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "rows": 37,
+      "custodians": 13,
+      "subjects": 1,
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-11 10:35:00+02:00",
+      "example_chars": 805,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "f88bc57d0cd8e8d3faf0d8a28f5ed076",
+      "example_subject": "introducing the 2nd issue of the new enron business!",
+      "rows": 35,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-04-29 19:13:00+02:00",
+      "last_date": "2001-04-29 19:13:00+02:00",
+      "example_chars": 964,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "3b68a5454d198c2133d24ca00ec9c1e8",
+      "example_subject": "",
+      "rows": 14,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-09-28 04:18:56+02:00",
+      "last_date": "2001-09-28 04:18:58+02:00",
+      "example_chars": 14771,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "099f8d0792a23510ea32ec299f47aa02",
+      "example_subject": "",
+      "rows": 12,
+      "custodians": 12,
+      "subjects": 1,
+      "first_date": "2001-11-21 19:00:05+01:00",
+      "last_date": "2001-11-21 19:00:05+01:00",
+      "example_chars": 26786,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "0e874d3e09aed56b45adf60cf754504b",
+      "example_subject": "\"take this job and shovel it\"",
+      "rows": 34,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-04-29 19:01:00+02:00",
+      "last_date": "2001-04-29 19:01:00+02:00",
+      "example_chars": 459,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "2a89118e83f5af1e60f439bae401f806",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-11-27 19:00:06+01:00",
+      "last_date": "2001-11-27 19:00:06+01:00",
+      "example_chars": 26786,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "db7d0728c66ff7e6b5d8561c4f7a46ae",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 11,
+      "subjects": 1,
+      "first_date": "2001-11-19 19:00:05+01:00",
+      "last_date": "2001-11-19 19:00:05+01:00",
+      "example_chars": 26786,
+      "example_extension": null
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "A8C5A85ECAC0847C221719764AC0AFB2",
+      "example_subject": "briefing paper- ferc's june 19 west-wide price mitigation order",
+      "rows": 26,
+      "custodians": 10,
+      "subjects": 2,
+      "first_date": "2001-06-21 17:34:00+02:00",
+      "last_date": "2001-06-25 19:54:56+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "0139654e529e2835d874d8caf825dd05",
+      "example_subject": "",
+      "rows": 11,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-23 01:36:13+02:00",
+      "last_date": "2001-10-23 01:36:13+02:00",
+      "example_chars": 354,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "46d350f276672dc71c9f260d64aff5d7",
+      "example_subject": "",
+      "rows": 10,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-26 19:00:04+02:00",
+      "last_date": "2001-10-26 19:00:04+02:00",
+      "example_chars": 26786,
+      "example_extension": null
+    },
+    {
+      "event_type": "body_hash",
+      "event_id": "02088d0d56b53f9e46719f635f8d1484",
+      "example_subject": "",
+      "rows": 10,
+      "custodians": 10,
+      "subjects": 1,
+      "first_date": "2001-10-29 19:00:05+01:00",
+      "last_date": "2001-10-29 19:00:05+01:00",
+      "example_chars": 26786,
+      "example_extension": null
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "C85E285D7FCD5AF6088B219D0F9F6A65",
+      "example_subject": "tax review of california senate bill no. 1",
+      "rows": 39,
+      "custodians": 8,
+      "subjects": 1,
+      "first_date": "2001-05-17 17:21:00+02:00",
+      "last_date": "2001-05-18 03:21:00+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "ED11829BF689786484E911A1ED599424",
+      "example_subject": "tax review of california senate bill no. 1",
+      "rows": 39,
+      "custodians": 8,
+      "subjects": 1,
+      "first_date": "2001-05-17 17:21:00+02:00",
+      "last_date": "2001-05-18 03:21:00+02:00",
+      "example_chars": null,
+      "example_extension": "doc"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "17130CADC85D6B8A8419BFA44F7823E1",
+      "example_subject": "**for the ferc staff lunch 12/7--ferc investigation summaries",
+      "rows": 211,
+      "custodians": 7,
+      "subjects": 6,
+      "first_date": "2000-11-08 10:39:00+01:00",
+      "last_date": "2000-12-06 10:03:00+01:00",
+      "example_chars": null,
+      "example_extension": "pdf"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "7F070802E1E7EFDBD2822F1C8A0E4B81",
+      "example_subject": "**for the ferc staff lunch 12/7--ferc investigation summaries",
+      "rows": 211,
+      "custodians": 7,
+      "subjects": 6,
+      "first_date": "2000-11-08 10:39:00+01:00",
+      "last_date": "2000-12-06 10:03:00+01:00",
+      "example_chars": null,
+      "example_extension": "pdf"
+    },
+    {
+      "event_type": "attachment_hash",
+      "event_id": "A586DAAFCE5C9816C2372DD2FECB12CD",
+      "example_subject": "pg&e 2001 capacity release transactions on transwestern pipeline",
+      "rows": 10,
+      "custodians": 7,
+      "subjects": 2,
+      "first_date": "2001-10-29 23:38:57+01:00",
+      "last_date": "2001-10-31 15:22:06+01:00",
+      "example_chars": null,
+      "example_extension": "xls"
+    }
+  ]
+}

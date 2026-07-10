@@ -1,0 +1,5412 @@
+{
+  "subject_clusters": [
+    {
+      "subject_clean": "schedule crawler: hourahead failure <codesite>",
+      "rows": 1470,
+      "custodians": 4,
+      "folder_families": 5,
+      "first_date": "2001-02-27 07:56:00+01:00",
+      "last_date": "2001-10-30 02:59:09+01:00",
+      "rows_with_attachments": 699
+    },
+    {
+      "subject_clean": "free time",
+      "rows": 1365,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-05-11 10:30:00+02:00",
+      "last_date": "2002-02-28 09:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "vacation",
+      "rows": 1301,
+      "custodians": 39,
+      "folder_families": 12,
+      "first_date": "1997-03-14 08:30:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 4
+    },
+    {
+      "subject_clean": "daily ca conf call",
+      "rows": 1188,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2001-03-28 15:30:00+02:00",
+      "last_date": "2001-12-27 14:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "calpine daily gas nomination",
+      "rows": 1185,
+      "custodians": 1,
+      "folder_families": 6,
+      "first_date": "1999-12-14 16:17:00+01:00",
+      "last_date": "2001-04-09 21:08:00+02:00",
+      "rows_with_attachments": 1179
+    },
+    {
+      "subject_clean": "energy issues",
+      "rows": 1057,
+      "custodians": 4,
+      "folder_families": 14,
+      "first_date": "2000-10-16 13:45:00+02:00",
+      "last_date": "2001-07-31 16:23:00+02:00",
+      "rows_with_attachments": 680
+    },
+    {
+      "subject_clean": "gas desk head meeting",
+      "rows": 1010,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-04-24 09:55:00+02:00",
+      "last_date": "2001-04-26 09:45:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "kids",
+      "rows": 965,
+      "custodians": 2,
+      "folder_families": 3,
+      "first_date": "2000-01-12 19:00:00+01:00",
+      "last_date": "2002-12-20 19:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "executive committee meeting",
+      "rows": 909,
+      "custodians": 7,
+      "folder_families": 7,
+      "first_date": "1999-07-19 13:00:00+02:00",
+      "last_date": "2002-02-11 12:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "save you positions going home",
+      "rows": 904,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-30 16:45:00+01:00",
+      "last_date": "2001-12-31 16:45:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "day ahead market",
+      "rows": 890,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-11 12:30:00+02:00",
+      "last_date": "2001-12-31 11:15:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "enron mentions",
+      "rows": 832,
+      "custodians": 5,
+      "folder_families": 17,
+      "first_date": "2000-09-20 11:48:00+02:00",
+      "last_date": "2001-07-31 09:57:00+02:00",
+      "rows_with_attachments": 2
+    },
+    {
+      "subject_clean": "holiday",
+      "rows": 701,
+      "custodians": 27,
+      "folder_families": 5,
+      "first_date": "1997-11-28 10:00:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "check where day ahead came out!",
+      "rows": 636,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-11 17:00:00+02:00",
+      "last_date": "2001-12-31 16:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "option exercise!",
+      "rows": 636,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-11 10:30:00+02:00",
+      "last_date": "2001-12-31 09:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "direct report conf call 713-853-3233, passcode 6500  eb 4741",
+      "rows": 624,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1999-07-30 17:00:00+02:00",
+      "last_date": "2000-09-01 11:30:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "daily it update w/ d brackett eb-2831",
+      "rows": 620,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2001-01-02 09:30:00+01:00",
+      "last_date": "2001-06-29 10:30:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "earthsat noon update",
+      "rows": 612,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-27 14:00:00+02:00",
+      "last_date": "2001-12-31 13:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "fyi - p kaufman weekly call w/ regulatory re sale of pge call in 503-464-7737",
+      "rows": 611,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2000-02-07 12:00:00+01:00",
+      "last_date": "2000-08-21 13:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "nws forecast",
+      "rows": 610,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-10-30 15:00:00+01:00",
+      "last_date": "2001-12-31 15:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "ed segner's staff meeting, in 50m dining room",
+      "rows": 559,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-03-03 09:00:00+01:00",
+      "last_date": "1997-12-22 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "organizational changes",
+      "rows": 522,
+      "custodians": 41,
+      "folder_families": 33,
+      "first_date": "1999-07-01 14:33:00+02:00",
+      "last_date": "2001-06-14 07:49:00+02:00",
+      "rows_with_attachments": 200
+    },
+    {
+      "subject_clean": "test",
+      "rows": 499,
+      "custodians": 67,
+      "folder_families": 13,
+      "first_date": "1999-10-19 16:37:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 20
+    },
+    {
+      "subject_clean": "fyi - california conference call, 800-749-9927, ask for maureen palmer",
+      "rows": 494,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-04-16 11:00:00+02:00",
+      "last_date": "1997-12-31 10:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: lunch",
+      "rows": 448,
+      "custodians": 44,
+      "folder_families": 10,
+      "first_date": "1999-06-22 11:49:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 2
+    },
+    {
+      "subject_clean": "re: meeting",
+      "rows": 437,
+      "custodians": 36,
+      "folder_families": 16,
+      "first_date": "1999-02-10 11:38:00+01:00",
+      "last_date": "2002-02-07 00:26:35+01:00",
+      "rows_with_attachments": 25
+    },
+    {
+      "subject_clean": "staff meeting",
+      "rows": 437,
+      "custodians": 16,
+      "folder_families": 8,
+      "first_date": "1998-08-14 17:00:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "entouch newsletter",
+      "rows": 435,
+      "custodians": 29,
+      "folder_families": 17,
+      "first_date": "2000-11-29 19:31:00+01:00",
+      "last_date": "2001-08-29 16:06:01+02:00",
+      "rows_with_attachments": 24
+    },
+    {
+      "subject_clean": "fyi - ecar conf. call 800-283-1805, in janine migden's name",
+      "rows": 429,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-05-21 11:00:00+02:00",
+      "last_date": "1997-12-31 10:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "eb3125b - power stocks meeting",
+      "rows": 429,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-03-05 16:30:00+01:00",
+      "last_date": "1997-10-29 16:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "weekly retail meeting, eb 27c1",
+      "rows": 416,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-03-06 09:30:00+01:00",
+      "last_date": "1997-10-30 09:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "executive committee mtg - boardroom",
+      "rows": 391,
+      "custodians": 3,
+      "folder_families": 4,
+      "first_date": "2000-05-30 13:00:00+02:00",
+      "last_date": "2001-12-31 12:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "regulatory matters conf call 853-3233",
+      "rows": 390,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1998-05-12 12:00:00+02:00",
+      "last_date": "1999-05-11 12:30:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "direct reports conference call - 713-853-3233, passcode 6000",
+      "rows": 390,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1998-06-30 10:00:00+02:00",
+      "last_date": "1999-05-04 14:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "lunch",
+      "rows": 387,
+      "custodians": 33,
+      "folder_families": 11,
+      "first_date": "1999-06-22 14:00:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "executive committee weekly meeting   50th floor boardroom",
+      "rows": 386,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-04-17 13:00:00+02:00",
+      "last_date": "2002-01-28 12:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "power fundamentals meeting",
+      "rows": 384,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-05-03 17:30:00+02:00",
+      "last_date": "2001-05-16 17:30:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "year end 2000 performance feedback",
+      "rows": 380,
+      "custodians": 22,
+      "folder_families": 16,
+      "first_date": "2000-10-27 16:22:00+02:00",
+      "last_date": "2000-11-27 13:42:00+01:00",
+      "rows_with_attachments": 3
+    },
+    {
+      "subject_clean": "call cliff baxter",
+      "rows": 377,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2000-02-18 18:00:00+01:00",
+      "last_date": "2000-09-01 19:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "exec.comm.mtg.-50br",
+      "rows": 371,
+      "custodians": 1,
+      "folder_families": 4,
+      "first_date": "2001-01-08 12:00:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "to 10:30am=ets staff-49c2",
+      "rows": 371,
+      "custodians": 1,
+      "folder_families": 4,
+      "first_date": "2001-01-08 10:15:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "executive committee - boardroom",
+      "rows": 366,
+      "custodians": 3,
+      "folder_families": 2,
+      "first_date": "2000-04-17 13:00:00+02:00",
+      "last_date": "2001-12-31 12:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "weekly ca call w/ quinn gillespie & dc office  800-713-8600  code 6261",
+      "rows": 360,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2001-04-02 17:00:00+02:00",
+      "last_date": "2001-12-31 16:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "fyi - weekly california conf call w/ ees, ena & attys",
+      "rows": 360,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2001-04-02 12:30:00+02:00",
+      "last_date": "2001-12-31 11:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "your approval is requested",
+      "rows": 344,
+      "custodians": 5,
+      "folder_families": 10,
+      "first_date": "1999-12-16 14:21:00+01:00",
+      "last_date": "2000-12-07 14:44:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "main, mapp, ecar conference call 800-283-1805, ask for enron call.",
+      "rows": 338,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-06-26 10:30:00+02:00",
+      "last_date": "1997-12-25 09:30:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: vacation",
+      "rows": 333,
+      "custodians": 35,
+      "folder_families": 12,
+      "first_date": "1999-02-10 12:01:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 6
+    },
+    {
+      "subject_clean": "congratulations",
+      "rows": 330,
+      "custodians": 11,
+      "folder_families": 9,
+      "first_date": "2000-01-10 19:15:00+01:00",
+      "last_date": "2001-12-12 23:55:01+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "organizational announcement",
+      "rows": 321,
+      "custodians": 38,
+      "folder_families": 33,
+      "first_date": "1999-08-27 19:12:00+02:00",
+      "last_date": "2001-10-23 16:25:24+02:00",
+      "rows_with_attachments": 52
+    },
+    {
+      "subject_clean": "what have you done to achieve the list?",
+      "rows": 318,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-12-16 13:00:00+01:00",
+      "last_date": "2001-12-15 13:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "earth sat noon update",
+      "rows": 318,
+      "custodians": 1,
+      "folder_families": 2,
+      "first_date": "2000-02-02 11:30:00+01:00",
+      "last_date": "2000-10-26 14:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "presentation",
+      "rows": 302,
+      "custodians": 22,
+      "folder_families": 19,
+      "first_date": "1999-05-26 13:39:00+02:00",
+      "last_date": "2002-01-15 19:39:30+01:00",
+      "rows_with_attachments": 254
+    },
+    {
+      "subject_clean": "eott staff mtg.",
+      "rows": 301,
+      "custodians": 1,
+      "folder_families": 4,
+      "first_date": "2001-01-02 08:30:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "lou pai's staff meeting, 25c3.",
+      "rows": 299,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "1997-03-18 09:00:00+01:00",
+      "last_date": "1997-08-19 10:00:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "dabhol call  800-991-9019   code  6782575",
+      "rows": 297,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2001-05-21 11:00:00+02:00",
+      "last_date": "2001-12-31 10:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "weekly mtg. w/john lavorato rm 3308",
+      "rows": 294,
+      "custodians": 3,
+      "folder_families": 2,
+      "first_date": "2001-01-23 17:00:00+01:00",
+      "last_date": "2001-01-23 17:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "organization announcement",
+      "rows": 293,
+      "custodians": 34,
+      "folder_families": 27,
+      "first_date": "2000-02-02 19:18:00+01:00",
+      "last_date": "2001-05-09 12:53:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: (no subject)",
+      "rows": 289,
+      "custodians": 24,
+      "folder_families": 13,
+      "first_date": "1999-11-23 17:07:00+01:00",
+      "last_date": "2002-03-05 18:05:20+01:00",
+      "rows_with_attachments": 10
+    },
+    {
+      "subject_clean": "dabhol call 800-991-9019 code 6782575",
+      "rows": 288,
+      "custodians": 1,
+      "folder_families": 3,
+      "first_date": "2001-05-17 11:00:00+02:00",
+      "last_date": "2001-12-20 10:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "executive committee breakfast",
+      "rows": 287,
+      "custodians": 2,
+      "folder_families": 3,
+      "first_date": "1999-07-12 09:00:00+02:00",
+      "last_date": "2000-01-31 08:30:00+01:00",
+      "rows_with_attachments": 0
+    }
+  ],
+  "high_custodian_subject_clusters": [
+    {
+      "subject_clean": "test",
+      "rows": 499,
+      "custodians": 67,
+      "first_date": "1999-10-19 16:37:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 20
+    },
+    {
+      "subject_clean": "enron center south technology watch",
+      "rows": 67,
+      "custodians": 61,
+      "first_date": "2001-10-01 06:55:15+02:00",
+      "last_date": "2001-11-19 03:37:33+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "meeting",
+      "rows": 276,
+      "custodians": 45,
+      "first_date": "1999-06-23 16:03:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 8
+    },
+    {
+      "subject_clean": "re: lunch",
+      "rows": 448,
+      "custodians": 44,
+      "first_date": "1999-06-22 11:49:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 2
+    },
+    {
+      "subject_clean": "4-urgent - owa please print this now.",
+      "rows": 126,
+      "custodians": 43,
+      "first_date": "2001-01-19 11:35:00+01:00",
+      "last_date": "2001-08-21 06:01:00+02:00",
+      "rows_with_attachments": 3
+    },
+    {
+      "subject_clean": "3 - urgent - to prevent loss of information",
+      "rows": 130,
+      "custodians": 42,
+      "first_date": "2001-04-18 03:59:00+02:00",
+      "last_date": "2001-10-20 01:54:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "organizational changes",
+      "rows": 522,
+      "custodians": 41,
+      "first_date": "1999-07-01 14:33:00+02:00",
+      "last_date": "2001-06-14 07:49:00+02:00",
+      "rows_with_attachments": 200
+    },
+    {
+      "subject_clean": "mid-year 2001 performance feedback",
+      "rows": 214,
+      "custodians": 41,
+      "first_date": "2001-05-08 21:53:00+02:00",
+      "last_date": "2001-05-30 21:21:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "1-urgent - outlook email notification (new)",
+      "rows": 121,
+      "custodians": 41,
+      "first_date": "2001-01-19 11:34:00+01:00",
+      "last_date": "2001-10-20 01:54:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: hi",
+      "rows": 279,
+      "custodians": 40,
+      "first_date": "1999-01-13 09:51:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 4
+    },
+    {
+      "subject_clean": "warning:  your mailbox is approaching the size limit",
+      "rows": 236,
+      "custodians": 40,
+      "first_date": "2001-05-31 09:00:13+02:00",
+      "last_date": "2002-01-29 08:01:11+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: hello",
+      "rows": 191,
+      "custodians": 40,
+      "first_date": "2000-03-10 18:16:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 34
+    },
+    {
+      "subject_clean": "vacation",
+      "rows": 1301,
+      "custodians": 39,
+      "first_date": "1997-03-14 08:30:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 4
+    },
+    {
+      "subject_clean": "online trading simulation",
+      "rows": 42,
+      "custodians": 39,
+      "first_date": "1999-10-04 18:16:00+02:00",
+      "last_date": "2002-02-05 02:47:02+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "credit watch list--week of 11/19/01",
+      "rows": 40,
+      "custodians": 39,
+      "first_date": "2001-11-19 17:25:56+01:00",
+      "last_date": "2001-11-19 17:25:56+01:00",
+      "rows_with_attachments": 40
+    },
+    {
+      "subject_clean": "organizational announcement",
+      "rows": 321,
+      "custodians": 38,
+      "first_date": "1999-08-27 19:12:00+02:00",
+      "last_date": "2001-10-23 16:25:24+02:00",
+      "rows_with_attachments": 52
+    },
+    {
+      "subject_clean": "re: test",
+      "rows": 189,
+      "custodians": 38,
+      "first_date": "1999-06-25 15:29:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 18
+    },
+    {
+      "subject_clean": "re: resume",
+      "rows": 259,
+      "custodians": 37,
+      "first_date": "2000-01-17 09:44:00+01:00",
+      "last_date": "2002-03-14 23:09:23+01:00",
+      "rows_with_attachments": 86
+    },
+    {
+      "subject_clean": "re: meeting",
+      "rows": 437,
+      "custodians": 36,
+      "first_date": "1999-02-10 11:38:00+01:00",
+      "last_date": "2002-02-07 00:26:35+01:00",
+      "rows_with_attachments": 25
+    },
+    {
+      "subject_clean": "succession plan",
+      "rows": 210,
+      "custodians": 36,
+      "first_date": "2000-12-13 07:01:00+01:00",
+      "last_date": "2001-05-18 01:07:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "ken lay and jeff skilling on cnnfn",
+      "rows": 131,
+      "custodians": 36,
+      "first_date": "2000-12-13 15:34:00+01:00",
+      "last_date": "2000-12-13 15:34:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: vacation",
+      "rows": 333,
+      "custodians": 35,
+      "first_date": "1999-02-10 12:01:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 6
+    },
+    {
+      "subject_clean": "access card information",
+      "rows": 35,
+      "custodians": 35,
+      "first_date": "2002-02-07 00:12:52+01:00",
+      "last_date": "2002-02-07 04:14:40+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "organization announcement",
+      "rows": 293,
+      "custodians": 34,
+      "first_date": "2000-02-02 19:18:00+01:00",
+      "last_date": "2001-05-09 12:53:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "re: question",
+      "rows": 156,
+      "custodians": 34,
+      "first_date": "1999-03-01 16:00:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 2
+    },
+    {
+      "subject_clean": "credit watch list--week of 10/29/01",
+      "rows": 37,
+      "custodians": 34,
+      "first_date": "2001-10-29 18:34:48+01:00",
+      "last_date": "2001-10-29 18:34:48+01:00",
+      "rows_with_attachments": 37
+    },
+    {
+      "subject_clean": "final benefits memo",
+      "rows": 34,
+      "custodians": 34,
+      "first_date": "2002-01-31 17:33:39+01:00",
+      "last_date": "2002-01-31 21:33:39+01:00",
+      "rows_with_attachments": 34
+    },
+    {
+      "subject_clean": "reminder: ubsw orientation - thursday. for those that did not attend the houstonian\r\n\t sessions",
+      "rows": 34,
+      "custodians": 34,
+      "first_date": "2002-02-06 23:06:53+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00",
+      "rows_with_attachments": 34
+    },
+    {
+      "subject_clean": "lunch",
+      "rows": 387,
+      "custodians": 33,
+      "first_date": "1999-06-22 14:00:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "credit watch list--week of 10/22/01",
+      "rows": 34,
+      "custodians": 33,
+      "first_date": "2001-10-22 18:36:48+02:00",
+      "last_date": "2001-10-22 18:36:48+02:00",
+      "rows_with_attachments": 34
+    },
+    {
+      "subject_clean": "you have 48 hours - message from louise kitchen",
+      "rows": 33,
+      "custodians": 33,
+      "first_date": "2002-02-06 18:18:10+01:00",
+      "last_date": "2002-02-06 22:18:10+01:00",
+      "rows_with_attachments": 33
+    },
+    {
+      "subject_clean": "deferral enrollment 2001",
+      "rows": 160,
+      "custodians": 32,
+      "first_date": "2000-11-14 20:17:00+01:00",
+      "last_date": "2000-12-01 19:40:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "rows": 32,
+      "custodians": 32,
+      "first_date": "2002-02-07 01:09:37+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00",
+      "rows_with_attachments": 32
+    },
+    {
+      "subject_clean": "(no subject)",
+      "rows": 243,
+      "custodians": 31,
+      "first_date": "1999-12-14 18:21:00+01:00",
+      "last_date": "2001-12-20 17:01:36+01:00",
+      "rows_with_attachments": 103
+    },
+    {
+      "subject_clean": "re: update",
+      "rows": 235,
+      "custodians": 31,
+      "first_date": "1999-05-28 18:22:00+02:00",
+      "last_date": "2002-11-30 00:00:00+01:00",
+      "rows_with_attachments": 8
+    },
+    {
+      "subject_clean": "urgent - drugs test reminder",
+      "rows": 31,
+      "custodians": 31,
+      "first_date": "2002-01-31 18:32:43+01:00",
+      "last_date": "2002-01-31 22:36:00+01:00",
+      "rows_with_attachments": 31
+    },
+    {
+      "subject_clean": "re: thanks",
+      "rows": 162,
+      "custodians": 30,
+      "first_date": "2000-01-14 11:36:00+01:00",
+      "last_date": "2002-03-08 17:23:04+01:00",
+      "rows_with_attachments": 10
+    },
+    {
+      "subject_clean": "ubsw orientation - thursday. for those that did not attend the houstonian sessions",
+      "rows": 30,
+      "custodians": 30,
+      "first_date": "2002-02-04 22:05:05+01:00",
+      "last_date": "2002-02-05 02:05:05+01:00",
+      "rows_with_attachments": 30
+    },
+    {
+      "subject_clean": "entouch newsletter",
+      "rows": 435,
+      "custodians": 29,
+      "first_date": "2000-11-29 19:31:00+01:00",
+      "last_date": "2001-08-29 16:06:01+02:00",
+      "rows_with_attachments": 24
+    },
+    {
+      "subject_clean": "thank you",
+      "rows": 217,
+      "custodians": 29,
+      "first_date": "1999-12-30 16:03:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 21
+    },
+    {
+      "subject_clean": "enron wholesale services legal department",
+      "rows": 139,
+      "custodians": 28,
+      "first_date": "2000-12-04 11:36:00+01:00",
+      "last_date": "2001-06-12 01:51:00+02:00",
+      "rows_with_attachments": 139
+    },
+    {
+      "subject_clean": "holiday schedule 2001",
+      "rows": 99,
+      "custodians": 28,
+      "first_date": "2000-11-13 19:46:00+01:00",
+      "last_date": "2000-11-27 11:23:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "holiday",
+      "rows": 701,
+      "custodians": 27,
+      "first_date": "1997-11-28 10:00:00+01:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "out of the office",
+      "rows": 188,
+      "custodians": 27,
+      "first_date": "1997-07-02 10:00:00+02:00",
+      "last_date": "2002-11-30 09:00:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "enron announcement",
+      "rows": 139,
+      "custodians": 27,
+      "first_date": "2001-04-19 02:04:00+02:00",
+      "last_date": "2001-04-23 10:14:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "clickathome portal is here!",
+      "rows": 107,
+      "custodians": 27,
+      "first_date": "2001-05-08 00:20:00+02:00",
+      "last_date": "2001-05-24 19:33:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "managing director and vice president elections",
+      "rows": 138,
+      "custodians": 26,
+      "first_date": "2001-01-12 20:31:00+01:00",
+      "last_date": "2001-02-21 20:02:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "improved process for engaging temporary workers",
+      "rows": 99,
+      "custodians": 26,
+      "first_date": "2000-12-12 19:50:00+01:00",
+      "last_date": "2000-12-12 19:50:00+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "vacation day",
+      "rows": 119,
+      "custodians": 25,
+      "first_date": "1999-06-08 02:00:00+02:00",
+      "last_date": "2002-02-25 20:26:35+01:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "capital book",
+      "rows": 62,
+      "custodians": 25,
+      "first_date": "2001-04-17 03:05:00+02:00",
+      "last_date": "2001-04-23 12:44:00+02:00",
+      "rows_with_attachments": 0
+    },
+    {
+      "subject_clean": "bcp seat assignments",
+      "rows": 29,
+      "custodians": 25,
+      "first_date": "2001-10-31 18:25:46+01:00",
+      "last_date": "2001-10-31 18:25:46+01:00",
+      "rows_with_attachments": 29
+    }
+  ],
+  "repeated_body_top_clusters": [
+    {
+      "body_top_md5": "9a75ceec7bf948ef5329e26354464d64",
+      "example_subject": "",
+      "rows": 101,
+      "custodians": 96,
+      "subject_variants": 2,
+      "first_date": "2001-11-19 14:12:09+01:00",
+      "last_date": "2001-11-19 14:12:37+01:00",
+      "example_chars": 919
+    },
+    {
+      "body_top_md5": "0a90694d2d01d78aabb7ec53905776bb",
+      "example_subject": "",
+      "rows": 95,
+      "custodians": 85,
+      "subject_variants": 2,
+      "first_date": "2001-10-29 05:23:22+01:00",
+      "last_date": "2001-10-29 05:23:31+01:00",
+      "example_chars": 1200
+    },
+    {
+      "body_top_md5": "29d41bff01b5938df057707a74f94065",
+      "example_subject": "enron center south technology watch",
+      "rows": 65,
+      "custodians": 59,
+      "subject_variants": 1,
+      "first_date": "2001-11-19 02:56:21+01:00",
+      "last_date": "2001-11-19 03:37:33+01:00",
+      "example_chars": 3094
+    },
+    {
+      "body_top_md5": "93a6c514b1f75faf1d677846c14da6f6",
+      "example_subject": "",
+      "rows": 58,
+      "custodians": 46,
+      "subject_variants": 2,
+      "first_date": "2001-11-27 02:17:02+01:00",
+      "last_date": "2001-11-27 02:17:10+01:00",
+      "example_chars": 898
+    },
+    {
+      "body_top_md5": "a17529c0cd6c661039fe19142aa4c831",
+      "example_subject": "",
+      "rows": 47,
+      "custodians": 44,
+      "subject_variants": 2,
+      "first_date": "2001-10-22 04:42:27+02:00",
+      "last_date": "2001-10-22 09:42:00+02:00",
+      "example_chars": 1224
+    },
+    {
+      "body_top_md5": "81011e44f5d540d71fd5c0e99835ef2a",
+      "example_subject": "",
+      "rows": 40,
+      "custodians": 40,
+      "subject_variants": 2,
+      "first_date": "2002-02-06 18:17:09+01:00",
+      "last_date": "2002-02-06 22:18:10+01:00",
+      "example_chars": 1622
+    },
+    {
+      "body_top_md5": "b5bba01870121af526a775cd5f84a5a8",
+      "example_subject": "credit watch list--week of 11/19/01",
+      "rows": 40,
+      "custodians": 39,
+      "subject_variants": 1,
+      "first_date": "2001-11-19 17:25:56+01:00",
+      "last_date": "2001-11-19 17:25:56+01:00",
+      "example_chars": 559
+    },
+    {
+      "body_top_md5": "1f4d9599ed6c5991429827be129c1053",
+      "example_subject": "online trading simulation",
+      "rows": 38,
+      "custodians": 38,
+      "subject_variants": 1,
+      "first_date": "2002-02-04 22:47:02+01:00",
+      "last_date": "2002-02-05 02:47:02+01:00",
+      "example_chars": 2994
+    },
+    {
+      "body_top_md5": "7b713761c18ab32ec8a5cb1e72a67ad9",
+      "example_subject": "ken lay and jeff skilling on cnnfn",
+      "rows": 131,
+      "custodians": 36,
+      "subject_variants": 1,
+      "first_date": "2000-12-13 15:34:00+01:00",
+      "last_date": "2000-12-13 15:34:00+01:00",
+      "example_chars": 382
+    },
+    {
+      "body_top_md5": "539875ee5c2d504e9f3993bf68414cb4",
+      "example_subject": "succession plan",
+      "rows": 129,
+      "custodians": 34,
+      "subject_variants": 1,
+      "first_date": "2000-12-13 07:01:00+01:00",
+      "last_date": "2000-12-13 07:02:00+01:00",
+      "example_chars": 1200
+    },
+    {
+      "body_top_md5": "8fc2666709726905e5085ada188a1804",
+      "example_subject": "credit watch list--week of 10/29/01",
+      "rows": 37,
+      "custodians": 34,
+      "subject_variants": 1,
+      "first_date": "2001-10-29 18:34:48+01:00",
+      "last_date": "2001-10-29 18:34:48+01:00",
+      "example_chars": 552
+    },
+    {
+      "body_top_md5": "c8cd36c37972819c164aca981ab8fb77",
+      "example_subject": "credit watch list--week of 10/22/01",
+      "rows": 34,
+      "custodians": 33,
+      "subject_variants": 1,
+      "first_date": "2001-10-22 18:36:48+02:00",
+      "last_date": "2001-10-22 18:36:48+02:00",
+      "example_chars": 556
+    },
+    {
+      "body_top_md5": "9f7f3a2971207d6032d9725389b56c72",
+      "example_subject": "4-urgent - owa please print this now.",
+      "rows": 97,
+      "custodians": 32,
+      "subject_variants": 1,
+      "first_date": "2001-01-19 11:35:00+01:00",
+      "last_date": "2001-07-30 16:56:00+02:00",
+      "example_chars": 2446
+    },
+    {
+      "body_top_md5": "1807c31f2b5e494e05e765c786512ea7",
+      "example_subject": "",
+      "rows": 38,
+      "custodians": 32,
+      "subject_variants": 2,
+      "first_date": "2001-06-08 05:04:06+02:00",
+      "last_date": "2001-06-14 02:46:57+02:00",
+      "example_chars": 787
+    },
+    {
+      "body_top_md5": "7e74d761212bb5d93781184b9cb94bba",
+      "example_subject": "",
+      "rows": 38,
+      "custodians": 32,
+      "subject_variants": 1,
+      "first_date": "2001-05-31 04:14:50+02:00",
+      "last_date": "2001-05-31 04:15:00+02:00",
+      "example_chars": 1490
+    },
+    {
+      "body_top_md5": "92ac52e223ada05b7a2333cd29c01a2a",
+      "example_subject": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "rows": 32,
+      "custodians": 32,
+      "subject_variants": 1,
+      "first_date": "2002-02-07 01:09:37+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00",
+      "example_chars": 471
+    },
+    {
+      "body_top_md5": "d21e904cec040f0d197e962a979f8df0",
+      "example_subject": "",
+      "rows": 35,
+      "custodians": 31,
+      "subject_variants": 1,
+      "first_date": "2001-06-01 07:28:15+02:00",
+      "last_date": "2001-06-01 07:28:31+02:00",
+      "example_chars": 943
+    },
+    {
+      "body_top_md5": "cb21f1d400d6be64f07af68b389d4d5c",
+      "example_subject": "",
+      "rows": 32,
+      "custodians": 31,
+      "subject_variants": 2,
+      "first_date": "2002-02-06 01:41:12+01:00",
+      "last_date": "2002-02-06 01:41:12+01:00",
+      "example_chars": 2071
+    },
+    {
+      "body_top_md5": "c168e65ce044587031feacbab9db0e51",
+      "example_subject": "ubsw orientation - thursday. for those that did not attend the houstonian sessions",
+      "rows": 31,
+      "custodians": 31,
+      "subject_variants": 2,
+      "first_date": "2002-02-04 22:04:37+01:00",
+      "last_date": "2002-02-05 02:05:05+01:00",
+      "example_chars": 603
+    },
+    {
+      "body_top_md5": "464ba34ca0d54089b71af459289aeef7",
+      "example_subject": "",
+      "rows": 30,
+      "custodians": 30,
+      "subject_variants": 2,
+      "first_date": "2002-02-06 23:08:33+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00",
+      "example_chars": 606
+    },
+    {
+      "body_top_md5": "00046dc5499f07d90584d66ee541d640",
+      "example_subject": "",
+      "rows": 37,
+      "custodians": 28,
+      "subject_variants": 1,
+      "first_date": "2001-09-24 22:06:27+02:00",
+      "last_date": "2001-09-24 22:06:35+02:00",
+      "example_chars": 2629
+    },
+    {
+      "body_top_md5": "624d5b264f8b0f14138d33504a9b48f0",
+      "example_subject": "enron wholesale services legal department",
+      "rows": 94,
+      "custodians": 26,
+      "subject_variants": 1,
+      "first_date": "2000-12-04 11:36:00+01:00",
+      "last_date": "2000-12-04 11:36:00+01:00",
+      "example_chars": 939
+    },
+    {
+      "body_top_md5": "134e5bce0a9fd2f1b1ce2f76988e5392",
+      "example_subject": "holiday schedule 2001",
+      "rows": 80,
+      "custodians": 26,
+      "subject_variants": 1,
+      "first_date": "2000-11-13 19:46:00+01:00",
+      "last_date": "2000-11-13 19:46:00+01:00",
+      "example_chars": 116
+    },
+    {
+      "body_top_md5": "a965b8acdb67d875700a7ab20d01eb0f",
+      "example_subject": "",
+      "rows": 26,
+      "custodians": 26,
+      "subject_variants": 1,
+      "first_date": "2002-01-28 21:49:30+01:00",
+      "last_date": "2002-01-28 21:49:30+01:00",
+      "example_chars": 2903
+    },
+    {
+      "body_top_md5": "fe0e0d5d9f5b8e64b55c7d2df1501e99",
+      "example_subject": "bcp seat assignments",
+      "rows": 29,
+      "custodians": 25,
+      "subject_variants": 1,
+      "first_date": "2001-10-31 18:25:46+01:00",
+      "last_date": "2001-10-31 18:25:46+01:00",
+      "example_chars": 1113
+    },
+    {
+      "body_top_md5": "b52fbf96d4e66f6fdeddfefd7c9b4452",
+      "example_subject": "esource presents esearch",
+      "rows": 91,
+      "custodians": 24,
+      "subject_variants": 1,
+      "first_date": "2000-12-11 07:07:00+01:00",
+      "last_date": "2000-12-11 07:08:00+01:00",
+      "example_chars": 1139
+    },
+    {
+      "body_top_md5": "9c051b8fd5a9b29a0ef22bda71922446",
+      "example_subject": "clickathome portal is here!",
+      "rows": 80,
+      "custodians": 24,
+      "subject_variants": 1,
+      "first_date": "2001-05-08 00:20:00+02:00",
+      "last_date": "2001-05-08 00:20:00+02:00",
+      "example_chars": 551
+    },
+    {
+      "body_top_md5": "dcbdfed43dfbc83692690039a9aaa272",
+      "example_subject": "",
+      "rows": 25,
+      "custodians": 24,
+      "subject_variants": 1,
+      "first_date": "2002-01-22 23:38:42+01:00",
+      "last_date": "2002-01-22 23:38:45+01:00",
+      "example_chars": 575
+    },
+    {
+      "body_top_md5": "e9db8852c47a945867eaee644d1602d7",
+      "example_subject": "pulse survey memo from the office of the chairman",
+      "rows": 102,
+      "custodians": 23,
+      "subject_variants": 1,
+      "first_date": "2000-12-04 21:09:00+01:00",
+      "last_date": "2000-12-04 21:09:00+01:00",
+      "example_chars": 2250
+    },
+    {
+      "body_top_md5": "d154fccb00bac4a7288eccd729752053",
+      "example_subject": "",
+      "rows": 23,
+      "custodians": 23,
+      "subject_variants": 1,
+      "first_date": "2001-05-31 17:45:09+02:00",
+      "last_date": "2001-05-31 17:45:09+02:00",
+      "example_chars": 132
+    },
+    {
+      "body_top_md5": "94fbf30fe88819fc962240bc15d00c49",
+      "example_subject": "deferral enrollment 2001",
+      "rows": 72,
+      "custodians": 22,
+      "subject_variants": 1,
+      "first_date": "2000-11-28 19:03:00+01:00",
+      "last_date": "2000-11-28 19:03:00+01:00",
+      "example_chars": 1681
+    },
+    {
+      "body_top_md5": "eb536eea6f7be258fc017be986b15fb4",
+      "example_subject": "",
+      "rows": 22,
+      "custodians": 22,
+      "subject_variants": 1,
+      "first_date": "2002-01-12 01:03:53+01:00",
+      "last_date": "2002-01-12 01:03:53+01:00",
+      "example_chars": 3578
+    },
+    {
+      "body_top_md5": "b25288c04c712cfa9dc62889d979a08a",
+      "example_subject": "",
+      "rows": 21,
+      "custodians": 21,
+      "subject_variants": 2,
+      "first_date": "2002-01-31 18:34:52+01:00",
+      "last_date": "2002-01-31 18:36:39+01:00",
+      "example_chars": 299
+    },
+    {
+      "body_top_md5": "f9835a249882fcb81da937882cbd644c",
+      "example_subject": "weather alert",
+      "rows": 74,
+      "custodians": 20,
+      "subject_variants": 1,
+      "first_date": "2000-12-12 18:11:00+01:00",
+      "last_date": "2000-12-12 18:11:00+01:00",
+      "example_chars": 503
+    },
+    {
+      "body_top_md5": "4e1f00463da923e5d7415dcf95049d4c",
+      "example_subject": "deferral enrollment 2001",
+      "rows": 69,
+      "custodians": 20,
+      "subject_variants": 1,
+      "first_date": "2000-11-14 20:17:00+01:00",
+      "last_date": "2000-11-14 20:17:00+01:00",
+      "example_chars": 1139
+    },
+    {
+      "body_top_md5": "becbba8fbdc5cbca3afa0bd098e06ebe",
+      "example_subject": "",
+      "rows": 22,
+      "custodians": 20,
+      "subject_variants": 1,
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00",
+      "example_chars": 1026
+    },
+    {
+      "body_top_md5": "f0d89909dedcaf5ee0106d6559a35c9f",
+      "example_subject": "",
+      "rows": 20,
+      "custodians": 20,
+      "subject_variants": 1,
+      "first_date": "2002-01-04 16:35:14+01:00",
+      "last_date": "2002-01-04 16:35:14+01:00",
+      "example_chars": 2006
+    },
+    {
+      "body_top_md5": "c0d6191cdd5c4133b339b0ebac49437b",
+      "example_subject": "",
+      "rows": 20,
+      "custodians": 20,
+      "subject_variants": 1,
+      "first_date": "2002-01-09 21:37:03+01:00",
+      "last_date": "2002-01-09 21:37:03+01:00",
+      "example_chars": 930
+    },
+    {
+      "body_top_md5": "75260a652553e9280d66fd96c5946265",
+      "example_subject": "deferral program enrollment deadline is friday",
+      "rows": 65,
+      "custodians": 19,
+      "subject_variants": 1,
+      "first_date": "2000-12-06 12:47:00+01:00",
+      "last_date": "2000-12-06 12:47:00+01:00",
+      "example_chars": 903
+    },
+    {
+      "body_top_md5": "8c183769308fffad5d47bbb0e305e0a2",
+      "example_subject": "cnc containers corporation",
+      "rows": 22,
+      "custodians": 19,
+      "subject_variants": 1,
+      "first_date": "2001-10-22 17:22:03+02:00",
+      "last_date": "2001-10-22 17:22:03+02:00",
+      "example_chars": 146
+    },
+    {
+      "body_top_md5": "ba1dbcd61611e48babeff8f232d36cac",
+      "example_subject": "credit watch list--week of 10/15/01",
+      "rows": 20,
+      "custodians": 19,
+      "subject_variants": 1,
+      "first_date": "2001-10-15 17:30:53+02:00",
+      "last_date": "2001-10-15 17:30:53+02:00",
+      "example_chars": 629
+    },
+    {
+      "body_top_md5": "4e571c068fee8cac77ba678f6cc75149",
+      "example_subject": "access card information",
+      "rows": 19,
+      "custodians": 19,
+      "subject_variants": 1,
+      "first_date": "2002-02-07 00:14:02+01:00",
+      "last_date": "2002-02-07 00:14:02+01:00",
+      "example_chars": 2950
+    },
+    {
+      "body_top_md5": "e501a2efbb4ac5e88a7278c983581672",
+      "example_subject": "",
+      "rows": 19,
+      "custodians": 19,
+      "subject_variants": 1,
+      "first_date": "2001-12-14 16:30:33+01:00",
+      "last_date": "2001-12-14 16:30:35+01:00",
+      "example_chars": 2158
+    },
+    {
+      "body_top_md5": "1fa6e4d16ad328ed3713e734ce7c3ea0",
+      "example_subject": "final benefits memo",
+      "rows": 19,
+      "custodians": 19,
+      "subject_variants": 2,
+      "first_date": "2002-01-31 17:33:09+01:00",
+      "last_date": "2002-01-31 17:34:11+01:00",
+      "example_chars": 757
+    },
+    {
+      "body_top_md5": "14b2a3fab9c982102699bf97011c64c3",
+      "example_subject": "enron announcement",
+      "rows": 62,
+      "custodians": 18,
+      "subject_variants": 1,
+      "first_date": "2001-04-19 02:04:00+02:00",
+      "last_date": "2001-04-19 02:05:00+02:00",
+      "example_chars": 2352
+    },
+    {
+      "body_top_md5": "f32497c8f8ea029fcb64d2d71921d9f1",
+      "example_subject": "remote control your air-conditioner and heater",
+      "rows": 59,
+      "custodians": 18,
+      "subject_variants": 1,
+      "first_date": "2001-05-13 21:33:00+02:00",
+      "last_date": "2001-05-13 21:33:00+02:00",
+      "example_chars": 2000
+    },
+    {
+      "body_top_md5": "2b508945fbfa831eb4bfc3fc5a806d07",
+      "example_subject": "",
+      "rows": 23,
+      "custodians": 18,
+      "subject_variants": 1,
+      "first_date": "2001-11-15 06:13:04+01:00",
+      "last_date": "2001-11-19 02:52:42+01:00",
+      "example_chars": 797
+    },
+    {
+      "body_top_md5": "af1659fbab79850dfac13b987831368c",
+      "example_subject": "",
+      "rows": 18,
+      "custodians": 18,
+      "subject_variants": 2,
+      "first_date": "2002-01-23 23:42:48+01:00",
+      "last_date": "2002-01-23 23:44:52+01:00",
+      "example_chars": 829
+    },
+    {
+      "body_top_md5": "4e4be7214263fd54a34dd073b503777b",
+      "example_subject": "california department of water resources",
+      "rows": 18,
+      "custodians": 18,
+      "subject_variants": 1,
+      "first_date": "2001-11-19 21:25:26+01:00",
+      "last_date": "2001-11-19 21:25:26+01:00",
+      "example_chars": 154
+    },
+    {
+      "body_top_md5": "a4257394286f2d25f66aac519f23c20a",
+      "example_subject": "organizational changes",
+      "rows": 70,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2001-02-07 20:23:00+01:00",
+      "last_date": "2001-02-07 20:23:00+01:00",
+      "example_chars": 3376
+    },
+    {
+      "body_top_md5": "0d12ac6e65df19ee3946a40bb99900ee",
+      "example_subject": "enronoptions announcement",
+      "rows": 59,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2000-12-21 19:05:00+01:00",
+      "last_date": "2000-12-21 19:05:00+01:00",
+      "example_chars": 725
+    },
+    {
+      "body_top_md5": "1cb63d90d2c907fa92733d66de02bb4b",
+      "example_subject": "conflict of interest policy mailing to vendors",
+      "rows": 54,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2000-11-12 22:07:00+01:00",
+      "last_date": "2000-11-12 22:08:00+01:00",
+      "example_chars": 2896
+    },
+    {
+      "body_top_md5": "01959276aad95a5845d839c1b559f2a6",
+      "example_subject": "holiday invitation",
+      "rows": 53,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2000-11-16 21:12:00+01:00",
+      "last_date": "2000-11-16 21:12:00+01:00",
+      "example_chars": 167
+    },
+    {
+      "body_top_md5": "0a2122407b3c490245af971a35374322",
+      "example_subject": "open enrollment 2001 deadline extension",
+      "rows": 52,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2000-11-15 22:09:00+01:00",
+      "last_date": "2000-11-15 22:09:00+01:00",
+      "example_chars": 583
+    },
+    {
+      "body_top_md5": "bb3d9b4b02fa35bb9e1b90e6f32dd742",
+      "example_subject": "",
+      "rows": 17,
+      "custodians": 17,
+      "subject_variants": 1,
+      "first_date": "2001-11-27 22:20:35+01:00",
+      "last_date": "2001-11-27 22:20:35+01:00",
+      "example_chars": 152
+    },
+    {
+      "body_top_md5": "a6a5cfff9276b7b3fbe964b36b6a553a",
+      "example_subject": "organization announcement",
+      "rows": 56,
+      "custodians": 16,
+      "subject_variants": 1,
+      "first_date": "2001-05-04 10:17:00+02:00",
+      "last_date": "2001-05-04 10:17:00+02:00",
+      "example_chars": 1380
+    },
+    {
+      "body_top_md5": "3ed252a2d820a1e94048b184ce781987",
+      "example_subject": "enron announcement",
+      "rows": 52,
+      "custodians": 16,
+      "subject_variants": 1,
+      "first_date": "2001-04-22 22:14:00+02:00",
+      "last_date": "2001-04-22 22:14:00+02:00",
+      "example_chars": 2350
+    },
+    {
+      "body_top_md5": "df62b3e85021c4c867d4186b7e6f0edf",
+      "example_subject": "2- survey/information email 5-17-01",
+      "rows": 51,
+      "custodians": 16,
+      "subject_variants": 5,
+      "first_date": "2001-05-11 17:49:00+02:00",
+      "last_date": "2001-06-07 13:04:00+02:00",
+      "example_chars": 1826
+    },
+    {
+      "body_top_md5": "61f824f163cd6fa5abd54383630916d0",
+      "example_subject": "vacation carryover",
+      "rows": 49,
+      "custodians": 16,
+      "subject_variants": 1,
+      "first_date": "2001-01-19 00:22:00+01:00",
+      "last_date": "2001-01-19 00:22:00+01:00",
+      "example_chars": 1430
+    },
+    {
+      "body_top_md5": "fd7cb001de0c660ff44b195ad80625fc",
+      "example_subject": "chairman's award nominations",
+      "rows": 49,
+      "custodians": 16,
+      "subject_variants": 1,
+      "first_date": "2000-11-13 19:42:00+01:00",
+      "last_date": "2000-11-13 19:42:00+01:00",
+      "example_chars": 2709
+    }
+  ],
+  "topic_month_bursts": {
+    "california": [
+      {
+        "month": "2001-04",
+        "rows": 12597,
+        "custodians": 61,
+        "subjects": 1233,
+        "rows_with_attachments": 5177
+      },
+      {
+        "month": "2001-03",
+        "rows": 5832,
+        "custodians": 51,
+        "subjects": 828,
+        "rows_with_attachments": 1922
+      },
+      {
+        "month": "2001-05",
+        "rows": 5559,
+        "custodians": 74,
+        "subjects": 725,
+        "rows_with_attachments": 1605
+      },
+      {
+        "month": "2000-11",
+        "rows": 4313,
+        "custodians": 42,
+        "subjects": 467,
+        "rows_with_attachments": 1242
+      },
+      {
+        "month": "2001-02",
+        "rows": 3932,
+        "custodians": 47,
+        "subjects": 517,
+        "rows_with_attachments": 1497
+      },
+      {
+        "month": "2000-12",
+        "rows": 3744,
+        "custodians": 58,
+        "subjects": 481,
+        "rows_with_attachments": 1050
+      },
+      {
+        "month": "2002-01",
+        "rows": 3559,
+        "custodians": 62,
+        "subjects": 79,
+        "rows_with_attachments": 171
+      },
+      {
+        "month": "2001-01",
+        "rows": 3334,
+        "custodians": 40,
+        "subjects": 421,
+        "rows_with_attachments": 1236
+      }
+    ],
+    "ferc": [
+      {
+        "month": "2000-11",
+        "rows": 3188,
+        "custodians": 32,
+        "subjects": 349,
+        "rows_with_attachments": 1268
+      },
+      {
+        "month": "2000-12",
+        "rows": 2047,
+        "custodians": 51,
+        "subjects": 260,
+        "rows_with_attachments": 711
+      },
+      {
+        "month": "2001-03",
+        "rows": 1977,
+        "custodians": 33,
+        "subjects": 327,
+        "rows_with_attachments": 630
+      },
+      {
+        "month": "2001-04",
+        "rows": 1900,
+        "custodians": 52,
+        "subjects": 255,
+        "rows_with_attachments": 595
+      },
+      {
+        "month": "2000-10",
+        "rows": 1828,
+        "custodians": 28,
+        "subjects": 213,
+        "rows_with_attachments": 686
+      },
+      {
+        "month": "2001-05",
+        "rows": 1769,
+        "custodians": 62,
+        "subjects": 256,
+        "rows_with_attachments": 547
+      },
+      {
+        "month": "2000-09",
+        "rows": 1517,
+        "custodians": 21,
+        "subjects": 186,
+        "rows_with_attachments": 473
+      },
+      {
+        "month": "2001-10",
+        "rows": 1493,
+        "custodians": 92,
+        "subjects": 268,
+        "rows_with_attachments": 278
+      }
+    ],
+    "dynegy": [
+      {
+        "month": "2001-11",
+        "rows": 1672,
+        "custodians": 119,
+        "subjects": 263,
+        "rows_with_attachments": 188
+      },
+      {
+        "month": "2001-03",
+        "rows": 1316,
+        "custodians": 33,
+        "subjects": 195,
+        "rows_with_attachments": 424
+      },
+      {
+        "month": "2001-04",
+        "rows": 1194,
+        "custodians": 40,
+        "subjects": 133,
+        "rows_with_attachments": 436
+      },
+      {
+        "month": "2000-11",
+        "rows": 1064,
+        "custodians": 31,
+        "subjects": 113,
+        "rows_with_attachments": 353
+      },
+      {
+        "month": "2001-05",
+        "rows": 966,
+        "custodians": 42,
+        "subjects": 126,
+        "rows_with_attachments": 318
+      },
+      {
+        "month": "2001-01",
+        "rows": 732,
+        "custodians": 29,
+        "subjects": 111,
+        "rows_with_attachments": 290
+      },
+      {
+        "month": "2000-12",
+        "rows": 684,
+        "custodians": 26,
+        "subjects": 93,
+        "rows_with_attachments": 242
+      },
+      {
+        "month": "2001-02",
+        "rows": 673,
+        "custodians": 28,
+        "subjects": 98,
+        "rows_with_attachments": 298
+      }
+    ],
+    "bankruptcy": [
+      {
+        "month": "2002-01",
+        "rows": 2078,
+        "custodians": 71,
+        "subjects": 106,
+        "rows_with_attachments": 151
+      },
+      {
+        "month": "2001-04",
+        "rows": 1450,
+        "custodians": 33,
+        "subjects": 186,
+        "rows_with_attachments": 177
+      },
+      {
+        "month": "2001-05",
+        "rows": 1076,
+        "custodians": 35,
+        "subjects": 140,
+        "rows_with_attachments": 111
+      },
+      {
+        "month": "2001-03",
+        "rows": 943,
+        "custodians": 34,
+        "subjects": 126,
+        "rows_with_attachments": 127
+      },
+      {
+        "month": "2001-01",
+        "rows": 832,
+        "custodians": 27,
+        "subjects": 118,
+        "rows_with_attachments": 166
+      },
+      {
+        "month": "2001-02",
+        "rows": 663,
+        "custodians": 18,
+        "subjects": 89,
+        "rows_with_attachments": 190
+      },
+      {
+        "month": "2001-12",
+        "rows": 644,
+        "custodians": 94,
+        "subjects": 128,
+        "rows_with_attachments": 87
+      },
+      {
+        "month": "2001-06",
+        "rows": 550,
+        "custodians": 56,
+        "subjects": 74,
+        "rows_with_attachments": 137
+      }
+    ],
+    "andersen": [
+      {
+        "month": "2000-11",
+        "rows": 241,
+        "custodians": 13,
+        "subjects": 41,
+        "rows_with_attachments": 47
+      },
+      {
+        "month": "2001-11",
+        "rows": 224,
+        "custodians": 41,
+        "subjects": 58,
+        "rows_with_attachments": 39
+      },
+      {
+        "month": "2000-10",
+        "rows": 192,
+        "custodians": 14,
+        "subjects": 27,
+        "rows_with_attachments": 66
+      },
+      {
+        "month": "2002-01",
+        "rows": 176,
+        "custodians": 34,
+        "subjects": 21,
+        "rows_with_attachments": 71
+      },
+      {
+        "month": "2001-05",
+        "rows": 148,
+        "custodians": 16,
+        "subjects": 21,
+        "rows_with_attachments": 52
+      },
+      {
+        "month": "2001-10",
+        "rows": 142,
+        "custodians": 37,
+        "subjects": 46,
+        "rows_with_attachments": 15
+      },
+      {
+        "month": "2001-04",
+        "rows": 135,
+        "custodians": 13,
+        "subjects": 24,
+        "rows_with_attachments": 37
+      },
+      {
+        "month": "2000-12",
+        "rows": 134,
+        "custodians": 15,
+        "subjects": 22,
+        "rows_with_attachments": 22
+      }
+    ],
+    "fastow": [
+      {
+        "month": "2001-10",
+        "rows": 569,
+        "custodians": 108,
+        "subjects": 41,
+        "rows_with_attachments": 14
+      },
+      {
+        "month": "2000-12",
+        "rows": 202,
+        "custodians": 12,
+        "subjects": 17,
+        "rows_with_attachments": 11
+      },
+      {
+        "month": "2000-10",
+        "rows": 190,
+        "custodians": 5,
+        "subjects": 16,
+        "rows_with_attachments": 68
+      },
+      {
+        "month": "2001-11",
+        "rows": 181,
+        "custodians": 38,
+        "subjects": 26,
+        "rows_with_attachments": 2
+      },
+      {
+        "month": "2000-08",
+        "rows": 169,
+        "custodians": 5,
+        "subjects": 12,
+        "rows_with_attachments": 97
+      },
+      {
+        "month": "2001-05",
+        "rows": 167,
+        "custodians": 17,
+        "subjects": 23,
+        "rows_with_attachments": 82
+      },
+      {
+        "month": "2001-03",
+        "rows": 162,
+        "custodians": 27,
+        "subjects": 16,
+        "rows_with_attachments": 21
+      },
+      {
+        "month": "2000-11",
+        "rows": 152,
+        "custodians": 11,
+        "subjects": 22,
+        "rows_with_attachments": 68
+      }
+    ],
+    "skilling": [
+      {
+        "month": "2000-12",
+        "rows": 1456,
+        "custodians": 58,
+        "subjects": 106,
+        "rows_with_attachments": 189
+      },
+      {
+        "month": "2001-05",
+        "rows": 1072,
+        "custodians": 53,
+        "subjects": 109,
+        "rows_with_attachments": 284
+      },
+      {
+        "month": "2000-10",
+        "rows": 1024,
+        "custodians": 21,
+        "subjects": 83,
+        "rows_with_attachments": 316
+      },
+      {
+        "month": "2001-04",
+        "rows": 876,
+        "custodians": 39,
+        "subjects": 112,
+        "rows_with_attachments": 275
+      },
+      {
+        "month": "2001-03",
+        "rows": 820,
+        "custodians": 28,
+        "subjects": 115,
+        "rows_with_attachments": 155
+      },
+      {
+        "month": "2000-09",
+        "rows": 787,
+        "custodians": 15,
+        "subjects": 62,
+        "rows_with_attachments": 195
+      },
+      {
+        "month": "2000-11",
+        "rows": 663,
+        "custodians": 23,
+        "subjects": 80,
+        "rows_with_attachments": 271
+      },
+      {
+        "month": "2001-06",
+        "rows": 656,
+        "custodians": 60,
+        "subjects": 57,
+        "rows_with_attachments": 58
+      }
+    ],
+    "ken_lay": [
+      {
+        "month": "2002-01",
+        "rows": 1370,
+        "custodians": 64,
+        "subjects": 9,
+        "rows_with_attachments": 26
+      },
+      {
+        "month": "2001-05",
+        "rows": 1236,
+        "custodians": 26,
+        "subjects": 111,
+        "rows_with_attachments": 561
+      },
+      {
+        "month": "2001-04",
+        "rows": 915,
+        "custodians": 26,
+        "subjects": 88,
+        "rows_with_attachments": 337
+      },
+      {
+        "month": "2000-10",
+        "rows": 901,
+        "custodians": 19,
+        "subjects": 84,
+        "rows_with_attachments": 305
+      },
+      {
+        "month": "2001-11",
+        "rows": 896,
+        "custodians": 114,
+        "subjects": 48,
+        "rows_with_attachments": 32
+      },
+      {
+        "month": "2001-10",
+        "rows": 783,
+        "custodians": 109,
+        "subjects": 44,
+        "rows_with_attachments": 22
+      },
+      {
+        "month": "2000-12",
+        "rows": 758,
+        "custodians": 48,
+        "subjects": 64,
+        "rows_with_attachments": 91
+      },
+      {
+        "month": "2000-09",
+        "rows": 714,
+        "custodians": 12,
+        "subjects": 57,
+        "rows_with_attachments": 305
+      }
+    ],
+    "ljm": [
+      {
+        "month": "2001-10",
+        "rows": 504,
+        "custodians": 105,
+        "subjects": 23,
+        "rows_with_attachments": 8
+      },
+      {
+        "month": "2001-11",
+        "rows": 135,
+        "custodians": 63,
+        "subjects": 9,
+        "rows_with_attachments": 1
+      },
+      {
+        "month": "2000-12",
+        "rows": 33,
+        "custodians": 1,
+        "subjects": 6,
+        "rows_with_attachments": 26
+      },
+      {
+        "month": "2002-01",
+        "rows": 33,
+        "custodians": 4,
+        "subjects": 3,
+        "rows_with_attachments": 6
+      },
+      {
+        "month": "2001-01",
+        "rows": 24,
+        "custodians": 1,
+        "subjects": 5,
+        "rows_with_attachments": 3
+      },
+      {
+        "month": "2000-02",
+        "rows": 20,
+        "custodians": 1,
+        "subjects": 4,
+        "rows_with_attachments": 6
+      },
+      {
+        "month": "2000-10",
+        "rows": 20,
+        "custodians": 2,
+        "subjects": 3,
+        "rows_with_attachments": 12
+      },
+      {
+        "month": "2001-05",
+        "rows": 17,
+        "custodians": 2,
+        "subjects": 3,
+        "rows_with_attachments": 0
+      }
+    ],
+    "chewco": [
+      {
+        "month": "2001-11",
+        "rows": 87,
+        "custodians": 51,
+        "subjects": 4,
+        "rows_with_attachments": 0
+      },
+      {
+        "month": "2001-10",
+        "rows": 62,
+        "custodians": 18,
+        "subjects": 3,
+        "rows_with_attachments": 6
+      },
+      {
+        "month": "2000-09",
+        "rows": 14,
+        "custodians": 2,
+        "subjects": 5,
+        "rows_with_attachments": 8
+      },
+      {
+        "month": "2002-01",
+        "rows": 14,
+        "custodians": 3,
+        "subjects": 1,
+        "rows_with_attachments": 4
+      },
+      {
+        "month": "2002-02",
+        "rows": 7,
+        "custodians": 1,
+        "subjects": 1,
+        "rows_with_attachments": 3
+      },
+      {
+        "month": "2001-12",
+        "rows": 3,
+        "custodians": 3,
+        "subjects": 2,
+        "rows_with_attachments": 0
+      },
+      {
+        "month": "2002-04",
+        "rows": 3,
+        "custodians": 3,
+        "subjects": 1,
+        "rows_with_attachments": 0
+      },
+      {
+        "month": "2001-08",
+        "rows": 2,
+        "custodians": 1,
+        "subjects": 2,
+        "rows_with_attachments": 0
+      }
+    ],
+    "dabhol": [
+      {
+        "month": "2001-05",
+        "rows": 478,
+        "custodians": 12,
+        "subjects": 42,
+        "rows_with_attachments": 34
+      },
+      {
+        "month": "2001-10",
+        "rows": 326,
+        "custodians": 83,
+        "subjects": 20,
+        "rows_with_attachments": 10
+      },
+      {
+        "month": "2001-01",
+        "rows": 258,
+        "custodians": 15,
+        "subjects": 42,
+        "rows_with_attachments": 104
+      },
+      {
+        "month": "2001-04",
+        "rows": 253,
+        "custodians": 10,
+        "subjects": 42,
+        "rows_with_attachments": 20
+      },
+      {
+        "month": "2001-06",
+        "rows": 214,
+        "custodians": 14,
+        "subjects": 19,
+        "rows_with_attachments": 6
+      },
+      {
+        "month": "2001-02",
+        "rows": 169,
+        "custodians": 14,
+        "subjects": 25,
+        "rows_with_attachments": 22
+      },
+      {
+        "month": "2000-11",
+        "rows": 158,
+        "custodians": 14,
+        "subjects": 11,
+        "rows_with_attachments": 57
+      },
+      {
+        "month": "2001-11",
+        "rows": 141,
+        "custodians": 28,
+        "subjects": 15,
+        "rows_with_attachments": 9
+      }
+    ],
+    "var": [
+      {
+        "month": "2000-12",
+        "rows": 596,
+        "custodians": 23,
+        "subjects": 75,
+        "rows_with_attachments": 125
+      },
+      {
+        "month": "2000-08",
+        "rows": 384,
+        "custodians": 12,
+        "subjects": 39,
+        "rows_with_attachments": 171
+      },
+      {
+        "month": "2000-07",
+        "rows": 369,
+        "custodians": 6,
+        "subjects": 38,
+        "rows_with_attachments": 99
+      },
+      {
+        "month": "2000-11",
+        "rows": 369,
+        "custodians": 16,
+        "subjects": 42,
+        "rows_with_attachments": 154
+      },
+      {
+        "month": "2000-06",
+        "rows": 312,
+        "custodians": 8,
+        "subjects": 34,
+        "rows_with_attachments": 93
+      },
+      {
+        "month": "2001-05",
+        "rows": 291,
+        "custodians": 30,
+        "subjects": 68,
+        "rows_with_attachments": 124
+      },
+      {
+        "month": "2001-11",
+        "rows": 287,
+        "custodians": 44,
+        "subjects": 74,
+        "rows_with_attachments": 12
+      },
+      {
+        "month": "2001-01",
+        "rows": 268,
+        "custodians": 12,
+        "subjects": 43,
+        "rows_with_attachments": 60
+      }
+    ],
+    "price_cap": [
+      {
+        "month": "2000-11",
+        "rows": 1130,
+        "custodians": 15,
+        "subjects": 82,
+        "rows_with_attachments": 501
+      },
+      {
+        "month": "2000-12",
+        "rows": 928,
+        "custodians": 19,
+        "subjects": 101,
+        "rows_with_attachments": 315
+      },
+      {
+        "month": "2000-08",
+        "rows": 793,
+        "custodians": 5,
+        "subjects": 53,
+        "rows_with_attachments": 267
+      },
+      {
+        "month": "2001-05",
+        "rows": 732,
+        "custodians": 23,
+        "subjects": 92,
+        "rows_with_attachments": 133
+      },
+      {
+        "month": "2001-03",
+        "rows": 670,
+        "custodians": 27,
+        "subjects": 72,
+        "rows_with_attachments": 103
+      },
+      {
+        "month": "2001-04",
+        "rows": 650,
+        "custodians": 18,
+        "subjects": 77,
+        "rows_with_attachments": 162
+      },
+      {
+        "month": "2000-10",
+        "rows": 572,
+        "custodians": 10,
+        "subjects": 66,
+        "rows_with_attachments": 204
+      },
+      {
+        "month": "2001-06",
+        "rows": 443,
+        "custodians": 24,
+        "subjects": 69,
+        "rows_with_attachments": 85
+      }
+    ],
+    "western_crisis": [
+      {
+        "month": "2001-03",
+        "rows": 340,
+        "custodians": 23,
+        "subjects": 32,
+        "rows_with_attachments": 48
+      },
+      {
+        "month": "2001-04",
+        "rows": 222,
+        "custodians": 9,
+        "subjects": 28,
+        "rows_with_attachments": 31
+      },
+      {
+        "month": "2001-05",
+        "rows": 160,
+        "custodians": 12,
+        "subjects": 24,
+        "rows_with_attachments": 32
+      },
+      {
+        "month": "2001-06",
+        "rows": 159,
+        "custodians": 13,
+        "subjects": 25,
+        "rows_with_attachments": 38
+      },
+      {
+        "month": "2000-08",
+        "rows": 139,
+        "custodians": 4,
+        "subjects": 8,
+        "rows_with_attachments": 3
+      },
+      {
+        "month": "2001-07",
+        "rows": 102,
+        "custodians": 12,
+        "subjects": 22,
+        "rows_with_attachments": 49
+      },
+      {
+        "month": "2001-01",
+        "rows": 90,
+        "custodians": 4,
+        "subjects": 9,
+        "rows_with_attachments": 0
+      },
+      {
+        "month": "2001-02",
+        "rows": 73,
+        "custodians": 5,
+        "subjects": 13,
+        "rows_with_attachments": 28
+      }
+    ]
+  },
+  "topic_custodian_concentration": {
+    "california": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 20157,
+        "subjects": 3269,
+        "first_date": "1999-09-22 01:50:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 13916,
+        "subjects": 788,
+        "first_date": "1997-08-06 11:00:00+02:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "guzman-m",
+        "rows": 4389,
+        "subjects": 737,
+        "first_date": "2000-10-23 17:53:00+02:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "linder-e",
+        "rows": 4032,
+        "subjects": 625,
+        "first_date": "2001-03-13 17:17:00+01:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "merris-s",
+        "rows": 1941,
+        "subjects": 316,
+        "first_date": "2001-03-13 17:17:00+01:00",
+        "last_date": "2001-05-01 20:44:08+02:00"
+      },
+      {
+        "custodian": "williams-b",
+        "rows": 1457,
+        "subjects": 60,
+        "first_date": "2001-04-13 04:13:00+02:00",
+        "last_date": "2002-02-07 08:38:17+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 1313,
+        "subjects": 284,
+        "first_date": "2000-10-17 14:41:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 1298,
+        "subjects": 26,
+        "first_date": "1999-10-13 22:23:00+02:00",
+        "last_date": "2002-01-30 20:48:06+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 1293,
+        "subjects": 177,
+        "first_date": "1999-12-16 18:02:00+01:00",
+        "last_date": "2002-01-30 23:26:13+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 1059,
+        "subjects": 206,
+        "first_date": "2000-10-31 14:47:00+01:00",
+        "last_date": "2001-05-02 19:37:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 923,
+        "subjects": 233,
+        "first_date": "2000-06-14 18:27:00+02:00",
+        "last_date": "2002-11-30 00:00:00+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 757,
+        "subjects": 218,
+        "first_date": "2000-06-21 07:45:00+02:00",
+        "last_date": "2001-07-08 19:31:00+02:00"
+      }
+    ],
+    "ferc": [
+      {
+        "custodian": "kean-s",
+        "rows": 7975,
+        "subjects": 470,
+        "first_date": "1997-06-26 11:30:00+02:00",
+        "last_date": "2001-12-28 22:17:15+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 6245,
+        "subjects": 1079,
+        "first_date": "1999-10-04 21:08:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 1182,
+        "subjects": 304,
+        "first_date": "2000-08-31 21:14:00+02:00",
+        "last_date": "2001-06-29 15:13:00+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 1139,
+        "subjects": 209,
+        "first_date": "2000-04-21 14:29:00+02:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "fossum-d",
+        "rows": 871,
+        "subjects": 178,
+        "first_date": "1999-12-16 18:34:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 829,
+        "subjects": 116,
+        "first_date": "1999-12-22 15:26:00+01:00",
+        "last_date": "2001-10-26 23:23:39+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 757,
+        "subjects": 317,
+        "first_date": "2001-06-20 19:09:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 540,
+        "subjects": 130,
+        "first_date": "1999-05-12 12:56:00+02:00",
+        "last_date": "2001-11-17 00:22:05+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 449,
+        "subjects": 63,
+        "first_date": "1999-12-16 18:02:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 430,
+        "subjects": 99,
+        "first_date": "2000-06-15 13:10:00+02:00",
+        "last_date": "2002-03-20 21:38:51+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 396,
+        "subjects": 154,
+        "first_date": "2000-07-11 12:24:00+02:00",
+        "last_date": "2001-06-11 16:53:00+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 335,
+        "subjects": 82,
+        "first_date": "2000-10-10 18:54:00+02:00",
+        "last_date": "2001-04-27 02:57:00+02:00"
+      }
+    ],
+    "dynegy": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 3649,
+        "subjects": 565,
+        "first_date": "1999-09-29 23:36:00+02:00",
+        "last_date": "2001-11-26 00:15:46+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 2868,
+        "subjects": 181,
+        "first_date": "2000-03-09 12:51:00+01:00",
+        "last_date": "2001-11-28 03:14:09+01:00"
+      },
+      {
+        "custodian": "scott-s",
+        "rows": 639,
+        "subjects": 81,
+        "first_date": "1999-12-27 13:45:00+01:00",
+        "last_date": "2001-08-22 17:51:00+02:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 331,
+        "subjects": 62,
+        "first_date": "2000-08-22 18:26:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 309,
+        "subjects": 74,
+        "first_date": "1999-05-24 16:00:00+02:00",
+        "last_date": "2001-11-26 22:26:21+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 248,
+        "subjects": 57,
+        "first_date": "1999-12-16 02:15:00+01:00",
+        "last_date": "2002-01-30 17:02:58+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 240,
+        "subjects": 53,
+        "first_date": "2000-11-07 17:35:00+01:00",
+        "last_date": "2001-04-24 18:41:00+02:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 236,
+        "subjects": 67,
+        "first_date": "2000-06-21 07:45:00+02:00",
+        "last_date": "2001-05-07 14:15:00+02:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 205,
+        "subjects": 49,
+        "first_date": "2000-02-29 12:18:00+01:00",
+        "last_date": "2001-11-25 23:59:31+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 184,
+        "subjects": 35,
+        "first_date": "2001-02-09 20:38:00+01:00",
+        "last_date": "2002-01-21 19:04:11+01:00"
+      },
+      {
+        "custodian": "taylor-m",
+        "rows": 165,
+        "subjects": 36,
+        "first_date": "1999-12-07 10:59:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "germany-c",
+        "rows": 158,
+        "subjects": 37,
+        "first_date": "1999-12-29 17:48:00+01:00",
+        "last_date": "2002-06-25 18:59:38+02:00"
+      }
+    ],
+    "bankruptcy": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 2534,
+        "subjects": 415,
+        "first_date": "1999-11-05 20:08:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 2095,
+        "subjects": 131,
+        "first_date": "2000-07-31 10:29:00+02:00",
+        "last_date": "2001-12-28 19:06:28+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 1179,
+        "subjects": 3,
+        "first_date": "2001-02-16 19:07:00+01:00",
+        "last_date": "2002-01-30 20:48:06+01:00"
+      },
+      {
+        "custodian": "germany-c",
+        "rows": 418,
+        "subjects": 57,
+        "first_date": "2001-05-21 21:10:57+02:00",
+        "last_date": "2002-06-25 21:21:22+02:00"
+      },
+      {
+        "custodian": "taylor-m",
+        "rows": 370,
+        "subjects": 97,
+        "first_date": "1998-11-30 12:22:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 269,
+        "subjects": 62,
+        "first_date": "1999-12-08 11:12:00+01:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "shackleton-s",
+        "rows": 261,
+        "subjects": 67,
+        "first_date": "1999-08-02 11:23:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 261,
+        "subjects": 49,
+        "first_date": "1999-12-17 16:58:00+01:00",
+        "last_date": "2002-01-29 23:42:10+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 251,
+        "subjects": 69,
+        "first_date": "1999-12-28 08:10:00+01:00",
+        "last_date": "2001-12-31 23:34:49+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 235,
+        "subjects": 86,
+        "first_date": "2001-02-08 21:21:00+01:00",
+        "last_date": "2002-02-05 17:50:57+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 227,
+        "subjects": 49,
+        "first_date": "2001-03-01 14:37:00+01:00",
+        "last_date": "2001-12-28 18:45:34+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 188,
+        "subjects": 48,
+        "first_date": "2000-12-14 01:20:10+01:00",
+        "last_date": "2001-04-17 03:08:00+02:00"
+      }
+    ],
+    "andersen": [
+      {
+        "custodian": "dasovich-j",
+        "rows": 404,
+        "subjects": 80,
+        "first_date": "1999-10-26 01:51:00+02:00",
+        "last_date": "2001-11-27 23:18:19+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 251,
+        "subjects": 42,
+        "first_date": "1999-12-30 17:31:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "beck-s",
+        "rows": 214,
+        "subjects": 42,
+        "first_date": "2000-01-27 18:31:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 202,
+        "subjects": 13,
+        "first_date": "2000-01-07 15:43:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "hayslett-r",
+        "rows": 85,
+        "subjects": 34,
+        "first_date": "2000-10-23 16:16:00+02:00",
+        "last_date": "2001-11-27 20:42:05+01:00"
+      },
+      {
+        "custodian": "bass-e",
+        "rows": 72,
+        "subjects": 16,
+        "first_date": "2000-02-08 12:23:00+01:00",
+        "last_date": "2002-02-04 20:34:13+01:00"
+      },
+      {
+        "custodian": "martin-t",
+        "rows": 51,
+        "subjects": 1,
+        "first_date": "2001-10-24 15:13:18+02:00",
+        "last_date": "2002-02-06 23:12:50+01:00"
+      },
+      {
+        "custodian": "skilling-j",
+        "rows": 49,
+        "subjects": 8,
+        "first_date": "2000-11-13 08:44:00+01:00",
+        "last_date": "2001-10-05 19:23:14+02:00"
+      },
+      {
+        "custodian": "taylor-m",
+        "rows": 49,
+        "subjects": 10,
+        "first_date": "1999-01-05 07:36:00+01:00",
+        "last_date": "2001-11-26 16:47:16+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 48,
+        "subjects": 8,
+        "first_date": "2000-11-16 12:36:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "giron-d",
+        "rows": 47,
+        "subjects": 8,
+        "first_date": "2001-01-16 16:33:00+01:00",
+        "last_date": "2002-01-23 00:31:40+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 42,
+        "subjects": 9,
+        "first_date": "2000-03-29 10:54:00+02:00",
+        "last_date": "2001-11-21 18:12:10+01:00"
+      }
+    ],
+    "fastow": [
+      {
+        "custodian": "kean-s",
+        "rows": 799,
+        "subjects": 67,
+        "first_date": "1997-09-26 10:00:00+02:00",
+        "last_date": "2001-12-17 16:53:22+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 208,
+        "subjects": 33,
+        "first_date": "2000-01-21 17:27:00+01:00",
+        "last_date": "2001-11-27 02:36:38+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 154,
+        "subjects": 19,
+        "first_date": "2001-02-27 22:59:00+01:00",
+        "last_date": "2002-01-29 18:30:26+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 153,
+        "subjects": 27,
+        "first_date": "1999-10-16 04:23:00+02:00",
+        "last_date": "2001-12-04 18:01:31+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 137,
+        "subjects": 25,
+        "first_date": "1999-12-14 13:53:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 106,
+        "subjects": 15,
+        "first_date": "2001-01-14 00:19:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "skilling-j",
+        "rows": 105,
+        "subjects": 10,
+        "first_date": "2000-06-07 10:57:00+02:00",
+        "last_date": "2001-10-24 22:50:19+02:00"
+      },
+      {
+        "custodian": "delainey-d",
+        "rows": 87,
+        "subjects": 14,
+        "first_date": "2000-05-17 22:02:00+02:00",
+        "last_date": "2001-02-20 20:56:00+01:00"
+      },
+      {
+        "custodian": "buy-r",
+        "rows": 75,
+        "subjects": 26,
+        "first_date": "2000-12-03 15:36:00+01:00",
+        "last_date": "2002-01-09 21:19:50+01:00"
+      },
+      {
+        "custodian": "shankman-j",
+        "rows": 70,
+        "subjects": 17,
+        "first_date": "2000-10-02 15:59:00+02:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "mcconnell-m",
+        "rows": 69,
+        "subjects": 20,
+        "first_date": "2000-07-18 20:31:00+02:00",
+        "last_date": "2001-10-24 22:50:19+02:00"
+      },
+      {
+        "custodian": "martin-t",
+        "rows": 65,
+        "subjects": 1,
+        "first_date": "2001-10-17 23:39:11+02:00",
+        "last_date": "2002-02-06 23:12:50+01:00"
+      }
+    ],
+    "skilling": [
+      {
+        "custodian": "skilling-j",
+        "rows": 3989,
+        "subjects": 286,
+        "first_date": "1999-08-17 02:18:00+02:00",
+        "last_date": "2001-11-19 22:34:59+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 2899,
+        "subjects": 193,
+        "first_date": "1997-03-06 10:30:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 877,
+        "subjects": 110,
+        "first_date": "1999-10-01 19:18:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 655,
+        "subjects": 87,
+        "first_date": "1999-12-27 00:59:00+01:00",
+        "last_date": "2002-01-14 02:57:03+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 389,
+        "subjects": 56,
+        "first_date": "1999-12-14 13:53:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "beck-s",
+        "rows": 372,
+        "subjects": 51,
+        "first_date": "2000-01-25 07:18:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 327,
+        "subjects": 64,
+        "first_date": "1999-08-16 11:17:00+02:00",
+        "last_date": "2002-01-16 15:41:47+01:00"
+      },
+      {
+        "custodian": "delainey-d",
+        "rows": 241,
+        "subjects": 30,
+        "first_date": "2000-05-17 22:35:00+02:00",
+        "last_date": "2001-02-09 10:00:00+01:00"
+      },
+      {
+        "custodian": "mcconnell-m",
+        "rows": 161,
+        "subjects": 42,
+        "first_date": "2000-06-07 10:49:00+02:00",
+        "last_date": "2001-08-14 22:59:29+02:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 157,
+        "subjects": 29,
+        "first_date": "2001-02-09 20:38:00+01:00",
+        "last_date": "2001-12-04 16:21:19+01:00"
+      },
+      {
+        "custodian": "buy-r",
+        "rows": 148,
+        "subjects": 36,
+        "first_date": "2000-11-27 11:42:00+01:00",
+        "last_date": "2002-01-09 21:19:50+01:00"
+      },
+      {
+        "custodian": "shankman-j",
+        "rows": 131,
+        "subjects": 31,
+        "first_date": "2000-10-17 10:02:00+02:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      }
+    ],
+    "ken_lay": [
+      {
+        "custodian": "kean-s",
+        "rows": 4762,
+        "subjects": 285,
+        "first_date": "1997-07-24 10:00:00+02:00",
+        "last_date": "2001-12-01 00:58:13+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 2370,
+        "subjects": 224,
+        "first_date": "1999-07-02 12:34:00+02:00",
+        "last_date": "2002-01-30 20:48:06+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 1506,
+        "subjects": 178,
+        "first_date": "1999-10-01 19:18:00+02:00",
+        "last_date": "2001-11-21 20:16:27+01:00"
+      },
+      {
+        "custodian": "skilling-j",
+        "rows": 382,
+        "subjects": 36,
+        "first_date": "1999-12-15 10:24:00+01:00",
+        "last_date": "2001-11-19 22:34:59+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 375,
+        "subjects": 56,
+        "first_date": "2000-01-21 18:03:00+01:00",
+        "last_date": "2002-01-29 16:01:53+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 304,
+        "subjects": 59,
+        "first_date": "2000-09-11 08:23:00+02:00",
+        "last_date": "2001-12-31 23:04:44+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 185,
+        "subjects": 14,
+        "first_date": "2001-03-17 10:34:00+01:00",
+        "last_date": "2002-02-05 01:56:02+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 164,
+        "subjects": 26,
+        "first_date": "1999-12-14 13:53:00+01:00",
+        "last_date": "2001-11-27 23:07:32+01:00"
+      },
+      {
+        "custodian": "beck-s",
+        "rows": 134,
+        "subjects": 28,
+        "first_date": "2000-01-21 13:51:00+01:00",
+        "last_date": "2002-01-24 03:10:47+01:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 126,
+        "subjects": 22,
+        "first_date": "2000-07-07 20:11:00+02:00",
+        "last_date": "2002-02-05 01:52:32+01:00"
+      },
+      {
+        "custodian": "martin-t",
+        "rows": 94,
+        "subjects": 5,
+        "first_date": "2001-10-02 23:24:19+02:00",
+        "last_date": "2002-02-06 23:12:50+01:00"
+      },
+      {
+        "custodian": "delainey-d",
+        "rows": 86,
+        "subjects": 16,
+        "first_date": "2000-07-05 21:48:00+02:00",
+        "last_date": "2001-12-30 23:45:34+01:00"
+      }
+    ],
+    "ljm": [
+      {
+        "custodian": "mann-k",
+        "rows": 80,
+        "subjects": 19,
+        "first_date": "2000-06-27 11:40:00+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 78,
+        "subjects": 9,
+        "first_date": "2001-03-25 05:54:00+02:00",
+        "last_date": "2001-12-05 20:39:00+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 60,
+        "subjects": 15,
+        "first_date": "1999-12-27 18:13:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "martin-t",
+        "rows": 42,
+        "subjects": 1,
+        "first_date": "2001-10-17 23:39:11+02:00",
+        "last_date": "2002-02-06 17:20:49+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 41,
+        "subjects": 2,
+        "first_date": "2001-10-17 23:39:11+02:00",
+        "last_date": "2001-11-20 15:53:25+01:00"
+      },
+      {
+        "custodian": "shackleton-s",
+        "rows": 33,
+        "subjects": 6,
+        "first_date": "2000-08-29 10:14:00+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 30,
+        "subjects": 2,
+        "first_date": "2001-09-27 19:34:30+02:00",
+        "last_date": "2001-12-05 22:07:06+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 25,
+        "subjects": 3,
+        "first_date": "2001-10-17 23:39:11+02:00",
+        "last_date": "2001-11-20 15:53:25+01:00"
+      },
+      {
+        "custodian": "derrick-j",
+        "rows": 24,
+        "subjects": 5,
+        "first_date": "2001-09-27 21:27:58+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "skilling-j",
+        "rows": 22,
+        "subjects": 4,
+        "first_date": "2001-04-16 21:25:00+02:00",
+        "last_date": "2001-10-26 06:54:55+02:00"
+      },
+      {
+        "custodian": "steffes-j",
+        "rows": 19,
+        "subjects": 1,
+        "first_date": "2001-10-18 22:49:31+02:00",
+        "last_date": "2001-11-20 15:53:25+01:00"
+      },
+      {
+        "custodian": "arnold-j",
+        "rows": 19,
+        "subjects": 2,
+        "first_date": "2001-10-17 23:39:11+02:00",
+        "last_date": "2001-11-20 15:53:25+01:00"
+      }
+    ],
+    "chewco": [
+      {
+        "custodian": "martin-t",
+        "rows": 22,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2002-02-06 23:12:50+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 20,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2001-12-04 16:21:19+01:00"
+      },
+      {
+        "custodian": "shackleton-s",
+        "rows": 11,
+        "subjects": 5,
+        "first_date": "2000-09-18 19:53:00+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 11,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "salisbury-h",
+        "rows": 7,
+        "subjects": 2,
+        "first_date": "2001-11-01 02:35:43+01:00",
+        "last_date": "2001-11-29 22:40:57+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 6,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2001-11-23 16:35:37+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 6,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2001-11-23 16:35:37+01:00"
+      },
+      {
+        "custodian": "dean-c2",
+        "rows": 5,
+        "subjects": 1,
+        "first_date": "2001-11-01 17:02:36+01:00",
+        "last_date": "2001-11-29 22:37:58+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 5,
+        "subjects": 2,
+        "first_date": "2001-10-26 21:45:17+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "derrick-j",
+        "rows": 5,
+        "subjects": 2,
+        "first_date": "2001-10-26 15:24:39+02:00",
+        "last_date": "2001-12-06 16:18:31+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 4,
+        "subjects": 1,
+        "first_date": "2001-10-26 15:16:19+02:00",
+        "last_date": "2001-11-09 00:35:50+01:00"
+      },
+      {
+        "custodian": "stclair-c",
+        "rows": 4,
+        "subjects": 1,
+        "first_date": "2000-09-22 13:55:00+02:00",
+        "last_date": "2000-09-22 13:55:00+02:00"
+      }
+    ],
+    "dabhol": [
+      {
+        "custodian": "kean-s",
+        "rows": 1195,
+        "subjects": 68,
+        "first_date": "1999-09-23 17:01:00+02:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 612,
+        "subjects": 51,
+        "first_date": "2000-09-14 16:11:00+02:00",
+        "last_date": "2001-11-19 14:51:52+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 165,
+        "subjects": 42,
+        "first_date": "1999-12-25 23:35:00+01:00",
+        "last_date": "2001-12-28 22:23:50+01:00"
+      },
+      {
+        "custodian": "skilling-j",
+        "rows": 111,
+        "subjects": 17,
+        "first_date": "2000-11-30 14:13:00+01:00",
+        "last_date": "2001-10-16 16:25:35+02:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 91,
+        "subjects": 20,
+        "first_date": "2000-11-22 17:06:00+01:00",
+        "last_date": "2001-10-19 21:27:35+02:00"
+      },
+      {
+        "custodian": "ybarbo-p",
+        "rows": 81,
+        "subjects": 19,
+        "first_date": "2001-02-28 16:57:00+01:00",
+        "last_date": "2001-11-27 12:21:58+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 75,
+        "subjects": 9,
+        "first_date": "2001-03-26 22:20:00+02:00",
+        "last_date": "2001-12-04 16:21:19+01:00"
+      },
+      {
+        "custodian": "derrick-j",
+        "rows": 62,
+        "subjects": 20,
+        "first_date": "2000-11-30 12:12:00+01:00",
+        "last_date": "2001-11-23 16:35:37+01:00"
+      },
+      {
+        "custodian": "mcconnell-m",
+        "rows": 61,
+        "subjects": 19,
+        "first_date": "2000-08-01 10:20:00+02:00",
+        "last_date": "2001-05-31 15:52:00+02:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 55,
+        "subjects": 5,
+        "first_date": "2000-11-30 16:37:00+01:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      },
+      {
+        "custodian": "lay-k",
+        "rows": 48,
+        "subjects": 12,
+        "first_date": "2000-02-27 18:14:00+01:00",
+        "last_date": "2001-12-28 05:03:31+01:00"
+      },
+      {
+        "custodian": "arnold-j",
+        "rows": 41,
+        "subjects": 7,
+        "first_date": "2001-05-14 10:29:00+02:00",
+        "last_date": "2001-11-26 23:12:31+01:00"
+      }
+    ],
+    "var": [
+      {
+        "custodian": "kaminski-v",
+        "rows": 1372,
+        "subjects": 205,
+        "first_date": "1999-11-30 12:22:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "beck-s",
+        "rows": 614,
+        "subjects": 85,
+        "first_date": "2000-01-25 16:08:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "lavorato-j",
+        "rows": 372,
+        "subjects": 39,
+        "first_date": "2000-05-01 19:55:00+02:00",
+        "last_date": "2002-02-07 18:30:40+01:00"
+      },
+      {
+        "custodian": "rodrigue-r",
+        "rows": 306,
+        "subjects": 23,
+        "first_date": "2000-07-18 23:04:00+02:00",
+        "last_date": "2001-03-08 08:35:00+01:00"
+      },
+      {
+        "custodian": "whalley-g",
+        "rows": 211,
+        "subjects": 43,
+        "first_date": "2000-12-06 15:35:00+01:00",
+        "last_date": "2001-11-27 19:01:37+01:00"
+      },
+      {
+        "custodian": "arnold-j",
+        "rows": 188,
+        "subjects": 22,
+        "first_date": "2000-03-29 20:44:00+02:00",
+        "last_date": "2001-10-26 14:44:53+02:00"
+      },
+      {
+        "custodian": "white-s",
+        "rows": 183,
+        "subjects": 33,
+        "first_date": "2000-12-04 16:23:00+01:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "buy-r",
+        "rows": 129,
+        "subjects": 29,
+        "first_date": "2000-12-05 08:55:00+01:00",
+        "last_date": "2002-01-25 14:16:40+01:00"
+      },
+      {
+        "custodian": "shankman-j",
+        "rows": 92,
+        "subjects": 18,
+        "first_date": "2000-10-18 12:15:00+02:00",
+        "last_date": "2001-12-27 18:28:18+01:00"
+      },
+      {
+        "custodian": "kean-s",
+        "rows": 77,
+        "subjects": 4,
+        "first_date": "2000-11-10 16:15:00+01:00",
+        "last_date": "2001-08-24 02:09:49+02:00"
+      },
+      {
+        "custodian": "grigsby-m",
+        "rows": 68,
+        "subjects": 54,
+        "first_date": "2000-06-12 15:17:00+02:00",
+        "last_date": "2002-01-01 19:26:01+01:00"
+      },
+      {
+        "custodian": "bass-e",
+        "rows": 66,
+        "subjects": 58,
+        "first_date": "2000-06-27 18:08:00+02:00",
+        "last_date": "2002-01-31 18:57:43+01:00"
+      }
+    ],
+    "price_cap": [
+      {
+        "custodian": "kean-s",
+        "rows": 3163,
+        "subjects": 170,
+        "first_date": "2000-02-23 18:58:00+01:00",
+        "last_date": "2001-10-24 23:17:26+02:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 2865,
+        "subjects": 469,
+        "first_date": "2000-02-18 12:19:00+01:00",
+        "last_date": "2001-12-19 18:47:18+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 199,
+        "subjects": 43,
+        "first_date": "2001-03-02 10:46:00+01:00",
+        "last_date": "2001-10-24 23:17:26+02:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 176,
+        "subjects": 49,
+        "first_date": "2000-10-27 11:50:00+02:00",
+        "last_date": "2001-04-16 01:42:00+02:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 113,
+        "subjects": 21,
+        "first_date": "2000-11-01 16:40:00+01:00",
+        "last_date": "2002-01-24 19:03:12+01:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 105,
+        "subjects": 30,
+        "first_date": "2000-10-27 14:15:00+02:00",
+        "last_date": "2001-05-08 16:14:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 68,
+        "subjects": 16,
+        "first_date": "2000-07-12 11:03:00+02:00",
+        "last_date": "2002-03-06 17:00:08+01:00"
+      },
+      {
+        "custodian": "badeer-r",
+        "rows": 68,
+        "subjects": 20,
+        "first_date": "2000-06-27 20:22:00+02:00",
+        "last_date": "2000-08-29 20:11:00+02:00"
+      },
+      {
+        "custodian": "guzman-m",
+        "rows": 64,
+        "subjects": 17,
+        "first_date": "2000-10-27 09:01:00+02:00",
+        "last_date": "2001-01-02 10:48:00+01:00"
+      },
+      {
+        "custodian": "sanders-r",
+        "rows": 61,
+        "subjects": 26,
+        "first_date": "2000-06-27 20:39:00+02:00",
+        "last_date": "2001-06-11 20:06:00+02:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 60,
+        "subjects": 13,
+        "first_date": "2000-09-26 13:30:00+02:00",
+        "last_date": "2001-06-04 14:53:00+02:00"
+      },
+      {
+        "custodian": "lavorato-j",
+        "rows": 53,
+        "subjects": 6,
+        "first_date": "2000-10-15 21:42:00+02:00",
+        "last_date": "2001-06-06 23:42:35+02:00"
+      }
+    ],
+    "western_crisis": [
+      {
+        "custodian": "kean-s",
+        "rows": 591,
+        "subjects": 31,
+        "first_date": "2000-08-04 17:13:00+02:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "dasovich-j",
+        "rows": 540,
+        "subjects": 96,
+        "first_date": "2000-08-04 05:48:00+02:00",
+        "last_date": "2002-11-30 09:00:00+01:00"
+      },
+      {
+        "custodian": "symes-k",
+        "rows": 45,
+        "subjects": 11,
+        "first_date": "2000-12-12 23:48:52+01:00",
+        "last_date": "2001-04-05 22:31:49+02:00"
+      },
+      {
+        "custodian": "hain-m",
+        "rows": 42,
+        "subjects": 10,
+        "first_date": "2000-11-06 10:05:00+01:00",
+        "last_date": "2001-05-15 11:37:00+02:00"
+      },
+      {
+        "custodian": "lokay-m",
+        "rows": 35,
+        "subjects": 8,
+        "first_date": "2000-06-26 16:58:00+02:00",
+        "last_date": "2001-01-26 18:56:00+01:00"
+      },
+      {
+        "custodian": "sager-e",
+        "rows": 34,
+        "subjects": 10,
+        "first_date": "1999-06-01 17:20:00+02:00",
+        "last_date": "2001-11-20 12:10:25+01:00"
+      },
+      {
+        "custodian": "haedicke-m",
+        "rows": 34,
+        "subjects": 13,
+        "first_date": "2001-03-05 21:21:00+01:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "kaminski-v",
+        "rows": 34,
+        "subjects": 9,
+        "first_date": "2000-01-21 08:16:00+01:00",
+        "last_date": "2002-01-25 00:00:02+01:00"
+      },
+      {
+        "custodian": "shapiro-r",
+        "rows": 29,
+        "subjects": 6,
+        "first_date": "2001-05-18 10:52:00+02:00",
+        "last_date": "2001-11-27 18:11:43+01:00"
+      },
+      {
+        "custodian": "taylor-m",
+        "rows": 26,
+        "subjects": 5,
+        "first_date": "1999-06-01 14:24:00+02:00",
+        "last_date": "2001-03-14 11:14:00+01:00"
+      },
+      {
+        "custodian": "kitchen-l",
+        "rows": 22,
+        "subjects": 10,
+        "first_date": "2001-02-09 23:12:00+01:00",
+        "last_date": "2001-11-30 16:27:03+01:00"
+      },
+      {
+        "custodian": "jones-t",
+        "rows": 16,
+        "subjects": 5,
+        "first_date": "2000-04-19 12:57:00+02:00",
+        "last_date": "2001-03-13 17:17:00+01:00"
+      }
+    ]
+  },
+  "topic_overlap_matrix": [
+    {
+      "california_rows": 66513,
+      "california_ferc_rows": 11865,
+      "california_dynegy_rows": 5588,
+      "dynegy_rows": 13374,
+      "dynegy_bankruptcy_rows": 1685,
+      "bankruptcy_rows": 12035,
+      "bankruptcy_andersen_rows": 268,
+      "fastow_rows": 2896,
+      "fastow_ljm_rows": 316,
+      "dabhol_rows": 3054
+    }
+  ],
+  "external_sender_domains_by_phase": [
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "ccomad3.uu.commissioner.com",
+      "rows": 225,
+      "custodians": 7,
+      "rank": 1
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "hotmail.com",
+      "rows": 149,
+      "custodians": 25,
+      "rank": 2
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "cheatsheets.net",
+      "rows": 125,
+      "custodians": 2,
+      "rank": 3
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "enerfax.com",
+      "rows": 103,
+      "custodians": 6,
+      "rank": 4
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "haas.berkeley.edu",
+      "rows": 100,
+      "custodians": 1,
+      "rank": 5
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "match.com",
+      "rows": 84,
+      "custodians": 1,
+      "rank": 6
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "concureworkplace.com",
+      "rows": 82,
+      "custodians": 23,
+      "rank": 7
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "yahoo.com",
+      "rows": 70,
+      "custodians": 20,
+      "rank": 8
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "aol.com",
+      "rows": 65,
+      "custodians": 21,
+      "rank": 9
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "schwab.com",
+      "rows": 48,
+      "custodians": 1,
+      "rank": 10
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "robertmondavi.com",
+      "rows": 46,
+      "custodians": 1,
+      "rank": 11
+    },
+    {
+      "phase": "collapse_q4_2001",
+      "sender_domain": "houston.rr.com",
+      "rows": 46,
+      "custodians": 9,
+      "rank": 12
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "txu.com",
+      "rows": 2612,
+      "custodians": 4,
+      "rank": 1
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "haas.berkeley.edu",
+      "rows": 2462,
+      "custodians": 1,
+      "rank": 2
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "aol.com",
+      "rows": 2304,
+      "custodians": 65,
+      "rank": 3
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "dowjones.com",
+      "rows": 1945,
+      "custodians": 6,
+      "rank": 4
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "calpine.com",
+      "rows": 1565,
+      "custodians": 9,
+      "rank": 5
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "hotmail.com",
+      "rows": 1489,
+      "custodians": 47,
+      "rank": 6
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "nymex.com",
+      "rows": 1207,
+      "custodians": 5,
+      "rank": 7
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "govadv.com",
+      "rows": 1160,
+      "custodians": 4,
+      "rank": 8
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "bracepatt.com",
+      "rows": 939,
+      "custodians": 18,
+      "rank": 9
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "gmssr.com",
+      "rows": 890,
+      "custodians": 7,
+      "rank": 10
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "kslaw.com",
+      "rows": 795,
+      "custodians": 3,
+      "rank": 11
+    },
+    {
+      "phase": "crisis_to_pre_collapse",
+      "sender_domain": "yahoo.com",
+      "rows": 792,
+      "custodians": 41,
+      "rank": 12
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "pmaconference.com",
+      "rows": 154,
+      "custodians": 4,
+      "rank": 1
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "rigzone.com",
+      "rows": 111,
+      "custodians": 3,
+      "rank": 2
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "enerfax.com",
+      "rows": 100,
+      "custodians": 2,
+      "rank": 3
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "msn.com",
+      "rows": 89,
+      "custodians": 4,
+      "rank": 4
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "aol.com",
+      "rows": 75,
+      "custodians": 7,
+      "rank": 5
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "nytimes.com",
+      "rows": 39,
+      "custodians": 1,
+      "rank": 6
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "pdq.net",
+      "rows": 38,
+      "custodians": 2,
+      "rank": 7
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "hotmail.com",
+      "rows": 36,
+      "custodians": 6,
+      "rank": 8
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "energyclasses.com",
+      "rows": 31,
+      "custodians": 4,
+      "rank": 9
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "cadvision.com",
+      "rows": 29,
+      "custodians": 1,
+      "rank": 10
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "earthlink.net",
+      "rows": 29,
+      "custodians": 3,
+      "rank": 11
+    },
+    {
+      "phase": "post_2001",
+      "sender_domain": "yahoo.com",
+      "rows": 27,
+      "custodians": 9,
+      "rank": 12
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "haas.berkeley.edu",
+      "rows": 648,
+      "custodians": 1,
+      "rank": 1
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "hotmail.com",
+      "rows": 227,
+      "custodians": 3,
+      "rank": 2
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "earthlink.net",
+      "rows": 131,
+      "custodians": 2,
+      "rank": 3
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "columbiaenergygroup.com",
+      "rows": 126,
+      "custodians": 1,
+      "rank": 4
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "fairisaac.com",
+      "rows": 64,
+      "custodians": 1,
+      "rank": 5
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "robertmondavi.com",
+      "rows": 56,
+      "custodians": 1,
+      "rank": 6
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "pge.com",
+      "rows": 53,
+      "custodians": 3,
+      "rank": 7
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "sullcrom.com",
+      "rows": 49,
+      "custodians": 2,
+      "rank": 8
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "gmssr.com",
+      "rows": 48,
+      "custodians": 1,
+      "rank": 9
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "aol.com",
+      "rows": 48,
+      "custodians": 4,
+      "rank": 10
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "calpine.com",
+      "rows": 41,
+      "custodians": 1,
+      "rank": 11
+    },
+    {
+      "phase": "pre_2000",
+      "sender_domain": "sempra.com",
+      "rows": 32,
+      "custodians": 1,
+      "rank": 12
+    }
+  ],
+  "attachment_hash_clusters": [
+    {
+      "native_hash": "AB1BE429322D9F363DE8A8403C8D7BFC",
+      "attachment_rows": 318,
+      "messages": 318,
+      "custodians": 107,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "enron in action 11.19.01",
+      "first_date": "2001-10-15 06:59:20+02:00",
+      "last_date": "2001-11-27 02:17:10+01:00"
+    },
+    {
+      "native_hash": "D41D8CD98F00B204E9800998ECF8427E",
+      "attachment_rows": 400,
+      "messages": 361,
+      "custodians": 56,
+      "extensions": 11,
+      "example_extension": "txt",
+      "example_subject": "check this out -",
+      "first_date": "2000-02-20 19:01:00+01:00",
+      "last_date": "2002-03-06 23:09:14+01:00"
+    },
+    {
+      "native_hash": "241856455D8F27081E1DF6F88ED7C9D0",
+      "attachment_rows": 95,
+      "messages": 95,
+      "custodians": 44,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00"
+    },
+    {
+      "native_hash": "C2E64A5217518FD9E91FF81B7B1FCE11",
+      "attachment_rows": 95,
+      "messages": 95,
+      "custodians": 44,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "pg&e bankruptcy case-- important",
+      "first_date": "2001-06-08 00:04:00+02:00",
+      "last_date": "2001-06-21 04:26:00+02:00"
+    },
+    {
+      "native_hash": "607801E28AD9198203D766D99B2EEADE",
+      "attachment_rows": 151,
+      "messages": 151,
+      "custodians": 42,
+      "extensions": 1,
+      "example_extension": "pdf",
+      "example_subject": "urgent - requires immediate action - ubs orientation tomorrow @the houstonian",
+      "first_date": "2002-01-23 23:42:48+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00"
+    },
+    {
+      "native_hash": "A2DB80CC2688170D79CA1E685767608E",
+      "attachment_rows": 151,
+      "messages": 151,
+      "custodians": 42,
+      "extensions": 1,
+      "example_extension": "pdf",
+      "example_subject": "urgent - requires immediate action - ubs orientation tomorrow @the houstonian",
+      "first_date": "2002-01-23 23:42:48+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00"
+    },
+    {
+      "native_hash": "1718DBA0043A6D2BDC0504BF40F1FD28",
+      "attachment_rows": 151,
+      "messages": 151,
+      "custodians": 42,
+      "extensions": 1,
+      "example_extension": "pdf",
+      "example_subject": "urgent - requires immediate action - ubs orientation tomorrow @the houstonian",
+      "first_date": "2002-01-23 23:42:48+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00"
+    },
+    {
+      "native_hash": "B956876868D105820528702FD063DB56",
+      "attachment_rows": 151,
+      "messages": 151,
+      "custodians": 42,
+      "extensions": 1,
+      "example_extension": "pdf",
+      "example_subject": "urgent - requires immediate action - ubs orientation tomorrow @the houstonian",
+      "first_date": "2002-01-23 23:42:48+01:00",
+      "last_date": "2002-02-07 03:08:59+01:00"
+    },
+    {
+      "native_hash": "D145B5FBAB66D4B8D727AF6D3E730E45",
+      "attachment_rows": 57,
+      "messages": 57,
+      "custodians": 42,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "you have 48 hours - message from louise kitchen",
+      "first_date": "2002-02-06 01:13:32+01:00",
+      "last_date": "2002-02-06 22:18:10+01:00"
+    },
+    {
+      "native_hash": "EF73CC7E9AE25CB3EE24B8D8A0D3EFFB",
+      "attachment_rows": 43,
+      "messages": 43,
+      "custodians": 38,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "executed master agreements list (november version)",
+      "first_date": "2001-11-15 03:58:49+01:00",
+      "last_date": "2001-11-19 20:40:29+01:00"
+    },
+    {
+      "native_hash": "70320A7BFDB5292C2128EEF718C463A5",
+      "attachment_rows": 40,
+      "messages": 40,
+      "custodians": 38,
+      "extensions": 1,
+      "example_extension": "xls",
+      "example_subject": "credit watch list--week of 11/19/01",
+      "first_date": "2001-11-19 17:25:56+01:00",
+      "last_date": "2001-11-19 17:53:30+01:00"
+    },
+    {
+      "native_hash": "0EF7B9B861BC01C4FAD3266497D63C34",
+      "attachment_rows": 39,
+      "messages": 39,
+      "custodians": 38,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "urgent - drugs test reminder",
+      "first_date": "2002-01-31 18:26:50+01:00",
+      "last_date": "2002-02-05 01:07:43+01:00"
+    },
+    {
+      "native_hash": "A7DE8EB76D01C02D8CE7A991AE6F97C7",
+      "attachment_rows": 39,
+      "messages": 39,
+      "custodians": 38,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "urgent - drugs test reminder",
+      "first_date": "2002-01-31 18:26:50+01:00",
+      "last_date": "2002-02-05 01:07:43+01:00"
+    },
+    {
+      "native_hash": "BC8ECD9D0F8761C7896C1A40ADF7FCF9",
+      "attachment_rows": 39,
+      "messages": 39,
+      "custodians": 38,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "urgent - drugs test reminder",
+      "first_date": "2002-01-31 18:26:50+01:00",
+      "last_date": "2002-02-05 01:07:43+01:00"
+    },
+    {
+      "native_hash": "2C8F31550A71B8BDE3FE59258E3C0773",
+      "attachment_rows": 180,
+      "messages": 180,
+      "custodians": 34,
+      "extensions": 1,
+      "example_extension": "gif",
+      "example_subject": "fw: bishop's corner",
+      "first_date": "2000-11-13 21:02:00+01:00",
+      "last_date": "2002-06-24 14:16:10+02:00"
+    },
+    {
+      "native_hash": "A0C6919789576B5E44E094292E4C3AF1",
+      "attachment_rows": 36,
+      "messages": 36,
+      "custodians": 34,
+      "extensions": 1,
+      "example_extension": "xls",
+      "example_subject": "credit watch list--week of 10/29/01",
+      "first_date": "2001-10-29 18:34:48+01:00",
+      "last_date": "2001-10-29 18:34:48+01:00"
+    },
+    {
+      "native_hash": "4ED3158DCA856A2F4BBEEBAC072D8D9E",
+      "attachment_rows": 33,
+      "messages": 33,
+      "custodians": 33,
+      "extensions": 1,
+      "example_extension": "xls",
+      "example_subject": "credit watch list--week of 10/22/01",
+      "first_date": "2001-10-22 18:36:48+02:00",
+      "last_date": "2001-10-22 18:36:48+02:00"
+    },
+    {
+      "native_hash": "1313392104834C0C9FCBD8D9EFC1D627",
+      "attachment_rows": 36,
+      "messages": 36,
+      "custodians": 32,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "first_date": "2002-02-06 21:28:14+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00"
+    },
+    {
+      "native_hash": "05E956E76EB1CF6036EB2E241C057D29",
+      "attachment_rows": 35,
+      "messages": 35,
+      "custodians": 32,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "first_date": "2002-02-06 21:33:03+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00"
+    },
+    {
+      "native_hash": "4861E0D2856A2479AA77AA2E3D21C9AE",
+      "attachment_rows": 34,
+      "messages": 34,
+      "custodians": 32,
+      "extensions": 1,
+      "example_extension": "xls",
+      "example_subject": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "first_date": "2002-02-07 01:09:37+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00"
+    },
+    {
+      "native_hash": "3F503399CE0F25296E73ECAA87CF893E",
+      "attachment_rows": 34,
+      "messages": 34,
+      "custodians": 32,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "trader presentations - 2/7 @ 2:30 p.m. (cst) in conf rm 06980",
+      "first_date": "2002-02-07 01:09:37+01:00",
+      "last_date": "2002-02-07 05:09:37+01:00"
+    },
+    {
+      "native_hash": "0649088203D5FEE559DBC67F88A63E41",
+      "attachment_rows": 32,
+      "messages": 32,
+      "custodians": 31,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "online trading simulation feb 7th",
+      "first_date": "2002-02-06 01:41:12+01:00",
+      "last_date": "2002-02-06 01:41:12+01:00"
+    },
+    {
+      "native_hash": "E2C5E8CFD4C9BD361FF185709B183BF6",
+      "attachment_rows": 36,
+      "messages": 36,
+      "custodians": 29,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "executed master agreements (october version)",
+      "first_date": "2001-10-15 07:00:32+02:00",
+      "last_date": "2001-11-12 23:33:01+01:00"
+    },
+    {
+      "native_hash": "DF9CB5E14291553F88BA1B691AD734F3",
+      "attachment_rows": 165,
+      "messages": 165,
+      "custodians": 27,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "organizational changes",
+      "first_date": "2000-11-08 17:59:00+01:00",
+      "last_date": "2001-01-19 10:28:00+01:00"
+    },
+    {
+      "native_hash": "D3FFEDB9DD484DF579BE0A497E3974D8",
+      "attachment_rows": 165,
+      "messages": 165,
+      "custodians": 27,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "organizational changes",
+      "first_date": "2000-11-08 17:59:00+01:00",
+      "last_date": "2001-01-19 10:28:00+01:00"
+    },
+    {
+      "native_hash": "418BEF28097796919F2D92E1B36532E9",
+      "attachment_rows": 157,
+      "messages": 157,
+      "custodians": 27,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "organizational changes",
+      "first_date": "2000-11-08 17:59:00+01:00",
+      "last_date": "2001-01-19 10:28:00+01:00"
+    },
+    {
+      "native_hash": "7756AA2F9FB5FAD2A0F82F4DA30FCA6C",
+      "attachment_rows": 140,
+      "messages": 140,
+      "custodians": 27,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "enron wholesale services legal department",
+      "first_date": "1980-01-01 01:00:00+01:00",
+      "last_date": "2001-06-12 01:51:00+02:00"
+    },
+    {
+      "native_hash": "6B2575867AD428E9C84C4F77F2CCE695",
+      "attachment_rows": 138,
+      "messages": 138,
+      "custodians": 27,
+      "extensions": 1,
+      "example_extension": "ppt",
+      "example_subject": "enron wholesale services legal department",
+      "first_date": "1980-01-01 01:00:00+01:00",
+      "last_date": "2001-06-12 01:51:00+02:00"
+    },
+    {
+      "native_hash": "8878FF6AEA01C361E895289E8FF5B24A",
+      "attachment_rows": 31,
+      "messages": 31,
+      "custodians": 25,
+      "extensions": 1,
+      "example_extension": "xls",
+      "example_subject": "bcp seat assignments",
+      "first_date": "2001-10-31 18:25:46+01:00",
+      "last_date": "2001-11-06 21:00:18+01:00"
+    },
+    {
+      "native_hash": "4186816D5C804E133EE2EA634348A6E8",
+      "attachment_rows": 104,
+      "messages": 103,
+      "custodians": 24,
+      "extensions": 1,
+      "example_extension": "jpg",
+      "example_subject": "fw: western strategy session",
+      "first_date": "2001-02-05 15:50:00+01:00",
+      "last_date": "2001-12-07 18:31:16+01:00"
+    },
+    {
+      "native_hash": "F05DB36EA7F31D5801DF60CFD75F8EF9",
+      "attachment_rows": 69,
+      "messages": 66,
+      "custodians": 24,
+      "extensions": 1,
+      "example_extension": "jpg",
+      "example_subject": "sm134",
+      "first_date": "2000-11-09 18:04:00+01:00",
+      "last_date": "2002-05-06 19:38:18+02:00"
+    },
+    {
+      "native_hash": "7822A634AC73986A45395AE617EA5C52",
+      "attachment_rows": 28,
+      "messages": 28,
+      "custodians": 24,
+      "extensions": 1,
+      "example_extension": "bmp",
+      "example_subject": "re: esource presents free global energy markets presentation",
+      "first_date": "2001-05-31 12:45:00+02:00",
+      "last_date": "2001-05-31 17:45:09+02:00"
+    },
+    {
+      "native_hash": "1BD1630EF177F3C657A1BD1C52164B51",
+      "attachment_rows": 572,
+      "messages": 121,
+      "custodians": 21,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "your weekly movie showtimes from amazon.com",
+      "first_date": "2001-04-11 08:24:00+02:00",
+      "last_date": "2002-03-20 07:00:58+01:00"
+    },
+    {
+      "native_hash": "BD170530AD64F68686DD2412763380CC",
+      "attachment_rows": 64,
+      "messages": 62,
+      "custodians": 21,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "fwd: gtt",
+      "first_date": "2001-02-28 17:00:00+01:00",
+      "last_date": "2001-12-26 15:28:27+01:00"
+    },
+    {
+      "native_hash": "9A217AC34046627B215B485BF38AE772",
+      "attachment_rows": 124,
+      "messages": 124,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "gif",
+      "example_subject": "letter re solicitation of employees",
+      "first_date": "2000-06-27 19:36:00+02:00",
+      "last_date": "2002-06-25 19:51:59+02:00"
+    },
+    {
+      "native_hash": "D3C0D0F0E23ADEC76164ABA7BE835338",
+      "attachment_rows": 71,
+      "messages": 70,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-16 01:21:12+01:00"
+    },
+    {
+      "native_hash": "F91C69176658F120A1D43038DFD03DCC",
+      "attachment_rows": 51,
+      "messages": 51,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "playa del carmen",
+      "first_date": "2001-07-20 06:36:16+02:00",
+      "last_date": "2001-12-08 21:30:12+01:00"
+    },
+    {
+      "native_hash": "CCC5B90E605AFA18CD19B9AA42F985A0",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "put the fun back on your desktop - free!",
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00"
+    },
+    {
+      "native_hash": "DE32AE7DA2E2A2E8013DF0A9B3FDC9E8",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "put the fun back on your desktop - free!",
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00"
+    },
+    {
+      "native_hash": "A09C886C94582832E5A896D0A52CD50D",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "put the fun back on your desktop - free!",
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00"
+    },
+    {
+      "native_hash": "7F54B555C121E6B68A7560D1318E9CA4",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "put the fun back on your desktop - free!",
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00"
+    },
+    {
+      "native_hash": "D235C7F7EB4A605842A25FBBD08B642E",
+      "attachment_rows": 22,
+      "messages": 22,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "put the fun back on your desktop - free!",
+      "first_date": "2001-10-18 15:23:26+02:00",
+      "last_date": "2001-10-28 01:43:02+02:00"
+    },
+    {
+      "native_hash": "CC3C11071A75BFF131A90A5AD07A83EA",
+      "attachment_rows": 20,
+      "messages": 20,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "from cindy olson, community relations: body shop reopening",
+      "first_date": "2002-01-04 16:35:14+01:00",
+      "last_date": "2002-01-04 16:35:14+01:00"
+    },
+    {
+      "native_hash": "977528F5DF6B5AA9122EBC15FFA12613",
+      "attachment_rows": 20,
+      "messages": 20,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "from cindy olson, community relations: body shop reopening",
+      "first_date": "2002-01-04 16:35:14+01:00",
+      "last_date": "2002-01-04 16:35:14+01:00"
+    },
+    {
+      "native_hash": "B628BDA55CD1E35314DA11E9F6CB74A8",
+      "attachment_rows": 20,
+      "messages": 20,
+      "custodians": 20,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "from cindy olson, community relations: body shop reopening",
+      "first_date": "2002-01-04 16:35:14+01:00",
+      "last_date": "2002-01-04 16:35:14+01:00"
+    },
+    {
+      "native_hash": "FCA94AF7EE0D72957FB3C01D4FCA1EBD",
+      "attachment_rows": 261,
+      "messages": 249,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "pcx",
+      "example_subject": "fw: agreement of confidentiality",
+      "first_date": "1999-05-11 19:16:00+02:00",
+      "last_date": "2001-07-27 20:07:19+02:00"
+    },
+    {
+      "native_hash": "77FDF9A9F5A788E58C3339FDDDF2D1DF",
+      "attachment_rows": 128,
+      "messages": 128,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "",
+      "example_subject": "ibuyit payables is now available",
+      "first_date": "2001-03-15 01:39:00+01:00",
+      "last_date": "2001-07-01 23:12:00+02:00"
+    },
+    {
+      "native_hash": "291085C0EE7307572A7AEEA80A55661B",
+      "attachment_rows": 128,
+      "messages": 128,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "",
+      "example_subject": "ibuyit payables is now available",
+      "first_date": "2001-03-15 01:39:00+01:00",
+      "last_date": "2001-07-01 23:12:00+02:00"
+    },
+    {
+      "native_hash": "A57519275749556741DC64AFCA2EFACF",
+      "attachment_rows": 75,
+      "messages": 72,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "news from cardmember central",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-16 01:21:12+01:00"
+    },
+    {
+      "native_hash": "8A337994BEEF9F3A46A17320CD43A3C7",
+      "attachment_rows": 72,
+      "messages": 71,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "your weekly movie showtimes from amazon.com",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-16 01:21:12+01:00"
+    },
+    {
+      "native_hash": "B3EFB39CD809D653F46E777E298CAA82",
+      "attachment_rows": 62,
+      "messages": 60,
+      "custodians": 19,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "8C3272F1ECE1CDB0B493A224C6D18F67",
+      "attachment_rows": 60,
+      "messages": 57,
+      "custodians": 18,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "5DB972DD2857D6FE0DC2CC6CE2C24251",
+      "attachment_rows": 59,
+      "messages": 59,
+      "custodians": 18,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "news from cardmember central",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-16 01:21:12+01:00"
+    },
+    {
+      "native_hash": "F99A58064919EDE63760C60B0AFB32D0",
+      "attachment_rows": 54,
+      "messages": 54,
+      "custodians": 18,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "20EDAB2B0DA69021E52AF2536ECCFA09",
+      "attachment_rows": 50,
+      "messages": 50,
+      "custodians": 17,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "chairman's award nominations",
+      "first_date": "2000-11-13 19:42:00+01:00",
+      "last_date": "2000-11-14 12:07:00+01:00"
+    },
+    {
+      "native_hash": "85585C5D4382EAFF16E8D2E42F3E69B1",
+      "attachment_rows": 93,
+      "messages": 93,
+      "custodians": 15,
+      "extensions": 1,
+      "example_extension": "gif",
+      "example_subject": "fw: town of waukee a/r",
+      "first_date": "2001-03-26 17:34:41+02:00",
+      "last_date": "2002-01-25 22:05:49+01:00"
+    },
+    {
+      "native_hash": "63A3C7D05F61B7EFADA843A86E3003AA",
+      "attachment_rows": 93,
+      "messages": 93,
+      "custodians": 15,
+      "extensions": 1,
+      "example_extension": "jpg",
+      "example_subject": "fw: town of waukee a/r",
+      "first_date": "2001-03-26 17:34:41+02:00",
+      "last_date": "2002-01-25 22:05:49+01:00"
+    },
+    {
+      "native_hash": "46B0B2C54AB9EA7F55126291B6E3EF00",
+      "attachment_rows": 295,
+      "messages": 247,
+      "custodians": 14,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "power indices",
+      "first_date": "2001-09-25 18:55:03+02:00",
+      "last_date": "2001-12-18 19:00:06+01:00"
+    },
+    {
+      "native_hash": "84C935DD378673311C8ACD1F72511645",
+      "attachment_rows": 247,
+      "messages": 247,
+      "custodians": 14,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "power indices",
+      "first_date": "2001-09-25 18:55:03+02:00",
+      "last_date": "2001-12-18 19:00:06+01:00"
+    },
+    {
+      "native_hash": "89C2610511B5C6875038C92553BD1C4A",
+      "attachment_rows": 54,
+      "messages": 54,
+      "custodians": 14,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "EC05B46B944C21035117DB7050ED3328",
+      "attachment_rows": 85,
+      "messages": 85,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "jpg",
+      "example_subject": "press release - mariner energy",
+      "first_date": "2001-02-05 14:15:00+01:00",
+      "last_date": "2002-05-03 22:02:05+02:00"
+    },
+    {
+      "native_hash": "81AC290CFAA7FDCA3B7BFD4FE3DF35CC",
+      "attachment_rows": 65,
+      "messages": 65,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "asf",
+      "example_subject": "fw: salmon",
+      "first_date": "2000-12-08 14:38:00+01:00",
+      "last_date": "2001-02-15 11:52:00+01:00"
+    },
+    {
+      "native_hash": "B8CDBA3E5B3CA2867B12E0AE64902A43",
+      "attachment_rows": 55,
+      "messages": 53,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "3B930F04889635E2EE689B7A4C7F13B1",
+      "attachment_rows": 54,
+      "messages": 54,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "DD2427855BDFE9459C17143E64C2BE0A",
+      "attachment_rows": 52,
+      "messages": 52,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "BB500DC40032806119281C81A8566EAF",
+      "attachment_rows": 51,
+      "messages": 51,
+      "custodians": 13,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "real deals from travelocity",
+      "first_date": "2001-05-02 06:14:00+02:00",
+      "last_date": "2002-01-15 23:29:24+01:00"
+    },
+    {
+      "native_hash": "E5A40DDDB56BA67F58BFF087D8FA215C",
+      "attachment_rows": 532,
+      "messages": 268,
+      "custodians": 12,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "williams energy news live -- today's video newscast",
+      "first_date": "2001-05-08 00:56:02+02:00",
+      "last_date": "2002-02-07 00:10:27+01:00"
+    },
+    {
+      "native_hash": "02E7751911DFD38340B3A4B8F7671F5D",
+      "attachment_rows": 271,
+      "messages": 271,
+      "custodians": 12,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "williams energy news live -- today's video newscast",
+      "first_date": "2001-05-03 23:50:26+02:00",
+      "last_date": "2002-02-07 00:10:27+01:00"
+    },
+    {
+      "native_hash": "7EDEA1DB020D55AA43827EDA056CA6BF",
+      "attachment_rows": 96,
+      "messages": 96,
+      "custodians": 12,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "gas indices",
+      "first_date": "2001-09-25 19:00:04+02:00",
+      "last_date": "2001-12-18 19:00:06+01:00"
+    },
+    {
+      "native_hash": "A4009533C06C2B4BC4DB298B1ECE87A0",
+      "attachment_rows": 51,
+      "messages": 51,
+      "custodians": 12,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "cbs sportsline.com fantasy football newsletter",
+      "first_date": "2001-10-13 04:28:36+02:00",
+      "last_date": "2001-12-19 14:41:04+01:00"
+    },
+    {
+      "native_hash": "7B9B2569C4EFCE6FF412DB3F737B6B92",
+      "attachment_rows": 264,
+      "messages": 264,
+      "custodians": 11,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "cbs sportsline.com fantasy football newsletter",
+      "first_date": "2001-10-17 12:27:18+02:00",
+      "last_date": "2002-01-01 17:50:04+01:00"
+    },
+    {
+      "native_hash": "FDB495CB8760052141F17A9CE5D175B9",
+      "attachment_rows": 144,
+      "messages": 129,
+      "custodians": 11,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "pacific northwest action prevented shortages",
+      "first_date": "2001-05-08 00:56:02+02:00",
+      "last_date": "2002-01-14 18:02:58+01:00"
+    },
+    {
+      "native_hash": "3532AF54B5533DFE2817C946EA512BCB",
+      "attachment_rows": 52,
+      "messages": 52,
+      "custodians": 11,
+      "extensions": 1,
+      "example_extension": "doc",
+      "example_subject": "enron in action 09.17.01",
+      "first_date": "2001-07-17 05:49:29+02:00",
+      "last_date": "2001-10-08 05:21:45+02:00"
+    },
+    {
+      "native_hash": "DBD3EB3F6F876EBA6C26B4911031B778",
+      "attachment_rows": 203,
+      "messages": 203,
+      "custodians": 10,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "williams energy news live -- today's video newscast",
+      "first_date": "2001-10-03 01:12:44+02:00",
+      "last_date": "2002-02-07 00:10:27+01:00"
+    },
+    {
+      "native_hash": "47620CD71ED9933E32D2053BAF4336E8",
+      "attachment_rows": 203,
+      "messages": 203,
+      "custodians": 10,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "williams energy news live -- today's video newscast",
+      "first_date": "2001-10-03 01:12:44+02:00",
+      "last_date": "2002-02-07 00:10:27+01:00"
+    },
+    {
+      "native_hash": "8D107B90F753DD5CBDA77DC36E5EC047",
+      "attachment_rows": 151,
+      "messages": 151,
+      "custodians": 10,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "power indices",
+      "first_date": "2001-09-25 18:55:03+02:00",
+      "last_date": "2001-12-13 18:55:02+01:00"
+    },
+    {
+      "native_hash": "ABA515AB00281457660E9D2DCD4DC114",
+      "attachment_rows": 227,
+      "messages": 119,
+      "custodians": 9,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "rigzone newsletter",
+      "first_date": "2001-12-18 23:49:45+01:00",
+      "last_date": "2002-03-22 23:35:05+01:00"
+    },
+    {
+      "native_hash": "75593DA87EB5E465C7185EE441A9EACA",
+      "attachment_rows": 222,
+      "messages": 119,
+      "custodians": 9,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "rigzone newsletter",
+      "first_date": "2001-12-18 23:49:45+01:00",
+      "last_date": "2002-03-22 23:35:05+01:00"
+    },
+    {
+      "native_hash": "CAF81050712AFB67295286DBB9B5FE69",
+      "attachment_rows": 214,
+      "messages": 108,
+      "custodians": 9,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "rigzone newsletter",
+      "first_date": "2001-12-18 23:49:45+01:00",
+      "last_date": "2002-03-22 23:35:05+01:00"
+    },
+    {
+      "native_hash": "2FF0B4338E8D234F745967CE90EA5C23",
+      "attachment_rows": 152,
+      "messages": 116,
+      "custodians": 9,
+      "extensions": 1,
+      "example_extension": "url",
+      "example_subject": "registration confirmation - yahoo!",
+      "first_date": "2001-04-06 05:05:00+02:00",
+      "last_date": "2002-02-06 14:36:49+01:00"
+    }
+  ],
+  "custodian_topic_profiles": [
+    {
+      "custodian": "dasovich-j",
+      "message_like_body_rows": 64806,
+      "california_rows": 20157,
+      "ferc_rows": 6245,
+      "dabhol_rows": 612,
+      "dynegy_rows": 3649,
+      "bankruptcy_rows": 2534,
+      "andersen_rows": 404,
+      "fastow_rows": 106,
+      "ljm_rows": 41
+    },
+    {
+      "custodian": "kean-s",
+      "message_like_body_rows": 66609,
+      "california_rows": 13916,
+      "ferc_rows": 7975,
+      "dabhol_rows": 1195,
+      "dynegy_rows": 2868,
+      "bankruptcy_rows": 2095,
+      "andersen_rows": 202,
+      "fastow_rows": 799,
+      "ljm_rows": 30
+    },
+    {
+      "custodian": "guzman-m",
+      "message_like_body_rows": 9109,
+      "california_rows": 4389,
+      "ferc_rows": 103,
+      "dabhol_rows": 0,
+      "dynegy_rows": 36,
+      "bankruptcy_rows": 12,
+      "andersen_rows": 3,
+      "fastow_rows": 0,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "linder-e",
+      "message_like_body_rows": 4980,
+      "california_rows": 4032,
+      "ferc_rows": 3,
+      "dabhol_rows": 0,
+      "dynegy_rows": 6,
+      "bankruptcy_rows": 9,
+      "andersen_rows": 0,
+      "fastow_rows": 3,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "shapiro-r",
+      "message_like_body_rows": 7781,
+      "california_rows": 1313,
+      "ferc_rows": 1139,
+      "dabhol_rows": 22,
+      "dynegy_rows": 331,
+      "bankruptcy_rows": 227,
+      "andersen_rows": 8,
+      "fastow_rows": 44,
+      "ljm_rows": 25
+    },
+    {
+      "custodian": "kaminski-v",
+      "message_like_body_rows": 40552,
+      "california_rows": 1293,
+      "ferc_rows": 449,
+      "dabhol_rows": 165,
+      "dynegy_rows": 248,
+      "bankruptcy_rows": 261,
+      "andersen_rows": 251,
+      "fastow_rows": 208,
+      "ljm_rows": 60
+    },
+    {
+      "custodian": "lay-k",
+      "message_like_body_rows": 6661,
+      "california_rows": 1298,
+      "ferc_rows": 27,
+      "dabhol_rows": 48,
+      "dynegy_rows": 78,
+      "bankruptcy_rows": 1179,
+      "andersen_rows": 11,
+      "fastow_rows": 153,
+      "ljm_rows": 8
+    },
+    {
+      "custodian": "hain-m",
+      "message_like_body_rows": 3814,
+      "california_rows": 757,
+      "ferc_rows": 1182,
+      "dabhol_rows": 3,
+      "dynegy_rows": 236,
+      "bankruptcy_rows": 173,
+      "andersen_rows": 0,
+      "fastow_rows": 3,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "scott-s",
+      "message_like_body_rows": 11269,
+      "california_rows": 725,
+      "ferc_rows": 829,
+      "dabhol_rows": 1,
+      "dynegy_rows": 639,
+      "bankruptcy_rows": 16,
+      "andersen_rows": 16,
+      "fastow_rows": 1,
+      "ljm_rows": 2
+    },
+    {
+      "custodian": "merris-s",
+      "message_like_body_rows": 2682,
+      "california_rows": 1941,
+      "ferc_rows": 3,
+      "dabhol_rows": 0,
+      "dynegy_rows": 6,
+      "bankruptcy_rows": 6,
+      "andersen_rows": 0,
+      "fastow_rows": 3,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "symes-k",
+      "message_like_body_rows": 13356,
+      "california_rows": 1059,
+      "ferc_rows": 335,
+      "dabhol_rows": 24,
+      "dynegy_rows": 240,
+      "bankruptcy_rows": 188,
+      "andersen_rows": 12,
+      "fastow_rows": 6,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "steffes-j",
+      "message_like_body_rows": 3390,
+      "california_rows": 594,
+      "ferc_rows": 757,
+      "dabhol_rows": 11,
+      "dynegy_rows": 129,
+      "bankruptcy_rows": 88,
+      "andersen_rows": 9,
+      "fastow_rows": 25,
+      "ljm_rows": 19
+    },
+    {
+      "custodian": "williams-b",
+      "message_like_body_rows": 3531,
+      "california_rows": 1457,
+      "ferc_rows": 90,
+      "dabhol_rows": 0,
+      "dynegy_rows": 14,
+      "bankruptcy_rows": 14,
+      "andersen_rows": 5,
+      "fastow_rows": 4,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "lokay-m",
+      "message_like_body_rows": 7964,
+      "california_rows": 923,
+      "ferc_rows": 430,
+      "dabhol_rows": 25,
+      "dynegy_rows": 117,
+      "bankruptcy_rows": 58,
+      "andersen_rows": 8,
+      "fastow_rows": 5,
+      "ljm_rows": 1
+    },
+    {
+      "custodian": "haedicke-m",
+      "message_like_body_rows": 11557,
+      "california_rows": 606,
+      "ferc_rows": 263,
+      "dabhol_rows": 91,
+      "dynegy_rows": 115,
+      "bankruptcy_rows": 269,
+      "andersen_rows": 42,
+      "fastow_rows": 42,
+      "ljm_rows": 5
+    },
+    {
+      "custodian": "fossum-d",
+      "message_like_body_rows": 5990,
+      "california_rows": 352,
+      "ferc_rows": 871,
+      "dabhol_rows": 2,
+      "dynegy_rows": 101,
+      "bankruptcy_rows": 42,
+      "andersen_rows": 11,
+      "fastow_rows": 11,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "sager-e",
+      "message_like_body_rows": 8567,
+      "california_rows": 480,
+      "ferc_rows": 279,
+      "dabhol_rows": 0,
+      "dynegy_rows": 309,
+      "bankruptcy_rows": 251,
+      "andersen_rows": 14,
+      "fastow_rows": 8,
+      "ljm_rows": 1
+    },
+    {
+      "custodian": "kitchen-l",
+      "message_like_body_rows": 5925,
+      "california_rows": 344,
+      "ferc_rows": 206,
+      "dabhol_rows": 75,
+      "dynegy_rows": 184,
+      "bankruptcy_rows": 235,
+      "andersen_rows": 38,
+      "fastow_rows": 154,
+      "ljm_rows": 78
+    },
+    {
+      "custodian": "sanders-r",
+      "message_like_body_rows": 4298,
+      "california_rows": 607,
+      "ferc_rows": 396,
+      "dabhol_rows": 2,
+      "dynegy_rows": 132,
+      "bankruptcy_rows": 143,
+      "andersen_rows": 4,
+      "fastow_rows": 2,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "jones-t",
+      "message_like_body_rows": 26628,
+      "california_rows": 215,
+      "ferc_rows": 540,
+      "dabhol_rows": 8,
+      "dynegy_rows": 205,
+      "bankruptcy_rows": 114,
+      "andersen_rows": 8,
+      "fastow_rows": 5,
+      "ljm_rows": 7
+    },
+    {
+      "custodian": "whalley-g",
+      "message_like_body_rows": 6846,
+      "california_rows": 405,
+      "ferc_rows": 121,
+      "dabhol_rows": 55,
+      "dynegy_rows": 112,
+      "bankruptcy_rows": 150,
+      "andersen_rows": 48,
+      "fastow_rows": 137,
+      "ljm_rows": 16
+    },
+    {
+      "custodian": "germany-c",
+      "message_like_body_rows": 14574,
+      "california_rows": 250,
+      "ferc_rows": 184,
+      "dabhol_rows": 2,
+      "dynegy_rows": 158,
+      "bankruptcy_rows": 418,
+      "andersen_rows": 6,
+      "fastow_rows": 5,
+      "ljm_rows": 6
+    },
+    {
+      "custodian": "taylor-m",
+      "message_like_body_rows": 19702,
+      "california_rows": 200,
+      "ferc_rows": 109,
+      "dabhol_rows": 13,
+      "dynegy_rows": 165,
+      "bankruptcy_rows": 370,
+      "andersen_rows": 49,
+      "fastow_rows": 11,
+      "ljm_rows": 8
+    },
+    {
+      "custodian": "meyers-a",
+      "message_like_body_rows": 1162,
+      "california_rows": 754,
+      "ferc_rows": 0,
+      "dabhol_rows": 0,
+      "dynegy_rows": 5,
+      "bankruptcy_rows": 9,
+      "andersen_rows": 0,
+      "fastow_rows": 0,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "solberg-g",
+      "message_like_body_rows": 1085,
+      "california_rows": 736,
+      "ferc_rows": 1,
+      "dabhol_rows": 0,
+      "dynegy_rows": 4,
+      "bankruptcy_rows": 10,
+      "andersen_rows": 2,
+      "fastow_rows": 2,
+      "ljm_rows": 1
+    },
+    {
+      "custodian": "shackleton-s",
+      "message_like_body_rows": 26251,
+      "california_rows": 199,
+      "ferc_rows": 28,
+      "dabhol_rows": 6,
+      "dynegy_rows": 98,
+      "bankruptcy_rows": 261,
+      "andersen_rows": 27,
+      "fastow_rows": 31,
+      "ljm_rows": 33
+    },
+    {
+      "custodian": "skilling-j",
+      "message_like_body_rows": 8605,
+      "california_rows": 262,
+      "ferc_rows": 33,
+      "dabhol_rows": 111,
+      "dynegy_rows": 42,
+      "bankruptcy_rows": 39,
+      "andersen_rows": 49,
+      "fastow_rows": 105,
+      "ljm_rows": 22
+    },
+    {
+      "custodian": "dean-c2",
+      "message_like_body_rows": 1184,
+      "california_rows": 592,
+      "ferc_rows": 3,
+      "dabhol_rows": 1,
+      "dynegy_rows": 17,
+      "bankruptcy_rows": 16,
+      "andersen_rows": 0,
+      "fastow_rows": 2,
+      "ljm_rows": 9
+    },
+    {
+      "custodian": "beck-s",
+      "message_like_body_rows": 17694,
+      "california_rows": 60,
+      "ferc_rows": 19,
+      "dabhol_rows": 29,
+      "dynegy_rows": 89,
+      "bankruptcy_rows": 110,
+      "andersen_rows": 214,
+      "fastow_rows": 43,
+      "ljm_rows": 4
+    },
+    {
+      "custodian": "nemec-g",
+      "message_like_body_rows": 16470,
+      "california_rows": 193,
+      "ferc_rows": 165,
+      "dabhol_rows": 10,
+      "dynegy_rows": 38,
+      "bankruptcy_rows": 95,
+      "andersen_rows": 29,
+      "fastow_rows": 24,
+      "ljm_rows": 5
+    },
+    {
+      "custodian": "mann-k",
+      "message_like_body_rows": 25589,
+      "california_rows": 80,
+      "ferc_rows": 154,
+      "dabhol_rows": 6,
+      "dynegy_rows": 74,
+      "bankruptcy_rows": 88,
+      "andersen_rows": 18,
+      "fastow_rows": 18,
+      "ljm_rows": 80
+    },
+    {
+      "custodian": "watson-k",
+      "message_like_body_rows": 3129,
+      "california_rows": 226,
+      "ferc_rows": 146,
+      "dabhol_rows": 4,
+      "dynegy_rows": 69,
+      "bankruptcy_rows": 30,
+      "andersen_rows": 6,
+      "fastow_rows": 4,
+      "ljm_rows": 3
+    },
+    {
+      "custodian": "lavorato-j",
+      "message_like_body_rows": 9214,
+      "california_rows": 194,
+      "ferc_rows": 91,
+      "dabhol_rows": 0,
+      "dynegy_rows": 70,
+      "bankruptcy_rows": 63,
+      "andersen_rows": 2,
+      "fastow_rows": 57,
+      "ljm_rows": 3
+    },
+    {
+      "custodian": "delainey-d",
+      "message_like_body_rows": 6066,
+      "california_rows": 173,
+      "ferc_rows": 127,
+      "dabhol_rows": 0,
+      "dynegy_rows": 40,
+      "bankruptcy_rows": 30,
+      "andersen_rows": 0,
+      "fastow_rows": 87,
+      "ljm_rows": 16
+    },
+    {
+      "custodian": "martin-t",
+      "message_like_body_rows": 1220,
+      "california_rows": 90,
+      "ferc_rows": 25,
+      "dabhol_rows": 36,
+      "dynegy_rows": 76,
+      "bankruptcy_rows": 81,
+      "andersen_rows": 51,
+      "fastow_rows": 65,
+      "ljm_rows": 42
+    },
+    {
+      "custodian": "campbell-l",
+      "message_like_body_rows": 7109,
+      "california_rows": 215,
+      "ferc_rows": 145,
+      "dabhol_rows": 5,
+      "dynegy_rows": 70,
+      "bankruptcy_rows": 15,
+      "andersen_rows": 0,
+      "fastow_rows": 1,
+      "ljm_rows": 3
+    },
+    {
+      "custodian": "hyatt-k",
+      "message_like_body_rows": 1827,
+      "california_rows": 134,
+      "ferc_rows": 168,
+      "dabhol_rows": 4,
+      "dynegy_rows": 38,
+      "bankruptcy_rows": 46,
+      "andersen_rows": 25,
+      "fastow_rows": 9,
+      "ljm_rows": 1
+    },
+    {
+      "custodian": "corman-s",
+      "message_like_body_rows": 2046,
+      "california_rows": 69,
+      "ferc_rows": 132,
+      "dabhol_rows": 5,
+      "dynegy_rows": 127,
+      "bankruptcy_rows": 42,
+      "andersen_rows": 11,
+      "fastow_rows": 12,
+      "ljm_rows": 9
+    },
+    {
+      "custodian": "arnold-j",
+      "message_like_body_rows": 6124,
+      "california_rows": 147,
+      "ferc_rows": 26,
+      "dabhol_rows": 41,
+      "dynegy_rows": 79,
+      "bankruptcy_rows": 35,
+      "andersen_rows": 11,
+      "fastow_rows": 25,
+      "ljm_rows": 19
+    },
+    {
+      "custodian": "tholt-j",
+      "message_like_body_rows": 2188,
+      "california_rows": 143,
+      "ferc_rows": 136,
+      "dabhol_rows": 1,
+      "dynegy_rows": 62,
+      "bankruptcy_rows": 4,
+      "andersen_rows": 4,
+      "fastow_rows": 1,
+      "ljm_rows": 2
+    },
+    {
+      "custodian": "stokley-c",
+      "message_like_body_rows": 1289,
+      "california_rows": 240,
+      "ferc_rows": 76,
+      "dabhol_rows": 0,
+      "dynegy_rows": 1,
+      "bankruptcy_rows": 13,
+      "andersen_rows": 17,
+      "fastow_rows": 1,
+      "ljm_rows": 0
+    },
+    {
+      "custodian": "allen-p",
+      "message_like_body_rows": 3878,
+      "california_rows": 167,
+      "ferc_rows": 122,
+      "dabhol_rows": 1,
+      "dynegy_rows": 29,
+      "bankruptcy_rows": 22,
+      "andersen_rows": 0,
+      "fastow_rows": 1,
+      "ljm_rows": 2
+    },
+    {
+      "custodian": "hayslett-r",
+      "message_like_body_rows": 3089,
+      "california_rows": 48,
+      "ferc_rows": 97,
+      "dabhol_rows": 9,
+      "dynegy_rows": 69,
+      "bankruptcy_rows": 9,
+      "andersen_rows": 85,
+      "fastow_rows": 16,
+      "ljm_rows": 1
+    },
+    {
+      "custodian": "ward-k",
+      "message_like_body_rows": 2869,
+      "california_rows": 177,
+      "ferc_rows": 9,
+      "dabhol_rows": 5,
+      "dynegy_rows": 55,
+      "bankruptcy_rows": 47,
+      "andersen_rows": 3,
+      "fastow_rows": 5,
+      "ljm_rows": 2
+    },
+    {
+      "custodian": "horton-s",
+      "message_like_body_rows": 2525,
+      "california_rows": 73,
+      "ferc_rows": 83,
+      "dabhol_rows": 10,
+      "dynegy_rows": 32,
+      "bankruptcy_rows": 19,
+      "andersen_rows": 12,
+      "fastow_rows": 55,
+      "ljm_rows": 6
+    },
+    {
+      "custodian": "grigsby-m",
+      "message_like_body_rows": 2256,
+      "california_rows": 152,
+      "ferc_rows": 58,
+      "dabhol_rows": 2,
+      "dynegy_rows": 30,
+      "bankruptcy_rows": 42,
+      "andersen_rows": 2,
+      "fastow_rows": 1,
+      "ljm_rows": 2
+    },
+    {
+      "custodian": "salisbury-h",
+      "message_like_body_rows": 1674,
+      "california_rows": 204,
+      "ferc_rows": 17,
+      "dabhol_rows": 2,
+      "dynegy_rows": 25,
+      "bankruptcy_rows": 25,
+      "andersen_rows": 0,
+      "fastow_rows": 5,
+      "ljm_rows": 10
+    },
+    {
+      "custodian": "derrick-j",
+      "message_like_body_rows": 1695,
+      "california_rows": 73,
+      "ferc_rows": 23,
+      "dabhol_rows": 62,
+      "dynegy_rows": 30,
+      "bankruptcy_rows": 21,
+      "andersen_rows": 6,
+      "fastow_rows": 44,
+      "ljm_rows": 24
+    },
+    {
+      "custodian": "mcconnell-m",
+      "message_like_body_rows": 4705,
+      "california_rows": 64,
+      "ferc_rows": 33,
+      "dabhol_rows": 61,
+      "dynegy_rows": 17,
+      "bankruptcy_rows": 7,
+      "andersen_rows": 23,
+      "fastow_rows": 69,
+      "ljm_rows": 3
+    },
+    {
+      "custodian": "saibi-e",
+      "message_like_body_rows": 1169,
+      "california_rows": 93,
+      "ferc_rows": 79,
+      "dabhol_rows": 4,
+      "dynegy_rows": 27,
+      "bankruptcy_rows": 56,
+      "andersen_rows": 11,
+      "fastow_rows": 4,
+      "ljm_rows": 3
+    }
+  ]
+}

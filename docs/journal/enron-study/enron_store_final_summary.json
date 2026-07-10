@@ -1,0 +1,341 @@
+{
+  "capsule": "/tmp/doxabase-enron-clean.pClwOo/enron-emails.doxabase.sqlite",
+  "network_time_profile": "/tmp/doxabase-enron-clean.pClwOo/enron_network_time_profile.json",
+  "analysis_views": "/tmp/doxabase-enron-clean.pClwOo/enron_analysis_views.md",
+  "validation": {
+    "conforms": true,
+    "report_text": "Validation Report\nConforms: True\n",
+    "result_count": 0,
+    "scope": "all",
+    "results": []
+  },
+  "graph_counts": {
+    "base_ontology": 1424,
+    "base_shapes": 1407,
+    "evidence": 485,
+    "history": 322,
+    "map": 787,
+    "observations": 3786,
+    "ontology": 117,
+    "patterns": 345,
+    "shapes": 0
+  },
+  "project_brief_key_counts": {
+    "datasets": 4,
+    "tables": 4,
+    "columns": 60,
+    "observations": 112,
+    "claims": 22,
+    "patterns": 19,
+    "evidence": 58,
+    "source_spans": 0,
+    "graph_revisions": 4,
+    "graph_patches": 0,
+    "graph_snapshots": 36,
+    "storage_accesses": 1,
+    "shapes": 40
+  },
+  "dataset_query_readiness_counts": {
+    "ready_for_query_planning": 4
+  },
+  "queue_counts": {
+    "query_plan_handoff": 4
+  },
+  "profile_queue_counts": {
+    "profile_observations": 90,
+    "profile_evidence": 30,
+    "profile_run_candidates": 4,
+    "profile_draft_candidates": 30,
+    "profile_candidate_omitted": 0,
+    "profile_drafts": 30,
+    "profile_draft_recommendations": 0,
+    "profile_scalar_conflict_groups": 0,
+    "profile_metric_advisories": 0,
+    "profile_type_advisories": 0
+  },
+  "new_caveats": {
+    "communication_domain_coverage": "https://example.test/enron-emails#caveat_communication_domain_coverage",
+    "monthly_calendar_spike": "https://example.test/enron-emails#caveat_monthly_calendar_spike",
+    "message_like_population": "https://example.test/enron-emails#caveat_message_like_population"
+  },
+  "new_observations": [
+    "https://example.test/enron-emails#obs_eml_messages_sender_recipient_domain_class_matrix",
+    "https://example.test/enron-emails#obs_eml_messages_top_sender_domains_network_pass",
+    "https://example.test/enron-emails#obs_xml_messages_sender_recipient_domain_class_matrix",
+    "https://example.test/enron-emails#obs_xml_messages_top_sender_domains_network_pass",
+    "https://example.test/enron-emails#obs_eml_top_months_network_pass",
+    "https://example.test/enron-emails#obs_message_like_population_counts_network_pass"
+  ],
+  "new_claims": [
+    "https://example.test/enron-emails#claim_communication_domain_coverage_network_pass",
+    "https://example.test/enron-emails#claim_monthly_calendar_spike_network_pass",
+    "https://example.test/enron-emails#claim_message_like_population_network_pass"
+  ],
+  "new_patterns": [
+    "https://example.test/enron-emails#pattern_network_analysis_requires_extractability_denominator",
+    "https://example.test/enron-emails#pattern_temporal_analysis_must_stratify_calendar",
+    "https://example.test/enron-emails#pattern_message_like_views_support_nlp_and_networks"
+  ],
+  "trig_export": {
+    "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store.trig",
+    "format": "trig",
+    "graphs": [
+      "ontology",
+      "map",
+      "observations",
+      "patterns",
+      "evidence",
+      "shapes",
+      "history"
+    ],
+    "graph_counts": {
+      "ontology": 117,
+      "map": 787,
+      "observations": 3786,
+      "patterns": 345,
+      "evidence": 485,
+      "shapes": 0,
+      "history": 322
+    },
+    "triples": 5842,
+    "bytes_written": 455797,
+    "sensitive_literal_count": 0,
+    "privacy_warnings": [],
+    "warnings": [],
+    "artifact_kind": "project_trig",
+    "importable": true,
+    "recommended_import_tool": "doxabase.import_trig",
+    "recovery_complete": false
+  },
+  "handoff_export": {
+    "trig": {
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+      "format": "trig",
+      "graphs": [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history"
+      ],
+      "graph_counts": {
+        "ontology": 117,
+        "map": 787,
+        "observations": 3786,
+        "patterns": 345,
+        "evidence": 485,
+        "shapes": 0,
+        "history": 322
+      },
+      "triples": 5842,
+      "bytes_written": 455797,
+      "sensitive_literal_count": 0,
+      "privacy_warnings": [],
+      "warnings": [],
+      "artifact_kind": "handoff_trig",
+      "importable": true,
+      "recommended_import_tool": "doxabase.import_trig",
+      "recovery_complete": false
+    },
+    "revision_snapshots": {
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "format": "doxabase.revision_snapshot_bundle.v1",
+      "revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "graph_roles": [
+        "base_ontology",
+        "base_shapes",
+        "evidence",
+        "history",
+        "map",
+        "observations",
+        "ontology",
+        "patterns",
+        "shapes"
+      ],
+      "snapshot_count": 36,
+      "quad_count": 29070,
+      "bytes_written": 10787273,
+      "sensitive_literal_count": 0,
+      "privacy_warnings": [],
+      "artifact_kind": "revision_snapshot_bundle",
+      "importable": true,
+      "recommended_import_tool": "doxabase.import_revision_snapshots",
+      "recovery_complete": false
+    },
+    "paths": {
+      "trig": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+      "revision_snapshots": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "manifest": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json"
+    },
+    "manifest": {
+      "format": "doxabase.handoff_bundle.v1",
+      "created_at": "2026-07-01T13:53:33.937335+00:00",
+      "artifacts": {
+        "trig": {
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+          "format": "trig",
+          "artifact_kind": "handoff_trig",
+          "importable": true,
+          "recommended_import_tool": "doxabase.import_trig",
+          "recovery_complete": false,
+          "graph_roles": [
+            "ontology",
+            "map",
+            "observations",
+            "patterns",
+            "evidence",
+            "shapes",
+            "history"
+          ],
+          "graph_counts": {
+            "ontology": 117,
+            "map": 787,
+            "observations": 3786,
+            "patterns": 345,
+            "evidence": 485,
+            "shapes": 0,
+            "history": 322
+          },
+          "triples": 5842,
+          "bytes_written": 455797,
+          "sensitive_literal_count": 0,
+          "privacy_warnings": []
+        },
+        "revision_snapshots": {
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+          "format": "doxabase.revision_snapshot_bundle.v1",
+          "artifact_kind": "revision_snapshot_bundle",
+          "importable": true,
+          "recommended_import_tool": "doxabase.import_revision_snapshots",
+          "recovery_complete": false,
+          "revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "https://example.test/enron-emails#history_initial_store_build",
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "snapshot_count": 36,
+          "quad_count": 29070,
+          "bytes_written": 10787273,
+          "sensitive_literal_count": 0,
+          "privacy_warnings": []
+        }
+      },
+      "recommended_import_sequence": [
+        {
+          "step": 1,
+          "tool_name": "import_trig",
+          "mcp_tool_name": "doxabase.import_trig",
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+          "expected_snapshot_evidence_status": "history_only_count_digest"
+        },
+        {
+          "step": 2,
+          "tool_name": "import_revision_snapshots",
+          "mcp_tool_name": "doxabase.import_revision_snapshots",
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+          "expected_snapshot_evidence_status": "history_plus_snapshot_rows"
+        }
+      ],
+      "artifact_kind": "handoff_bundle",
+      "importable": true,
+      "recommended_import_tool": "doxabase.import_handoff_bundle",
+      "recovery_complete": true,
+      "json_first_status": "snapshot_rows_without_history",
+      "final_snapshot_evidence_status": "history_plus_snapshot_rows",
+      "revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "snapshot_graph_roles": [
+        "base_ontology",
+        "base_shapes",
+        "evidence",
+        "history",
+        "map",
+        "observations",
+        "ontology",
+        "patterns",
+        "shapes"
+      ],
+      "decision": "clean_by_scanner_only",
+      "scanner_clean": true,
+      "shareability_review_required": true,
+      "shareability_review_status": "required_not_completed",
+      "would_block_sensitive_export": false,
+      "sensitive_literal_count": 0,
+      "graph_sensitive_literal_count": 0,
+      "snapshot_sensitive_literal_count": 0,
+      "privacy_warnings": [],
+      "warnings": [
+        "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts."
+      ],
+      "scanner_note": "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts."
+    },
+    "graph_roles": [
+      "ontology",
+      "map",
+      "observations",
+      "patterns",
+      "evidence",
+      "shapes",
+      "history"
+    ],
+    "snapshot_graph_roles": [
+      "base_ontology",
+      "base_shapes",
+      "evidence",
+      "history",
+      "map",
+      "observations",
+      "ontology",
+      "patterns",
+      "shapes"
+    ],
+    "revision_iris": [
+      "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+      "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+      "https://example.test/enron-emails#history_initial_store_build",
+      "https://example.test/enron-emails#history_network_time_store_augmentation"
+    ],
+    "manifest_path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json",
+    "manifest_bytes_written": 4249,
+    "decision": "clean_by_scanner_only",
+    "scanner_clean": true,
+    "shareability_review_required": true,
+    "shareability_review_status": "required_not_completed",
+    "would_block_sensitive_export": false,
+    "sensitive_literal_count": 0,
+    "graph_sensitive_literal_count": 0,
+    "snapshot_sensitive_literal_count": 0,
+    "privacy_warnings": [],
+    "warnings": [
+      "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts."
+    ],
+    "scanner_note": "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts.",
+    "artifact_kind": "handoff_bundle",
+    "importable": true,
+    "recommended_import_tool": "doxabase.import_handoff_bundle",
+    "recovery_complete": true
+  }
+}

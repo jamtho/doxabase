@@ -1,0 +1,1821 @@
+{
+  "california": [
+    {
+      "month": "2000-01",
+      "rows": 142,
+      "custodians": 7,
+      "subjects": 21,
+      "rows_with_attachments": 39
+    },
+    {
+      "month": "2000-02",
+      "rows": 256,
+      "custodians": 10,
+      "subjects": 34,
+      "rows_with_attachments": 106
+    },
+    {
+      "month": "2000-03",
+      "rows": 279,
+      "custodians": 14,
+      "subjects": 42,
+      "rows_with_attachments": 157
+    },
+    {
+      "month": "2000-04",
+      "rows": 510,
+      "custodians": 12,
+      "subjects": 48,
+      "rows_with_attachments": 218
+    },
+    {
+      "month": "2000-05",
+      "rows": 297,
+      "custodians": 18,
+      "subjects": 43,
+      "rows_with_attachments": 154
+    },
+    {
+      "month": "2000-06",
+      "rows": 424,
+      "custodians": 23,
+      "subjects": 69,
+      "rows_with_attachments": 116
+    },
+    {
+      "month": "2000-07",
+      "rows": 502,
+      "custodians": 26,
+      "subjects": 71,
+      "rows_with_attachments": 154
+    },
+    {
+      "month": "2000-08",
+      "rows": 3288,
+      "custodians": 25,
+      "subjects": 258,
+      "rows_with_attachments": 1307
+    },
+    {
+      "month": "2000-09",
+      "rows": 2893,
+      "custodians": 27,
+      "subjects": 296,
+      "rows_with_attachments": 628
+    },
+    {
+      "month": "2000-10",
+      "rows": 2873,
+      "custodians": 37,
+      "subjects": 310,
+      "rows_with_attachments": 674
+    },
+    {
+      "month": "2000-11",
+      "rows": 4313,
+      "custodians": 42,
+      "subjects": 467,
+      "rows_with_attachments": 1242
+    },
+    {
+      "month": "2000-12",
+      "rows": 3744,
+      "custodians": 58,
+      "subjects": 481,
+      "rows_with_attachments": 1050
+    },
+    {
+      "month": "2001-01",
+      "rows": 3334,
+      "custodians": 40,
+      "subjects": 421,
+      "rows_with_attachments": 1236
+    },
+    {
+      "month": "2001-02",
+      "rows": 3932,
+      "custodians": 47,
+      "subjects": 517,
+      "rows_with_attachments": 1497
+    },
+    {
+      "month": "2001-03",
+      "rows": 5832,
+      "custodians": 51,
+      "subjects": 828,
+      "rows_with_attachments": 1922
+    },
+    {
+      "month": "2001-04",
+      "rows": 12597,
+      "custodians": 61,
+      "subjects": 1233,
+      "rows_with_attachments": 5177
+    },
+    {
+      "month": "2001-05",
+      "rows": 5559,
+      "custodians": 74,
+      "subjects": 725,
+      "rows_with_attachments": 1605
+    },
+    {
+      "month": "2001-06",
+      "rows": 2047,
+      "custodians": 72,
+      "subjects": 418,
+      "rows_with_attachments": 525
+    },
+    {
+      "month": "2001-07",
+      "rows": 1984,
+      "custodians": 44,
+      "subjects": 393,
+      "rows_with_attachments": 496
+    },
+    {
+      "month": "2001-08",
+      "rows": 894,
+      "custodians": 50,
+      "subjects": 206,
+      "rows_with_attachments": 185
+    },
+    {
+      "month": "2001-09",
+      "rows": 994,
+      "custodians": 59,
+      "subjects": 256,
+      "rows_with_attachments": 210
+    },
+    {
+      "month": "2001-10",
+      "rows": 2509,
+      "custodians": 111,
+      "subjects": 672,
+      "rows_with_attachments": 314
+    },
+    {
+      "month": "2001-11",
+      "rows": 1281,
+      "custodians": 110,
+      "subjects": 259,
+      "rows_with_attachments": 285
+    },
+    {
+      "month": "2001-12",
+      "rows": 752,
+      "custodians": 71,
+      "subjects": 68,
+      "rows_with_attachments": 91
+    },
+    {
+      "month": "2002-01",
+      "rows": 3559,
+      "custodians": 62,
+      "subjects": 79,
+      "rows_with_attachments": 171
+    },
+    {
+      "month": "2002-02",
+      "rows": 670,
+      "custodians": 42,
+      "subjects": 57,
+      "rows_with_attachments": 58
+    },
+    {
+      "month": "2002-03",
+      "rows": 103,
+      "custodians": 14,
+      "subjects": 33,
+      "rows_with_attachments": 2
+    }
+  ],
+  "ferc": [
+    {
+      "month": "2000-01",
+      "rows": 176,
+      "custodians": 12,
+      "subjects": 34,
+      "rows_with_attachments": 28
+    },
+    {
+      "month": "2000-02",
+      "rows": 200,
+      "custodians": 9,
+      "subjects": 38,
+      "rows_with_attachments": 70
+    },
+    {
+      "month": "2000-03",
+      "rows": 317,
+      "custodians": 13,
+      "subjects": 44,
+      "rows_with_attachments": 95
+    },
+    {
+      "month": "2000-04",
+      "rows": 457,
+      "custodians": 10,
+      "subjects": 38,
+      "rows_with_attachments": 226
+    },
+    {
+      "month": "2000-05",
+      "rows": 268,
+      "custodians": 11,
+      "subjects": 37,
+      "rows_with_attachments": 97
+    },
+    {
+      "month": "2000-06",
+      "rows": 484,
+      "custodians": 19,
+      "subjects": 64,
+      "rows_with_attachments": 263
+    },
+    {
+      "month": "2000-07",
+      "rows": 601,
+      "custodians": 17,
+      "subjects": 66,
+      "rows_with_attachments": 256
+    },
+    {
+      "month": "2000-08",
+      "rows": 1415,
+      "custodians": 16,
+      "subjects": 132,
+      "rows_with_attachments": 514
+    },
+    {
+      "month": "2000-09",
+      "rows": 1517,
+      "custodians": 21,
+      "subjects": 186,
+      "rows_with_attachments": 473
+    },
+    {
+      "month": "2000-10",
+      "rows": 1828,
+      "custodians": 28,
+      "subjects": 213,
+      "rows_with_attachments": 686
+    },
+    {
+      "month": "2000-11",
+      "rows": 3188,
+      "custodians": 32,
+      "subjects": 349,
+      "rows_with_attachments": 1268
+    },
+    {
+      "month": "2000-12",
+      "rows": 2047,
+      "custodians": 51,
+      "subjects": 260,
+      "rows_with_attachments": 711
+    },
+    {
+      "month": "2001-01",
+      "rows": 986,
+      "custodians": 24,
+      "subjects": 162,
+      "rows_with_attachments": 251
+    },
+    {
+      "month": "2001-02",
+      "rows": 1011,
+      "custodians": 26,
+      "subjects": 166,
+      "rows_with_attachments": 437
+    },
+    {
+      "month": "2001-03",
+      "rows": 1977,
+      "custodians": 33,
+      "subjects": 327,
+      "rows_with_attachments": 630
+    },
+    {
+      "month": "2001-04",
+      "rows": 1900,
+      "custodians": 52,
+      "subjects": 255,
+      "rows_with_attachments": 595
+    },
+    {
+      "month": "2001-05",
+      "rows": 1769,
+      "custodians": 62,
+      "subjects": 256,
+      "rows_with_attachments": 547
+    },
+    {
+      "month": "2001-06",
+      "rows": 1067,
+      "custodians": 54,
+      "subjects": 216,
+      "rows_with_attachments": 358
+    },
+    {
+      "month": "2001-07",
+      "rows": 924,
+      "custodians": 36,
+      "subjects": 192,
+      "rows_with_attachments": 362
+    },
+    {
+      "month": "2001-08",
+      "rows": 479,
+      "custodians": 37,
+      "subjects": 162,
+      "rows_with_attachments": 121
+    },
+    {
+      "month": "2001-09",
+      "rows": 503,
+      "custodians": 56,
+      "subjects": 120,
+      "rows_with_attachments": 152
+    },
+    {
+      "month": "2001-10",
+      "rows": 1493,
+      "custodians": 92,
+      "subjects": 268,
+      "rows_with_attachments": 278
+    },
+    {
+      "month": "2001-11",
+      "rows": 753,
+      "custodians": 89,
+      "subjects": 137,
+      "rows_with_attachments": 211
+    },
+    {
+      "month": "2001-12",
+      "rows": 211,
+      "custodians": 48,
+      "subjects": 41,
+      "rows_with_attachments": 83
+    },
+    {
+      "month": "2002-01",
+      "rows": 325,
+      "custodians": 38,
+      "subjects": 64,
+      "rows_with_attachments": 120
+    },
+    {
+      "month": "2002-02",
+      "rows": 155,
+      "custodians": 28,
+      "subjects": 39,
+      "rows_with_attachments": 19
+    },
+    {
+      "month": "2002-03",
+      "rows": 56,
+      "custodians": 9,
+      "subjects": 24,
+      "rows_with_attachments": 6
+    }
+  ],
+  "price_cap": [
+    {
+      "month": "2000-02",
+      "rows": 28,
+      "custodians": 3,
+      "subjects": 3,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-03",
+      "rows": 8,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 8
+    },
+    {
+      "month": "2000-05",
+      "rows": 18,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 13,
+      "custodians": 3,
+      "subjects": 3,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2000-07",
+      "rows": 187,
+      "custodians": 8,
+      "subjects": 18,
+      "rows_with_attachments": 98
+    },
+    {
+      "month": "2000-08",
+      "rows": 793,
+      "custodians": 5,
+      "subjects": 53,
+      "rows_with_attachments": 267
+    },
+    {
+      "month": "2000-09",
+      "rows": 390,
+      "custodians": 9,
+      "subjects": 60,
+      "rows_with_attachments": 72
+    },
+    {
+      "month": "2000-10",
+      "rows": 572,
+      "custodians": 10,
+      "subjects": 66,
+      "rows_with_attachments": 204
+    },
+    {
+      "month": "2000-11",
+      "rows": 1130,
+      "custodians": 15,
+      "subjects": 82,
+      "rows_with_attachments": 501
+    },
+    {
+      "month": "2000-12",
+      "rows": 928,
+      "custodians": 19,
+      "subjects": 101,
+      "rows_with_attachments": 315
+    },
+    {
+      "month": "2001-01",
+      "rows": 313,
+      "custodians": 10,
+      "subjects": 43,
+      "rows_with_attachments": 90
+    },
+    {
+      "month": "2001-02",
+      "rows": 279,
+      "custodians": 7,
+      "subjects": 36,
+      "rows_with_attachments": 130
+    },
+    {
+      "month": "2001-03",
+      "rows": 670,
+      "custodians": 27,
+      "subjects": 72,
+      "rows_with_attachments": 103
+    },
+    {
+      "month": "2001-04",
+      "rows": 650,
+      "custodians": 18,
+      "subjects": 77,
+      "rows_with_attachments": 162
+    },
+    {
+      "month": "2001-05",
+      "rows": 732,
+      "custodians": 23,
+      "subjects": 92,
+      "rows_with_attachments": 133
+    },
+    {
+      "month": "2001-06",
+      "rows": 443,
+      "custodians": 24,
+      "subjects": 69,
+      "rows_with_attachments": 85
+    },
+    {
+      "month": "2001-07",
+      "rows": 242,
+      "custodians": 11,
+      "subjects": 46,
+      "rows_with_attachments": 79
+    },
+    {
+      "month": "2001-08",
+      "rows": 37,
+      "custodians": 9,
+      "subjects": 10,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2001-09",
+      "rows": 25,
+      "custodians": 8,
+      "subjects": 7,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2001-10",
+      "rows": 133,
+      "custodians": 35,
+      "subjects": 16,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2001-11",
+      "rows": 15,
+      "custodians": 9,
+      "subjects": 3,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2001-12",
+      "rows": 16,
+      "custodians": 10,
+      "subjects": 6,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2002-01",
+      "rows": 25,
+      "custodians": 13,
+      "subjects": 4,
+      "rows_with_attachments": 8
+    },
+    {
+      "month": "2002-02",
+      "rows": 30,
+      "custodians": 12,
+      "subjects": 4,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2002-03",
+      "rows": 2,
+      "custodians": 2,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    }
+  ],
+  "western_crisis": [
+    {
+      "month": "2000-01",
+      "rows": 4,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-02",
+      "rows": 16,
+      "custodians": 1,
+      "subjects": 2,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-04",
+      "rows": 10,
+      "custodians": 1,
+      "subjects": 3,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 5,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-07",
+      "rows": 10,
+      "custodians": 1,
+      "subjects": 2,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-08",
+      "rows": 139,
+      "custodians": 4,
+      "subjects": 8,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2000-09",
+      "rows": 15,
+      "custodians": 4,
+      "subjects": 4,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-10",
+      "rows": 35,
+      "custodians": 3,
+      "subjects": 4,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-11",
+      "rows": 24,
+      "custodians": 3,
+      "subjects": 3,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2000-12",
+      "rows": 67,
+      "custodians": 8,
+      "subjects": 9,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2001-01",
+      "rows": 90,
+      "custodians": 4,
+      "subjects": 9,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-02",
+      "rows": 73,
+      "custodians": 5,
+      "subjects": 13,
+      "rows_with_attachments": 28
+    },
+    {
+      "month": "2001-03",
+      "rows": 340,
+      "custodians": 23,
+      "subjects": 32,
+      "rows_with_attachments": 48
+    },
+    {
+      "month": "2001-04",
+      "rows": 222,
+      "custodians": 9,
+      "subjects": 28,
+      "rows_with_attachments": 31
+    },
+    {
+      "month": "2001-05",
+      "rows": 160,
+      "custodians": 12,
+      "subjects": 24,
+      "rows_with_attachments": 32
+    },
+    {
+      "month": "2001-06",
+      "rows": 159,
+      "custodians": 13,
+      "subjects": 25,
+      "rows_with_attachments": 38
+    },
+    {
+      "month": "2001-07",
+      "rows": 102,
+      "custodians": 12,
+      "subjects": 22,
+      "rows_with_attachments": 49
+    },
+    {
+      "month": "2001-08",
+      "rows": 18,
+      "custodians": 9,
+      "subjects": 5,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2001-09",
+      "rows": 27,
+      "custodians": 7,
+      "subjects": 6,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2001-10",
+      "rows": 46,
+      "custodians": 14,
+      "subjects": 9,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2001-11",
+      "rows": 32,
+      "custodians": 21,
+      "subjects": 7,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2001-12",
+      "rows": 6,
+      "custodians": 4,
+      "subjects": 5,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2002-01",
+      "rows": 16,
+      "custodians": 9,
+      "subjects": 3,
+      "rows_with_attachments": 12
+    },
+    {
+      "month": "2002-02",
+      "rows": 4,
+      "custodians": 2,
+      "subjects": 1,
+      "rows_with_attachments": 1
+    }
+  ],
+  "dynegy": [
+    {
+      "month": "2000-01",
+      "rows": 19,
+      "custodians": 4,
+      "subjects": 4,
+      "rows_with_attachments": 4
+    },
+    {
+      "month": "2000-02",
+      "rows": 79,
+      "custodians": 6,
+      "subjects": 12,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2000-03",
+      "rows": 160,
+      "custodians": 12,
+      "subjects": 30,
+      "rows_with_attachments": 87
+    },
+    {
+      "month": "2000-04",
+      "rows": 237,
+      "custodians": 13,
+      "subjects": 29,
+      "rows_with_attachments": 47
+    },
+    {
+      "month": "2000-05",
+      "rows": 288,
+      "custodians": 11,
+      "subjects": 39,
+      "rows_with_attachments": 113
+    },
+    {
+      "month": "2000-06",
+      "rows": 319,
+      "custodians": 18,
+      "subjects": 40,
+      "rows_with_attachments": 152
+    },
+    {
+      "month": "2000-07",
+      "rows": 100,
+      "custodians": 16,
+      "subjects": 24,
+      "rows_with_attachments": 42
+    },
+    {
+      "month": "2000-08",
+      "rows": 401,
+      "custodians": 17,
+      "subjects": 51,
+      "rows_with_attachments": 120
+    },
+    {
+      "month": "2000-09",
+      "rows": 440,
+      "custodians": 23,
+      "subjects": 58,
+      "rows_with_attachments": 75
+    },
+    {
+      "month": "2000-10",
+      "rows": 489,
+      "custodians": 20,
+      "subjects": 46,
+      "rows_with_attachments": 118
+    },
+    {
+      "month": "2000-11",
+      "rows": 1064,
+      "custodians": 31,
+      "subjects": 113,
+      "rows_with_attachments": 353
+    },
+    {
+      "month": "2000-12",
+      "rows": 684,
+      "custodians": 26,
+      "subjects": 93,
+      "rows_with_attachments": 242
+    },
+    {
+      "month": "2001-01",
+      "rows": 732,
+      "custodians": 29,
+      "subjects": 111,
+      "rows_with_attachments": 290
+    },
+    {
+      "month": "2001-02",
+      "rows": 673,
+      "custodians": 28,
+      "subjects": 98,
+      "rows_with_attachments": 298
+    },
+    {
+      "month": "2001-03",
+      "rows": 1316,
+      "custodians": 33,
+      "subjects": 195,
+      "rows_with_attachments": 424
+    },
+    {
+      "month": "2001-04",
+      "rows": 1194,
+      "custodians": 40,
+      "subjects": 133,
+      "rows_with_attachments": 436
+    },
+    {
+      "month": "2001-05",
+      "rows": 966,
+      "custodians": 42,
+      "subjects": 126,
+      "rows_with_attachments": 318
+    },
+    {
+      "month": "2001-06",
+      "rows": 441,
+      "custodians": 39,
+      "subjects": 84,
+      "rows_with_attachments": 114
+    },
+    {
+      "month": "2001-07",
+      "rows": 350,
+      "custodians": 24,
+      "subjects": 76,
+      "rows_with_attachments": 98
+    },
+    {
+      "month": "2001-08",
+      "rows": 116,
+      "custodians": 28,
+      "subjects": 39,
+      "rows_with_attachments": 23
+    },
+    {
+      "month": "2001-09",
+      "rows": 202,
+      "custodians": 33,
+      "subjects": 55,
+      "rows_with_attachments": 50
+    },
+    {
+      "month": "2001-10",
+      "rows": 573,
+      "custodians": 79,
+      "subjects": 83,
+      "rows_with_attachments": 77
+    },
+    {
+      "month": "2001-11",
+      "rows": 1672,
+      "custodians": 119,
+      "subjects": 263,
+      "rows_with_attachments": 188
+    },
+    {
+      "month": "2001-12",
+      "rows": 83,
+      "custodians": 32,
+      "subjects": 22,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2002-01",
+      "rows": 289,
+      "custodians": 52,
+      "subjects": 45,
+      "rows_with_attachments": 66
+    },
+    {
+      "month": "2002-02",
+      "rows": 173,
+      "custodians": 27,
+      "subjects": 39,
+      "rows_with_attachments": 18
+    },
+    {
+      "month": "2002-03",
+      "rows": 53,
+      "custodians": 10,
+      "subjects": 17,
+      "rows_with_attachments": 6
+    }
+  ],
+  "bankruptcy": [
+    {
+      "month": "2000-01",
+      "rows": 40,
+      "custodians": 4,
+      "subjects": 7,
+      "rows_with_attachments": 34
+    },
+    {
+      "month": "2000-02",
+      "rows": 80,
+      "custodians": 5,
+      "subjects": 15,
+      "rows_with_attachments": 39
+    },
+    {
+      "month": "2000-03",
+      "rows": 48,
+      "custodians": 6,
+      "subjects": 15,
+      "rows_with_attachments": 15
+    },
+    {
+      "month": "2000-04",
+      "rows": 29,
+      "custodians": 3,
+      "subjects": 7,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2000-05",
+      "rows": 78,
+      "custodians": 7,
+      "subjects": 15,
+      "rows_with_attachments": 38
+    },
+    {
+      "month": "2000-06",
+      "rows": 89,
+      "custodians": 8,
+      "subjects": 18,
+      "rows_with_attachments": 11
+    },
+    {
+      "month": "2000-07",
+      "rows": 82,
+      "custodians": 7,
+      "subjects": 12,
+      "rows_with_attachments": 26
+    },
+    {
+      "month": "2000-08",
+      "rows": 43,
+      "custodians": 6,
+      "subjects": 11,
+      "rows_with_attachments": 12
+    },
+    {
+      "month": "2000-09",
+      "rows": 112,
+      "custodians": 9,
+      "subjects": 19,
+      "rows_with_attachments": 50
+    },
+    {
+      "month": "2000-10",
+      "rows": 101,
+      "custodians": 11,
+      "subjects": 19,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2000-11",
+      "rows": 180,
+      "custodians": 15,
+      "subjects": 26,
+      "rows_with_attachments": 95
+    },
+    {
+      "month": "2000-12",
+      "rows": 489,
+      "custodians": 22,
+      "subjects": 59,
+      "rows_with_attachments": 97
+    },
+    {
+      "month": "2001-01",
+      "rows": 832,
+      "custodians": 27,
+      "subjects": 118,
+      "rows_with_attachments": 166
+    },
+    {
+      "month": "2001-02",
+      "rows": 663,
+      "custodians": 18,
+      "subjects": 89,
+      "rows_with_attachments": 190
+    },
+    {
+      "month": "2001-03",
+      "rows": 943,
+      "custodians": 34,
+      "subjects": 126,
+      "rows_with_attachments": 127
+    },
+    {
+      "month": "2001-04",
+      "rows": 1450,
+      "custodians": 33,
+      "subjects": 186,
+      "rows_with_attachments": 177
+    },
+    {
+      "month": "2001-05",
+      "rows": 1076,
+      "custodians": 35,
+      "subjects": 140,
+      "rows_with_attachments": 111
+    },
+    {
+      "month": "2001-06",
+      "rows": 550,
+      "custodians": 56,
+      "subjects": 74,
+      "rows_with_attachments": 137
+    },
+    {
+      "month": "2001-07",
+      "rows": 361,
+      "custodians": 17,
+      "subjects": 61,
+      "rows_with_attachments": 105
+    },
+    {
+      "month": "2001-08",
+      "rows": 142,
+      "custodians": 25,
+      "subjects": 39,
+      "rows_with_attachments": 27
+    },
+    {
+      "month": "2001-09",
+      "rows": 198,
+      "custodians": 38,
+      "subjects": 47,
+      "rows_with_attachments": 29
+    },
+    {
+      "month": "2001-10",
+      "rows": 407,
+      "custodians": 89,
+      "subjects": 49,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2001-11",
+      "rows": 472,
+      "custodians": 75,
+      "subjects": 98,
+      "rows_with_attachments": 33
+    },
+    {
+      "month": "2001-12",
+      "rows": 644,
+      "custodians": 94,
+      "subjects": 128,
+      "rows_with_attachments": 87
+    },
+    {
+      "month": "2002-01",
+      "rows": 2078,
+      "custodians": 71,
+      "subjects": 106,
+      "rows_with_attachments": 151
+    },
+    {
+      "month": "2002-02",
+      "rows": 206,
+      "custodians": 39,
+      "subjects": 49,
+      "rows_with_attachments": 35
+    },
+    {
+      "month": "2002-03",
+      "rows": 204,
+      "custodians": 13,
+      "subjects": 45,
+      "rows_with_attachments": 13
+    }
+  ],
+  "andersen": [
+    {
+      "month": "2000-01",
+      "rows": 32,
+      "custodians": 5,
+      "subjects": 5,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2000-02",
+      "rows": 51,
+      "custodians": 5,
+      "subjects": 11,
+      "rows_with_attachments": 20
+    },
+    {
+      "month": "2000-03",
+      "rows": 17,
+      "custodians": 3,
+      "subjects": 4,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-04",
+      "rows": 24,
+      "custodians": 4,
+      "subjects": 5,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2000-05",
+      "rows": 53,
+      "custodians": 9,
+      "subjects": 10,
+      "rows_with_attachments": 25
+    },
+    {
+      "month": "2000-06",
+      "rows": 17,
+      "custodians": 5,
+      "subjects": 5,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-07",
+      "rows": 61,
+      "custodians": 6,
+      "subjects": 7,
+      "rows_with_attachments": 35
+    },
+    {
+      "month": "2000-08",
+      "rows": 109,
+      "custodians": 7,
+      "subjects": 12,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-09",
+      "rows": 105,
+      "custodians": 8,
+      "subjects": 17,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-10",
+      "rows": 192,
+      "custodians": 14,
+      "subjects": 27,
+      "rows_with_attachments": 66
+    },
+    {
+      "month": "2000-11",
+      "rows": 241,
+      "custodians": 13,
+      "subjects": 41,
+      "rows_with_attachments": 47
+    },
+    {
+      "month": "2000-12",
+      "rows": 134,
+      "custodians": 15,
+      "subjects": 22,
+      "rows_with_attachments": 22
+    },
+    {
+      "month": "2001-01",
+      "rows": 55,
+      "custodians": 9,
+      "subjects": 14,
+      "rows_with_attachments": 15
+    },
+    {
+      "month": "2001-02",
+      "rows": 38,
+      "custodians": 11,
+      "subjects": 12,
+      "rows_with_attachments": 8
+    },
+    {
+      "month": "2001-03",
+      "rows": 37,
+      "custodians": 11,
+      "subjects": 11,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2001-04",
+      "rows": 135,
+      "custodians": 13,
+      "subjects": 24,
+      "rows_with_attachments": 37
+    },
+    {
+      "month": "2001-05",
+      "rows": 148,
+      "custodians": 16,
+      "subjects": 21,
+      "rows_with_attachments": 52
+    },
+    {
+      "month": "2001-06",
+      "rows": 52,
+      "custodians": 13,
+      "subjects": 16,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2001-07",
+      "rows": 20,
+      "custodians": 10,
+      "subjects": 9,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2001-08",
+      "rows": 39,
+      "custodians": 14,
+      "subjects": 14,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2001-09",
+      "rows": 54,
+      "custodians": 18,
+      "subjects": 13,
+      "rows_with_attachments": 21
+    },
+    {
+      "month": "2001-10",
+      "rows": 142,
+      "custodians": 37,
+      "subjects": 46,
+      "rows_with_attachments": 15
+    },
+    {
+      "month": "2001-11",
+      "rows": 224,
+      "custodians": 41,
+      "subjects": 58,
+      "rows_with_attachments": 39
+    },
+    {
+      "month": "2001-12",
+      "rows": 30,
+      "custodians": 13,
+      "subjects": 10,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2002-01",
+      "rows": 176,
+      "custodians": 34,
+      "subjects": 21,
+      "rows_with_attachments": 71
+    },
+    {
+      "month": "2002-02",
+      "rows": 74,
+      "custodians": 24,
+      "subjects": 15,
+      "rows_with_attachments": 20
+    },
+    {
+      "month": "2002-03",
+      "rows": 20,
+      "custodians": 6,
+      "subjects": 10,
+      "rows_with_attachments": 0
+    }
+  ],
+  "fastow": [
+    {
+      "month": "2000-01",
+      "rows": 20,
+      "custodians": 3,
+      "subjects": 4,
+      "rows_with_attachments": 11
+    },
+    {
+      "month": "2000-02",
+      "rows": 32,
+      "custodians": 3,
+      "subjects": 5,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2000-03",
+      "rows": 21,
+      "custodians": 1,
+      "subjects": 3,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2000-04",
+      "rows": 48,
+      "custodians": 3,
+      "subjects": 5,
+      "rows_with_attachments": 37
+    },
+    {
+      "month": "2000-05",
+      "rows": 30,
+      "custodians": 4,
+      "subjects": 5,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 43,
+      "custodians": 6,
+      "subjects": 6,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2000-07",
+      "rows": 35,
+      "custodians": 4,
+      "subjects": 8,
+      "rows_with_attachments": 12
+    },
+    {
+      "month": "2000-08",
+      "rows": 169,
+      "custodians": 5,
+      "subjects": 12,
+      "rows_with_attachments": 97
+    },
+    {
+      "month": "2000-09",
+      "rows": 101,
+      "custodians": 6,
+      "subjects": 11,
+      "rows_with_attachments": 16
+    },
+    {
+      "month": "2000-10",
+      "rows": 190,
+      "custodians": 5,
+      "subjects": 16,
+      "rows_with_attachments": 68
+    },
+    {
+      "month": "2000-11",
+      "rows": 152,
+      "custodians": 11,
+      "subjects": 22,
+      "rows_with_attachments": 68
+    },
+    {
+      "month": "2000-12",
+      "rows": 202,
+      "custodians": 12,
+      "subjects": 17,
+      "rows_with_attachments": 11
+    },
+    {
+      "month": "2001-01",
+      "rows": 88,
+      "custodians": 10,
+      "subjects": 14,
+      "rows_with_attachments": 47
+    },
+    {
+      "month": "2001-02",
+      "rows": 102,
+      "custodians": 7,
+      "subjects": 14,
+      "rows_with_attachments": 21
+    },
+    {
+      "month": "2001-03",
+      "rows": 162,
+      "custodians": 27,
+      "subjects": 16,
+      "rows_with_attachments": 21
+    },
+    {
+      "month": "2001-04",
+      "rows": 119,
+      "custodians": 11,
+      "subjects": 23,
+      "rows_with_attachments": 44
+    },
+    {
+      "month": "2001-05",
+      "rows": 167,
+      "custodians": 17,
+      "subjects": 23,
+      "rows_with_attachments": 82
+    },
+    {
+      "month": "2001-06",
+      "rows": 96,
+      "custodians": 28,
+      "subjects": 14,
+      "rows_with_attachments": 31
+    },
+    {
+      "month": "2001-07",
+      "rows": 57,
+      "custodians": 8,
+      "subjects": 13,
+      "rows_with_attachments": 11
+    },
+    {
+      "month": "2001-08",
+      "rows": 95,
+      "custodians": 33,
+      "subjects": 19,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2001-09",
+      "rows": 50,
+      "custodians": 11,
+      "subjects": 14,
+      "rows_with_attachments": 8
+    },
+    {
+      "month": "2001-10",
+      "rows": 569,
+      "custodians": 108,
+      "subjects": 41,
+      "rows_with_attachments": 14
+    },
+    {
+      "month": "2001-11",
+      "rows": 181,
+      "custodians": 38,
+      "subjects": 26,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2001-12",
+      "rows": 31,
+      "custodians": 15,
+      "subjects": 3,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2002-01",
+      "rows": 37,
+      "custodians": 6,
+      "subjects": 3,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2002-02",
+      "rows": 33,
+      "custodians": 14,
+      "subjects": 3,
+      "rows_with_attachments": 9
+    },
+    {
+      "month": "2002-03",
+      "rows": 1,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    }
+  ],
+  "ljm": [
+    {
+      "month": "2000-02",
+      "rows": 20,
+      "custodians": 1,
+      "subjects": 4,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2000-03",
+      "rows": 2,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 3,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2000-08",
+      "rows": 10,
+      "custodians": 2,
+      "subjects": 1,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2000-09",
+      "rows": 6,
+      "custodians": 1,
+      "subjects": 2,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2000-10",
+      "rows": 20,
+      "custodians": 2,
+      "subjects": 3,
+      "rows_with_attachments": 12
+    },
+    {
+      "month": "2000-11",
+      "rows": 16,
+      "custodians": 3,
+      "subjects": 4,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2000-12",
+      "rows": 33,
+      "custodians": 1,
+      "subjects": 6,
+      "rows_with_attachments": 26
+    },
+    {
+      "month": "2001-01",
+      "rows": 24,
+      "custodians": 1,
+      "subjects": 5,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2001-02",
+      "rows": 8,
+      "custodians": 1,
+      "subjects": 3,
+      "rows_with_attachments": 5
+    },
+    {
+      "month": "2001-03",
+      "rows": 5,
+      "custodians": 2,
+      "subjects": 2,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-04",
+      "rows": 8,
+      "custodians": 3,
+      "subjects": 3,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-05",
+      "rows": 17,
+      "custodians": 2,
+      "subjects": 3,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-07",
+      "rows": 1,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-08",
+      "rows": 1,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2001-09",
+      "rows": 13,
+      "custodians": 5,
+      "subjects": 7,
+      "rows_with_attachments": 4
+    },
+    {
+      "month": "2001-10",
+      "rows": 504,
+      "custodians": 105,
+      "subjects": 23,
+      "rows_with_attachments": 8
+    },
+    {
+      "month": "2001-11",
+      "rows": 135,
+      "custodians": 63,
+      "subjects": 9,
+      "rows_with_attachments": 1
+    },
+    {
+      "month": "2001-12",
+      "rows": 13,
+      "custodians": 7,
+      "subjects": 3,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2002-01",
+      "rows": 33,
+      "custodians": 4,
+      "subjects": 3,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2002-02",
+      "rows": 7,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 3
+    }
+  ],
+  "dabhol": [
+    {
+      "month": "2000-01",
+      "rows": 10,
+      "custodians": 1,
+      "subjects": 3,
+      "rows_with_attachments": 4
+    },
+    {
+      "month": "2000-02",
+      "rows": 53,
+      "custodians": 4,
+      "subjects": 5,
+      "rows_with_attachments": 21
+    },
+    {
+      "month": "2000-03",
+      "rows": 18,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-04",
+      "rows": 18,
+      "custodians": 1,
+      "subjects": 1,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-06",
+      "rows": 59,
+      "custodians": 2,
+      "subjects": 5,
+      "rows_with_attachments": 19
+    },
+    {
+      "month": "2000-07",
+      "rows": 118,
+      "custodians": 3,
+      "subjects": 8,
+      "rows_with_attachments": 19
+    },
+    {
+      "month": "2000-08",
+      "rows": 103,
+      "custodians": 3,
+      "subjects": 5,
+      "rows_with_attachments": 0
+    },
+    {
+      "month": "2000-09",
+      "rows": 65,
+      "custodians": 4,
+      "subjects": 5,
+      "rows_with_attachments": 3
+    },
+    {
+      "month": "2000-10",
+      "rows": 83,
+      "custodians": 5,
+      "subjects": 9,
+      "rows_with_attachments": 29
+    },
+    {
+      "month": "2000-11",
+      "rows": 158,
+      "custodians": 14,
+      "subjects": 11,
+      "rows_with_attachments": 57
+    },
+    {
+      "month": "2000-12",
+      "rows": 130,
+      "custodians": 10,
+      "subjects": 24,
+      "rows_with_attachments": 44
+    },
+    {
+      "month": "2001-01",
+      "rows": 258,
+      "custodians": 15,
+      "subjects": 42,
+      "rows_with_attachments": 104
+    },
+    {
+      "month": "2001-02",
+      "rows": 169,
+      "custodians": 14,
+      "subjects": 25,
+      "rows_with_attachments": 22
+    },
+    {
+      "month": "2001-03",
+      "rows": 116,
+      "custodians": 8,
+      "subjects": 20,
+      "rows_with_attachments": 22
+    },
+    {
+      "month": "2001-04",
+      "rows": 253,
+      "custodians": 10,
+      "subjects": 42,
+      "rows_with_attachments": 20
+    },
+    {
+      "month": "2001-05",
+      "rows": 478,
+      "custodians": 12,
+      "subjects": 42,
+      "rows_with_attachments": 34
+    },
+    {
+      "month": "2001-06",
+      "rows": 214,
+      "custodians": 14,
+      "subjects": 19,
+      "rows_with_attachments": 6
+    },
+    {
+      "month": "2001-07",
+      "rows": 81,
+      "custodians": 5,
+      "subjects": 16,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2001-08",
+      "rows": 68,
+      "custodians": 11,
+      "subjects": 7,
+      "rows_with_attachments": 12
+    },
+    {
+      "month": "2001-09",
+      "rows": 50,
+      "custodians": 9,
+      "subjects": 3,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2001-10",
+      "rows": 326,
+      "custodians": 83,
+      "subjects": 20,
+      "rows_with_attachments": 10
+    },
+    {
+      "month": "2001-11",
+      "rows": 141,
+      "custodians": 28,
+      "subjects": 15,
+      "rows_with_attachments": 9
+    },
+    {
+      "month": "2001-12",
+      "rows": 7,
+      "custodians": 5,
+      "subjects": 3,
+      "rows_with_attachments": 2
+    },
+    {
+      "month": "2002-01",
+      "rows": 23,
+      "custodians": 4,
+      "subjects": 1,
+      "rows_with_attachments": 7
+    },
+    {
+      "month": "2002-02",
+      "rows": 11,
+      "custodians": 6,
+      "subjects": 2,
+      "rows_with_attachments": 2
+    }
+  ]
+}

@@ -1,0 +1,2947 @@
+{
+  "verify_capsule": "/tmp/doxabase-enron-clean.pClwOo/enron-handoff-verify.doxabase.sqlite",
+  "import": {
+    "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json",
+    "format": "doxabase.handoff_bundle.v1",
+    "dry_run": false,
+    "replace": false,
+    "manifest": {
+      "artifact_kind": "handoff_bundle",
+      "artifacts": {
+        "revision_snapshots": {
+          "artifact_kind": "revision_snapshot_bundle",
+          "bytes_written": 10787273,
+          "format": "doxabase.revision_snapshot_bundle.v1",
+          "graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "importable": true,
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+          "privacy_warnings": [],
+          "quad_count": 29070,
+          "recommended_import_tool": "doxabase.import_revision_snapshots",
+          "recovery_complete": false,
+          "revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "https://example.test/enron-emails#history_initial_store_build",
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "sensitive_literal_count": 0,
+          "snapshot_count": 36
+        },
+        "trig": {
+          "artifact_kind": "handoff_trig",
+          "bytes_written": 455797,
+          "format": "trig",
+          "graph_counts": {
+            "evidence": 485,
+            "history": 322,
+            "map": 787,
+            "observations": 3786,
+            "ontology": 117,
+            "patterns": 345,
+            "shapes": 0
+          },
+          "graph_roles": [
+            "ontology",
+            "map",
+            "observations",
+            "patterns",
+            "evidence",
+            "shapes",
+            "history"
+          ],
+          "importable": true,
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+          "privacy_warnings": [],
+          "recommended_import_tool": "doxabase.import_trig",
+          "recovery_complete": false,
+          "sensitive_literal_count": 0,
+          "triples": 5842
+        }
+      },
+      "created_at": "2026-07-01T13:53:33.937335+00:00",
+      "decision": "clean_by_scanner_only",
+      "final_snapshot_evidence_status": "history_plus_snapshot_rows",
+      "format": "doxabase.handoff_bundle.v1",
+      "graph_sensitive_literal_count": 0,
+      "importable": true,
+      "json_first_status": "snapshot_rows_without_history",
+      "privacy_warnings": [],
+      "recommended_import_sequence": [
+        {
+          "expected_snapshot_evidence_status": "history_only_count_digest",
+          "mcp_tool_name": "doxabase.import_trig",
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+          "step": 1,
+          "tool_name": "import_trig"
+        },
+        {
+          "expected_snapshot_evidence_status": "history_plus_snapshot_rows",
+          "mcp_tool_name": "doxabase.import_revision_snapshots",
+          "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+          "step": 2,
+          "tool_name": "import_revision_snapshots"
+        }
+      ],
+      "recommended_import_tool": "doxabase.import_handoff_bundle",
+      "recovery_complete": true,
+      "revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "scanner_clean": true,
+      "scanner_note": "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts.",
+      "sensitive_literal_count": 0,
+      "shareability_review_required": true,
+      "shareability_review_status": "required_not_completed",
+      "snapshot_graph_roles": [
+        "base_ontology",
+        "base_shapes",
+        "evidence",
+        "history",
+        "map",
+        "observations",
+        "ontology",
+        "patterns",
+        "shapes"
+      ],
+      "snapshot_sensitive_literal_count": 0,
+      "warnings": [
+        "Scanner-clean means no selected export content matched DoxaBase's credential-like graph-term patterns; it is not proof that an artifact is shareable or free of user-specific paths, endpoint details, or confidential project facts."
+      ],
+      "would_block_sensitive_export": false
+    },
+    "paths": {
+      "trig": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff.trig",
+      "revision_snapshots": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "manifest": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json"
+    },
+    "graph_roles": [
+      "ontology",
+      "map",
+      "observations",
+      "patterns",
+      "evidence",
+      "shapes",
+      "history"
+    ],
+    "snapshot_graph_roles": [
+      "base_ontology",
+      "base_shapes",
+      "evidence",
+      "history",
+      "map",
+      "observations",
+      "ontology",
+      "patterns",
+      "shapes"
+    ],
+    "revision_iris": [
+      "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+      "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+      "https://example.test/enron-emails#history_initial_store_build",
+      "https://example.test/enron-emails#history_network_time_store_augmentation"
+    ],
+    "pre_import_snapshot_evidence": [
+      {
+        "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "status": "history_missing",
+        "history_revision_found": false,
+        "rdf_snapshot_graph_roles": [],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "No RDF history revision record or SQLite snapshot rows were found for this revision IRI.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "status": "history_missing",
+        "history_revision_found": false,
+        "rdf_snapshot_graph_roles": [],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "No RDF history revision record or SQLite snapshot rows were found for this revision IRI.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+        "status": "history_missing",
+        "history_revision_found": false,
+        "rdf_snapshot_graph_roles": [],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "No RDF history revision record or SQLite snapshot rows were found for this revision IRI.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+        "status": "history_missing",
+        "history_revision_found": false,
+        "rdf_snapshot_graph_roles": [],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "No RDF history revision record or SQLite snapshot rows were found for this revision IRI.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      }
+    ],
+    "trig_imported": {
+      "history": 322,
+      "map": 787,
+      "evidence": 485,
+      "ontology": 117,
+      "observations": 3786,
+      "patterns": 345
+    },
+    "trig_total_imported": 5842,
+    "post_trig_snapshot_evidence": [
+      {
+        "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "status": "history_only_count_digest",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and count/digest graph snapshots are present, but SQLite snapshot rows for exact changed-triple inspection are absent. Import a companion revision snapshot JSON bundle when exact applied diffs or stale drift triples are needed.",
+        "suggested_next_actions": [
+          {
+            "action_label": "Import snapshot bundle if available",
+            "tool_name": "import_revision_snapshots",
+            "mcp_tool_name": "doxabase.import_revision_snapshots",
+            "arguments": {
+              "path": "/tmp/revision-snapshots.json",
+              "path_is_placeholder": true
+            },
+            "reason": "RDF history metadata is present for 'https://example.test/enron-emails#history_analyst_slicing_store_augmentation', but exact snapshot rows are missing for one or more graph roles. Import the companion snapshot JSON bundle at its real handoff path before relying on exact applied-diff or stale-drift triple inspection. If the snapshot JSON is not available, request a recovery-complete export_handoff_bundle from the source capsule.",
+            "call": "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+          }
+        ],
+        "suggested_next_calls": [
+          "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+        ]
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "status": "history_only_count_digest",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and count/digest graph snapshots are present, but SQLite snapshot rows for exact changed-triple inspection are absent. Import a companion revision snapshot JSON bundle when exact applied diffs or stale drift triples are needed.",
+        "suggested_next_actions": [
+          {
+            "action_label": "Import snapshot bundle if available",
+            "tool_name": "import_revision_snapshots",
+            "mcp_tool_name": "doxabase.import_revision_snapshots",
+            "arguments": {
+              "path": "/tmp/revision-snapshots.json",
+              "path_is_placeholder": true
+            },
+            "reason": "RDF history metadata is present for 'https://example.test/enron-emails#history_deep_analysis_store_augmentation', but exact snapshot rows are missing for one or more graph roles. Import the companion snapshot JSON bundle at its real handoff path before relying on exact applied-diff or stale-drift triple inspection. If the snapshot JSON is not available, request a recovery-complete export_handoff_bundle from the source capsule.",
+            "call": "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+          }
+        ],
+        "suggested_next_calls": [
+          "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+        ]
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+        "status": "history_only_count_digest",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and count/digest graph snapshots are present, but SQLite snapshot rows for exact changed-triple inspection are absent. Import a companion revision snapshot JSON bundle when exact applied diffs or stale drift triples are needed.",
+        "suggested_next_actions": [
+          {
+            "action_label": "Import snapshot bundle if available",
+            "tool_name": "import_revision_snapshots",
+            "mcp_tool_name": "doxabase.import_revision_snapshots",
+            "arguments": {
+              "path": "/tmp/revision-snapshots.json",
+              "path_is_placeholder": true
+            },
+            "reason": "RDF history metadata is present for 'https://example.test/enron-emails#history_initial_store_build', but exact snapshot rows are missing for one or more graph roles. Import the companion snapshot JSON bundle at its real handoff path before relying on exact applied-diff or stale-drift triple inspection. If the snapshot JSON is not available, request a recovery-complete export_handoff_bundle from the source capsule.",
+            "call": "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+          }
+        ],
+        "suggested_next_calls": [
+          "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+        ]
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+        "status": "history_only_count_digest",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [],
+        "exact_snapshot_graph_roles": [],
+        "missing_snapshot_row_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and count/digest graph snapshots are present, but SQLite snapshot rows for exact changed-triple inspection are absent. Import a companion revision snapshot JSON bundle when exact applied diffs or stale drift triples are needed.",
+        "suggested_next_actions": [
+          {
+            "action_label": "Import snapshot bundle if available",
+            "tool_name": "import_revision_snapshots",
+            "mcp_tool_name": "doxabase.import_revision_snapshots",
+            "arguments": {
+              "path": "/tmp/revision-snapshots.json",
+              "path_is_placeholder": true
+            },
+            "reason": "RDF history metadata is present for 'https://example.test/enron-emails#history_network_time_store_augmentation', but exact snapshot rows are missing for one or more graph roles. Import the companion snapshot JSON bundle at its real handoff path before relying on exact applied-diff or stale-drift triple inspection. If the snapshot JSON is not available, request a recovery-complete export_handoff_bundle from the source capsule.",
+            "call": "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+          }
+        ],
+        "suggested_next_calls": [
+          "import_revision_snapshots(path='/tmp/revision-snapshots.json', path_is_placeholder=True)"
+        ]
+      }
+    ],
+    "revision_snapshots": {
+      "path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_revision_snapshots.json",
+      "format": "doxabase.revision_snapshot_bundle.v1",
+      "replace": false,
+      "revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "graph_roles": [
+        "base_ontology",
+        "base_shapes",
+        "evidence",
+        "history",
+        "map",
+        "observations",
+        "ontology",
+        "patterns",
+        "shapes"
+      ],
+      "snapshot_count": 36,
+      "imported_snapshot_count": 36,
+      "skipped_snapshot_count": 0,
+      "quad_count": 29070,
+      "imported_quad_count": 29070,
+      "post_import_snapshot_evidence": [
+        {
+          "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "status": "history_plus_snapshot_rows",
+          "history_revision_found": true,
+          "rdf_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "stored_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "exact_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "missing_snapshot_row_graph_roles": [],
+          "orphan_snapshot_row_graph_roles": [],
+          "missing_current_graph_roles": [],
+          "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+          "suggested_next_actions": [],
+          "suggested_next_calls": []
+        },
+        {
+          "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "status": "history_plus_snapshot_rows",
+          "history_revision_found": true,
+          "rdf_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "stored_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "exact_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "missing_snapshot_row_graph_roles": [],
+          "orphan_snapshot_row_graph_roles": [],
+          "missing_current_graph_roles": [],
+          "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+          "suggested_next_actions": [],
+          "suggested_next_calls": []
+        },
+        {
+          "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "status": "history_plus_snapshot_rows",
+          "history_revision_found": true,
+          "rdf_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "stored_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "exact_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "missing_snapshot_row_graph_roles": [],
+          "orphan_snapshot_row_graph_roles": [],
+          "missing_current_graph_roles": [],
+          "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+          "suggested_next_actions": [],
+          "suggested_next_calls": []
+        },
+        {
+          "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "status": "history_plus_snapshot_rows",
+          "history_revision_found": true,
+          "rdf_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "stored_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "exact_snapshot_graph_roles": [
+            "base_ontology",
+            "base_shapes",
+            "evidence",
+            "history",
+            "map",
+            "observations",
+            "ontology",
+            "patterns",
+            "shapes"
+          ],
+          "missing_snapshot_row_graph_roles": [],
+          "orphan_snapshot_row_graph_roles": [],
+          "missing_current_graph_roles": [],
+          "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+          "suggested_next_actions": [],
+          "suggested_next_calls": []
+        }
+      ]
+    },
+    "post_import_snapshot_evidence": [
+      {
+        "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "status": "history_plus_snapshot_rows",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "exact_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "status": "history_plus_snapshot_rows",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "exact_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+        "status": "history_plus_snapshot_rows",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "exact_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      },
+      {
+        "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+        "status": "history_plus_snapshot_rows",
+        "history_revision_found": true,
+        "rdf_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "stored_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "exact_snapshot_graph_roles": [
+          "base_ontology",
+          "base_shapes",
+          "evidence",
+          "history",
+          "map",
+          "observations",
+          "ontology",
+          "patterns",
+          "shapes"
+        ],
+        "missing_snapshot_row_graph_roles": [],
+        "orphan_snapshot_row_graph_roles": [],
+        "missing_current_graph_roles": [],
+        "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+        "suggested_next_actions": [],
+        "suggested_next_calls": []
+      }
+    ],
+    "recovery_plan": {
+      "result_kind": "staged_revision_recovery_plan",
+      "helper": "plan_staged_revision_recovery",
+      "mode": "read_only_plan",
+      "selection_mode": "explicit_revision_iris",
+      "requested_revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "processed_revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "current_staged_work_only": false,
+      "include_drafts": true,
+      "repair_draft_limit": 1,
+      "repair_draft_attempted_count": 0,
+      "repair_drafts_included_count": 0,
+      "repair_drafts_deferred_count": 0,
+      "validation_scope": "all",
+      "drift_detail": "summary",
+      "limit": 50,
+      "offset": 0,
+      "count": 4,
+      "returned_count": 4,
+      "total_count": 4,
+      "lanes": [
+        {
+          "row_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "source_revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "current_revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "resolved_target_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "lane": "informational",
+          "effective_recovery_action": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "batch_action": "skipped_non_staged_history_record",
+          "not_restageable_reason": "non_staged_history_record",
+          "summary": "Augmented Enron store with analyst slicing and named-view guidance.",
+          "changed_graphs": [],
+          "shared_context_applies": false,
+          "shared_context_patch_count": 0,
+          "shared_context_graphs": [],
+          "status_before": "not_available",
+          "decision_before": "non_staged_history_record",
+          "routing_decision_before": "inspect_non_staged_history_record",
+          "stale_resolution_state_before": null,
+          "blocking_reasons_before": [
+            "non_staged_history_record"
+          ],
+          "exact_drift_summary": [],
+          "status_after": "not_available",
+          "decision_after": "non_staged_history_record",
+          "routing_decision_after": "inspect_non_staged_history_record",
+          "stale_resolution_state_after": null,
+          "blocking_reasons_after": [
+            "non_staged_history_record"
+          ],
+          "source_staged_validation_status": "conforms",
+          "source_validation_result_count": 0,
+          "current_staged_validation_status": "conforms",
+          "current_validation_result_count": 0,
+          "source_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "source_snapshot_evidence_completeness": "complete",
+          "current_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "current_snapshot_evidence_completeness": "complete",
+          "triples_to_add_after": 0,
+          "triples_to_remove_after": 0,
+          "restaged_from": null,
+          "restaged_revision_iri": null,
+          "current_restaged_by": null,
+          "alternative_gate": null,
+          "next_action": {
+            "action_type": "inspect_non_staged_history_record",
+            "queue": "informational",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "arguments": {
+              "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+              "graph": "history"
+            },
+            "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery"
+          },
+          "next_action_queue_item": {
+            "row_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "queue": "informational",
+            "action_type": "inspect_non_staged_history_record",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "resolved_target_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "resolved_target_iri_source": "next_action.arguments.iri",
+            "resolved_target_record_kind": "history_record",
+            "row_is_target": true,
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery",
+            "record_kind": "history_record",
+            "application_status": "not_available",
+            "application_decision": "non_staged_history_record",
+            "stale_resolution_state": null,
+            "staged_validation_status": "conforms",
+            "semantic_risk_level": null,
+            "semantic_risk_reasons": [],
+            "alternative_gate_status": null,
+            "alternative_semantic_review_required": false,
+            "alternative_applied_source_iri": null,
+            "alternative_applied_revision_iri": null,
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": null,
+            "alternative_set_role": null
+          },
+          "repair_draft": null,
+          "repair_draft_error": null,
+          "repair_draft_deferred_reason": null,
+          "suggested_next_actions": [
+            {
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+            }
+          ],
+          "suggested_next_calls": [
+            "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+          ],
+          "batch_item": {
+            "source_revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "summary": "Augmented Enron store with analyst slicing and named-view guidance.",
+            "status_before": "not_available",
+            "decision_before": "non_staged_history_record",
+            "routing_decision_before": "inspect_non_staged_history_record",
+            "stale_resolution_state_before": null,
+            "blocking_reasons_before": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_before": [],
+            "source_staged_validation_status": "conforms",
+            "source_validation_result_count": 0,
+            "source_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "source_snapshot_evidence_completeness": "complete",
+            "status_after": "not_available",
+            "decision_after": "non_staged_history_record",
+            "routing_decision_after": "inspect_non_staged_history_record",
+            "stale_resolution_state_after": null,
+            "blocking_reasons_after": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_after": [],
+            "current_staged_validation_status": "conforms",
+            "current_validation_result_count": 0,
+            "current_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "current_snapshot_evidence_completeness": "complete",
+            "triples_to_add_after": 0,
+            "triples_to_remove_after": 0,
+            "action": "skipped_non_staged_history_record",
+            "not_restageable_reason": "non_staged_history_record",
+            "restaged_from": null,
+            "restaged_revision_iri": null,
+            "current_restaged_by": null,
+            "current_revision_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "next_action_after": {
+              "action_type": "inspect_non_staged_history_record",
+              "queue": "informational",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery"
+            },
+            "next_action_queue_item_after": {
+              "row_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+              "queue": "informational",
+              "action_type": "inspect_non_staged_history_record",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "resolved_target_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+              "resolved_target_iri_source": "next_action.arguments.iri",
+              "resolved_target_record_kind": "history_record",
+              "row_is_target": true,
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery",
+              "record_kind": "history_record",
+              "application_status": "not_available",
+              "application_decision": "non_staged_history_record",
+              "stale_resolution_state": null,
+              "staged_validation_status": "conforms",
+              "semantic_risk_level": null,
+              "semantic_risk_reasons": [],
+              "alternative_gate_status": null,
+              "alternative_semantic_review_required": false,
+              "alternative_applied_source_iri": null,
+              "alternative_applied_revision_iri": null,
+              "alternative_set_iris": [],
+              "alternative_set_source_iri": null,
+              "alternative_set_role": null
+            },
+            "suggested_next_actions_after": [
+              {
+                "action_label": "Inspect non-staged history record",
+                "tool_name": "describe_graph_revision",
+                "mcp_tool_name": "doxabase.describe_graph_revision",
+                "arguments": {
+                  "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+                  "graph": "history"
+                },
+                "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+                "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+              }
+            ],
+            "repair_first_warning": null,
+            "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+          },
+          "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "source_revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "current_revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "resolved_target_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "lane": "informational",
+          "effective_recovery_action": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "batch_action": "skipped_non_staged_history_record",
+          "not_restageable_reason": "non_staged_history_record",
+          "summary": "Augmented Enron store with analysis-readiness findings and query cookbook.",
+          "changed_graphs": [],
+          "shared_context_applies": false,
+          "shared_context_patch_count": 0,
+          "shared_context_graphs": [],
+          "status_before": "not_available",
+          "decision_before": "non_staged_history_record",
+          "routing_decision_before": "inspect_non_staged_history_record",
+          "stale_resolution_state_before": null,
+          "blocking_reasons_before": [
+            "non_staged_history_record"
+          ],
+          "exact_drift_summary": [],
+          "status_after": "not_available",
+          "decision_after": "non_staged_history_record",
+          "routing_decision_after": "inspect_non_staged_history_record",
+          "stale_resolution_state_after": null,
+          "blocking_reasons_after": [
+            "non_staged_history_record"
+          ],
+          "source_staged_validation_status": "conforms",
+          "source_validation_result_count": 0,
+          "current_staged_validation_status": "conforms",
+          "current_validation_result_count": 0,
+          "source_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "source_snapshot_evidence_completeness": "complete",
+          "current_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "current_snapshot_evidence_completeness": "complete",
+          "triples_to_add_after": 0,
+          "triples_to_remove_after": 0,
+          "restaged_from": null,
+          "restaged_revision_iri": null,
+          "current_restaged_by": null,
+          "alternative_gate": null,
+          "next_action": {
+            "action_type": "inspect_non_staged_history_record",
+            "queue": "informational",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "arguments": {
+              "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+              "graph": "history"
+            },
+            "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery"
+          },
+          "next_action_queue_item": {
+            "row_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "queue": "informational",
+            "action_type": "inspect_non_staged_history_record",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "resolved_target_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "resolved_target_iri_source": "next_action.arguments.iri",
+            "resolved_target_record_kind": "history_record",
+            "row_is_target": true,
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery",
+            "record_kind": "history_record",
+            "application_status": "not_available",
+            "application_decision": "non_staged_history_record",
+            "stale_resolution_state": null,
+            "staged_validation_status": "conforms",
+            "semantic_risk_level": null,
+            "semantic_risk_reasons": [],
+            "alternative_gate_status": null,
+            "alternative_semantic_review_required": false,
+            "alternative_applied_source_iri": null,
+            "alternative_applied_revision_iri": null,
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": null,
+            "alternative_set_role": null
+          },
+          "repair_draft": null,
+          "repair_draft_error": null,
+          "repair_draft_deferred_reason": null,
+          "suggested_next_actions": [
+            {
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')"
+            }
+          ],
+          "suggested_next_calls": [
+            "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')"
+          ],
+          "batch_item": {
+            "source_revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "summary": "Augmented Enron store with analysis-readiness findings and query cookbook.",
+            "status_before": "not_available",
+            "decision_before": "non_staged_history_record",
+            "routing_decision_before": "inspect_non_staged_history_record",
+            "stale_resolution_state_before": null,
+            "blocking_reasons_before": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_before": [],
+            "source_staged_validation_status": "conforms",
+            "source_validation_result_count": 0,
+            "source_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "source_snapshot_evidence_completeness": "complete",
+            "status_after": "not_available",
+            "decision_after": "non_staged_history_record",
+            "routing_decision_after": "inspect_non_staged_history_record",
+            "stale_resolution_state_after": null,
+            "blocking_reasons_after": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_after": [],
+            "current_staged_validation_status": "conforms",
+            "current_validation_result_count": 0,
+            "current_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "current_snapshot_evidence_completeness": "complete",
+            "triples_to_add_after": 0,
+            "triples_to_remove_after": 0,
+            "action": "skipped_non_staged_history_record",
+            "not_restageable_reason": "non_staged_history_record",
+            "restaged_from": null,
+            "restaged_revision_iri": null,
+            "current_restaged_by": null,
+            "current_revision_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "next_action_after": {
+              "action_type": "inspect_non_staged_history_record",
+              "queue": "informational",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery"
+            },
+            "next_action_queue_item_after": {
+              "row_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+              "queue": "informational",
+              "action_type": "inspect_non_staged_history_record",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "resolved_target_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+              "resolved_target_iri_source": "next_action.arguments.iri",
+              "resolved_target_record_kind": "history_record",
+              "row_is_target": true,
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery",
+              "record_kind": "history_record",
+              "application_status": "not_available",
+              "application_decision": "non_staged_history_record",
+              "stale_resolution_state": null,
+              "staged_validation_status": "conforms",
+              "semantic_risk_level": null,
+              "semantic_risk_reasons": [],
+              "alternative_gate_status": null,
+              "alternative_semantic_review_required": false,
+              "alternative_applied_source_iri": null,
+              "alternative_applied_revision_iri": null,
+              "alternative_set_iris": [],
+              "alternative_set_source_iri": null,
+              "alternative_set_role": null
+            },
+            "suggested_next_actions_after": [
+              {
+                "action_label": "Inspect non-staged history record",
+                "tool_name": "describe_graph_revision",
+                "mcp_tool_name": "doxabase.describe_graph_revision",
+                "arguments": {
+                  "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+                  "graph": "history"
+                },
+                "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+                "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')"
+              }
+            ],
+            "repair_first_warning": null,
+            "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+          },
+          "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "source_revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "current_revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "resolved_target_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "lane": "informational",
+          "effective_recovery_action": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "batch_action": "skipped_non_staged_history_record",
+          "not_restageable_reason": "non_staged_history_record",
+          "summary": "Built initial Enron emails knowledge store from S3 Parquet profiling.",
+          "changed_graphs": [],
+          "shared_context_applies": false,
+          "shared_context_patch_count": 0,
+          "shared_context_graphs": [],
+          "status_before": "not_available",
+          "decision_before": "non_staged_history_record",
+          "routing_decision_before": "inspect_non_staged_history_record",
+          "stale_resolution_state_before": null,
+          "blocking_reasons_before": [
+            "non_staged_history_record"
+          ],
+          "exact_drift_summary": [],
+          "status_after": "not_available",
+          "decision_after": "non_staged_history_record",
+          "routing_decision_after": "inspect_non_staged_history_record",
+          "stale_resolution_state_after": null,
+          "blocking_reasons_after": [
+            "non_staged_history_record"
+          ],
+          "source_staged_validation_status": "conforms",
+          "source_validation_result_count": 0,
+          "current_staged_validation_status": "conforms",
+          "current_validation_result_count": 0,
+          "source_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "source_snapshot_evidence_completeness": "complete",
+          "current_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "current_snapshot_evidence_completeness": "complete",
+          "triples_to_add_after": 0,
+          "triples_to_remove_after": 0,
+          "restaged_from": null,
+          "restaged_revision_iri": null,
+          "current_restaged_by": null,
+          "alternative_gate": null,
+          "next_action": {
+            "action_type": "inspect_non_staged_history_record",
+            "queue": "informational",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "arguments": {
+              "iri": "https://example.test/enron-emails#history_initial_store_build",
+              "graph": "history"
+            },
+            "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+            "source": "plan_staged_revision_recovery"
+          },
+          "next_action_queue_item": {
+            "row_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "queue": "informational",
+            "action_type": "inspect_non_staged_history_record",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "resolved_target_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "resolved_target_iri_source": "next_action.arguments.iri",
+            "resolved_target_record_kind": "history_record",
+            "row_is_target": true,
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+            "source": "plan_staged_revision_recovery",
+            "record_kind": "history_record",
+            "application_status": "not_available",
+            "application_decision": "non_staged_history_record",
+            "stale_resolution_state": null,
+            "staged_validation_status": "conforms",
+            "semantic_risk_level": null,
+            "semantic_risk_reasons": [],
+            "alternative_gate_status": null,
+            "alternative_semantic_review_required": false,
+            "alternative_applied_source_iri": null,
+            "alternative_applied_revision_iri": null,
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": null,
+            "alternative_set_role": null
+          },
+          "repair_draft": null,
+          "repair_draft_error": null,
+          "repair_draft_deferred_reason": null,
+          "suggested_next_actions": [
+            {
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_initial_store_build",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')"
+            }
+          ],
+          "suggested_next_calls": [
+            "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')"
+          ],
+          "batch_item": {
+            "source_revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "summary": "Built initial Enron emails knowledge store from S3 Parquet profiling.",
+            "status_before": "not_available",
+            "decision_before": "non_staged_history_record",
+            "routing_decision_before": "inspect_non_staged_history_record",
+            "stale_resolution_state_before": null,
+            "blocking_reasons_before": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_before": [],
+            "source_staged_validation_status": "conforms",
+            "source_validation_result_count": 0,
+            "source_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "source_snapshot_evidence_completeness": "complete",
+            "status_after": "not_available",
+            "decision_after": "non_staged_history_record",
+            "routing_decision_after": "inspect_non_staged_history_record",
+            "stale_resolution_state_after": null,
+            "blocking_reasons_after": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_after": [],
+            "current_staged_validation_status": "conforms",
+            "current_validation_result_count": 0,
+            "current_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "current_snapshot_evidence_completeness": "complete",
+            "triples_to_add_after": 0,
+            "triples_to_remove_after": 0,
+            "action": "skipped_non_staged_history_record",
+            "not_restageable_reason": "non_staged_history_record",
+            "restaged_from": null,
+            "restaged_revision_iri": null,
+            "current_restaged_by": null,
+            "current_revision_iri": "https://example.test/enron-emails#history_initial_store_build",
+            "next_action_after": {
+              "action_type": "inspect_non_staged_history_record",
+              "queue": "informational",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_initial_store_build",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+              "source": "plan_staged_revision_recovery"
+            },
+            "next_action_queue_item_after": {
+              "row_iri": "https://example.test/enron-emails#history_initial_store_build",
+              "queue": "informational",
+              "action_type": "inspect_non_staged_history_record",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "resolved_target_iri": "https://example.test/enron-emails#history_initial_store_build",
+              "resolved_target_iri_source": "next_action.arguments.iri",
+              "resolved_target_record_kind": "history_record",
+              "row_is_target": true,
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+              "source": "plan_staged_revision_recovery",
+              "record_kind": "history_record",
+              "application_status": "not_available",
+              "application_decision": "non_staged_history_record",
+              "stale_resolution_state": null,
+              "staged_validation_status": "conforms",
+              "semantic_risk_level": null,
+              "semantic_risk_reasons": [],
+              "alternative_gate_status": null,
+              "alternative_semantic_review_required": false,
+              "alternative_applied_source_iri": null,
+              "alternative_applied_revision_iri": null,
+              "alternative_set_iris": [],
+              "alternative_set_source_iri": null,
+              "alternative_set_role": null
+            },
+            "suggested_next_actions_after": [
+              {
+                "action_label": "Inspect non-staged history record",
+                "tool_name": "describe_graph_revision",
+                "mcp_tool_name": "doxabase.describe_graph_revision",
+                "arguments": {
+                  "iri": "https://example.test/enron-emails#history_initial_store_build",
+                  "graph": "history"
+                },
+                "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+                "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')"
+              }
+            ],
+            "repair_first_warning": null,
+            "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+          },
+          "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "source_revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "current_revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "resolved_target_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "lane": "informational",
+          "effective_recovery_action": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "batch_action": "skipped_non_staged_history_record",
+          "not_restageable_reason": "non_staged_history_record",
+          "summary": "Augmented Enron store with network coverage and temporal population guidance.",
+          "changed_graphs": [],
+          "shared_context_applies": false,
+          "shared_context_patch_count": 0,
+          "shared_context_graphs": [],
+          "status_before": "not_available",
+          "decision_before": "non_staged_history_record",
+          "routing_decision_before": "inspect_non_staged_history_record",
+          "stale_resolution_state_before": null,
+          "blocking_reasons_before": [
+            "non_staged_history_record"
+          ],
+          "exact_drift_summary": [],
+          "status_after": "not_available",
+          "decision_after": "non_staged_history_record",
+          "routing_decision_after": "inspect_non_staged_history_record",
+          "stale_resolution_state_after": null,
+          "blocking_reasons_after": [
+            "non_staged_history_record"
+          ],
+          "source_staged_validation_status": "conforms",
+          "source_validation_result_count": 0,
+          "current_staged_validation_status": "conforms",
+          "current_validation_result_count": 0,
+          "source_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "source_snapshot_evidence_completeness": "complete",
+          "current_snapshot_evidence": {
+            "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "status": "history_plus_snapshot_rows",
+            "history_revision_found": true,
+            "rdf_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "stored_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "exact_snapshot_graph_roles": [
+              "base_ontology",
+              "base_shapes",
+              "evidence",
+              "history",
+              "map",
+              "observations",
+              "ontology",
+              "patterns",
+              "shapes"
+            ],
+            "missing_snapshot_row_graph_roles": [],
+            "orphan_snapshot_row_graph_roles": [],
+            "missing_current_graph_roles": [],
+            "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+            "suggested_next_actions": [],
+            "suggested_next_calls": []
+          },
+          "current_snapshot_evidence_completeness": "complete",
+          "triples_to_add_after": 0,
+          "triples_to_remove_after": 0,
+          "restaged_from": null,
+          "restaged_revision_iri": null,
+          "current_restaged_by": null,
+          "alternative_gate": null,
+          "next_action": {
+            "action_type": "inspect_non_staged_history_record",
+            "queue": "informational",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "arguments": {
+              "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+              "graph": "history"
+            },
+            "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery"
+          },
+          "next_action_queue_item": {
+            "row_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "queue": "informational",
+            "action_type": "inspect_non_staged_history_record",
+            "action_label": "Inspect non-staged history record",
+            "tool_name": "describe_graph_revision",
+            "mcp_tool_name": "doxabase.describe_graph_revision",
+            "resolved_target_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "resolved_target_iri_source": "next_action.arguments.iri",
+            "resolved_target_record_kind": "history_record",
+            "row_is_target": true,
+            "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')",
+            "source": "plan_staged_revision_recovery",
+            "record_kind": "history_record",
+            "application_status": "not_available",
+            "application_decision": "non_staged_history_record",
+            "stale_resolution_state": null,
+            "staged_validation_status": "conforms",
+            "semantic_risk_level": null,
+            "semantic_risk_reasons": [],
+            "alternative_gate_status": null,
+            "alternative_semantic_review_required": false,
+            "alternative_applied_source_iri": null,
+            "alternative_applied_revision_iri": null,
+            "alternative_set_iris": [],
+            "alternative_set_source_iri": null,
+            "alternative_set_role": null
+          },
+          "repair_draft": null,
+          "repair_draft_error": null,
+          "repair_draft_deferred_reason": null,
+          "suggested_next_actions": [
+            {
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+            }
+          ],
+          "suggested_next_calls": [
+            "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+          ],
+          "batch_item": {
+            "source_revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "summary": "Augmented Enron store with network coverage and temporal population guidance.",
+            "status_before": "not_available",
+            "decision_before": "non_staged_history_record",
+            "routing_decision_before": "inspect_non_staged_history_record",
+            "stale_resolution_state_before": null,
+            "blocking_reasons_before": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_before": [],
+            "source_staged_validation_status": "conforms",
+            "source_validation_result_count": 0,
+            "source_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "source_snapshot_evidence_completeness": "complete",
+            "status_after": "not_available",
+            "decision_after": "non_staged_history_record",
+            "routing_decision_after": "inspect_non_staged_history_record",
+            "stale_resolution_state_after": null,
+            "blocking_reasons_after": [
+              "non_staged_history_record"
+            ],
+            "exact_drift_summary_after": [],
+            "current_staged_validation_status": "conforms",
+            "current_validation_result_count": 0,
+            "current_snapshot_evidence": {
+              "revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+              "status": "history_plus_snapshot_rows",
+              "history_revision_found": true,
+              "rdf_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "stored_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "exact_snapshot_graph_roles": [
+                "base_ontology",
+                "base_shapes",
+                "evidence",
+                "history",
+                "map",
+                "observations",
+                "ontology",
+                "patterns",
+                "shapes"
+              ],
+              "missing_snapshot_row_graph_roles": [],
+              "orphan_snapshot_row_graph_roles": [],
+              "missing_current_graph_roles": [],
+              "note": "RDF history metadata and SQLite snapshot rows are present. Exact changed-triple inspection is available for graph roles listed in exact_snapshot_graph_roles.",
+              "suggested_next_actions": [],
+              "suggested_next_calls": []
+            },
+            "current_snapshot_evidence_completeness": "complete",
+            "triples_to_add_after": 0,
+            "triples_to_remove_after": 0,
+            "action": "skipped_non_staged_history_record",
+            "not_restageable_reason": "non_staged_history_record",
+            "restaged_from": null,
+            "restaged_revision_iri": null,
+            "current_restaged_by": null,
+            "current_revision_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "next_action_after": {
+              "action_type": "inspect_non_staged_history_record",
+              "queue": "informational",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "arguments": {
+                "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+                "graph": "history"
+              },
+              "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery"
+            },
+            "next_action_queue_item_after": {
+              "row_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+              "queue": "informational",
+              "action_type": "inspect_non_staged_history_record",
+              "action_label": "Inspect non-staged history record",
+              "tool_name": "describe_graph_revision",
+              "mcp_tool_name": "doxabase.describe_graph_revision",
+              "resolved_target_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+              "resolved_target_iri_source": "next_action.arguments.iri",
+              "resolved_target_record_kind": "history_record",
+              "row_is_target": true,
+              "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')",
+              "source": "plan_staged_revision_recovery",
+              "record_kind": "history_record",
+              "application_status": "not_available",
+              "application_decision": "non_staged_history_record",
+              "stale_resolution_state": null,
+              "staged_validation_status": "conforms",
+              "semantic_risk_level": null,
+              "semantic_risk_reasons": [],
+              "alternative_gate_status": null,
+              "alternative_semantic_review_required": false,
+              "alternative_applied_source_iri": null,
+              "alternative_applied_revision_iri": null,
+              "alternative_set_iris": [],
+              "alternative_set_source_iri": null,
+              "alternative_set_role": null
+            },
+            "suggested_next_actions_after": [
+              {
+                "action_label": "Inspect non-staged history record",
+                "tool_name": "describe_graph_revision",
+                "mcp_tool_name": "doxabase.describe_graph_revision",
+                "arguments": {
+                  "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+                  "graph": "history"
+                },
+                "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+                "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+              }
+            ],
+            "repair_first_warning": null,
+            "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+          },
+          "note": "Skipped because this explicit recovery input is not a staged patch revision. It remains available as history/snapshot context but is not an apply or mechanical-restage target."
+        }
+      ],
+      "lane_counts": {
+        "informational": 4
+      },
+      "next_action_queue": {
+        "informational": [
+          "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "https://example.test/enron-emails#history_initial_store_build",
+          "https://example.test/enron-emails#history_network_time_store_augmentation"
+        ]
+      },
+      "next_action_queue_items": [
+        {
+          "row_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "resolved_target_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "resolved_target_iri_source": "next_action.arguments.iri",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+          "source": "plan_staged_revision_recovery",
+          "record_kind": "history_record",
+          "application_status": "not_available",
+          "application_decision": "non_staged_history_record",
+          "stale_resolution_state": null,
+          "staged_validation_status": "conforms",
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_gate_status": null,
+          "alternative_semantic_review_required": false,
+          "alternative_applied_source_iri": null,
+          "alternative_applied_revision_iri": null,
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_role": null
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "resolved_target_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "resolved_target_iri_source": "next_action.arguments.iri",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+          "source": "plan_staged_revision_recovery",
+          "record_kind": "history_record",
+          "application_status": "not_available",
+          "application_decision": "non_staged_history_record",
+          "stale_resolution_state": null,
+          "staged_validation_status": "conforms",
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_gate_status": null,
+          "alternative_semantic_review_required": false,
+          "alternative_applied_source_iri": null,
+          "alternative_applied_revision_iri": null,
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_role": null
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "resolved_target_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "resolved_target_iri_source": "next_action.arguments.iri",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+          "source": "plan_staged_revision_recovery",
+          "record_kind": "history_record",
+          "application_status": "not_available",
+          "application_decision": "non_staged_history_record",
+          "stale_resolution_state": null,
+          "staged_validation_status": "conforms",
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_gate_status": null,
+          "alternative_semantic_review_required": false,
+          "alternative_applied_source_iri": null,
+          "alternative_applied_revision_iri": null,
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_role": null
+        },
+        {
+          "row_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "resolved_target_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "resolved_target_iri_source": "next_action.arguments.iri",
+          "resolved_target_record_kind": "history_record",
+          "row_is_target": true,
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')",
+          "source": "plan_staged_revision_recovery",
+          "record_kind": "history_record",
+          "application_status": "not_available",
+          "application_decision": "non_staged_history_record",
+          "stale_resolution_state": null,
+          "staged_validation_status": "conforms",
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_gate_status": null,
+          "alternative_semantic_review_required": false,
+          "alternative_applied_source_iri": null,
+          "alternative_applied_revision_iri": null,
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_role": null
+        }
+      ],
+      "next_action_queue_item_counts": {
+        "informational": 4
+      },
+      "resolved_target_groups": [
+        {
+          "group_key": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "resolved_target_iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "lane_count": 1,
+          "row_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "source_revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "requested_revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "current_revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "latest_revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "restage_chain_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation"
+          ],
+          "applied_event_iris": [],
+          "row_is_target_all": true,
+          "row_is_target_any": true,
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_roles": [],
+          "alternative_gate_statuses": [],
+          "alternative_applied_source_iris": [],
+          "alternative_applied_revision_iris": [],
+          "alternative_semantic_review_required": false
+        },
+        {
+          "group_key": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "resolved_target_iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "lane_count": 1,
+          "row_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "source_revision_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "requested_revision_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "current_revision_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "latest_revision_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "restage_chain_iris": [
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation"
+          ],
+          "applied_event_iris": [],
+          "row_is_target_all": true,
+          "row_is_target_any": true,
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_roles": [],
+          "alternative_gate_statuses": [],
+          "alternative_applied_source_iris": [],
+          "alternative_applied_revision_iris": [],
+          "alternative_semantic_review_required": false
+        },
+        {
+          "group_key": "https://example.test/enron-emails#history_initial_store_build",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "resolved_target_iri": "https://example.test/enron-emails#history_initial_store_build",
+          "resolved_target_record_kind": "history_record",
+          "lane_count": 1,
+          "row_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "source_revision_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "requested_revision_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "current_revision_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "latest_revision_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "restage_chain_iris": [
+            "https://example.test/enron-emails#history_initial_store_build"
+          ],
+          "applied_event_iris": [],
+          "row_is_target_all": true,
+          "row_is_target_any": true,
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_roles": [],
+          "alternative_gate_statuses": [],
+          "alternative_applied_source_iris": [],
+          "alternative_applied_revision_iris": [],
+          "alternative_semantic_review_required": false
+        },
+        {
+          "group_key": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "queue": "informational",
+          "action_type": "inspect_non_staged_history_record",
+          "action_label": "Inspect non-staged history record",
+          "resolved_target_iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "resolved_target_record_kind": "history_record",
+          "lane_count": 1,
+          "row_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "source_revision_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "requested_revision_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "current_revision_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "latest_revision_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "restage_chain_iris": [
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "applied_event_iris": [],
+          "row_is_target_all": true,
+          "row_is_target_any": true,
+          "semantic_risk_level": null,
+          "semantic_risk_reasons": [],
+          "alternative_set_iris": [],
+          "alternative_set_source_iri": null,
+          "alternative_set_roles": [],
+          "alternative_gate_statuses": [],
+          "alternative_applied_source_iris": [],
+          "alternative_applied_revision_iris": [],
+          "alternative_semantic_review_required": false
+        }
+      ],
+      "resolved_target_group_counts": {
+        "informational": 4
+      },
+      "mutation_frontier_iris": [],
+      "mutation_frontier_items": [],
+      "helper_mutation_frontier_actions": [],
+      "helper_mutation_frontier_calls": [],
+      "mutation_allowed_after": "no_mutation_frontier",
+      "blocking_preflight_actions": [],
+      "blocking_preflight_calls": [],
+      "requires_recheck_after_each_apply": false,
+      "semantic_review_required_queue_counts": {},
+      "would_restage_revision_iris": [],
+      "repair_first_revision_iris": [],
+      "repair_or_replace_source_revision_iris": [],
+      "not_restageable_revision_iris_by_reason": {
+        "non_staged_history_record": [
+          "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "https://example.test/enron-emails#history_initial_store_build",
+          "https://example.test/enron-emails#history_network_time_store_augmentation"
+        ]
+      },
+      "current_revision_by_source": {
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build": "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation": "https://example.test/enron-emails#history_network_time_store_augmentation"
+      },
+      "review_revision_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "recommended_review_iris": [
+        "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+        "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+        "https://example.test/enron-emails#history_initial_store_build",
+        "https://example.test/enron-emails#history_network_time_store_augmentation"
+      ],
+      "recommended_mutation_review_iris": [],
+      "recommended_apply_or_restage_review_iris": [],
+      "recommended_repair_review_iris": [],
+      "recommended_applied_inspection_iris": [],
+      "sequential_apply_recheck_candidate_iris": [],
+      "revision_summaries": [],
+      "bundle_summary": {
+        "total_revisions": 0,
+        "decision_headline": "Review 0 staged revision row(s).",
+        "apply_status_counts": {},
+        "stale_resolution_state_counts": {},
+        "changed_graph_counts": {},
+        "choose_one_groups": [],
+        "modelling_choice_summary": null,
+        "modelling_choice_rows": [],
+        "unresolved_stale_revision_iris": [],
+        "stale_handled_by_restage_revision_iris": [],
+        "ready_restage_successor_revision_iris": [],
+        "ready_restage_successor_alternative_to_applied_source_iris": [],
+        "post_apply_recheck_revision_iris": [],
+        "sequential_apply_recheck_candidate_iris": [],
+        "warnings": [],
+        "validation_failed_revision_iris": [],
+        "staged_validation_failed_revision_iris": [],
+        "recommended_review_iris": [],
+        "external_recommended_review_iris": [],
+        "recommended_mutation_review_iris": [],
+        "recommended_apply_or_restage_review_iris": [],
+        "recommended_repair_review_iris": [],
+        "recommended_applied_inspection_iris": [],
+        "review_sequence": [],
+        "next_action_queue": {},
+        "next_action_queue_items": [],
+        "next_action_queue_item_counts": {},
+        "snapshot_evidence": {
+          "complete": true,
+          "total_revision_count": 0,
+          "incomplete_revision_iris": [],
+          "status_counts": {},
+          "rows": []
+        },
+        "mutation_frontier_iris": [],
+        "requires_recheck_after_each_apply": false,
+        "semantic_risk_queue_counts": {},
+        "semantic_review_required_queue_counts": {},
+        "shared_context_graphs": [],
+        "shared_context_patch_summaries": [],
+        "fallback_revision_iris_with_shared_semantic_context": [],
+        "shared_semantic_context_warnings": []
+      },
+      "suggested_next_actions": [
+        {
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "arguments": {
+            "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "graph": "history"
+          },
+          "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+        },
+        {
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "arguments": {
+            "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "graph": "history"
+          },
+          "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')"
+        },
+        {
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "arguments": {
+            "iri": "https://example.test/enron-emails#history_initial_store_build",
+            "graph": "history"
+          },
+          "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')"
+        },
+        {
+          "action_label": "Inspect non-staged history record",
+          "tool_name": "describe_graph_revision",
+          "mcp_tool_name": "doxabase.describe_graph_revision",
+          "arguments": {
+            "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+            "graph": "history"
+          },
+          "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+          "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+        }
+      ],
+      "suggested_next_calls": [
+        "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+        "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+        "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+        "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+      ],
+      "warnings": [
+        "Recovery selection includes non-staged graph-revision history context: https://example.test/enron-emails#history_analyst_slicing_store_augmentation. It is available for inspection and snapshot evidence, but is not an apply/restage target.",
+        "Recovery selection includes non-staged graph-revision history context: https://example.test/enron-emails#history_deep_analysis_store_augmentation. It is available for inspection and snapshot evidence, but is not an apply/restage target.",
+        "Recovery selection includes non-staged graph-revision history context: https://example.test/enron-emails#history_initial_store_build. It is available for inspection and snapshot evidence, but is not an apply/restage target.",
+        "Recovery selection includes non-staged graph-revision history context: https://example.test/enron-emails#history_network_time_store_augmentation. It is available for inspection and snapshot evidence, but is not an apply/restage target."
+      ],
+      "note": "Read-only staged revision recovery plan. It did not stage, restage, apply, export, or otherwise mutate graph state."
+    },
+    "imported_recovery_session_iris": [],
+    "matching_recovery_session_iris": [],
+    "recovery_summary": {
+      "result_kind": "handoff_bundle_recovery_summary",
+      "dry_run": false,
+      "revision_count": 4,
+      "snapshot_evidence_complete": true,
+      "snapshot_evidence_status_counts": {
+        "history_plus_snapshot_rows": 4
+      },
+      "incomplete_snapshot_revision_iris": [],
+      "trig_total_imported": 5842,
+      "imported_snapshot_count": 36,
+      "skipped_snapshot_count": 0,
+      "imported_recovery_session_count": 0,
+      "matching_recovery_session_count": 0,
+      "matching_recovery_session_iris": [],
+      "recovery_plan_available": true,
+      "recovery_lane_counts": {
+        "informational": 4
+      },
+      "recovery_next_action_queue_item_counts": {
+        "informational": 4
+      },
+      "mutation_frontier_iris": [],
+      "mutation_frontier_count": 0,
+      "first_mutation_frontier_item": null,
+      "first_mutation_action": null,
+      "first_safe_review_or_mutation_action": {
+        "action_label": "Inspect non-staged history record",
+        "tool_name": "describe_graph_revision",
+        "mcp_tool_name": "doxabase.describe_graph_revision",
+        "arguments": {
+          "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "graph": "history"
+        },
+        "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+        "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+      },
+      "first_safe_review_or_mutation_call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+      "first_safe_review_or_mutation_source": "recovery_plan_suggested_next_action",
+      "profile_route_revision_count": 0,
+      "profile_route_group_count": 0,
+      "profile_route_keys": [],
+      "first_suggested_next_action": {
+        "action_label": "Start receiver-local recovery session",
+        "tool_name": "start_staged_revision_recovery_session",
+        "mcp_tool_name": "doxabase.start_staged_revision_recovery_session",
+        "arguments": {
+          "revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "https://example.test/enron-emails#history_initial_store_build",
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "current_staged_work_only": false,
+          "include_drafts": true,
+          "drift_detail": "summary",
+          "handoff_manifest_path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json",
+          "validation_scope": "all"
+        },
+        "reason": "No matching imported recovery session was found. Persist a receiver-local session for the imported manifest revisions so multi-step restage, repair, and apply work can be replanned from one stable session IRI.",
+        "call": "start_staged_revision_recovery_session(revision_iris=['https://example.test/enron-emails#history_analyst_slicing_store_augmentation', 'https://example.test/enron-emails#history_deep_analysis_store_augmentation', 'https://example.test/enron-emails#history_initial_store_build', 'https://example.test/enron-emails#history_network_time_store_augmentation'], current_staged_work_only=False, include_drafts=True, drift_detail='summary', handoff_manifest_path='/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json', validation_scope='all')"
+      },
+      "recommended_next_step": "inspect_recovery_plan",
+      "note": "All manifest revisions have history RDF and exact stored snapshot rows. recommended_next_step=inspect_recovery_plan."
+    },
+    "suggested_next_actions": [
+      {
+        "action_label": "Start receiver-local recovery session",
+        "tool_name": "start_staged_revision_recovery_session",
+        "mcp_tool_name": "doxabase.start_staged_revision_recovery_session",
+        "arguments": {
+          "revision_iris": [
+            "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+            "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+            "https://example.test/enron-emails#history_initial_store_build",
+            "https://example.test/enron-emails#history_network_time_store_augmentation"
+          ],
+          "current_staged_work_only": false,
+          "include_drafts": true,
+          "drift_detail": "summary",
+          "handoff_manifest_path": "/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json",
+          "validation_scope": "all"
+        },
+        "reason": "No matching imported recovery session was found. Persist a receiver-local session for the imported manifest revisions so multi-step restage, repair, and apply work can be replanned from one stable session IRI.",
+        "call": "start_staged_revision_recovery_session(revision_iris=['https://example.test/enron-emails#history_analyst_slicing_store_augmentation', 'https://example.test/enron-emails#history_deep_analysis_store_augmentation', 'https://example.test/enron-emails#history_initial_store_build', 'https://example.test/enron-emails#history_network_time_store_augmentation'], current_staged_work_only=False, include_drafts=True, drift_detail='summary', handoff_manifest_path='/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json', validation_scope='all')"
+      },
+      {
+        "action_label": "Inspect non-staged history record",
+        "tool_name": "describe_graph_revision",
+        "mcp_tool_name": "doxabase.describe_graph_revision",
+        "arguments": {
+          "iri": "https://example.test/enron-emails#history_analyst_slicing_store_augmentation",
+          "graph": "history"
+        },
+        "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+        "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')"
+      },
+      {
+        "action_label": "Inspect non-staged history record",
+        "tool_name": "describe_graph_revision",
+        "mcp_tool_name": "doxabase.describe_graph_revision",
+        "arguments": {
+          "iri": "https://example.test/enron-emails#history_deep_analysis_store_augmentation",
+          "graph": "history"
+        },
+        "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+        "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')"
+      },
+      {
+        "action_label": "Inspect non-staged history record",
+        "tool_name": "describe_graph_revision",
+        "mcp_tool_name": "doxabase.describe_graph_revision",
+        "arguments": {
+          "iri": "https://example.test/enron-emails#history_initial_store_build",
+          "graph": "history"
+        },
+        "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+        "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')"
+      },
+      {
+        "action_label": "Inspect non-staged history record",
+        "tool_name": "describe_graph_revision",
+        "mcp_tool_name": "doxabase.describe_graph_revision",
+        "arguments": {
+          "iri": "https://example.test/enron-emails#history_network_time_store_augmentation",
+          "graph": "history"
+        },
+        "reason": "This explicit recovery input is ordinary graph-revision history or snapshot context, not a staged patch. Inspect it as history instead of applying or restaging it.",
+        "call": "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+      }
+    ],
+    "suggested_next_calls": [
+      "start_staged_revision_recovery_session(revision_iris=['https://example.test/enron-emails#history_analyst_slicing_store_augmentation', 'https://example.test/enron-emails#history_deep_analysis_store_augmentation', 'https://example.test/enron-emails#history_initial_store_build', 'https://example.test/enron-emails#history_network_time_store_augmentation'], current_staged_work_only=False, include_drafts=True, drift_detail='summary', handoff_manifest_path='/tmp/doxabase-enron-clean.pClwOo/enron_knowledge_store_handoff_manifest.json', validation_scope='all')",
+      "describe_graph_revision(iri='https://example.test/enron-emails#history_analyst_slicing_store_augmentation', graph='history')",
+      "describe_graph_revision(iri='https://example.test/enron-emails#history_deep_analysis_store_augmentation', graph='history')",
+      "describe_graph_revision(iri='https://example.test/enron-emails#history_initial_store_build', graph='history')",
+      "describe_graph_revision(iri='https://example.test/enron-emails#history_network_time_store_augmentation', graph='history')"
+    ],
+    "warnings": [
+      "Handoff bundle manifest is scanner-clean only unless sensitive_literal_count is nonzero; shareability review is still required before sharing artifacts beyond the intended receiver."
+    ],
+    "artifact_kind": "handoff_bundle_import",
+    "recovery_complete": true
+  },
+  "validation": {
+    "conforms": true,
+    "report_text": "Validation Report\nConforms: True\n",
+    "result_count": 0,
+    "scope": "all",
+    "results": []
+  },
+  "key_counts": {
+    "datasets": 4,
+    "tables": 4,
+    "columns": 60,
+    "observations": 112,
+    "claims": 22,
+    "patterns": 19,
+    "evidence": 58,
+    "source_spans": 0,
+    "graph_revisions": 4,
+    "graph_patches": 0,
+    "graph_snapshots": 36,
+    "storage_accesses": 1,
+    "shapes": 40
+  },
+  "readiness": {
+    "ready_for_query_planning": 4
+  },
+  "eml_messages": {
+    "columns": 25,
+    "caveats": 16,
+    "relationships": 2,
+    "profile_candidates": 1
+  }
+}
