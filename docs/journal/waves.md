@@ -626,3 +626,19 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Study lesson: inherited story incidentals need verification —
   date-stamp specifics or mark descriptions generic.
 - No repo code changes; study capsule conforms (45 patterns, M1-M11).
+
+## Wave 35 — 2026-07-11 — Session 12 lands: the threshold survey
+
+- M11 validation survey recorded: docs/journal/trials/
+  2026-07-ais-session-12.md; plots in docs/journal/ais-study/plots-s12/.
+  Verdict: keep the tuned thresholds (empirical valley ~20m matches);
+  revise the doctrine's shape expectation (one dominant mode + long
+  tail, not two humps); class dependence as the expert predicted;
+  mooring-buoy geometry-only classification generalizes at n=931.
+- NEW failure mode: 10.1% of stopped windows position-suspect, incl.
+  frozen-longitude/drifting-latitude smooth artifacts invisible to
+  jump heuristics; index distance_m formula question escalated to
+  James (his builder).
+- Survey cache work/m11_survey.parquet (4,710 windows) + recorded
+  full-survey SQL = the deterministic-pipeline pattern in action.
+- No repo code changes; study capsule conforms.
