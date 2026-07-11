@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DoxaBase capsule report — capsule.sqlite</title>
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --hairline: #e1e0d9; --accent: #2a78d6;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --hairline: #2c2c2a; --accent: #3987e5;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+h1 { font-size: 22px; margin: 8px 0 2px; }
+h2 { font-size: 16px; margin: 36px 0 10px; border-bottom: 1px solid var(--hairline);
+     padding-bottom: 6px; }
+h3 { font-size: 14px; margin: 18px 0 6px; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.banner { background: var(--surface); border: 1px solid var(--warning);
+          border-radius: 8px; padding: 10px 14px; margin: 16px 0; font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+         gap: 10px; margin: 14px 0; }
+.tile { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; padding: 10px 12px; }
+.tile .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.tile .l { color: var(--ink-2); font-size: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px;
+        background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 8px; overflow: hidden; }
+th { text-align: left; color: var(--ink-2); font-weight: 600; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--hairline);
+         vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.wrap { overflow-x: auto; }
+.card { background: var(--surface); border: 1px solid var(--hairline);
+        border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+.iri { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px;
+       word-break: break-all; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 9px;
+         font-size: 11.5px; font-weight: 600; border: 1.5px solid; }
+.badge.minor    { border-color: var(--good);    color: var(--good); }
+.badge.moderate { border-color: var(--serious); color: var(--serious); }
+.badge.severe   { border-color: var(--critical); color: var(--critical); }
+.badge.neutral  { border-color: var(--muted);   color: var(--ink-2); }
+.gate { border-left: 3px solid var(--critical); padding: 6px 12px; margin: 8px 0;
+        background: var(--surface); border-radius: 0 8px 8px 0; font-size: 13px; }
+.gate.none { border-left-color: var(--warning); }
+.ok { color: var(--good); font-weight: 600; }
+.pattern-links { color: var(--ink-2); font-size: 12.5px; margin: 4px 0 0 0; }
+footer { margin-top: 44px; color: var(--muted); font-size: 12px;
+         border-top: 1px solid var(--hairline); padding-top: 10px; }
+details > summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+</style></head>
+<body><main>
+<h1>Capsule report — capsule.sqlite</h1>
+<div class="sub">generated 2026-07-11 00:49 UTC · SHACL: <span class="ok">conforms</span> · sensitive scan: scanner-clean</div>
+<div class="banner">&#9888; <strong>Local-only pending shareability review.</strong>
+This report reproduces graph literals faithfully. A clean sensitive-literal scan
+is a review prompt, not export approval — review before sharing.</div>
+
+<h2>At a glance</h2>
+<div class="tiles"><div class="tile"><div class="n">7</div><div class="l">datasets</div></div><div class="tile"><div class="n">49</div><div class="l">columns</div></div><div class="tile"><div class="n">130</div><div class="l">observations</div></div><div class="tile"><div class="n">93</div><div class="l">claims</div></div><div class="tile"><div class="n">45</div><div class="l">patterns</div></div><div class="tile"><div class="n">147</div><div class="l">evidence</div></div><div class="tile"><div class="n">12</div><div class="l">revisions</div></div><div class="tile"><div class="n">0</div><div class="l">analysis packets</div></div></div>
+<div class="sub">graphs: base_ontology 1527 · base_shapes 1540 · evidence 670 · history 754 · map 755 · observations 1503 · ontology 226 · patterns 591</div>
+
+<h2>Gates</h2>
+<div class="ok">No gates — nothing is blocked.</div>
+
+<h2>Queues</h2>
+<div class="wrap"><table><tr><th>queue</th><th style="width:70px">count</th><th>example</th></tr><tr><td>analysis view review</td><td>5</td><td class='iri'>https://ais.study/view/year-boundary-identity-changes</td></tr><tr><td>query plan handoff</td><td>2</td><td class='iri'>https://ais.study/dataset/broadcasts</td></tr></table></div>
+
+<h2>Datasets (7)</h2>
+<div class="card">
+<h3>AIS broadcasts (per-message) <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/dataset/broadcasts</div>
+<div class="sub">storage: S3-compatible object storage · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>21 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>base_date_time</td><td>VARCHAR</td><td>—</td></tr><tr><td>call_sign</td><td>VARCHAR</td><td>—</td></tr><tr><td>cargo</td><td>INTEGER</td><td>—</td></tr><tr><td>cog</td><td>DOUBLE</td><td>—</td></tr><tr><td>date</td><td>DATE</td><td>—</td></tr><tr><td>draft</td><td>DOUBLE</td><td>—</td></tr><tr><td>geometry</td><td>—</td><td>—</td></tr><tr><td>h3_res15</td><td>UBIGINT</td><td>—</td></tr><tr><td>heading</td><td>DOUBLE</td><td>—</td></tr><tr><td>imo</td><td>VARCHAR</td><td>—</td></tr><tr><td>latitude</td><td>DOUBLE</td><td>—</td></tr><tr><td>length</td><td>DOUBLE</td><td>—</td></tr><tr><td>longitude</td><td>DOUBLE</td><td>—</td></tr><tr><td>mmsi</td><td>INTEGER</td><td>—</td></tr><tr><td>sog</td><td>DOUBLE</td><td>—</td></tr><tr><td>status</td><td>INTEGER</td><td>—</td></tr><tr><td>timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>—</td></tr><tr><td>transceiver</td><td>VARCHAR</td><td>—</td></tr><tr><td>vessel_name</td><td>VARCHAR</td><td>—</td></tr><tr><td>vessel_type</td><td>INTEGER</td><td>—</td></tr><tr><td>width</td><td>DOUBLE</td><td>—</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>sog=102.3, cog=360, heading=511 are AIS &#x27;not available&#x27; sentinels, present in broadcasts and propagated into index sog_max/sog_mean aggregates. Filter them before computing speed statistics.<div class='sub'>Impact: Unfiltered sog_max=102.3 rows look like impossible 102-knot sprints.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Static identity (names, IMO, dims) is near-frozen per file-year in BOTH the index and the raw broadcasts: 2,736/2,738 index name transitions land exactly on Jan 1, and raw broadcasts flip renames at the year boundary even when the true rename happened mid-year (311050400). Upstream mechanism unconfirmed; one vessel (369914086) shows a surviving mid-year toggle, so it is not an absolute annual snapshot. Treat within-year identity timing from this feed as unreliable; date real renames behaviourally (gaps, draft, movement).<div class='sub'>Impact: Mid-year identity changes are invisible or displaced to Jan 1; year-boundary diffs overstate simultaneity of changes.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Despite the VARCHAR[]/DOUBLE[] schema, vessel_names, imos, call_signs, vessel_types, lengths and widths never contain more than one element per (mmsi,date) row: the upstream feed carries one static-identity record per MMSI per day. Only drafts (max 6), cargos (max 5), transceiver_classes (max 2) and status_codes (max 8) genuinely vary within a day. Consequences: same-day identity flips cannot exist in this data; identity-change detection operates at day granularity; an empty list means the field was not broadcast that day.<div class='sub'>Impact: Methods that expect intraday name/IMO conflicts will find none by construction - not because vessels behave.</div></td></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Some individual AIS broadcast messages report a draft value that differs from every neighbouring message that day (and from the day before/after), with no sustained run of messages at the new value -- a single-message transmission/decoding glitch, not a physical draft change. The daily index&#x27;s `drafts` list stores distinct values seen that UTC day, and M4 (and the M7 track-state/draft-context views) both read the day&#x27;s FIRST value as &#x27;the&#x27; day&#x27;s draft; if the glitched message happens to be the day&#x27;s first, it manufactures a spurious load/discharge event. Confirmed on MMSI 235076282 (EAGLE HALIFAX): 2024-01-21&#x27;s first message (00:01:08Z) read draft=8.7 while every other message that day and the day before/after read 11.2 -- a fake 2.5 m &#x27;discharge&#x27; with no physical basis. A second superficially similar case for the same vessel (2024-03-11, draft-&gt;8.5m) was checked and found genuine: 30+ consecutive messages sustained the new value with status=3. Distinct from caveat/m4-draft-quality (voluntary/quantized/frozen values) and caveat/m4-draft-update-lag (position smearing) -- this is a single-reading transmission artifact, not a data-entry or timing issue.<div class='sub'>Impact: An isolated M4/M7 draft event -- especially one with no multi-message corroboration, or one where the value reverts the very next day -- may be a transmission glitch rather than a real cargo/ballast operation; spot-check the underlying broadcast messages before trusting a single event, particularly for anomaly-hunting or per-event claims (aggregate terminal/cycle statistics over many events are far less affected).</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Raw AIS separates positional reports (Messages 1/2/3 for Class A; Message 18 for Class B, sent every few seconds while underway) from static/voyage data (Message 5, Class A only, sent roughly every 6 minutes) -- confirmed distinct message types per USCG NAVCEN documentation (MarineCadastre &#x27;Other AIS Resources&#x27;). This flat per-broadcast-point product (the 2015-onward CSV/parquet convention; 2009-2015 data was instead normalized across three related tables per the AIS FAQ) presents both message families as columns on one row: static fields (vessel_name, imo, call_sign, length, width, draft, cargo) are carried forward onto positional rows rather than reflecting an actual Message-5 transmission at that row&#x27;s own timestamp. Expect: static fields to lag or lead the true moment they changed; and prefer message-tagged/raw NMEA data over this feed for forensics-grade static/positional joins (expert tradecraft note).<div class='sub'>Impact: Row-level static fields (name/IMO/dims/draft/cargo) are &#x27;last known&#x27;, not &#x27;as-of this exact position fix&#x27;; treating them as synchronized with the row&#x27;s timestamp overstates precision, especially for identity-change and draft-event timing.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both broadcasts/ and index/ have no file for 2024-08-26 (730 files each instead of 731 for 2024-01-01..2025-12-31). Any per-day time series or gap analysis must treat that day as no-coverage, not vessel silence. Evidence: observation &#x27;coverage-gap-2024-08-26&#x27; in the observations graph.<div class='sub'>Impact: Vessel &#x27;gaps&#x27; spanning 2024-08-26 are partly or wholly a data outage; day-count denominators over 2024 must use 365 observed days, not 366.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Some vessel_name values are wrapped in literal double quotes (CSV-escape residue upstream), and the same hull can alternate between quoted and unquoted forms across days. Strip double quotes and trim whitespace (e.g. trim(replace(name,&#x27;&quot;&#x27;,&#x27;&#x27;))) before any distinct-count, join, or rename detection on names.<div class='sub'>Impact: Unnormalized name comparisons manufacture fake renames/conflicts; the worst &#x27;identity flipper&#x27; in the data is pure quoting noise.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Normalize before any cross-year identity or dimension comparison: treat imo=&#x27;IMO0000000&#x27;, vessel_type=0, length=0, width=0, draft=0 (2024 style) as equivalent to NULL/empty (2025 style). Otherwise every placeholder vessel appears to &#x27;lose&#x27; its IMO/type/dims at 2025-01-01.<div class='sub'>Impact: 42% of 2024 index rows carry IMO0000000; unnormalized cross-year diffs generate ~50k fake identity-change events at the boundary.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>vessel_name, imo, call_sign, vessel_type, length, width, draft (and mmsi itself) are typed into the transponder by the operator. Expect: multiple names per MMSI per day (index lists), IMO0000000 placeholders, cloned/shared MMSIs, and dimension/draft values that change without physical cause. Treat identity as a time-varying claim, never a key.<div class='sub'>Impact: Joining on vessel_name or trusting a single day&#x27;s identity fields silently merges or splits vessels.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Sampling one day per year via read_parquet(&#x27;s3://ais-noaa/broadcasts/*/*.parquet&#x27;): heading=511 appears in 3,943,345 rows on 2024-03-15 and 0 rows on 2025-03-15 (which instead has 3,983,560 true NULL headings); cog=360 appears in 1,204,379 rows on 2024-03-15 and 0 rows on 2025-03-15 (1,387,273 NULLs instead). sog=102.3 appears in BOTH years (15,804 in 2024; 19,767 in 2025) and sog is never NULL in either year. This matches the NOAA data dictionary&#x27;s 2025-present schema explicitly marking heading/cog/sog nullable (&#x27;Null Allowed: Y&#x27;) where the 2018-2024 dictionary page has no equivalent column -- but only heading and cog actually changed encoding in the real feed; sog kept its literal 102.3 sentinel in both years. Treat heading=511 / cog=360 as 2024-only &#x27;not available&#x27; encodings and NULL as the 2025+ encoding for those two fields specifically; continue to treat sog=102.3 as the sentinel in both years. This is the same-shaped bug as caveat/placeholder-encoding-shift-2025 (which covers imo/vessel_type/length/width/draft) but for the positional-quality fields heading/cog, and caveat/ais-sentinel-values does not currently warn of the asymmetry or the year dependency.<div class='sub'>Impact: A query that only checks for the numeric sentinel (511/360) will silently miss all &#x27;not available&#x27; heading/cog rows in 2025+; a query that only checks IS NULL will miss all of them in 2024. sog is not affected by this specific issue.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>broadcasts.timestamp = base_date_time parsed as Central European time: subtract-shifted by 1h (winter) / 2h (EU summer) from true UTC, with flips at EU DST switch dates. Column affected: broadcasts.timestamp; index first_timestamp/last_timestamp inherit it. base_date_time (string, true UTC, spans exactly the file&#x27;s named day) is authoritative. Within-day deltas are unaffected except on the two EU switch days; cross-day and absolute-time work (e.g. rendezvous timing, gap edges) must use base_date_time or correct the offset.<div class='sub'>Impact: Absolute event times are off by 1-2 hours season-dependently; naive UTC treatment misdates events near midnight and across DST switches.</div></td></tr></table></div>
+</div><div class="card">
+<h3>AIS daily index (per-MMSI per-day summary) <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/dataset/daily-index</div>
+<div class="sub">storage: S3-compatible object storage · layout: Parquet · verification: VerifiedByQueryLayout</div>
+<details><summary>28 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr><tr><td>call_signs</td><td>VARCHAR[]</td><td>—</td></tr><tr><td>cargos</td><td>INTEGER[]</td><td>—</td></tr><tr><td>centroid_lat</td><td>DOUBLE</td><td>—</td></tr><tr><td>centroid_lon</td><td>DOUBLE</td><td>—</td></tr><tr><td>date</td><td>DATE</td><td>—</td></tr><tr><td>distance_m</td><td>DOUBLE</td><td>—</td></tr><tr><td>drafts</td><td>DOUBLE[]</td><td>—</td></tr><tr><td>duration_s</td><td>DOUBLE</td><td>—</td></tr><tr><td>first_timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>—</td></tr><tr><td>h3_cell_count</td><td>BIGINT</td><td>—</td></tr><tr><td>imos</td><td>VARCHAR[]</td><td>—</td></tr><tr><td>last_timestamp</td><td>TIMESTAMP WITH TIME ZONE</td><td>—</td></tr><tr><td>lengths</td><td>DOUBLE[]</td><td>—</td></tr><tr><td>max_inter_msg_speed_ms</td><td>DOUBLE</td><td>—</td></tr><tr><td>max_lat</td><td>DOUBLE</td><td>—</td></tr><tr><td>max_lon</td><td>DOUBLE</td><td>—</td></tr><tr><td>message_count</td><td>BIGINT</td><td>—</td></tr><tr><td>min_lat</td><td>DOUBLE</td><td>—</td></tr><tr><td>min_lon</td><td>DOUBLE</td><td>—</td></tr><tr><td>mmsi</td><td>INTEGER</td><td>—</td></tr><tr><td>sog_max</td><td>DOUBLE</td><td>—</td></tr><tr><td>sog_mean</td><td>DOUBLE</td><td>—</td></tr><tr><td>sog_min</td><td>DOUBLE</td><td>—</td></tr><tr><td>status_codes</td><td>INTEGER[]</td><td>—</td></tr><tr><td>transceiver_classes</td><td>VARCHAR[]</td><td>—</td></tr><tr><td>vessel_names</td><td>VARCHAR[]</td><td>—</td></tr><tr><td>vessel_types</td><td>INTEGER[]</td><td>—</td></tr><tr><td>widths</td><td>DOUBLE[]</td><td>—</td></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>sog=102.3, cog=360, heading=511 are AIS &#x27;not available&#x27; sentinels, present in broadcasts and propagated into index sog_max/sog_mean aggregates. Filter them before computing speed statistics.<div class='sub'>Impact: Unfiltered sog_max=102.3 rows look like impossible 102-knot sprints.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Static identity (names, IMO, dims) is near-frozen per file-year in BOTH the index and the raw broadcasts: 2,736/2,738 index name transitions land exactly on Jan 1, and raw broadcasts flip renames at the year boundary even when the true rename happened mid-year (311050400). Upstream mechanism unconfirmed; one vessel (369914086) shows a surviving mid-year toggle, so it is not an absolute annual snapshot. Treat within-year identity timing from this feed as unreliable; date real renames behaviourally (gaps, draft, movement).<div class='sub'>Impact: Mid-year identity changes are invisible or displaced to Jan 1; year-boundary diffs overstate simultaneity of changes.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Despite the VARCHAR[]/DOUBLE[] schema, vessel_names, imos, call_signs, vessel_types, lengths and widths never contain more than one element per (mmsi,date) row: the upstream feed carries one static-identity record per MMSI per day. Only drafts (max 6), cargos (max 5), transceiver_classes (max 2) and status_codes (max 8) genuinely vary within a day. Consequences: same-day identity flips cannot exist in this data; identity-change detection operates at day granularity; an empty list means the field was not broadcast that day.<div class='sub'>Impact: Methods that expect intraday name/IMO conflicts will find none by construction - not because vessels behave.</div></td></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>Some individual AIS broadcast messages report a draft value that differs from every neighbouring message that day (and from the day before/after), with no sustained run of messages at the new value -- a single-message transmission/decoding glitch, not a physical draft change. The daily index&#x27;s `drafts` list stores distinct values seen that UTC day, and M4 (and the M7 track-state/draft-context views) both read the day&#x27;s FIRST value as &#x27;the&#x27; day&#x27;s draft; if the glitched message happens to be the day&#x27;s first, it manufactures a spurious load/discharge event. Confirmed on MMSI 235076282 (EAGLE HALIFAX): 2024-01-21&#x27;s first message (00:01:08Z) read draft=8.7 while every other message that day and the day before/after read 11.2 -- a fake 2.5 m &#x27;discharge&#x27; with no physical basis. A second superficially similar case for the same vessel (2024-03-11, draft-&gt;8.5m) was checked and found genuine: 30+ consecutive messages sustained the new value with status=3. Distinct from caveat/m4-draft-quality (voluntary/quantized/frozen values) and caveat/m4-draft-update-lag (position smearing) -- this is a single-reading transmission artifact, not a data-entry or timing issue.<div class='sub'>Impact: An isolated M4/M7 draft event -- especially one with no multi-message corroboration, or one where the value reverts the very next day -- may be a transmission glitch rather than a real cargo/ballast operation; spot-check the underlying broadcast messages before trusting a single event, particularly for anomaly-hunting or per-event claims (aggregate terminal/cycle statistics over many events are far less affected).</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Both broadcasts/ and index/ have no file for 2024-08-26 (730 files each instead of 731 for 2024-01-01..2025-12-31). Any per-day time series or gap analysis must treat that day as no-coverage, not vessel silence. Evidence: observation &#x27;coverage-gap-2024-08-26&#x27; in the observations graph.<div class='sub'>Impact: Vessel &#x27;gaps&#x27; spanning 2024-08-26 are partly or wholly a data outage; day-count denominators over 2024 must use 365 observed days, not 366.</div></td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Some vessel_name values are wrapped in literal double quotes (CSV-escape residue upstream), and the same hull can alternate between quoted and unquoted forms across days. Strip double quotes and trim whitespace (e.g. trim(replace(name,&#x27;&quot;&#x27;,&#x27;&#x27;))) before any distinct-count, join, or rename detection on names.<div class='sub'>Impact: Unnormalized name comparisons manufacture fake renames/conflicts; the worst &#x27;identity flipper&#x27; in the data is pure quoting noise.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Normalize before any cross-year identity or dimension comparison: treat imo=&#x27;IMO0000000&#x27;, vessel_type=0, length=0, width=0, draft=0 (2024 style) as equivalent to NULL/empty (2025 style). Otherwise every placeholder vessel appears to &#x27;lose&#x27; its IMO/type/dims at 2025-01-01.<div class='sub'>Impact: 42% of 2024 index rows carry IMO0000000; unnormalized cross-year diffs generate ~50k fake identity-change events at the boundary.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>vessel_name, imo, call_sign, vessel_type, length, width, draft (and mmsi itself) are typed into the transponder by the operator. Expect: multiple names per MMSI per day (index lists), IMO0000000 placeholders, cloned/shared MMSIs, and dimension/draft values that change without physical cause. Treat identity as a time-varying claim, never a key.<div class='sub'>Impact: Joining on vessel_name or trusting a single day&#x27;s identity fields silently merges or splits vessels.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>broadcasts.timestamp = base_date_time parsed as Central European time: subtract-shifted by 1h (winter) / 2h (EU summer) from true UTC, with flips at EU DST switch dates. Column affected: broadcasts.timestamp; index first_timestamp/last_timestamp inherit it. base_date_time (string, true UTC, spans exactly the file&#x27;s named day) is authoritative. Within-day deltas are unaffected except on the two EU switch days; cross-day and absolute-time work (e.g. rendezvous timing, gap edges) must use base_date_time or correct the offset.<div class='sub'>Impact: Absolute event times are off by 1-2 hours season-dependently; naive UTC treatment misdates events near midnight and across DST switches.</div></td></tr></table></div>
+</div><div class="card">
+<h3>M1: year-boundary identity-change classifier <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/view/year-boundary-identity-changes</div>
+<div class="sub">storage: — · layout: — · verification: not recorded</div>
+<details><summary>0 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>The view nullifies IMO0000000, vessel_type=0, and length/width=0 before comparing years (see caveat/placeholder-encoding-shift-2025) and strips literal quotes from names (see caveat/name-quoting-artifact). Removing these steps floods the classifier with tens of thousands of fake identity-loss events at 2025-01-01.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The spelling-variant test (substring containment, levenshtein&lt;=2, jaro-winkler&gt;=0.88) will merge fleet units with serial names (e.g. &#x27;OSG 243&#x27; vs &#x27;OSG 244&#x27;, &#x27;HULL 1&#x27; vs &#x27;HULL 2&#x27;) and very short names, misclassifying a real MMSI handover between sister vessels as the same hull. Conversely, drastic legitimate renames with a constant call sign are classified rename_same_hull only if the call sign or IMO actually repeats - vessels broadcasting neither will land in ambiguous_name_change.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Because this feed canonicalizes identity annually (see caveat/identity-year-constant), M1 cannot say WHEN within the window a rename or reassignment happened - only that the 2024 identity differs from the 2025 identity. Combine with behavioural evidence (lay-up windows, dark gaps around the boundary) to narrow the true date, as done for MMSI 311050400.</td></tr></table></div>
+</div><div class="card">
+<h3>M2: multi-emitter / shared-MMSI detector <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/view/multi-emitter-mmsis</div>
+<div class="sub">storage: — · layout: — · verification: not recorded</div>
+<details><summary>0 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>The index-level detector proves &#x27;more than one emitter&#x27; (or &#x27;bad GPS&#x27;) per MMSI but says nothing about how many emitters or where they are. Follow up per flagged MMSI with broadcast-level position clustering (GROUP BY round(latitude,1), round(longitude,1) plus transceiver class), as demonstrated for 367373000.</td></tr><tr><td><span class="badge minor">&#9679; Minor</span></td><td>max_inter_msg_speed_ms is computed from the parsed timestamp column, which jumps by one hour on EU DST switch days (2024-03-31, 2024-10-27, 2025-03-30, 2025-10-26) due to the CET parse bug (caveat/timestamp-cet-parse-bug). Single-day conflicts on exactly those dates are suspect; the persistence requirement (&gt;=10 days) makes the per-MMSI classification robust to them.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Thresholds (conflict on &gt;=30% of active days, median conflict-day span &gt;=1.0 deg, &gt;=10 conflict days, message_count&gt;=20) were tuned on extreme cases; 4,180 MMSIs land in mixed_or_unclear and need per-case review. Fast vessels with flaky GPS can cross the span threshold (false multi-emitter); emitters with &lt;20 messages/day or &lt;10 conflict days are never flagged (false clean). The 0.5-1.0 deg span band is deliberately unclassified.</td></tr></table></div>
+</div><div class="card">
+<h3>M3: silence-gap segmentation (in-place / coverage-exit / implausible) <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/view/silence-gap-events</div>
+<div class="sub">storage: — · layout: — · verification: not recorded</div>
+<details><summary>0 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>The index stores per-day centroids only; a vessel that moved a lot on its last active day has a centroid biased away from its true last position (up to ~half the day&#x27;s track). Displacements are therefore +-100 km fuzzy for fast movers; use broadcast last/first fixes (via base_date_time, not the buggy timestamp) when a gap matters. Gap-day counts also subtract the 2024-08-26 feed outage.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Leisure and small commercial craft power their transponders on only when used; their gap distribution says nothing about behaviour of interest. The view exposes duty (active_days/span_days) so consumers can filter (duty &gt;= 0.85 recommended) or baseline per vessel; do not run anomaly triage on low-duty MMSIs.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>M3 classifies coverage_exit_voyage purely by point-to-point centroid displacement (&gt;=300 km at plausible speed), with no reference to where the receiver network actually is. Cross-referencing M3 output against the AIS Base Stations receiver map (AISBaseStation.gpkg, 290 stations) shows two concrete failure directions. (1) Over-calling: MMSI 100000000&#x27;s repeated ~400-436 km Gulf-coast gaps (Mississippi River mouth to Pensacola/Panama City FL) have BOTH endpoints only 19-22 nm from the nearest NAIS station -- well inside the ~40-50 nm coverage envelope (caveat/m3-silence-is-not-dark) -- yet score coverage_exit_voyage purely because the coastline transit exceeds 300 km. (2) Under-calling: a cluster of short/malformed-MMSI records (mmsi 211, 407, 527, 621-634, 809-832 among others) shows repeated 135-298 km gaps with BOTH endpoints already 270-360 nm from the nearest station (open North Atlantic east of Georges Bank) -- already outside the envelope on both ends -- yet these score local_gap because displacement stays under 300 km. The GOLDEN BEAR worked example (claim e9d46474) is a case where the rule happens to work because its endpoints (Guam, Strait of Juan de Fuca) are both near-coast/near-station. A geometry-aware version would check each gap endpoint&#x27;s (or the straight-line path&#x27;s) distance to the nearest receiver rather than relying on raw endpoint-to-endpoint displacement.<div class='sub'>Impact: coverage_exit_voyage should not be read as &#x27;left the network&#x27; without checking the endpoints against the receiver map first -- some long coastal transits (over-called) never left coverage and their silence is unexplained; some already-far-offshore small-displacement gaps (under-called) are filed as undifferentiated local_gap when they are, in fact, ordinary coverage loss that could be reclassified with more confidence than the local_gap bucket implies.</div></td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>This is a terrestrial-receiver feed covering US coasts plus Alaska, Hawaii, Guam and Puerto Rico. A vessel sailing beyond receiver range goes silent with its transponder on; most large-displacement gaps are ocean transits (coverage_exit_voyage), not dark activity. True AIS-off detection at sea is impossible from this data alone; silent_in_place events at a berth are usually routine power-downs. Treat gap classes as descriptive segmentation, and only escalate residual anomalies (e.g. implausible_jump, or in-coverage displacements inconsistent with the vessel&#x27;s habits).</td></tr></table></div>
+</div><div class="card">
+<h3>M4: draft-change load/discharge events (tankers) <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/view/draft-change-events</div>
+<div class="sub">storage: — · layout: — · verification: not recorded</div>
+<details><summary>0 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Draft is the least-maintained AIS field: many vessels never update it (no events != no cargo activity); values are quantized to 0.1 m and capped at 25.5 m; 2024 placeholder zeros must be excluded (drafts[1] &gt; 0 is in the view); some crews set draft once per charter. Day granularity also merges same-day load+discharge (drafts list can hold up to 6 values/day - the view uses the day&#x27;s first value only). Validated on tankers (type 80-89); passenger/tug drafts change for non-cargo reasons.</td></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Draft is typed in manually, often hours after departure or before arrival, so a load/discharge event&#x27;s recorded position can lie along the transit lane rather than at the terminal (PEGASUS VOYAGER shows loading events strung offshore along the SoCal departure lane). The dominant location cluster still identifies the terminal; use modal clusters over many cycles, not single events, and prefer the previous-day centroid when the change-day shows high movement.</td></tr></table></div>
+</div><div class="card">
+<h3>M5: persistent co-movement pair detector <span class='badge neutral'>table</span></h3>
+<div class="iri">https://ais.study/view/co-movement-pairs</div>
+<div class="sub">storage: — · layout: — · verification: not recorded</div>
+<details><summary>0 column(s)</summary><div class="wrap"><table>
+<tr><th>column</th><th>physical</th><th>value type</th></tr></table></div></details>
+<div class="wrap"><table><tr><th style="width:110px">severity</th><th>caveat</th></tr><tr><td><span class="badge moderate">&#9679; Moderate</span></td><td>Day-granularity centroids cannot see brief rendezvous (hours) - only pairs that spend much of a day together score; separate vessels following the same river/channel on the same days also pass the test (shared constrained waterway, not a tie). Broadcast-level confirmation (positions within a few hundred metres over consecutive hours, matched SOG) is required before asserting an operational relationship. The 3x3 neighbor-cell join avoids grid-edge misses, and message_count&gt;=50/distance&gt;20 km filters low-signal days, but sparse Class B pairs can still be missed.</td></tr><tr><td><span class="badge severe">&#9679; Severe</span></td><td>Harbor tugs, pilot boats, and ferries of one port move &gt;20 km/day inside the same 3 km area every day and satisfy the closeness test without any operational tie; scheduled ferries on the same route co-locate by timetable. The mobility_km column (spread of the pair&#x27;s daily midpoints) is the discriminator: true traveling pairs (convoys, tug+barge, project fleets) have mobility &gt;=100 km; harbor cliques have mobility near zero. Without the mobility filter the top of the list is dominated by same-port fleets and pair-day counts are meaningless.</td></tr></table></div>
+</div>
+
+<h2>Patterns</h2>
+<div class="card"><h3>M1 method: classify year-boundary identity changes by corroboration (spelling variant vs rename vs MMSI reassignment).</h3>
+<div class="iri">https://ais.study/pattern/method-m1-identity-change-classifier</div>
+<div>WHAT IT DETECTS: for each MMSI active in both 2024 and 2025, whether its identity change across the year boundary is (a) upstream spelling re-canonicalization of the same hull, (b) a genuine rename of the same hull, or (c) a different physical vessel taking over the MMSI. WHY IT WORKS: this feed freezes identity per year, so the boundary is the only place identity can change; and the corroborating fields fail independently - a rename keeps call sign/IMO/dimensions, while a reassignment changes them together. Name similarity (containment, levenshtein&lt;=2, jaro-winkler&gt;=0.88) absorbs the upstream re-canonicalization noise before corroboration is consulted. HOW TO APPLY: run the SQL on view year-boundary-identity-changes; triage suspected_mmsi_reassignment (169 rows) and rename_same_hull (1,288) by activity days; treat ambiguous_name_change as a review queue, not a result.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/year-boundary-identity-changes</div>
+</div><div class="card"><h3>M2 method: detect shared/cloned MMSIs by persistent impossible speeds with wide geographic span; separate GPS jitter by span.</h3>
+<div class="iri">https://ais.study/pattern/method-m2-multi-emitter-detector</div>
+<div>WHAT IT DETECTS: MMSIs carried by more than one physical transmitter at the same time (cloned, misprogrammed, default, or infrastructure MMSIs), using only the cheap index layer. WHY IT WORKS: two simultaneous emitters produce inter-fix jumps between their locations, so max_inter_msg_speed_ms is impossibly high on essentially EVERY shared day (persistence), and the daily bounding box stays wide (separation). A single vessel with a broken GPS also produces impossible speeds but inside a tight box - so median conflict-day span &gt;= 1 deg splits the two. HOW TO APPLY: run the view SQL; multi_emitter rows are near-certain shared MMSIs (top ranks confirmed by broadcast clustering); follow up each hit with broadcast-level position clustering + transceiver class to enumerate the emitters. Round-number MMSIs (X00000000, 338000000) deserve a strong prior of being shared defaults.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/multi-emitter-mmsis</div>
+</div><div class="card"><h3>M3 method: segment per-vessel silences into in-place power-downs, coverage-exit voyages, and implausible jumps, using outage-corrected gaps and centroid displacement.</h3>
+<div class="iri">https://ais.study/pattern/method-m3-silence-gap-segmentation</div>
+<div>WHAT IT DETECTS: every multi-day silence per MMSI, classified by what the vessel did while unheard: silent_in_place (berth power-down / lay-up), coverage_exit_voyage (sailed beyond the terrestrial network: ocean transit or foreign call), implausible_jump (&gt;30 kn implied: clone or data fault), local_gap. WHY IT WORKS: at day granularity a silence is fully characterized by (duration, endpoint displacement); implied speed = displacement/duration separates continuous sailing (3-25 kn) from teleports; the vessel&#x27;s duty ratio separates meaningful silence from Class B lifestyle gaps; subtracting the 2024-08-26 outage prevents a systematic false gap across the whole fleet. WHAT IT IS NOT: a dark-ship detector - in a terrestrial feed, most silence is innocent range loss (see caveat/m3-silence-is-not-dark). USES: voyage segmentation (ocean legs), lay-up windows for dating identity changes (paired with M1), residual-anomaly triage.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/silence-gap-events</div>
+</div><div class="card"><h3>M4 method: read cargo operations (load/discharge events, terminals, laden/ballast cycles) from day-over-day draft changes.</h3>
+<div class="iri">https://ais.study/pattern/method-m4-draft-cargo-events</div>
+<div>WHAT IT DETECTS: cargo-operation events and terminal geography for draft-disciplined fleets (tankers first): each day-over-day draught increase &gt;=1 m is a loading, each decrease a discharge; modal position clusters of many events identify the vessel&#x27;s load and discharge terminals; the alternation gives the laden/ballast rhythm and voyage counts. WHY IT WORKS: draught is the one static field tied to physics - a tanker MUST change draft when it moves thousands of tonnes, and crews of working tankers do maintain it (188-248 events per active tanker here). WHY IT PARTIALLY FAILS: the update is manual and often entered en route, so single events smear along the transit lane - always aggregate cycles before naming a terminal (see caveats). HOW TO APPLY: run the view SQL (adjust vessel_types and min delta); aggregate by event type and rounded position; read trades as load-cluster -&gt; discharge-cluster pairs.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/draft-change-events</div>
+</div><div class="card"><h3>M5 method: detect operational vessel relationships (convoys, project fleets, tug pairs) via persistent same-day co-location while moving, discriminated by midpoint mobility.</h3>
+<div class="iri">https://ais.study/pattern/method-m5-co-movement-pairs</div>
+<div>WHAT IT DETECTS: pairs (and, transitively, fleets) of vessels that WORK TOGETHER: they are within 3 km on many days when both genuinely move (&gt;20 km/day), and the places where they meet wander over long distances (mobility &gt;=100 km). WHY IT WORKS: chance co-location concentrates in fixed places (harbors, ferry lanes); an operational tie is the only common reason two movers keep meeting at ever-new locations. The mobility statistic (spread of pair midpoints across pair-days) encodes that distinction in one number. HOW TO APPLY: run the view SQL (grid self-join, ~1.5 s for two years); read pairs with high pair_days and mobility as ties; confirm important ones at broadcast level; cluster overlapping pairs into fleets. TUNING: lower pair_days to ~30 and mobility to ~50 km for seasonal ties; raise the 3 km radius for offshore escort work.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/co-movement-pairs</div>
+</div><div class="card"><h3>Vessel story: MMSI 111227501 - HELICO PILOTE HAVRE, a French-configured pilot helicopter flying out of Vancouver: the feed&#x27;s only aircraft with recorded flights, saturating AIS&#x27;s 102.2 kn speed ceiling.</h3>
+<div class="iri">https://ais.study/pattern/vessel-111227501</div>
+<div>An aircraft in ship&#x27;s clothing: SAR-aircraft MMSI (111 + French MID 227), name HELICO PILOTE HAVRE, call sign F-GYLH, type 50 (pilot) - French pilotage statics transmitting from the Vancouver airport apron in Oct-Dec 2024. Six ground blips and two flights: a 217 km sortie down the Strait of Georgia with cruise pinned at the AIS SOG maximum of 102.2 kn (the encoding ceiling, not the aircraft&#x27;s speed), a slow 29-43 kn pass in Boundary Pass pilot waters, and a 49 km hop. Story value is the emitter class: aircraft evade impossible-speed detectors (M2 trips at ~194 kn) while wrecking ship-semantic fields (heading always 511, SOG saturated), and are correctly found only by MMSI format. Thin data (121 messages) - recorded as a bounded curiosity, per the expert&#x27;s explicit request to keep helicopters. KIND: non-ship aircraft curiosity (foreign-statics pilot helicopter; identity describes a past life).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 303520000 - SULPHUR ENTERPRISE, a dedicated molten-sulphur shuttle between Galveston Bay/Beaumont and Tampa Bay whose symmetric draft cycle is a live demonstration that M4 cannot tell cargo from ballast on a two-pole run.</h3>
+<div class="iri">https://ais.study/pattern/vessel-303520000</div>
+<div>One 160 x 27 m US-flag tanker (IMO9077044, KAKB), identity constant, 695 active days, ~280k km. M4 gives it 179 draft events collapsing onto exactly two terminal poles - Galveston Bay/Texas City-Beaumont and Tampa Bay - with a 7.1-7.4 m / 10.2-10.8 m draft alternation, a metronomic niche-cargo shuttle (the US-flag molten sulphur trade). The analytic point: &#x27;loading&#x27; events appear nearly symmetrically at BOTH poles (32 laden-legs westbound vs 20 eastbound by naive M4 reading), because the backhaul is heavy ballast - the exact misread the expert warned against; only external trade knowledge orients the cargo eastbound to Tampa&#x27;s phosphate plants. Also carries a 2025 GPS-degradation artifact (68 teleport-flagged days vs 2 in 2024) inflating raw mileage. KIND: niche-trade shuttle / draft-cycle workhorse (no identity change; ballast-ambiguity exemplar).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 311050400 - OCEAN VOYAGER renamed VICTORY I during Charleston lay-up; Great Lakes cruise deployment in 2025.</h3>
+<div class="iri">https://ais.study/pattern/vessel-311050400</div>
+<div>One 92x17 m Bahamas-flag passenger ship (IMO 9213129, C6YZ9). 2024 as OCEAN VOYAGER: moored Portland ME Jan-Jun, short south-Florida/Bahamas season Jul-Sep, then lay-up at Charleston SC from Oct. Renamed VICTORY I - the feed shows it at the 2025 year boundary, physically it happened during the Oct 2024-Feb 2025 lay-up. 2025 as VICTORY I: Great Lakes cruise season May-Oct (~5,000-11,800 km/month), winter repositioning to Jacksonville FL. Draft 4.2-&gt;4.1 into lay-up, 4.1/4.3 alternation in service. One corrupted fix (Wyoming, 2025-07-26) shows single-fix position lies. Use as the calibration example for distinguishing genuine renames (IMO/CS/dims constant) from spelling churn at the year boundary.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 316001262 - QUEEN OF SURREY, a BC Ferries Howe Sound metronome: 730/730 days active, ~240,000 km inside one 40-km crossing, with annual refit stand-downs as the only breaks.</h3>
+<div class="iri">https://ais.study/pattern/vessel-316001262</div>
+<div>One 140 x 28 m Canadian ferry (type 60, IMO7902221, VG8177), identity constant both years. Operating pattern is the purest fixed-route shuttle in the selection pool: active every observed day, ~11-13k km/month shuttling Horseshoe Bay-Langdale (occasional Departure Bay relief legs), top speed ~21 kn, draft never updated off 5.8 m. Service breaks appear as movement dropouts while AIS keeps transmitting from the yard berth (Feb 2024; Jan and Apr 2025 at the Fraser River shipyard area) - the refit signature that distinguishes a shuttle&#x27;s lay-up from a coverage or power-down gap. KIND: route-metronome ferry (fixed-route shuttle, annual refit lay-ups, no identity change).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 338024391 - TERESA, an 8-metre type-99 work skiff whose 25,000 km, four-state-plus-Puerto-Rico wanderings only make sense as a towed member of a marine-construction flotilla (with MONIKA C and tug STASINOS BOYS).</h3>
+<div class="iri">https://ais.study/pattern/vessel-338024391</div>
+<div>An 8 x 3 m &#x27;other&#x27;-type craft with call sign NA and no IMO should not cross the Gulf of Mexico or the Mona Passage, yet TERESA logs Galveston -&gt; San Juan (Apr-Nov 2024) -&gt; Baltimore (Dec 2024-Apr 2025) -&gt; Hampton Roads (2025) with MONIKA C (12 m, mis-typed passenger) glued to its monthly centroid for 18 months and the 30 m tug STASINOS BOYS alongside on passage legs. M5&#x27;s highest-mobility pairings in the feed (940-982 km) are all within this trio. The story class: a towed construction spread - AIS transponders riding barges/skiffs that move only when the company tug moves them, so their &#x27;voyages&#x27; are really contract redeployments (San Juan harbor works, Baltimore winter 2024/25, Norfolk 2025). Auxiliary-craft AIS types (99, misassigned 60) and junk call signs are the giveaway. KIND: traveling flotilla / towed work-spread (M5 co-movement class; no identity change).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 360000000 - a round-number default shared by river and Gulf-coast workboats; its INGRAM DUPO -&gt; SOMMELIER year flip is two different transponders winning the annual identity slot, and M1 files the whole mess as merely &#x27;ambiguous&#x27;.</h3>
+<div class="iri">https://ais.study/pattern/vessel-360000000</div>
+<div>An unallocated-MID, round-number MMSI transmitting every single day for two years with a 7.2-degree average daily footprint and 642 impossible-speed days: not a vessel but a default setting. Clustering one day&#x27;s broadcasts shows simultaneous emitters at St. Louis (a Mississippi fleeting area; 2024&#x27;s identity INGRAM DUPO is an Ingram Barge fleet-boat name matching the company&#x27;s Dupo IL site) and on the Mississippi Gulf coast (2025&#x27;s identity SOMMELIER). Each year a different unit&#x27;s statics own the year-frozen identity slot, so the boundary shows a fake &#x27;rename&#x27;; M1 cannot flag it (no IMOs on either side -&gt; ambiguous_name_change), while M2 catches it at rank 2 feed-wide. The distilled rule: M2 emitter-class screening is a PRECONDITION for M1 identity semantics; year-slot identity on shared MMSIs describes the loudest transponder, not any hull. KIND: shared default MMSI / multi-emitter (identity-slot artifact; M1 blind spot exemplar).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 366971370 - EDWIN H GOTT, a 305 m Great Lakes 1000-footer running ~231,000 km of ore trade a year-pair, with identical Toledo winter lay-ups dating the season edges to the day.</h3>
+<div class="iri">https://ais.study/pattern/vessel-366971370</div>
+<div>One 305 x 32 m US-flag laker (type 70, IMO7606061, WDH7558), identity constant. Operating pattern: ~11-13k km/month mid-March through mid-January between the western Lake Superior ore docks (47.5-48.7N -92W) and lower-lakes steel ports, draft cycling 7.3 m ballast / 8.3-8.7 m laden on every round trip - dry-bulk cargo cycles the M4 tanker view is blind to by construction. Winter lay-up is a signature, not a gap mystery: both years the track ends at the same Toledo berth (41.693N -83.462W) and goes dark mid-January to mid-March (34-37 day silences with occasional single-day berth blips), i.e. in-place power-downs matching the Soo Locks closure. Contrast with QUEEN OF SURREY (whose refits show as movement dropouts with AIS on): two different lay-up signatures. KIND: seasonal trader / fleet workhorse (winter lay-up rhythm, no identity change).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 366991421 - TALUS/ROBERT E. SIMANEK: a 239 m Navy expeditionary sea base that spent 2024 broadcasting as an 8-metre nobody; the reassignment is real but its Jan-1 date is not.</h3>
+<div class="iri">https://ais.study/pattern/vessel-366991421</div>
+<div>M1&#x27;s most extreme reassignment row (8 m TALUS with empty statics -&gt; 239 m ESB-7 ROBERT E. SIMANEK, NRTS, IMO9905394). Draft tells the truth early: from Aug 2024 the &#x27;TALUS&#x27; track reports 7.8 m draft while sitting at the San Diego naval waterfront, sorties toward San Clemente Island, then sails to the Portland OR yard in Dec 2024 at 9.4 m - the big hull was emitting under junk statics months before the year-boundary flip relabelled it. 2025 shows the naval-auxiliary pattern: AIS on only 3-24 days/month, a Panama coverage-exit relocation to Hampton Roads, Virginia Capes operating periods, months-long AIS-off berth stays (Norfolk, Charleston). Two lessons for the corpus: (1) reassignment-class M1 rows can hide statics-corrections on one hull - draft continuity is the cheap discriminator; (2) for naval units, silence and junk identity are operating procedure, so anomaly detectors need a military class. KIND: reassignment/statics-correction on a naval auxiliary (M1-derived; boundary date is a freeze artifact).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 367369920 - CAPT. RANDY JAMES / WEBB CROSBY: the MMSI both M1 and M2 confidently claim, resolved by one broadcast day - two fleet tugs sharing MMSI and call sign, with the year boundary swapping whose name the feed shows.</h3>
+<div class="iri">https://ais.study/pattern/vessel-367369920</div>
+<div>The corpus&#x27;s method-collision exemplar. M1: rename_same_hull (call sign WDN2651 persists across CAPT. RANDY JAMES 2024 -&gt; WEBB CROSBY 2025). M2: multi_emitter (303 conflict days). One broadcast-day clustering settles it: on 2025-03-21 two Class A units transmit simultaneously all day from Beaumont TX and Bayou Lafourche LA, 320 km apart - fleet transponder cloning gave two tugs the same MMSI and the same call sign, so M1&#x27;s strongest corroborator is forged by construction. The year-boundary &#x27;rename&#x27; is the frozen identity slot switching between the two boats&#x27; statics. 2024&#x27;s tighter spans suggest the units then worked co-located, explaining how the clone survived screening. Distilled rules: (1) persistent call sign corroborates same-hull ONLY after M2 clears the MMSI; (2) within-fleet clones are the hard case - same operator, plausible names, same region; (3) per-hull semantics require the expert&#x27;s movement-continuity track segregation. KIND: fleet-cloned shared MMSI masquerading as a rename (M1xM2 contradiction case).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 367373000 &#x27;WD143 SHELL RIG&#x27; - one MMSI, one fixed platform plus at least two vessels.</h3>
+<div class="iri">https://ais.study/pattern/vessel-367373000</div>
+<div>MMSI 367373000 is a shared identity: (1) a fixed Gulf of Mexico structure at 28.662N 89.552W (Shell West Delta 143 platform; Class A; 3 m position spread; transmits every one of the 730 covered days), (2) a Class A vessel based Fort Lauderdale that cruised to New England Jul-Sep 2024, (3) a Class B unit also at Fort Lauderdale. The static record (name WD143 SHELL RIG, cs WDE5894, type 37, 100x100 m) is beacon-style config, false as ship data. Every index metric for this MMSI is a chimera (10-deg daily bboxes, impossible speeds on every active day). Lesson: platform/infrastructure AIS beacons live inside the vessel MMSI space and continuously collide with vessels; separate emitters geometrically before analysing anything on a suspect MMSI.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 367677560 - BAY STATE renamed FLORIDA VOYAGER: a textbook same-hull rename (IMO and call sign both persist) on a Gulf-to-Florida products shuttle that never stopped trading long enough for the rename to be dated.</h3>
+<div class="iri">https://ais.study/pattern/vessel-367677560</div>
+<div>One 186 x 27 m US-flag product tanker (IMO9698018, WBYQ), renamed at the file boundary from BAY STATE to FLORIDA VOYAGER with every corroborating field constant - M1 rename_same_hull anchored from both sides. The operational story is a Jones-Act clean-products machine: 725/730 days active, 182 M4 draft events, loading Pascagoula/Beaumont/Lake Charles, discharging Port Everglades (28 events) and Tampa (28), ballast 8.0-8.7 m vs laden 10.8-11.6 m, with a four-month Tampa-only rotation (Jan-Apr 2025) read straight off the bounding-box seasonality. Because it has zero multi-day gaps, the rename has no lay-up window: real date unrecoverable, Jan-1 flip purely an artifact - the corpus&#x27;s second exemplar (after 367615990) of the &#x27;undatable rename&#x27;, but this time with full M1 corroboration. KIND: rename, same hull + fleet workhorse (M1+M4; mid-service rename, undatable in-feed).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 368166560 - ARGOS PLATFORM, a fixed Gulf of Mexico production platform on AIS: two years at one coordinate, and living proof of deep-water coverage pockets ~100 nm offshore.</h3>
+<div class="iri">https://ais.study/pattern/vessel-368166560</div>
+<div>Not a ship: AIS type 98, 129 x 95 m footprint, no IMO/draft, status 15-or-nothing, call sign WDL8117, parked at exactly 27.17N -90.37W (Green Canyon; matches the BP Argos platform) for all 646 active days of 2024-2025. Monthly track distance (3-55 km) is pure GPS scatter, sog never above 1.2 kn. The story&#x27;s payoff is what a fixed emitter reveals about the FEED: received ~320 days/year at ~185 km offshore, far beyond the reconciled 40-50 mi land-receiver envelope, so deep-water coverage pockets exist (offshore-hosted receivers), and offshore silence must not be auto-classified as coverage exit. Contrast with storied 367373000 (WD143 SHELL RIG) where a platform SHARES its MMSI with vessels: here the platform is the sole emitter, giving the clean single-platform baseline. KIND: non-ship fixed installation (production platform beacon; no identity change).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 368574000 - TUNA HELPER/BOB LIVINGSTON, an MMSI collision dressed up as a year-boundary reassignment: a Gulf ICW towboat transmitted under a San Diego pleasure boat&#x27;s name for eight months.</h3>
+<div class="iri">https://ais.study/pattern/vessel-368574000</div>
+<div>M1 files this as suspected_mmsi_reassignment (TUNA HELPER, 14 m pleasure, 2024 -&gt; BOB LIVINGSTON, 102 m, IMO-shaped official number, 2025). Position evidence rewrites the mechanism: the MMSI wakes on 2024-04-18 as a working towboat shuttling the Houston-New Orleans ICW corridor (draft 2.8 m, 10-13 kn, 1,500-6,500 km/month, zero behavioural break across the boundary), while the 14 m TUNA HELPER - owner of the entire 2024 identity slot - actually transmits on only THREE days, each producing simultaneous Gulf+Southern-California positions with 41k-329k m/s implied speeds. So: a duplicate-programmed MMSI from April 2024, relabelled by the feed&#x27;s annual identity canonicalization at Jan 1 2025. The real &#x27;reassignment date&#x27; is ~2024-04-18; Jan 1 is an artifact. Cross-method lesson: M1 boundary classes need an M2-style same-day-span check before the reassignment reading is accepted at face value. KIND: MMSI collision / shared-MMSI masquerading as year-boundary reassignment.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 368817000 (COMFORT) - a 273 m medical-transport vessel that spends the great majority of two years motionless at one Gulf-coast berth, with a clean repeated winter in-place silence pattern and one long 2025 excursion toward the Caribbean that M3&#x27;s per-gap rule mechanically splits into two events instead of reading as one continuous voyage.</h3>
+<div class="iri">https://ais.study/pattern/vessel-368817000</div>
+<div>COMFORT (368817000) is identity-constant and near-immobile: ~7,350 km total track over two years, the large majority of active days sitting at 30.68N -88.03W. Three M3 silent_in_place gaps (25d, 13d, 36d) share that exact berth position on both sides, and one exactly-bounded 91-day zero-movement window (2025-02-05..2025-05-06) sits between the longest of them and the vessel&#x27;s next departure -- a recurring in-place lay-up pattern, not a coverage problem, distinct in mechanism from the two already-storied draft-cycling tankers (303520000, 538002783) and closer in flavour to 366971370&#x27;s winter lay-ups but on a non-cargo, non-cycling hull. The 2025 mid-year absence (2025-06-08 -&gt; 2025-08-16) is the richer methodological find: M3 mechanically reports it as a 64-day &#x27;local_gap&#x27; plus a 2-day &#x27;coverage_exit_voyage&#x27; because one single intervening position ping near the Mona Passage breaks one long Caribbean-ward excursion into two gap rows, the second of which happens to clear the 300 km displacement threshold and the first of which does not. Read together, the two adjoining gaps are better understood as one ~68-day voyage beyond the domestic receiver envelope -- a gap-splitting failure mode distinct from the already-recorded m3-coverage-geometry-blind caveat (which is about receiver-distance blindness on displacement alone, not about single intervening fixes fragmenting one voyage into multiple gap rows).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/vessel/mmsi-368817000</div>
+</div><div class="card"><h3>Vessel story: MMSI 369305000 - MAGDALEN, hopper dredge working coast-wide projects in tandem with sister RB WEEKS (368349000); their co-location calendar is a readable contract history.</h3>
+<div class="iri">https://ais.study/pattern/vessel-369305000</div>
+<div>Two sister hopper dredges (109x24 m MAGDALEN, type 33; 108x24 m RB WEEKS, mis-typed 30-fishing), identities constant, both flashing status 3 (restricted manoeuvrability) at work. M5 flags them at 171 pair-days / 622 km mobility; the monthly series turns that into a project chronicle: NY Harbor approaches (winter 2024) -&gt; Jacksonville (spring) -&gt; Palm Coast (summer) -&gt; Mobile Bay (fall) -&gt; apart for five months -&gt; Galveston Bay (summer 2025). Draft tells crew habits, not physics: MAGDALEN frozen at 7.8 m for two years, RB WEEKS actively updated through hopper cycles including one impossible 16.7 m entry. Dredges are the expert&#x27;s curiosity class doing real economic work in the data; the pair-day calendar segments their bookings without any contract database. KIND: project-fleet pair / mobile worksite units (co-movement class; no identity change).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 369914086 - US Navy patrol boat PB1802 / USN 40PB1802 (Hampton Roads).</h3>
+<div class="iri">https://ais.study/pattern/vessel-369914086</div>
+<div>One US Navy 40-ft-class patrol boat, hull PB1802, operating only in Hampton Roads / lower Chesapeake Bay. Identity: names &#x27;PB1802&#x27; (Jan-Mar) and &#x27;USN 40PB1802&#x27; (from late April) alternate seasonally in both years - the dataset&#x27;s only within-year renames - with the call_sign field abused to carry the hull number, no IMO, no type, no dimensions. Physical claims: none broadcast (military practice). Behaviour: sparse burst sorties (49 active days over 2 years, 90-135 km/day, up to 43 kn), multi-week dark gaps, last seen 2025-07-23. Useful as: (a) the exception proving identity is otherwise year-constant in this feed; (b) a template of military static-data hygiene for classifying other government emitters.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 374158000 - a legitimately-formatted MMSI (MID 374, Panama) that nonetheless behaves like the feed&#x27;s junk-MMSI family: a dominant, physically persistent occupant off Long Beach CA whose broadcast identity was corrected (not reassigned) from a placeholder profile (LOTTUS) to a real large-ship identity (EVER FOCUS, IMO9850537) at the 2025 year boundary, PLUS a genuine multi-emitter phenomenon -- other stationary transmitters at several distinct US East Coast locations intermittently broadcasting the identical borrowed name+IMO+call sign across both years.</h3>
+<div class="iri">https://ais.study/pattern/vessel-374158000</div>
+<div>MMSI 374158000 is the widest-span multi-emitter case surveyed this session (M2 median conflict-day span 33.1 deg vs 367369920&#x27;s 2.83 deg), yet unlike the fleet-clone case its dominant occupant is positionally continuous across the M1-flagged 2024/2025 identity change (LOTTUS -&gt; EVER FOCUS): ~74% of active days in BOTH years sit at the identical stationary position off Long Beach CA. Broadcast-level spot checks on three separate conflict days confirm the multi-emitter signal is real (a second, internally-coherent stationary site each time, at Boston MA and coastal Georgia on different days) and not GPS jitter, and that -- unlike 367369920 -- the two tracks share the IDENTICAL complete identity (name, IMO, call sign), not just the MMSI. The result is two co-existing, independently evidenced mechanisms on one MMSI: a same-object statics-correction for the dominant track, and an unresolved-count multi-emitter phenomenon for the rest, which M2&#x27;s own caveat (m2-day-granularity-no-localization) predicts cannot be fully localized without full per-message segregation (not attempted this session).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/vessel/mmsi-374158000</div>
+</div><div class="card"><h3>Vessel story: MMSI 538002783 - NOR&#x27;EASTER, the feed&#x27;s busiest draft-cycler: an Irving Saint John -&gt; New England products distribution workhorse whose only silences are voyages beyond the receiver envelope.</h3>
+<div class="iri">https://ais.study/pattern/vessel-538002783</div>
+<div>One 184 x 27 m Marshall Islands product tanker (IMO9350642, V7LP7), identity constant, 620 active days. Top M4 vessel in the entire feed: 224 draft events, 7.2-7.9 m ballast vs 10.0-11.0 m laden, forming a hub-and-spokes network - all-loading cluster at Saint John NB / Bay of Fundy, discharges fanned across Boston (43), Portland (22), Providence (7), Portsmouth (3). The Saint John no-discharge asymmetry makes cargo direction readable from M4 alone (contrast SULPHUR ENTERPRISE, where a two-pole shuttle leaves direction ambiguous). Its two long silences (29 d, 41 d) both exit and re-enter at offshore Gulf of Maine coordinates: coverage-exit voyages (Canada is dark to this feed), not lay-ups. KIND: fleet workhorse / hub-and-spokes distribution tanker (no identity change; M4 direction-readability exemplar).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 941217116 - J.C. BUOY 8, a fishing-gear marker buoy off the Washington coast: carried at 15 kn, drifting at 1 kn, silent when recovered - one of 467 nonstandard 941xxxxxx gear beacons in the feed.</h3>
+<div class="iri">https://ais.study/pattern/vessel-941217116</div>
+<div>Not a vessel: a Class B gear beacon named J.C. BUOY 8 (call sign &#x27;1201&#x27;, zero static fields) in the invalid-for-ships 941xxxxxx MMSI block, active Jun-Dec 2025 off La Push, WA. Its track is trimodal - carried aboard the fishing boat (58-70 km, up to ~15 kn), deployed and drifting on the grounds (~2 km/day at ~1.2 kn for weeks), or recovered (multi-day silence). It belongs to a family (J.C. BUOY 4/5/6/8/9) within a 467-MMSI national population of 941-range gear beacons (POT BUOY, SCANDIA BUOY, WONIYA BUOY...). Story value: a whole emitter class that fakes vessel mileage on carried days, fakes loitering vessels on deployed days, and fakes dark events when hauled - segregate by MMSI range before any per-vessel statistic. KIND: non-ship gear beacon (deployment-cycle emitter; curiosity class per expert guidance).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 999999999 - &#x27;USS GOVT VESSEL&#x27;, a nine-nines placeholder shared coast-to-coast by anonymous government craft; the flagship of the feed&#x27;s junk-MMSI family.</h3>
+<div class="iri">https://ais.study/pattern/vessel-999999999</div>
+<div>Not one vessel: a keyboard-placeholder MMSI (no allocated MID) named USS GOVT VESSEL with junk call signs, active 486 days from Puerto Rico to Maine to Texas with 169 impossible-speed days. Broadcast clustering proves simultaneous units (Onslow Bay amphibious area at 8 kn + a Jacksonville basin at anchor, same day). Reading: US government/naval small craft and security units left on a placeholder configuration - the identity is a POLICY, not a ship. The story stands for the whole placeholder family (0, 360000000, 338000000/&#x27;DREDGE PIPELINE&#x27; at 82M raw km, 987654321, 982000000, 111111111): validate MMSI structure before applying any vessel method, because these rows break M1 (fake identity churn), M2 (they ARE the top hits), M4/M5/M6 (nonsense positions) and every mileage statistic. KIND: shared placeholder identity / anomaly class (multi-emitter by construction; no single hull exists).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 367615990 - JACOB BRENT renamed PERCIVAL at the 2024/2025 boundary, one small workboat continuously operating out of Galveston, TX.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/0773b4ed-8a50-4ccb-8b37-6c742e1cd977</div>
+<div>One small commercial vessel (AIS type 90, 29.0 x 8.0 m, IMO never reported), call sign changing alongside the name (WDH4272 -&gt; WDN4882). 2024 as JACOB BRENT, 2025 as PERCIVAL. Home base tight cluster at 29.31-29.32N/-94.75..-94.78W (Galveston, TX area), near-continuous operation (727/731 possible days) with two multi-day coastal excursions (late Jun 2024 to Louisiana/Mississippi Sound; Oct 2025 to South Texas) and one unexplained 3-day silence (2025-11-11..13). The rename crosses the year boundary mid-voyage with no accompanying gap or lay-up (unlike 311050400): broadcast data shows the name/call sign flip between two consecutive messages 47s apart while underway at 6-8 kn. Same hull is asserted from identical dims and unbroken single-area operation, not from M1s own call-sign/IMO corroborators (neither persists) - a case the M1 method itself would file as ambiguous_name_change. True rename date is unrecoverable from this feed: zero 2024 gap days beyond the known feed outage leave no lay-up window to pin it to.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/year-boundary-identity-changes</div>
+</div><div class="card"><h3>Vessel story: MMSI 338617000 - PENNSYLVANIA, a coastwise product tanker shuttling Gulf Coast refinery terminals against Tampa Bay; six port calls reconstructed for May 2024 via the new M6 method.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/125c7bac-b2b5-4477-aa5d-7a23125bde8e</div>
+<div>One coastwise product tanker, PENNSYLVANIA (IMO9486958, WAPZ, AIS type 80, 182-183x32m), identity stable across both years - no rename, unlike 367615990. Runs a tight repeating shuttle: Gulf Coast refinery terminals (Lake Charles LA, Baton Rouge LA, Beaumont/Port Arthur TX) against Tampa Bay FL, each leg ~2-3 days, each port stay ~2-4 days. Six stays touch May 2024 (method and full itinerary in the linked claim): Lake Charles (into May 1), Tampa (May 3/4-6), Baton Rouge (May 9-12), Lake Charles (May 18-21), Tampa (May 23/24-26), Beaumont (May 28/29-Jun 1). Draft direction (rising at Gulf terminals, falling after Tampa) corroborates genuine cargo operations at each stay, not idle anchoring. M2&#x27;s multi-emitter diagnostic flags this MMSI mixed_or_unclear, but this is the documented false-positive mode for fast long-haul vessels (large daily displacement inflates the conflict span test) - the broadcast-level reconstruction shows one single, continuous, internally consistent track.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 2 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://ais.study/dataset/broadcasts, https://ais.study/view/multi-emitter-mmsis</div>
+</div><div class="card"><h3>M7 method: track-state classifier -- per-MMSI-per-day kinematic state (underway / berthed / anchored / transition_day / stationary_unclassified) from SOG, position dispersion and status codes, aggregated (missing-day-corrected, edge-day-excluded) into dwell spans that flag anchorage-then-berth two-step approaches. Index layer only; broadcast level reserved for decisive spot checks.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/208f3abb-08c7-4186-8122-dd15e4205b2f</div>
+<div>Two-layer index-only method answering &#x27;was this vessel underway, anchored, or at berth on this day/span&#x27;, built for expert round-2 guidance that draft-change interpretation needs positional track context. LAYER 1 (per-day state), one row per (mmsi,date) over read_parquet(&#x27;s3://ais-noaa/index/*/*.parquet&#x27;):
+
+CASE
+  WHEN sog_mean &gt;= 3.0 OR distance_m &gt;= 50000 THEN
+    CASE WHEN list_contains(status_codes,1) OR list_contains(status_codes,5)
+         THEN &#x27;transition_day&#x27; ELSE &#x27;underway&#x27; END
+  WHEN list_contains(status_codes, 5) THEN &#x27;berthed&#x27;
+  WHEN list_contains(status_codes, 1) THEN &#x27;anchored&#x27;
+  WHEN sog_mean &lt; 1.0 AND distance_m &lt; 5000 THEN &#x27;stationary_unclassified&#x27;
+  ELSE &#x27;transition_day&#x27;
+END AS day_state
+
+Kinematics (sog_mean, distance_m) decide underway vs not first; status_codes (self-reported nav status, present for Class A, empty for most Class B) only disambiguates berthed/anchored among not-clearly-underway days; &#x27;transition_day&#x27; is deliberately its own bucket for arrival/departure days where the daily-index&#x27;s day-granularity blends a real dwell with real transit in one row (status_codes is a per-day DISTINCT LIST, so a departure day carries both the moored code and the underway code).
+
+LAYER 2 (dwell spans = the &#x27;dwell overlap&#x27; signal): group consecutive stationary_candidate days (sog_mean&lt;3 AND distance_m&lt;50000) per mmsi via gaps-and-islands, correcting for the single feed-wide missing day 2024-08-26 so a span isn&#x27;t spuriously split there (same correction M3 uses):
+
+WITH flagged AS (
+  SELECT *, (sog_mean&lt;3.0 AND distance_m&lt;50000) AS stationary_candidate,
+    lag(date) OVER w AS prev_date2, lag(stationary_candidate) OVER w AS prev_stat2
+  FROM read_parquet(&#x27;s3://ais-noaa/index/*/*.parquet&#x27;) WINDOW w AS (PARTITION BY mmsi ORDER BY date)
+), grouped AS (
+  SELECT *, SUM(CASE WHEN prev_date2 IS NULL OR stationary_candidate&lt;&gt;prev_stat2
+      OR (date_diff(&#x27;day&#x27;,prev_date2,date)&gt;1 AND NOT (prev_date2=DATE &#x27;2024-08-25&#x27; AND date=DATE &#x27;2024-08-27&#x27;))
+      THEN 1 ELSE 0 END) OVER (PARTITION BY mmsi ORDER BY date) AS grp_id
+  FROM flagged
+), ranked AS (
+  SELECT *, row_number() OVER (PARTITION BY mmsi,grp_id ORDER BY date) AS rn,
+    count(*) OVER (PARTITION BY mmsi,grp_id) AS cnt FROM grouped
+)
+SELECT mmsi, min(date) span_start, max(date) span_end, count(*) span_days,
+  -- dispersion over INTERIOR days only (edge days&#x27; centroid is polluted by
+  -- the partial arrival/departure transit -- see caveat below)
+  max(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lat END)
+    - min(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lat END) AS core_lat_spread,
+  max(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lon END)
+    - min(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lon END) AS core_lon_spread,
+  bool_or(list_contains(status_codes,5)) AS any_moored,
+  bool_or(list_contains(status_codes,1)) AS any_anchored
+FROM ranked WHERE stationary_candidate GROUP BY mmsi, grp_id;
+-- any_moored AND any_anchored on one span = an anchorage-then-berth (or berth-then-anchor) two-step within one continuous stop.
+
+CAVEATS DISCOVERED WHILE PROVING: (1) status_codes is a whole-day distinct list, not point-in-time -- arrival/departure days routinely carry both an underway and a stationary code, which is exactly why &#x27;transition_day&#x27; has to be a first-class bucket rather than forced into berthed/anchored. (2) Span dispersion computed over ALL days in a span is badly inflated by partial edge days (one observed case: a real ~0 deg berth stay measured 0.52 deg lat-spread across the full span, but 0.0 once the first/last partial day were excluded) -- always exclude edge days from tightness checks when span_days&gt;2. (3) The single missing feed day (2024-08-26) must be bridged explicitly in the gaps-and-islands grouping or it spuriously splits any dwell straddling it (none observed in the proving set, but the correction is cheap insurance, mirrored from M3). (4) Class B/leisure craft that rarely report status_codes fall to &#x27;stationary_unclassified&#x27; -- dispersion-based berthed/anchored refinement for that population is a documented gap, not yet built or proven.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 1 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/m4-single-message-draft-glitch, https://ais.study/view/draft-change-events</div>
+</div><div class="card"><h3>M11 method: physical berth-vs-anchor discriminator -- broadcast-level swing geometry (radius/hollow-fraction) and true-heading circular concentration, cross-checked against index-level crowd evidence (distinct-vessel-count and dispersion at rounded positions), used to grade M7/M8&#x27;s self-reported NavStatus split independent of status_codes. Answers the round-3 external research question and quantifies NavStatus reliability.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/2fb8d9b7-80e9-44e7-b5f9-181b2f271008</div>
+<div>Three signals, all proven this session (M11a broadcast geometry, M11b broadcast heading, M11c index crowd evidence). Use M11a+M11b together on a candidate stationary period (found via M7&#x27;s own dwell-span layer -- never scan broadcasts blind); use M11c to sanity-check a LOCATION independent of any single vessel&#x27;s self-report.
+
+M11a: ANCHOR-SWING GEOMETRY (broadcast level, per vessel-day-or-span). Given a set of broadcast rows for one mmsi over the candidate window:
+
+WITH pts AS (
+  SELECT latitude, longitude, heading, cog, sog, status, base_date_time
+  FROM read_parquet([&lt;candidate day files&gt;])
+  WHERE mmsi = :mmsi
+), c AS (SELECT avg(latitude) lat0, avg(longitude) lon0 FROM pts),
+d AS (SELECT p.*, (p.longitude-c.lon0)*111320*cos(radians(c.lat0)) dx, (p.latitude-c.lat0)*110540 dy FROM pts p, c),
+r AS (SELECT *, sqrt(dx*dx+dy*dy) AS dist_m FROM d),
+stats AS (SELECT count(*) n, max(dist_m) rmax, avg(dist_m) rmean, median(dist_m) rmed, stddev(dist_m) rstd FROM r)
+SELECT stats.*, (SELECT avg(CASE WHEN dist_m&lt;0.5*stats.rmax THEN 1.0 ELSE 0.0 END) FROM r) AS hollow_frac FROM stats;
+
+hollow_frac = fraction of points within half the window&#x27;s own max radius of the centroid. A berth (GPS noise scattered around one fixed point) puts MOST points close to the centroid -&gt; hollow_frac high (&gt;0.85 in every proving case, up to 0.99). A vessel swinging on ground tackle traces a partial ring/arc at roughly the scope radius -&gt; few points sit near the centroid -&gt; hollow_frac low (0.34-0.65 in every proving anchor case). radius_mean_m is the companion size metric: ~2-4m at berth, ~120-170m at anchor in the proving set (a &gt;30x gap; use radius_mean over 20-30m as a soft anchor-leaning threshold, not a hard cutoff -- see failure modes).
+
+M11b: HEADING BEHAVIOR (broadcast level, true heading only -- NEVER cog, see caveats). Circular concentration:
+R = sqrt(pow(avg(cos(radians(heading))),2) + pow(avg(sin(radians(heading))),2))
+computed only over rows with heading NOT NULL AND heading&lt;&gt;511 (sentinel differs by year: 2024 uses 511, 2025+ uses true NULL -- filter both forms, per caveat/sentinel-encoding-shift-2025). R near 1.0 = heading pinned (tied to a dock) = berth. R well below 1.0 (proving set: 0.65-0.76 for genuine anchor swings, one weaker case at 0.757 during only a ~4.5-hour window) = weathervaning = anchor. IMPORTANT: many small Class B recreational craft never transmit true heading at all (n_heading_valid=0 in both proving mooring-buoy cases) -- this signal is simply UNAVAILABLE for that population, not zero/low; report coverage (n_heading_valid / n) alongside R and do not silently treat missing heading as R=0.
+
+M11c: CROWD EVIDENCE (index level, location-level, whole-feed or a bounded region). Cheap, run before any broadcast pull:
+SELECT round(centroid_lat, :prec) glat, round(centroid_lon, :prec) glon,
+  count(DISTINCT mmsi) n_vessels, count(*) n_days, avg(distance_m) avg_dist_m,
+  avg(CASE WHEN list_contains(status_codes,5) THEN 1.0 ELSE 0.0 END) frac_moored,
+  avg(CASE WHEN list_contains(status_codes,1) THEN 1.0 ELSE 0.0 END) frac_anchored,
+  avg(CASE WHEN list_contains(status_codes,0) THEN 1.0 ELSE 0.0 END) frac_underway0
+FROM read_parquet(&#x27;s3://ais-noaa/index/*/*.parquet&#x27;)
+WHERE sog_mean &lt; 1.0 AND distance_m BETWEEN :lo AND :hi
+  AND len(list_filter(vessel_types, x -&gt; x BETWEEN 70 AND 89)) &gt; 0  -- restrict to large Class A ships; see tug/OSV failure mode
+GROUP BY 1,2 HAVING count(DISTINCT mmsi) &gt;= 5 ORDER BY n_vessels DESC;
+Run once with :prec=3, :lo=0, :hi=3000 (tight, ~111m grid) for berth-infrastructure candidates, and once with :prec=2, :lo=8000, :hi=60000 (wide, ~1.1km grid) for anchorage-ground candidates. A location where MANY DISTINCT vessels persistently dwell tight = berth infrastructure (proving set: Norfolk VA, Houston Ship Channel, Portland OR, Vancouver BC terminals, all frac_moored 0.97-1.0). A location where many distinct vessels persistently dwell dispersed = anchorage ground (proving set: Vancouver English Bay frac_anchored 0.77-1.0). Use frac_moored/frac_anchored/frac_underway0 as a VALIDATION cross-check after clustering, never as the clustering filter itself (that would be circular -- selecting by self-report to then test self-report). At the small-craft, no-status-code end (recreational moorings/anchorages, e.g. Catalina Island&#x27;s Avalon and Two Harbors), the same clustering (distinct MMSI count with tiny per-vessel index-level daily distance) still finds real infrastructure even though frac_moored/frac_anchored are undefined (status_codes empty for the whole population) -- crowd evidence is the ONLY working signal for that population; M11a/M11b either fail (no heading) or disagree with each other (see Newport-Catalina finding below).
+
+DECISION RULE (composite, apply in order): (1) if M11c places the location at a known crowd-tight cell (&gt;=5 distinct vessels, avg_dist&lt;3km) -&gt; berth-leaning prior; if at a known crowd-wide cell -&gt; anchor-leaning prior, but check the vessel_type composition first (tug/OSV loiter failure mode). (2) M11a: hollow_frac&gt;0.85 and radius_mean&lt;20m -&gt; berth; hollow_frac&lt;0.7 and radius_mean&gt;50m -&gt; anchor; anything between is genuinely ambiguous, report it as such rather than forcing a class. (3) M11b, where heading coverage is non-trivial (say &gt;20% of messages): R&gt;0.95 -&gt; berth; R&lt;0.85 -&gt; anchor; corroborate/contradict (1)-(2) rather than override. (4) NavStatus (status_codes) is evidence, not ground truth -- use it only as a final cross-check for a reliability estimate, never as an input to (1)-(3).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 7 observation/claim(s)
+ · 3 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/observation/b21712a9-c329-4d5f-9baa-c2ae1f6c9104, https://richcanopy.org/doxabase/generated/pattern/208f3abb-08c7-4186-8122-dd15e4205b2f, https://richcanopy.org/doxabase/generated/pattern/c768eaa1-b2ed-49ba-b8ac-50a03c99ed5e</div>
+</div><div class="card"><h3>Reconciliation: timestamp semantics -- CONFIRMED for base_date_time&#x27;s UTC authority; SILENT on (i.e. does not implicate the provider in) the CET/CEST parse bug</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/355a7b51-0f0f-4cb0-948b-010a8cc30135</div>
+<div>The AIS FAQ CONFIRMS that &#x27;All time stamps in the NMEA record use Coordinated Universal Time (UTC)&#x27; -- matching caveat/timestamp-cet-parse-bug&#x27;s own claim that base_date_time is authoritative true UTC. No provider document mentions any timezone-conversion step, Central European Time, or DST handling in NOAA&#x27;s own pipeline; the docs are SILENT on the broadcasts.timestamp column&#x27;s CET/CEST mis-parse specifically, because that column and its bug do not exist in the provider&#x27;s product -- they are introduced by this project&#x27;s own parsing of base_date_time into the timestamp TIMESTAMPTZ column. Verdict: CONFIRMED (base_date_time is UTC, as the caveat already assumed) + SILENT-BY-ABSENCE on the bug (it is not a provider artifact, which is itself useful: it rules out &#x27;maybe NOAA&#x27;s pipeline does this on purpose&#x27; as an explanation, leaving straightforward downstream parsing error as the only remaining explanation). No change to the caveat&#x27;s guidance: keep using base_date_time as truth.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>M9 method: two-point shuttle detector -- per-MMSI dwell-time concentration at exactly two recurring locations (0.1 deg grid poles) with regular chronological alternation between them, built on M7&#x27;s dwell-span layer. Index layer only; two broadcast-level spot checks only, for exemplar verification.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+<div>M9: two-point shuttle detector (index layer only). Answers &quot;which MMSIs run
+between exactly two recurring dwell locations with regular alternation.&quot;
+Built directly on M7&#x27;s dwell-span layer (same missing-day-corrected,
+edge-day-excluded gaps-and-islands grouping, reused verbatim), extended
+from tankers-only to all MMSIs and from spread to core centroid.
+
+LAYER 1 (dwell spans, one row per mmsi/stationary-run) -- identical to M7
+layer 2&#x27;s grouping CTE, output columns changed to core_lat/core_lon
+(edge-day-excluded AVG, not spread) plus message_count sum:
+
+WITH flagged AS (
+  SELECT mmsi, date, sog_mean, distance_m, centroid_lat, centroid_lon, status_codes, message_count,
+    (sog_mean&lt;3.0 AND distance_m&lt;50000) AS stationary_candidate,
+    lag(date) OVER w AS prev_date2,
+    lag(sog_mean&lt;3.0 AND distance_m&lt;50000) OVER w AS prev_stat2
+  FROM read_parquet(&#x27;s3://ais-noaa/index/*/*.parquet&#x27;) WINDOW w AS (PARTITION BY mmsi ORDER BY date)
+), grouped AS (
+  SELECT *, SUM(CASE WHEN prev_date2 IS NULL OR stationary_candidate&lt;&gt;prev_stat2
+      OR (date_diff(&#x27;day&#x27;,prev_date2,date)&gt;1 AND NOT (prev_date2=DATE &#x27;2024-08-25&#x27; AND date=DATE &#x27;2024-08-27&#x27;))
+      THEN 1 ELSE 0 END) OVER (PARTITION BY mmsi ORDER BY date) AS grp_id
+  FROM flagged
+), ranked AS (
+  SELECT *, row_number() OVER (PARTITION BY mmsi,grp_id ORDER BY date) AS rn,
+    count(*) OVER (PARTITION BY mmsi,grp_id) AS cnt FROM grouped
+)
+SELECT mmsi, min(date) span_start, max(date) span_end, count(*) span_days,
+  avg(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lat END) AS core_lat,
+  avg(CASE WHEN NOT (cnt&gt;2 AND (rn=1 OR rn=cnt)) THEN centroid_lon END) AS core_lon,
+  bool_or(list_contains(status_codes,5)) any_moored, bool_or(list_contains(status_codes,1)) any_anchored,
+  sum(message_count) msg_sum
+FROM ranked WHERE stationary_candidate GROUP BY mmsi, grp_id;
+
+LAYER 2 (pole assignment + scoring, run against LAYER 1&#x27;s materialized
+output, not against S3 -- cheap, local, repeatable): round each span&#x27;s
+core centroid to a 0.1-degree lat/lon grid cell (&quot;pole/bin&quot;); sum
+span_days per (mmsi, bin); rank bins per mmsi by summed dwell-days desc;
+top-2 = pole1/pole2. Then re-scan only the spans belonging to the top-2
+bins, ordered chronologically, and count adjacent-pair pole switches
+(n_switches) via lag() -- this is the &quot;regular alternation&quot; signal, not
+just &quot;has two popular places.&quot;
+
+METRICS (all thresholds tuned on this run, not discovered constants):
+  concentration = (pole1_days + pole2_days) / SUM(all bins&#x27; days)  -- &gt;= 0.85
+  pole_sep_deg = max(|dlat|, |dlon|*cos(mean_lat))                -- &gt;= 0.15
+  n_spans_top2 (span count at the two poles)                      -- &gt;= 8
+  n_switches (alternating adjacent-pair transitions)               -- &gt;= 6  (&gt;=3 round trips)
+  dwell_fraction = total_dwell_days / top2_activity_window_days    -- &lt;= 0.5
+  top2_window_days (first to last top-2 span)                      -- &gt;= 300
+
+Cross-referenced every candidate against M2&#x27;s emitter_class (materialized
+the same M2 SQL already in the capsule, unmodified) to catch the exact
+failure mode the brief warns about -- a shared MMSI faking a shuttle
+(confirmed cases in this capsule: MMSI 367369920, two LA/TX tugs sharing
+one MMSI 320km apart; MMSI 374158000, dominant Long Beach occupant plus a
+scattered East-Coast second emitter). Population is reported split by
+emitter_class (clean_or_sporadic / mixed_or_unclear / position_jitter /
+multi_emitter), with multi_emitter excluded from the census and
+mixed_or_unclear kept but flagged for review rather than auto-trusted or
+auto-dropped.
+
+CAVEATS FOUND WHILE PROVING:
+(1) Concentration as defined is a conservative/high-precision metric, not
+a high-recall one: SULPHUR ENTERPRISE (MMSI 303520000, the capsule&#x27;s own
+existing &quot;dedicated molten-sulphur shuttle&quot; story) scores only 0.529
+concentration and FAILS the 0.85 threshold, because 11 distinct minor
+dwell bins (weather holds, anchorage waits, channel transits along its
+route) dilute the top-2 share even though its two cargo terminals are
+still its top-ranked poles. A looser concentration&gt;=0.5 band (same other
+thresholds) recovers SULPHUR-ENTERPRISE-like cases but grows the
+candidate population from 820 to 1,839 with more recreational noise
+bleed-through; not used as the primary census, recorded as the documented
+alternative for a future session that wants recall over precision.
+(2) The detector is structurally BLIND to continuous-transit / fast-
+turnaround shuttles: QUEEN OF SURREY (MMSI 316001262, the capsule&#x27;s own
+&quot;BC Ferries metronome&quot; story, active 730/730 days) scores concentration
+0.809 and only 4 switches -- FAILS -- because a ferry that is underway
+essentially all day almost never satisfies the day-level
+`stationary_candidate` test (sog_mean&lt;3 AND distance_m&lt;50000 for the WHOLE
+day); the only &quot;dwells&quot; this method sees for a metronome ferry are its
+annual refit lay-ups, not the crossing itself. Any population-scale claim
+from this method systematically undercounts fast-cycling passenger/car
+ferries; a genuinely different (schedule- or port-call-based) detector
+would be needed to catch them. This is the concrete answer to &quot;how did you
+separate ferries from shuttles&quot;: most fast ferries never enter the
+candidate pool at all; only slower-turnaround or overnight-layover
+ferry-type vessels (29 clean_or_sporadic + 8 position_jitter + 1
+mixed_or_unclear MMSIs of AIS type 60-69 in the 820-strong census, e.g.
+RANGER III / MMSI 338016759, a real Isle Royale NPS ferry) pass, and they
+are reported as a labelled sub-class, not folded into &quot;cargo shuttle.&quot;
+(3) Dredges (AIS type 33) mostly do NOT pass this detector -- only 3 of
+820 candidates are type 33 (e.g. DELTA DREDGE 4, MMSI 367765520) -- because
+most dredges in this feed work multiple/rotating project sites rather than
+one fixed dredge-site/disposal-site pair (matches the capsule&#x27;s existing
+MAGDALEN/RB WEEKS story, &quot;working coast-wide projects,&quot; which likewise
+does not pass). The few that do pass are recorded as a labelled sub-class
+(dredge, not cargo/industrial) rather than folded into the main population.
+(4) M2&#x27;s day-level multi-emitter flag can misfire on a single busy,
+Class-A, high-message-rate vessel whose own two genuine dwell poles are
+already close together: MMSI 366989480 (SONNY COOK, promoted exemplar) is
+M2-flagged mixed_or_unclear (conflict_ratio 8.9%, median conflict-day span
+0.66 deg, close to its own two poles&#x27; 0.86 deg separation); a broadcast-
+level spot check on its worst conflict day (2025-05-15) found ONE isolated
+1-second/75km position glitch sandwiched between otherwise-continuous,
+physically consistent fixes -- a lone bad GPS fix, not a second emitter.
+Refines caveat/m2-gray-zone-and-sparse: high message-rate plus tight own-
+route geometry is a specific, identifiable false-positive mechanism for
+M2&#x27;s per-day conflict heuristic, distinct from the sparse/gray-zone
+mechanisms already recorded there.
+</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 0 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/m2-gray-zone-and-sparse, https://richcanopy.org/doxabase/generated/pattern/208f3abb-08c7-4186-8122-dd15e4205b2f</div>
+</div><div class="card"><h3>Vessel story: the LA/Long Beach-Oakland/SF container coastal string -- 4 of the M9 census&#x27;s 17 early-stoppers all ran the identical two-pole pattern, dropping out of a route independently confirmed thriving with ~40 other operators</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/4197cd92-f2df-44dd-83b7-26f2c2678f1a</div>
+<div>Four of the 17 vessels whose two-pole shuttle stopped before mid-2025 -- PRESIDENT CLEVELAND (303340000), SEASPAN ADONIS (477528400), ONE ALTAIR (431710000), and NYK OCEANUS (351249000) -- all ran the SAME two poles: LA/Long Beach (33.7-33.8N, -118.2 to -118.3W) and Oakland/SF Bay (37.8N, -122.3W), the classic California trans-Pacific coastal string. A re-query of the M9 census for other MMSI sharing this exact pole pair surfaced roughly 40 other container ships (ONE, NYK, MOL, HMM, Yang Ming, Wan Hai, Evergreen-chartered Seaspan tonnage) still actively running it through November/December 2025 -- a decisive negative control: the route itself is thriving, not dying. Yet these four specific hulls stopped visiting it within a tight window (Nov 2024-May 2025), and split cleanly into two sub-patterns: (a) SEASPAN ADONIS and ONE ALTAIR both show CONFIRMED relocation tracks to Atlantic-coast ports (Port of NY/NJ, then Norfolk VA and Savannah GA respectively) within weeks of their last Pacific-pole visit -- an ordinary Pacific-to-Atlantic liner redeployment; (b) PRESIDENT CLEVELAND and NYK OCEANUS instead show an identical, previously-undocumented terminal-trajectory signature: their last 2-3 AIS days trace a track from the Oakland/SF pole out through the Golden Gate, accelerating on an offshore heading (PRESIDENT CLEVELAND: 0.2kn in port -&gt; 6.6kn near the Golden Gate -&gt; 19.1kn at 280nm offshore over 3 days; NYK OCEANUS: 0kn in port -&gt; 11.9kn -&gt; 13.5kn at ~330nm offshore over 2 days) -- read as a genuine outbound transoceanic departure (most likely a return leg to Asia), not a lay-up or a data artifact. All four are M1-clean (no identity change) and three of the four carry M2&#x27;s mixed_or_unclear flag, reviewed and attributed to a specific, newly-documented false-positive mechanism: M2&#x27;s day-level bbox/speed heuristic legitimately fires on the single day a fast, high-message-rate cargo ship crosses a very wide span while genuinely transiting (Pacific-to-Atlantic or the accelerating-offshore-departure day itself), not because of a shared MMSI. The story for the expert&#x27;s economic-indicator framing: this is a clean demonstration of why &#x27;the boats stopped running at endpoint X&#x27; must be checked against endpoint-level traffic before being read as a downturn signal -- individual hull churn on a healthy multi-operator trunk route looks superficially identical to a real stoppage until the wider census and the terminal track are examined.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 5 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Reconciliation: placeholder-encoding-shift-2025 -- CONFIRMED at the schema level</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/4620b97c-f685-4903-be4b-3fca59afdd75</div>
+<div>The NOAA data dictionary CONFIRMS caveat/placeholder-encoding-shift-2025 at the schema level: its 2018-2024 page has no null-handling column at all, while its 2025-present page adds an explicit &#x27;Null Allowed&#x27; column marking sog/cog/heading/vessel_name/imo/call_sign/vessel_type/status/length/width/draft/cargo/transceiver as nullable (Y) and only mmsi/base_date_time/longitude/latitude as non-nullable (N). This is independent, dated, provider-authored confirmation that a real schema change landed at the 2024/2025 boundary, matching the capsule&#x27;s own empirically-derived finding (42% of 2024 rows carrying IMO0000000, ~50k boundary-crossing fake identity-change events). The dictionary does not literally name the &#x27;IMO0000000&#x27; placeholder string or the 0-valued dimension convention -- that specific encoding detail remains this capsule&#x27;s own empirical finding, not a provider claim -- so the verdict is CONFIRMED (schema change is real and dated correctly) with one open detail (exact placeholder string/values) that the docs stay silent on.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: A-MACHAYA III and PRIVATEER -- the two commercially-flavoured apparent lay-ups, and what the endpoint-context groundwork for the POI join actually looks like</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/46289c67-b8c9-41c4-affc-192e6dc3f789</div>
+<div>Of the 6 &#x27;apparent lay-up&#x27; vessels in the 17 (no relocation evidence found for the specific hull), two are the commercially-flavoured, non-recreational cases the expert&#x27;s warehouse-endpoint framing is really aimed at: A-MACHAYA III (338139747, AIS type 97, an uncommon/ambiguous code) on the Neuse River near New Bern, NC (35.49N -76.99W primary pole, long multi-day dwells up to 15 days consistent with near-continuous mooring, secondary stop near the Outer Banks at 35.11N -75.98W), and PRIVATEER (368065940, AIS type 52 tug) at Indian River Inlet/Bay, DE (38.37N -75.6W, secondary spot 38.48N -75.82W, unusually high message-rate dwells up to 9,246 messages consistent with continuous heavy-duty work, plausibly dredging/inlet-maintenance support given the well-known Army Corps dredge site there). Both show the same shape: dense-to-decaying activity through 2024, then a long silence, then in A-MACHAYA III&#x27;s case one final isolated day (2025-03-20) and in PRIVATEER&#x27;s case one final moored ping (2025-04-02), then nothing. Critically, BOTH endpoints were independently confirmed to remain heavily trafficked by OTHER vessels well into 2025 (New Bern: top other MMSI logged 356 of 365 days in 2025; Indian River Inlet: top other MMSI logged 224 days through December 2025) -- so neither case is a receiver dropout or a dead waterway. This is exactly the endpoint-context groundwork the brief asks for: precise pole coordinates recorded, a clearly-flagged industry conjecture attached (small-craft marina/boatyard for A-MACHAYA III; dredging/inlet-maintenance or marina-tug support for PRIVATEER), ready for a future POI join -- while being explicit that the endpoint traffic itself gives no evidence of an industry-wide slowdown. The honest reading is: this specific operator&#x27;s presence stopped, the underlying activity at the location did not, and a future POI join should test at the endpoint-traffic level (aggregate, many vessels) rather than at the single-hull level to find the kind of signal the expert is after.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 3 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Reconciliation + M3 assessment: coverage envelope CONFIRMED (40-50 mi, land-based only); M3&#x27;s displacement-only classifier demonstrably mislabels gaps in both directions once geometry is checked</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/48796b21-ccb9-4c78-b9ff-f5758a51abb8</div>
+<div>CONFIRMED: the AIS FAQ verifies the expert&#x27;s remembered 40-50 nm rule almost verbatim (&#x27;waters extending more than 40 to 50 miles from the coast&#x27;), confirms the feed is land-based-receiver-only (no satellite AIS), and confirms coverage includes Guam/Hawaii/Caribbean/Great Lakes/EEZ but not &#x27;remote Pacific territories&#x27; or &#x27;foreign waters&#x27; -- consistent with the capsule&#x27;s own GOLDEN BEAR finding that coverage extends to Guam. One provider inconsistency noted rather than resolved: the FAQ says NAIS is &#x27;~200 land-based receiving stations&#x27; while the separate ArcGIS &#x27;AIS Base Stations&#x27; item says &#x27;130-plus base stations and 150-plus USACE inland stations&#x27; (280+) -- two different counts from the same provider family; the downloaded receiver gpkg has 290 features (136 NAIS + 154 LOMA/lock-and-dam), closer to the second figure. M3 ASSESSMENT (concrete): cross-referencing M3&#x27;s own gap output against the receiver gpkg (nearest-station haversine distance) shows the &gt;=300km-displacement rule for coverage_exit_voyage is not a reliable proxy for &#x27;left the network.&#x27; Two demonstrated failure directions, now formalized as caveat/m3-coverage-geometry-blind: (a) OVER-CALLING -- MMSI 100000000&#x27;s repeated ~400-436km Gulf-coast gaps (New Orleans-area to Pensacola/Panama City) have both endpoints only 19-22 nm from a station (inside the envelope), so these should likely NOT be coverage_exit_voyage; the silence itself, inside coverage, is the more interesting unexplained fact. (b) UNDER-CALLING -- a cluster of short/malformed-MMSI records shows 135-298km gaps with both endpoints already 270-360 nm out in the open North Atlantic (beyond the envelope on both sides), currently bucketed as undifferentiated local_gap when they are, in fact, ordinary coverage loss. The GOLDEN BEAR worked example survives because its endpoints happen to sit near receivers (13-22 nm) on both sides of a genuine ocean transit. Net verdict: CONFIRMED (envelope figures) + a concrete, evidenced REFINEMENT of M3&#x27;s classification logic (recorded as a new caveat; the query itself was not rewritten this session -- see friction notes).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 3 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/m3-coverage-geometry-blind</div>
+</div><div class="card"><h3>Reconciliation: identity-year-constant -- REFINED (candidate mechanism found), not CONFIRMED or CONTRADICTED</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/55287bc4-e0bc-40c7-8038-262af76d042c</div>
+<div>caveat/identity-year-constant states its &#x27;upstream mechanism unconfirmed&#x27; for near-annual freezing of identity fields. The AIS FAQ documents AVIS (2015-2023) and, from January 2024, AVID: an MMSI-keyed, 23-source, fuzzy-logic correction database that has &#x27;corrected approximately 10-15 percent of records&#x27; since launch, and which back-fills uncertain/null vessel_name using &#x27;the name associated with that Maritime Mobile Service Identity in AVID&#x27; rather than the individual message&#x27;s own reported name. This is a plausible causal mechanism for a lookup-table-driven near-annual freeze (a periodically-refreshed, MMSI-keyed correction layer would produce exactly this signature: identity fields that track a lookup snapshot rather than the raw per-message value), consistent with the capsule&#x27;s own exception case (369914086&#x27;s surviving mid-year toggle) if that vessel&#x27;s raw NMEA value happened to agree with its AVID entry all year. However, the FAQ does NOT state AVID&#x27;s refresh cadence or that any refresh aligns to calendar-year boundaries -- so this is a candidate mechanism, not a confirmed one. Verdict: REFINED. The caveat&#x27;s guidance (treat within-year identity timing as unreliable; date real renames behaviourally) is unchanged and should NOT be weakened -- if anything the fuzzy-logic correction layer is one more reason raw per-message identity timing is untrustworthy.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 1 observation/claim(s)
+ · 0 map implication(s)</div>
+
+</div><div class="card"><h3>Vessel story: MMSI 366989480 - SONNY COOK, a Mississippi River towboat shuttling Baton Rouge &lt;-&gt; LaPlace/Norco, the cleanest, most regular two-point shuttle in the M9 census and the literal &#x27;river shuttle&#x27; case the expert&#x27;s brief described.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/5e595964-28f8-4bfd-bd10-ffaad5b86dc6</div>
+<div>One AIS type-31 towing vessel, identity constant both years. The purest working two-point shuttle found this session: 160 of its 176 recorded dwell spans (105 alternating switches, concentration 0.934) sit at two Mississippi River poles ~95 km apart -- Baton Rouge (30.51N -91.20W) and the LaPlace/Norco/Reserve reach (30.00N -90.41W) -- with roughly weekly cadence and no gap wider than 12 days across the full 2024-2025 window. M2 flags it mixed_or_unclear; resolved by broadcast-level spot check as a single stray GPS fix, not a shared MMSI. KIND: river towboat shuttle (two riverine industrial poles, weekly cadence, no observed stoppage).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Vessel story: MMSI 316009090 - ALGOMA EQUINOX, a Great Lakes laker shuttling Hamilton ON &lt;-&gt; Thunder Bay ON on the classic grain-export route, with a fleet-corroborated winter closure plus one unexplained single-hull gap.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/76e09078-3534-4ce7-8693-a6b9049438d8</div>
+<div>One AIS type-70 bulk carrier, identity constant both years, on the Hamilton (43.3N -79.8W) - Thunder Bay (48.4N -89.2W) Great Lakes grain corridor: 27 of 38 dwell spans (17 switches, concentration 0.864) at these two poles over a 689-day window. Shows a ~99-day winter dwell gap (2024-12-29 -&gt; 2025-04-07) that lines up with the well-known Great Lakes/Soo Locks seasonal closure, corroborated by sister vessel ALGOMA STRONGFIELD&#x27;s near-coincident 94-day gap on the same route; sister G3 MARQUIS instead shows several shorter winter interruptions, i.e. a different per-hull winter deployment, not a uniform fleet rule. EQUINOX ALSO shows an unmatched, vessel-specific 115-day gap (2024-08-02 -&gt; 2024-11-25) that its sisters do not share -- flagged as an unexplained single-hull anomaly (candidate drydock/reassignment), explicitly NOT claimed as a trade-wide signal since the route kept running on other hulls. KIND: Great Lakes bulk-cargo shuttle (two industrial/grain poles, ~90-day seasonal closure, one unexplained single-hull gap).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Vessel story: MMSI 215809000 - ATLANTIC SAIL and four sister hulls (ATLANTIC SEA/STAR/SUN/SKY), a 5-ship fleet all shuttling Baltimore MD &lt;-&gt; Port of NY/NJ on the US side of what the evidence suggests is a longer transatlantic rotation, with rotating (not synchronized) maintenance breaks across hulls.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/87ff1b40-27a7-4598-b21c-cecde5cd5dee</div>
+<div>Five AIS type 70/71/72/74 vessels sharing the same two US poles -- Baltimore MD (39.2N -76.5W) and Port of NY/NJ (40.7N -74.1W) -- each cycling roughly every 30-35 days with concentration 0.86-1.00 at those poles, but with LOW total dwell-time relative to cycle length (42-52 dwell-days out of a ~700-day window per hull): most of each cycle is spent outside the US feed&#x27;s coverage envelope, consistent with (not proven as) the US legs of a transatlantic liner rotation -- flagged as conjecture. Occasional longer (65-72 day) breaks land on different hulls at different times (215797000 Oct2024 &amp; Nov2025; 215800000 Oct2025; 215801000 Nov2025), never overlapping across the whole fleet, consistent with rotating dry-dock/class-survey scheduling rather than a trade-wide stoppage. KIND: multi-hull liner-fleet shuttle (two US coastal poles, ~30-day cycle, most of the cycle off-coverage, rotating per-hull maintenance breaks).</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 1 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/m3-coverage-geometry-blind, https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Reconciliation: sentinel values -- CONFIRMED for sog/cog exact values, REFINED for heading/cog&#x27;s year-dependent encoding</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/8dfe900d-8ada-45c5-b274-bcab32e7c4f6</div>
+<div>The AIS FAQ CONFIRMS caveat/ais-sentinel-values&#x27; sog=102.3 and cog=360 sentinel values verbatim (&#x27;A value of 102.3 indicates that SOG data are not available&#x27;; &#x27;A value of 360.0 indicates that COG data are unavailable&#x27;). It also documents heading=511 but frames it as specific to &#x27;pre-2015 data&#x27; rather than restating it as current practice -- a hint this project&#x27;s own data confirmed empirically: heading and cog both flip from a numeric sentinel (511 / 360) in 2024 to a true NULL in 2025 (0 sentinel occurrences either direction across the boundary in a one-day-per-year sample), while sog=102.3 persists as a literal value in BOTH years and is never NULL. This REFINES caveat/ais-sentinel-values (which treats all three fields as uniform, undated sentinels) into two behaviors: sog&#x27;s sentinel is stable across the whole 2024-2025 span; heading/cog&#x27;s sentinel-vs-NULL encoding depends on the year, formalized as the new caveat/sentinel-encoding-shift-2025. Net verdict: CONFIRMED (documented sentinel values match) + REFINED (encoding is not uniform across years, and the FAQ&#x27;s own pre-2015 framing was the tell).</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/sentinel-encoding-shift-2025</div>
+</div><div class="card"><h3>Vessel story: THAT&#x27;S LIFE&#x27;s Puget Sound-to-Hawaii ping -- a two-point sailboat shuttle&#x27;s &#x27;stop&#x27; is a physically-plausible ocean passage, not a stoppage or a GPS glitch</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/a13b8477-40df-4baa-90c6-573fe446a9bb</div>
+<div>THAT&#x27;S LIFE (MMSI 244023610, AIS type 36 sailing vessel, Netherlands MID) shuttled for 16 months between two points in Puget Sound/the San Juan Islands, WA (48.7N -123.4W and 48.9N -123.5W), a textbook recreational two-point pattern with no decay. Its last dwell at either pole was 2025-05-14; the only subsequent AIS activity in the whole feed is a single day, 2025-06-13, at 20.92N -156.7W -- Maui, Hawaii. Naively this 4,269 km jump looks like exactly the kind of thing that should be flagged &#x27;implausible&#x27; (M3&#x27;s implausible_jump class is built for jumps like this). But computed as a point-to-point average over the 30 days between the two pings, it works out to ~3.2 knots -- comfortably within a cruising sailboat&#x27;s typical offshore-passage speed (including days becalmed or hove-to), and the Pacific Northwest-to-Hawaii route is one of the most common blue-water passages for exactly this class of vessel. No further AIS activity follows the Hawaii ping, consistent with the boat continuing further out into the Pacific, beyond NOAA feed coverage. The story: a rigorous stop-verification has to distinguish &#x27;physically impossible, therefore a data artifact&#x27; from &#x27;physically slow-but-real, therefore a genuine departure&#x27; by actually computing the implied speed rather than eyeballing the distance -- the same displacement-over-time check M3 uses for gap classification, applied here to a single terminal ping instead of an internal gap.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 1 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>M10 method: stop-verification checklist for two-point shuttle disappearances (builds on M1/M2/M3/M7/M9) -- 5 checks to run before reading an M9 census dropout as an economic signal</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/b9ca9631-fdf7-4445-8098-61d6dd12db5e</div>
+<div>M10: a reusable checklist for verifying that a two-point shuttle&#x27;s disappearance (an M9 census member whose top-2-pole pattern stops) is what it appears to be, developed while individually verifying the 17 vessels in the M9 census that stopped before mid-2025.
+
+1. IDENTITY CHECK (M1, one query for the whole candidate batch): run the M1 year-boundary classifier SQL filtered to the candidate MMSI list in one index scan. Zero rows across a batch is a strong, cheap, decisive negative result -- rules out &#x27;the hull continued under a new identity&#x27; for the whole cohort at once rather than per-vessel.
+
+2. EMITTER CHECK (M2, already joined at census time): read emitter_class per candidate. multi_emitter excludes a candidate outright (shared-MMSI fake). mixed_or_unclear needs one extra step: pull conflict_ratio and med_span_conflict_deg and check whether the wide-span conflict days line up with a genuine long-distance transit the vessel is known to have made (visible in its own dwell-span history) rather than same-day contradictory positions -- fast, high-message-rate cargo ships crossing wide areas in a single day are a specific, newly-documented false-positive mechanism for M2&#x27;s day-level bbox heuristic, distinct from the sparse/gray-zone and GPS-glitch mechanisms already recorded in caveat/m2-gray-zone-and-sparse.
+
+3. TERMINAL-TRAJECTORY READ: pull the vessel&#x27;s last 3-5 AIS-active days (index) after its last recognized dwell span and classify the shape: (a) STAYS PUT near a pole = lay-up; (b) HOPS to a new location and DWELLS there (a new span appears) = relocation/re-tasking, confirmed; (c) ACCELERATES on a steady heading away from the coast (e.g. through a strait/channel, speed climbing over consecutive days) = an outbound departure/coverage-exit voyage, not a lay-up -- this signature was found independently on two vessels sharing one pole pair (PRESIDENT CLEVELAND, NYK OCEANUS) and is a new, reusable read distinct from M3&#x27;s internal-gap-based classification (M3 needs two active days bracketing a gap; a terminal disappearance is right-censored and needs this trajectory read instead).
+
+4. ENDPOINT-CONTINUITY CHECK (M3-style, but at the pole not the vessel): query the index for ALL other MMSI active within the same small radius of each pole AFTER the stop date. If other vessels keep calling, coverage/route death is ruled out and the stop is vessel-side by elimination, regardless of whether cause (3) above found anything -- in this session, checking a single busy pole pair (LA/Long Beach-Oakland/SF) incidentally surfaced ~40 other vessels still running the exact route, a strong negative control against reading any single dropout as an economic signal. Do this BEFORE treating any &#x27;apparent lay-up&#x27; as a route-side/industry candidate.
+
+5. OWN-VESSEL SEASONALITY BASELINE: before calling a long silence a permanent stop, check the vessel&#x27;s own prior dwell-span history for an established seasonal gap pattern (e.g. a multi-month winter break that resumed before). Compare the current silence duration against the vessel&#x27;s own historical maximum gap -- a silence 2-3x longer than anything the vessel has done before is a much stronger &#x27;real stop&#x27; signal than an arbitrary calendar cutoff.
+
+Applied to the 17-vessel M9 early-stop cohort: check 1 ruled out identity change for all 17 in one query; check 2 cleared all 3 mixed_or_unclear cases as transit false positives; check 3 confirmed 8 of 17 (6 relocations + 2 departure-track); check 4, run for every non-trivial endpoint in the cohort, found continued traffic at 100% of endpoints checked (zero route-death cases); check 5 flagged one vessel (ENDEAVOUR) as a considered-and-rejected seasonal-gap alternative.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 6 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://richcanopy.org/doxabase/generated/pattern/404f92f7-ba30-4e16-a8a5-8f6494680fbd</div>
+</div><div class="card"><h3>Reconciliation: message-type merging -- CONFIRMED (both the distinct message types and the flat-row product convention)</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/bd61a224-151e-452a-8589-f3a0b870ad44</div>
+<div>USCG NAVCEN documentation (via MarineCadastre&#x27;s &#x27;Other AIS Resources&#x27; page) CONFIRMS the expert&#x27;s tradecraft note (observation 6b13e8f8): positional data (Messages 1/2/3 Class A, Message 18 Class B) and static/voyage data (Message 5, Class A only) are indeed distinct raw AIS message types. The AIS FAQ additionally CONFIRMS that the flat single-row-per-broadcast-point convention (positional and static fields together, as this capsule&#x27;s broadcasts table has them) is specifically a 2015-onward product decision -- 2009-2015 data used a different, three-table normalized model. Verdict: CONFIRMED on both counts. Remaining silence: no document describes the exact carry-forward/join logic (e.g. how long a static value persists onto subsequent positional rows before being refreshed by a new Message 5), which is exactly the mechanism caveat/message-type-merging (newly recorded this session) warns future analysts to be skeptical of when treating a row&#x27;s static fields as synchronized with its timestamp.</div>
+<div class="pattern-links">confidence: high confidence
+ · supported by 2 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/caveat/message-type-merging</div>
+</div><div class="card"><h3>M8 method: draft-change track-context -- joins each M4 draft-change event to the M7 dwell-span layer (+-1 day tolerance) so every load/discharge event carries a kinematic context (at_berth / at_anchor / no_dwell_nearby / dwell_unclassified), operationalising the expert&#x27;s berth=cargo / anchor=ambiguous / underway=ballast-or-artifact guidance as a measurable per-vessel percentage.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/c768eaa1-b2ed-49ba-b8ac-50a03c99ed5e</div>
+<div>Extends M4 (draft-change-events) with M7 (track-state dwell spans). For each M4 event (mmsi, prev_date, change_date, delta_m, event), find M7 dwell spans for the same mmsi overlapping [prev_date-1, change_date+1] and label:
+
+CASE
+  WHEN n_overlapping_spans = 0 THEN &#x27;no_dwell_nearby&#x27;   -- underway or between recognised stops: ballast shift, crew reset, or an M4 artifact
+  WHEN overlaps_moored THEN &#x27;at_berth&#x27;                   -- tied up: cargo work is the default read
+  WHEN overlaps_anchored THEN &#x27;at_anchor&#x27;                -- swinging on the hook: ambiguous, could be ballast/lightering
+  ELSE &#x27;dwell_unclassified&#x27;
+END AS track_context
+
+SQL (DuckDB, combines the M4 seq CTE with the M7 flagged/grouped/spans CTEs):
+WITH t AS (
+  SELECT mmsi, date, distance_m, drafts[1] AS draft, sog_mean, status_codes
+  FROM read_parquet(&#x27;s3://ais-noaa/index/*/*.parquet&#x27;)
+  WHERE len(drafts)&gt;=1 AND drafts[1]&gt;0 AND len(vessel_types)=1 AND vessel_types[1] BETWEEN 80 AND 89
+), flagged AS (
+  SELECT *, (sog_mean&lt;3.0 AND distance_m&lt;50000) AS stationary_candidate,
+    lag(date) OVER w AS prev_date2, lag(sog_mean&lt;3.0 AND distance_m&lt;50000) OVER w AS prev_stat2
+  FROM t WINDOW w AS (PARTITION BY mmsi ORDER BY date)
+), grouped AS (
+  SELECT *, SUM(CASE WHEN prev_date2 IS NULL OR stationary_candidate&lt;&gt;prev_stat2
+      OR (date_diff(&#x27;day&#x27;,prev_date2,date)&gt;1 AND NOT (prev_date2=DATE &#x27;2024-08-25&#x27; AND date=DATE &#x27;2024-08-27&#x27;))
+      THEN 1 ELSE 0 END) OVER (PARTITION BY mmsi ORDER BY date) AS grp_id
+  FROM flagged
+), spans AS (
+  SELECT mmsi, grp_id, min(date) span_start, max(date) span_end,
+    bool_or(list_contains(status_codes,5)) any_moored, bool_or(list_contains(status_codes,1)) any_anchored
+  FROM grouped WHERE stationary_candidate GROUP BY mmsi, grp_id
+), seq AS (
+  SELECT mmsi, date, draft, lag(draft) OVER w AS prev_draft, lag(date) OVER w AS prev_date
+  FROM t WINDOW w AS (PARTITION BY mmsi ORDER BY date)
+), events AS (
+  SELECT mmsi, prev_date, date AS change_date, round(draft-prev_draft,1) AS delta_m,
+    CASE WHEN draft&gt;prev_draft THEN &#x27;loading&#x27; ELSE &#x27;discharge&#x27; END AS event
+  FROM seq WHERE prev_draft IS NOT NULL AND abs(draft-prev_draft)&gt;=1.0
+)
+SELECT e.mmsi, e.prev_date, e.change_date, e.event, e.delta_m,
+  max(sp.any_moored) AS overlaps_moored, max(sp.any_anchored) AS overlaps_anchored,
+  count(sp.grp_id) AS n_overlapping_spans
+FROM events e LEFT JOIN spans sp
+  ON sp.mmsi=e.mmsi AND sp.span_start&lt;=e.change_date+1 AND sp.span_end&gt;=e.prev_date-1
+GROUP BY e.mmsi, e.prev_date, e.change_date, e.event, e.delta_m;
+
+The +-1 day join tolerance is a tunable design parameter, not a discovered constant: widening it will reduce &#x27;no_dwell_nearby&#x27; counts because draft update-lag (caveat/m4-draft-update-lag) can smear the recorded date a day or more from the true stay.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 3 observation/claim(s)
+ · 2 map implication(s)</div>
+<div class="iri">→ https://ais.study/view/draft-change-events, https://richcanopy.org/doxabase/generated/pattern/208f3abb-08c7-4186-8122-dd15e4205b2f</div>
+</div><div class="card"><h3>M6 method (new, not yet a formal analysis view): detect port/terminal visits and their arrival/departure timing from broadcast-level SOG crossings plus draft cross-check, without a port database.</h3>
+<div class="iri">https://richcanopy.org/doxabase/generated/pattern/dc8eddfb-3dfe-43c6-9a33-df476ed196ae</div>
+<div>No analysis view in this capsule covers port calls (M1-M5 cover identity, multi-emitter, silence, draft/cargo, co-movement). Method: (1) screen the daily-index (cheap) for multi-day stationary clusters per MMSI - small distance_m, sog_mean near 0, status_codes containing 1 (anchored) or 5 (moored) - to find candidate port/terminal stays and their approximate positions; (2) refine each stay&#x27;s true boundaries at broadcast level using base_date_time (never the CET-shifted timestamp column, per caveat/timestamp-cet-parse-bug) with a lag-window crossing detector: flag rows where sog crosses below ~1 kn (candidate arrival) or back above it (candidate departure), reading read_parquet(&#x27;s3://ais-noaa/broadcasts/{year}/*.parquet&#x27;) filtered to the MMSI and a date window; (3) where the vessel type is a tanker (80-89), cross-check with the day&#x27;s drafts list (M4s signal): draft rising into a stay = loading, falling after = discharge, corroborating a genuine cargo port call rather than anchoring/waiting; (4) name the port/terminal by matching the stay&#x27;s stable lat/lon to known-geography, exactly as M4 does for terminals - this is an inference from position, not a verified geocode, and should be labelled as such. Worked example: MMSI 338617000 (PENNSYLVANIA, tanker), May 2024 - six stays identified this way, including an anchorage-then-berth two-step approach pattern at each port (an offshore/river waiting position followed by the actual dock, both within the same caveat/timestamp-cet-parse-bug-safe timeline) and a within-port berth shift visible as a brief secondary arrive/depart flicker.</div>
+<div class="pattern-links">confidence: medium confidence
+ · supported by 0 observation/claim(s)
+ · 1 map implication(s)</div>
+<div class="iri">→ https://ais.study/dataset/broadcasts</div>
+</div>
+
+<h2>Recent revisions</h2>
+<div class="wrap"><table><tr><th style="width:160px">when</th><th>revision</th><th style='width:150px'>type</th></tr><tr><td class='sub'>2026-07-08T12:11:15</td><td>Applied staged revision: v2 map migration: the two CargoOperation cluster resources re-typed to aisv:DraftChangeEvent with cargoDirection moved to draftChangeReading plus stated readingBasis/representsDetectorRows/derivedFromRun; the merged-gap COMFORT silence states its two M3 rows in representsDetectorRows; ofEmitter scopes the 374158000 statics-correction to the dominant occupant; externalBasis surfaces the COMFORT orientation-only identification; assessedAt + assessmentDataWindow added to all 8 operatingProfile-bearing resources (session-5 resources 2026-07-06, session-6 resources 2026-07-07, window = NOAA AIS 2024-2025).<div class='sub'>applied event</div></td><td class='sub'>AppliedStagedRevision</td></tr><tr><td class='sub'>2026-07-08T12:10:58</td><td>v2 map migration: the two CargoOperation cluster resources re-typed to aisv:DraftChangeEvent with cargoDirection moved to draftChangeReading plus stated readingBasis/representsDetectorRows/derivedFromRun; the merged-gap COMFORT silence states its two M3 rows in representsDetectorRows; ofEmitter scopes the 374158000 statics-correction to the dominant occupant; externalBasis surfaces the COMFORT orientation-only identification; assessedAt + assessmentDataWindow added to all 8 operatingProfile-bearing resources (session-5 resources 2026-07-06, session-6 resources 2026-07-07, window = NOAA AIS 2024-2025).<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr><tr><td class='sub'>2026-07-08T12:09:35</td><td>Applied staged revision: aisv: vocabulary v2 - expert-directed revision: fact/reading layering (DraftChangeEvent+draftChangeReading supersede CargoOperation+cargoDirection; RecurringCoPresence+coPresenceReading supersede OperationalTie+tieKind), candidate-vs-declared identity threshold (declaredHullRecord, externalBasis), indexical assessment context (assessedAt, assessmentDataWindow), run/ephemera provenance hooks (derivedFromRun, representsDetectorRows), per-emitter scoping (ofEmitter), M8 track context (trackContext), readingBasis; 8 v1 terms strengthened in place; 4 superseded terms retained with rewritten comments, never deleted.<div class='sub'>applied event</div></td><td class='sub'>AppliedStagedRevision</td></tr><tr><td class='sub'>2026-07-08T12:08:57</td><td>aisv: vocabulary v2 - expert-directed revision: fact/reading layering (DraftChangeEvent+draftChangeReading supersede CargoOperation+cargoDirection; RecurringCoPresence+coPresenceReading supersede OperationalTie+tieKind), candidate-vs-declared identity threshold (declaredHullRecord, externalBasis), indexical assessment context (assessedAt, assessmentDataWindow), run/ephemera provenance hooks (derivedFromRun, representsDetectorRows), per-emitter scoping (ofEmitter), M8 track context (trackContext), readingBasis; 8 v1 terms strengthened in place; 4 superseded terms retained with rewritten comments, never deleted.<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr><tr><td class='sub'>2026-07-07T01:18:05</td><td>Applied staged revision: Two new structured vessel stories (session 6): MMSI 374158000 (dual-track shared identity, LOTTUS/EVER FOCUS) and MMSI 368817000 (COMFORT, Gulf-berth lay-up pattern + split deployment gap), expressed via the aisv: vocabulary in map, following the repaired rdfs:seeAlso/rdfs:comment convention (not rc:supportingClaim/rc:summary).<div class='sub'>applied event</div></td><td class='sub'>AppliedStagedRevision</td></tr><tr><td class='sub'>2026-07-07T01:17:52</td><td>Two new structured vessel stories (session 6): MMSI 374158000 (dual-track shared identity, LOTTUS/EVER FOCUS) and MMSI 368817000 (COMFORT, Gulf-berth lay-up pattern + split deployment gap), expressed via the aisv: vocabulary in map, following the repaired rdfs:seeAlso/rdfs:comment convention (not rc:supportingClaim/rc:summary).<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr><tr><td class='sub'>2026-07-06T23:21:44</td><td>Recorded staged revision review decision: superseded - Proof-of-vocabulary: three vessel stories (311050400 rename/lay-ups, 538002783 cargo + coverage exits, 367369920 fleet clone) re-expressed as 13 aisv: event/state resources in the map graph.<div class='sub'></div></td><td class='sub'>StagedRevisionReviewResolution</td></tr><tr><td class='sub'>2026-07-06T23:16:10</td><td>Applied staged revision: Proof-of-vocabulary: three vessel stories (311050400 rename/lay-ups, 538002783 cargo + coverage exits, 367369920 fleet clone) re-expressed as 13 aisv: event/state resources in the map graph.<div class='sub'>applied event</div></td><td class='sub'>AppliedStagedRevision</td></tr><tr><td class='sub'>2026-07-06T23:15:46</td><td>Proof-of-vocabulary: three vessel stories (311050400 rename/lay-ups, 538002783 cargo + coverage exits, 367369920 fleet clone) re-expressed as 13 aisv: event/state resources in the map graph.<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr><tr><td class='sub'>2026-07-06T23:14:20</td><td>Proof-of-vocabulary: three vessel stories (311050400 rename/lay-ups, 538002783 cargo + coverage exits, 367369920 fleet clone) re-expressed as 13 aisv: event/state resources in the map graph.<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr><tr><td class='sub'>2026-07-06T23:11:50</td><td>Applied staged revision: aisv: vessel-doings vocabulary v1 - 25 terms (7 classes, 18 properties) distilled empirically from the 20 vessel stories, 6 method patterns, 24 caveats and 4 expert observations; namespace https://ais.study/ns#.<div class='sub'>applied event</div></td><td class='sub'>AppliedStagedRevision</td></tr><tr><td class='sub'>2026-07-06T23:11:24</td><td>aisv: vessel-doings vocabulary v1 - 25 terms (7 classes, 18 properties) distilled empirically from the 20 vessel stories, 6 method patterns, 24 caveats and 4 expert observations; namespace https://ais.study/ns#.<div class='sub'></div></td><td class='sub'>StagedRevision</td></tr></table></div>
+
+<footer>DoxaBase capsule report · one static file, no external assets ·
+regenerate with <code>doxabase-report --capsule &lt;path&gt;</code></footer>
+</main></body></html>
