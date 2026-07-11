@@ -45,9 +45,13 @@ story_kml.py; capsule-reading map tool is the direction), flagged
 sub-day stop recall as untested, and asked for an MMSI-sharing global
 survey. Session 12 ran the M11 survey (thresholds confirmed, shape
 expectation revised, 10% position-suspect windows found, distance_m
-formula escalated to James); session 13 (stops-series foundation +
-recall measurement) launched 2026-07-11. James has a "crafty idea for
-a very different data set" he will share ~2026-07-12. Foursquare
+formula escalated to James); session 13 landed the stops-series
+foundation (M12: day-index recall is 52% for 10–30min stops rising to
+99% multi-day; event-level series finds 3× the shuttles — the expert's
+architecture confirmed). A SECOND, private external case study now
+exists in its own repository (deliberately kept out of this repo;
+memory holds the pointer); only domain-stripped generic product gaps
+flow back to the distiller ledger from it. Foursquare
 open places is the candidate reference dataset James may load to S3 —
 pilot target: the flagged endpoints from sessions 8/9. Everything is
 committed and pushed to `master`; the gate is green; nothing is
