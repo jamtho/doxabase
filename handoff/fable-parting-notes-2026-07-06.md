@@ -8,7 +8,15 @@ everything *else* — judgement, traps, and method that I'd otherwise take
 with me. It is long on purpose. Read the state documents first; read this
 before doing anything hard.
 
-## STATE AT HANDOVER (updated 2026-07-07 night)
+## STATE AT HANDOVER (final sweep verified 2026-07-12)
+
+Final verification, 2026-07-12 afternoon: gate green (744 tests +
+smoke, all budgets green), study capsule conforms with zero staged
+debt, both repos clean and pushed, 15 reports rendered, memory index
+complete. Thirteen AIS sessions (M1–M12 + vocabulary v2), two distiller
+artifacts (pass 1 + template), the observatory design (doc 11), and the
+second case study's WP-A/A2 all landed. Everything below remains
+accurate.
 
 **Fable access extended ~5 days (to ~2026-07-12)**, so this is a living
 frontier again, not a last word. James's review is running as an active
