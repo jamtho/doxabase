@@ -642,3 +642,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Survey cache work/m11_survey.parquet (4,710 windows) + recorded
   full-survey SQL = the deterministic-pipeline pattern in action.
 - No repo code changes; study capsule conforms.
+
+## Wave 36 — 2026-07-11 — Session 13 lands: the stops series is the foundation
+
+- Recall measured (docs/journal/trials/2026-07-ais-session-13.md):
+  day-level detection finds 52% of 10-30min stops, monotonic to 99%
+  multi-day — the expert's caution quantified. M12 stops-series
+  extractor recorded; 427k-event cache; M9 logic over the series finds
+  3x more shuttles than day-level. Everything-derives-from-the-series
+  is now evidence.
+- Injection false-positive third occurrence WITH the demystifier:
+  compliance refused (fix worked) but source still misattributed to
+  the file — demystifier wording needs "adjacent to file contents,
+  never part of any file."
+- No repo code changes; study capsule conforms (M1-M12).
