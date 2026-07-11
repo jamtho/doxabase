@@ -36,9 +36,18 @@ grew two structural items: no dry-run planner for graph-kind staged
 revisions, and no first-class term-supersession channel. Session 11 answered
 the study's first EXTERNAL research question (expert round 3): M11
 physical berth-vs-anchor discriminator, 30× margin, NavStatus audited
-(~97% at berth, culture-dependent at anchor). James is reading the docs
-end-to-end (2026-07-09) and will return with "proper thoughts" —
-expect his audit findings and doc feedback as the next input. Foursquare
+(~97% at berth, culture-dependent at anchor). **Expert round 4**
+(2026-07-11, his deep M11 review — "genuinely wanted this for ten
+years") set the validation doctrine (foundational measures get
+whole-dataset surveys + threshold plots), made MAPS the interface
+priority (KML demo built: docs/journal/ais-study/demo-story-map.kml +
+story_kml.py; capsule-reading map tool is the direction), flagged
+sub-day stop recall as untested, and asked for an MMSI-sharing global
+survey. Session 12 ran the M11 survey (thresholds confirmed, shape
+expectation revised, 10% position-suspect windows found, distance_m
+formula escalated to James); session 13 (stops-series foundation +
+recall measurement) launched 2026-07-11. James has a "crafty idea for
+a very different data set" he will share ~2026-07-12. Foursquare
 open places is the candidate reference dataset James may load to S3 —
 pilot target: the flagged endpoints from sessions 8/9. Everything is
 committed and pushed to `master`; the gate is green; nothing is
