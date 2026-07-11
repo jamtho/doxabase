@@ -51,7 +51,17 @@ foundation (M12: day-index recall is 52% for 10–30min stops rising to
 architecture confirmed). A SECOND, private external case study now
 exists in its own repository (deliberately kept out of this repo;
 memory holds the pointer); only domain-stripped generic product gaps
-flow back to the distiller ledger from it. Foursquare
+flow back to the distiller ledger from it.
+- **The map turn is designed**: doc 11 (capsule-observatory) is the
+  handover contract for the web/map rendering stack — separate repo,
+  exporter → static bundles → MapLibre + DuckDB-Wasm, no agent in the
+  serving path, expert + public modes, AIS MVP defined. James sees the
+  AIS observatory as DoxaBase's public demonstration. Repo-architecture
+  doctrine agreed with James 2026-07-12: per domain, a pure fetch repo
+  (data → S3), a study repo (capsule + interpretation), the shared
+  observatory, and doxabase core — coordinated by capsule-recorded
+  "pipeline ledgers" turned into batched maintenance passes, never by
+  live cross-repo coupling. Foursquare
 open places is the candidate reference dataset James may load to S3 —
 pilot target: the flagged endpoints from sessions 8/9. Everything is
 committed and pushed to `master`; the gate is green; nothing is
