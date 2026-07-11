@@ -18,6 +18,18 @@ artifacts (pass 1 + template), the observatory design (doc 11), and the
 second case study's WP-A/A2 all landed. Everything below remains
 accurate.
 
+Late additions (2026-07-12 evening, all landed and pushed):
+**rc:citesClaim is IN the base ontology** (James-approved; wave 37) —
+the reserved batch-2 semantic item is resolved; James granted a
+standing delegation for obvious straightforward ontology changes
+(gate + tests + primer + keep him in the loop). Expert round 5
+recorded (KML information design, hull-registry idea, operatingProfile
+generalization hunch, RDF-as-code-contract idea — all on the v3
+ledger). Two KML maps now ship in docs/journal/ais-study/: the story
+demo and port-stops-map.kml (San Diego, M11 classifications in
+folders, a joined-line arrival — built to round-5 design guidance and
+already yielding findings).
+
 **Fable access extended ~5 days (to ~2026-07-12)**, so this is a living
 frontier again, not a last word. James's review is running as an active
 conversation: **expert round 2** (VOCAB-NOTE feedback + four addenda) is
