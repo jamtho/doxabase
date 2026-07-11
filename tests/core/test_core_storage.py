@@ -8,7 +8,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1527
+    assert graphs["base_ontology"].triple_count == 1530
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1540
     assert graphs["base_shapes"].mutable is False

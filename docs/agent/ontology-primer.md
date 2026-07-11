@@ -46,3 +46,9 @@ Useful distinction:
   `rc:Pattern`.
 
 The base SHACL shapes validate common authoring mistakes in `rc:` usage. They are open and do not reject client-defined terms.
+
+To cite an `rc:Claim` from a project-domain resource (a vocabulary
+instance, a story resource), use `rc:citesClaim` — it is open-domain
+and carries no shape obligations. Reserve `rc:supportingClaim` and
+`rc:hasClaim` for kernel patterns/observations: using them on other
+subjects pulls in the kernel shape contracts and fails validation.

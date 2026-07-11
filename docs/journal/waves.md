@@ -656,3 +656,15 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   the file — demystifier wording needs "adjacent to file contents,
   never part of any file."
 - No repo code changes; study capsule conforms (M1-M12).
+
+## Wave 37 — 2026-07-12 — rc:citesClaim lands (James-approved)
+
+- The one reserved semantic item from distiller batch 2, decided by
+  James this morning ("no brainer"): rc:citesClaim added to the base
+  ontology — open-domain, range rc:Claim, deliberately shape-free, so
+  project-domain resources cite claims first-class instead of
+  rdfs:seeAlso (the session-5 workaround). Primer gains the
+  when-to-use-which sentence. Seed count 1527→1530; regression
+  expectations updated.
+- Standing delegation recorded: obvious straightforward ontology
+  changes may be made directly, keeping James in the loop.

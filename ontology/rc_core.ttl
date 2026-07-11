@@ -1199,6 +1199,10 @@ rc:supportingClaim a rdf:Property ;
     rdfs:range rc:Claim ;
     rdfs:comment "A structured claim that supports a pattern." .
 
+rc:citesClaim a rdf:Property ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "Open-domain citation of a claim: the subject resource cites the object claim as support or context. Deliberately domain-free and shape-free so project-domain resources (which must not inherit kernel Pattern/Observation shape contracts via rc:supportingClaim or rc:hasClaim) can cite claims first-class instead of falling back to rdfs:seeAlso." .
+
 rc:patternStability a rdf:Property ;
     rdfs:domain rc:Pattern ;
     rdfs:range rc:PatternStability ;
