@@ -103,6 +103,13 @@ berth/anchor/ambiguous points with the threshold provenance one click
 away (the session-12 plots ARE the trust surface — embed them).
 Deliberately absent from MVP: search, arbitrary query UI, any
 natural-language interface. Add only against observed need.
+Post-MVP affordance (expert round 6): "export what I'm looking at as
+KML/KMZ" on every map view — the download-as-xlsx of maps; cheap
+because the KML writer already exists as a peer output of the same
+exporter core. Also queued from round 6: colour-for-speed on track
+rendering, and the classifier-feedback loop (human marks
+misclassified points on the map; marks flow back as recorded
+observations).
 
 ## 5. What this is not
 
