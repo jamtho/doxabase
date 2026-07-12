@@ -697,3 +697,20 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   ordering determinism, dedup policy. Doc 12's decision point 4
   (stage regenerated code behind invariant reports) is now law by
   demonstration.
+
+## Wave 40 — 2026-07-12 — Docs 13 and 14: the workbench and anchored derivations
+
+- Doc 13 (capsule workbench): the exploratory analyst-facing web
+  system James asked to run with — local-first, read-only v1, shared
+  L1/L2 layers with per-domain L3 configs, one codebase with the doc-11
+  observatory as its static reviewed build target; frame browser
+  (data-with-its-semantics) named the killer feature; AIS MVP cut
+  defined.
+- Doc 14 (anchored derivations): the ephemeral-entities design
+  session — identity by promotion with anchor descriptors, membership
+  recomputed per run, match-back as a contracted method, drift as a
+  finding never a silent re-anchor, promotion rate as the capsule's
+  scale knob; four decision points for James.
+- Doc 12 gained its session outcome (§8): all four points ratified,
+  autoresearch-over-contracts recorded as future direction.
+- Round 7 recorded in the study capsule.
