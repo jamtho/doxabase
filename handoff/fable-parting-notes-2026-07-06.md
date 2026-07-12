@@ -29,8 +29,17 @@ code, and the blind agent found the base_date_time separator shift no
 sighted session had noticed — now a recorded caveat + pipeline
 reminder). The contract vocabulary's v2 worklist is empirical: metric
 definitions, ordering determinism, dedup policy, threshold bands,
-procedure sequencing. James's design-session reactions to doc 12 §5
-are the next input. Also landed 2026-07-12: doc 11 round-6 affordances,
+procedure sequencing. James ratified all four
+doc-12 decision points same-day (§8 records the outcome plus his
+borrow-vs-reinvent guidance and the autoresearch-over-contracts
+direction). Round 7 recorded. **Docs 13 and 14 landed at his request**:
+the Capsule Workbench (exploratory analyst UI; local-first read-only;
+shared L1/L2 + per-domain L3 configs; one codebase with the doc-11
+observatory as its static build target; frame browser = the killer
+feature) and Anchored Derivations (identity-by-promotion with anchor
+descriptors; match-back as a contracted method; drift as finding;
+promotion rate as the capsule's scale knob — doc-14 §4 decision points
+await James). Implementation of 13/14 belongs to future sessions. Also landed 2026-07-12: doc 11 round-6 affordances,
 round-6 expert observations, KML marker scaling, Transit agreed as the
 v3-ledger shape (kinematic between-stops segment), the
 place-as-resource pairing design (identity in graph, membership
