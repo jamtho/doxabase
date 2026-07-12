@@ -668,3 +668,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   expectations updated.
 - Standing delegation recorded: obvious straightforward ontology
   changes may be made directly, keeping James in the loop.
+
+## Wave 38 — 2026-07-12 — Session 14 lands: M12 has a contract
+
+- Doc-12 pilot phase 1 recorded: docs/journal/trials/
+  2026-07-ais-session-14.md. mc: vocabulary (20 terms, two-method
+  justified), M12 full contract (5 invariants incl. the structurally-
+  encoded session-13 defect; 7 evidenced parameters aging via
+  assessment windows), M11 sketch, blind bundle exported. All four
+  doc-12 decision points answered with evidence; the couldn't-say
+  list (bands, procedures, metric definitions, parameter
+  interactions, run inputs, checkability grades) is the design
+  session's key input. rc:citesClaim's first production use.
+- Phase 2 (cold contract-only regeneration) running.
+- No repo code changes; study capsule conforms.
