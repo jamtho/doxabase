@@ -18,7 +18,25 @@ artifacts (pass 1 + template), the observatory design (doc 11), and the
 second case study's WP-A/A2 all landed. Everything below remains
 accurate.
 
-Late additions (2026-07-12 evening, all landed and pushed):
+Final additions (2026-07-12 night, all landed and pushed): **the
+RDF-method-contracts pilot ran end-to-end in one day and PASSED** —
+doc 12 (the design, four decision points now carrying phase-1
+recommendations AND phase-2 demonstrations), session 14 phase 1 (mc:
+vocabulary, M12's contract with evidenced parameters and five
+invariants), phase 2 (blind regeneration from contract alone: −0.22%
+event delta, invariants caught real non-determinism in the regenerated
+code, and the blind agent found the base_date_time separator shift no
+sighted session had noticed — now a recorded caveat + pipeline
+reminder). The contract vocabulary's v2 worklist is empirical: metric
+definitions, ordering determinism, dedup policy, threshold bands,
+procedure sequencing. James's design-session reactions to doc 12 §5
+are the next input. Also landed 2026-07-12: doc 11 round-6 affordances,
+round-6 expert observations, KML marker scaling, Transit agreed as the
+v3-ledger shape (kinematic between-stops segment), the
+place-as-resource pairing design (identity in graph, membership
+recomputed per run), and the private-repo strategy appendix.
+
+Earlier additions (2026-07-12 evening, all landed and pushed):
 **rc:citesClaim is IN the base ontology** (James-approved; wave 37) —
 the reserved batch-2 semantic item is resolved; James granted a
 standing delegation for obvious straightforward ontology changes
