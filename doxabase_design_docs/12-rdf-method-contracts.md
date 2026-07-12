@@ -147,3 +147,37 @@ tolerance; the diff between regenerated and original behaviour is the
 measure of what the contract failed to say — which is the real
 deliverable: an empirical list of what contracts must express, learned
 the same way everything else in this project has been.
+
+---
+
+## 8. Session outcome (2026-07-12, same day)
+
+James ratified all four §5 decision points as decided, with additions:
+heavyweight invariants are contract-system-defined computations whose
+invalidation rows must be empty (no formal apparatus needed);
+parameters stay free-standing because the same test under different
+thresholds IS a different method (stopped vs slow-moving); separate
+realizations exist partly to discuss implementations (speed testing).
+Standing design guidance: bottom-up from need, avoiding BOTH drop-in
+familiarity (importing a type system "because of course") and
+contrarian reinvention where another community captured a concept well
+(SQL's ordering spec may deserve direct reference); LLMs make post-hoc
+ontology restructuring cheap, so bottom-up-then-restructure is the
+safe path. Couldn't-say lists are deliberate modelling debt.
+
+The pilot passed same-day (see session 14's trial record): blind
+regeneration at −0.22%, invariants catching real non-determinism,
+and a feed defect found by fresh eyes under constraint. The contract
+vocabulary's v2 worklist is empirical: metric definitions, ordering
+determinism, duplicate policy, threshold bands, procedure sequencing,
+run-scope inputs, checkability grades.
+
+**Future direction (James, round 7): autoresearch over contracts.**
+Evolutionary/search-style improvement of realizations toward a goal
+may be far more tractable here than over raw code: the goal,
+invariants, parameters, and every past experiment and finding are
+queryable graph citizens, so an agent evolving (say) a better
+anchorage-stop detector inherits the full experimental record and
+leaves its own. First candidate when someone wants it: M11's
+ambiguous band as the optimization target, with the classifier
+feedback loop (doc 11) supplying ground truth.
