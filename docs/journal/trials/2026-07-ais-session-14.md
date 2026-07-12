@@ -66,3 +66,34 @@ unfindable); describe_resource incoming links on patterns returned
 nothing; list_entities needs exact full IRIs; stage_revision reports
 history-side triple counts (momentarily alarming). All → batch-2/3
 ledger.
+
+## Phase 2 (same day): the blind regeneration — PASS
+
+A cold agent with ONLY the 333-triple bundle + data access rebuilt
+M12: **426,207 events vs the original 427,134 (−0.22%)**; flag rate
+6.92% vs 7.0%; the post-fix maximum event reproduced to the decimal
+(89.709 days vs the contract's quoted "plausible 89.7"). All five
+invariants PASS — and the invariant machinery earned its keep inside
+the pilot itself: the regenerated SQL was initially non-deterministic
+(same-second broadcast collisions left window-function ties arbitrary;
+five runs, five counts) and flicker-containment caught it; fixed to
+bit-identical reruns with integer run-ids and single-threaded
+canonical execution.
+
+The ambiguity list independently confirms phase 1's couldn't-say items
+(hollow_fraction named-but-undefined = the largest interpretive gap)
+and adds three the contract vocabulary must express: ordering
+determinism under timestamp ties; duplicate-broadcast handling
+(120,633 exact dupes, unaddressed); run-scope inputs (already on the
+list). And the star finding: the blind agent discovered the
+**base_date_time separator shift at the 2024/2025 boundary** — a real
+ingest inconsistency five sighted sessions silently absorbed via CAST
+— now a recorded caveat (curator-verified live) and a pipeline
+reminder for James. Fresh eyes constrained to a spec see what
+familiarity glosses.
+
+Verdict for doc 12: behavioural regeneration from RDF contracts works
+at the 99.8% level, the residual is attributable to exactly the gaps
+phase 1 predicted plus determinism/dedup, and "regenerated code stages
+behind an invariant report" moved from lean to law — the report caught
+a real bug in the pilot's own regenerated code.

@@ -682,3 +682,18 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   session's key input. rc:citesClaim's first production use.
 - Phase 2 (cold contract-only regeneration) running.
 - No repo code changes; study capsule conforms.
+
+## Wave 39 — 2026-07-12 — The blind regeneration passes
+
+- Doc-12 pilot phase 2: a cold agent rebuilt M12 from the RDF contract
+  alone — 426,207 vs 427,134 events (−0.22%), flag rates matched, the
+  89.7-day maximum reproduced to the decimal, all five invariants PASS
+  after the invariant checker caught real non-determinism in the
+  regenerated code. Trial record extended (session 14 phase 2).
+- The blind agent found a real feed defect five sighted sessions
+  missed: base_date_time separator shift at the 2024/2025 boundary —
+  recorded as a caveat (curator-verified) + pipeline reminder.
+- Contract-vocabulary gaps confirmed+extended: metric definitions,
+  ordering determinism, dedup policy. Doc 12's decision point 4
+  (stage regenerated code behind invariant reports) is now law by
+  demonstration.
