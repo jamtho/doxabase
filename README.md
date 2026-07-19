@@ -84,13 +84,23 @@ Because this is research, here is the honest state of the claims:
   for derived entities (doc 14). A second, independent case study is
   underway to test generalization; nothing enters the core ontology
   until two domains need it.
-- **Design-stage, deliberately speculative**: the capsule
-  workbench/observatory (docs 13/11 — a first working cut of the
-  workbench exists), RDF method contracts as general engineering
-  practice (doc 12 — pilot passed), and search-based method
-  improvement over contracts. These are stated as designs with pilot
-  evidence, not shipped claims; expect them to be revised as trials
-  accumulate.
+- **Design-stage, deliberately speculative**: the capsule observatory
+  (doc 11), RDF method contracts as general engineering practice
+  (doc 12 — pilot passed), and search-based method improvement over
+  contracts. These are stated as designs with pilot evidence, not
+  shipped claims; expect them to be revised as trials accumulate.
+
+**The Capsule Workbench is real and usable now**
+([`jamtho/doxabase-workbench`](https://github.com/jamtho/doxabase-workbench)):
+point it at any capsule (`doxabase-workbench capsule.sqlite`) and
+browse it in your browser — the project brief as a landing page,
+every IRI clickable with claims and evidence expanded inline, dataset
+pages that refuse to show data without its caveats, a guarded SQL box
+over the S3 frames a capsule describes, the full revision timeline
+with staged→applied lineage, and supersession chains rendered so you
+can watch conclusions change as evidence arrives. It opens the capsule
+strictly read-only: agents write, humans see. Design contract in
+doc 13.
 
 ## How To Read This Project
 
