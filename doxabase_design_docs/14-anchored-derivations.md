@@ -104,3 +104,25 @@ candidates — by the two-domain law, not before.
 4. **Workbench surfacing** (doc 13 tie-in): promoted entities' pages
    should show live match-back status against the CURRENT run
    ("anchor last matched run R, drift 3m") — is that v1 or later?
+
+---
+
+## 5. Session outcome (2026-07-18, James)
+
+All four §4 decision points decided: (1) anchors defined by the
+promoting session — try it this way first, re-evaluate on failure;
+(2) drift tolerance as a match-back contract parameter — with the
+accepted consequence that bulk periodic data releases can break
+patterns and force contract rebuilds ("a real pain, but the system
+working as intended"); (3) plain supersededBy links, reconsideration
+carries the story; (4) match-back status goes into WORKBENCH V1 —
+James wants direct eyes on the living capsule, particularly the flow
+of versions as evidence changes.
+
+Growth doctrine added: justified promotion can still bulk the map,
+and bulk releases cause churn spikes; the answer is dynamic
+reorganisation of the modelling by the system+agent pair as growth
+happens — legitimate because the questions humans ask change as the
+data grows. The §2 rule of thumb is audience-relative: "something
+needs to be SAID" means said to the people trying to understand the
+data, or a reasonable hunch of their future questions.
