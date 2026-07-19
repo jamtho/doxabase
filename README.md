@@ -49,34 +49,48 @@ The implementation is intentionally small: a Python package backed by a
 local SQLite file, with RDFLib handling parsing and pySHACL handling
 explicit validation. There is no embedded LLM in the library.
 
-## Current Status: Distillation (V1 → V1.5)
+## Current Status: Field Studies on a Distilled Core
 
-V1 was built fast by an autonomous improvement loop and works — the full
-observation → pattern → staged-map workflow, profiling, query-planning
-handoffs, staged revisions with drift detection, privacy preflights, and an
-MCP server are all real and tested. But the loop had no subtractive pressure,
-and the surface grew far past the design brief: 89 MCP tools against an
-intended ~10, orientation responses in the tens of thousands of tokens, and a
-75k-line core module. The external review in
-`doxabase_design_docs/06-fresh-eyes-review-2026-07-03.md` diagnosed this, and
-the project is now executing the **Distillation Program**
-(`doxabase_design_docs/07-distillation-program.md`): same capability, a small
-fraction of the surface and context cost. Until the program exits, it
-supersedes every other stated priority in this repo.
+The **Distillation Program completed 2026-07-05** (`v0.2.0`): the V1
+autonomous loop had grown the surface to 89 MCP tools and a 75k-line
+core; the program cut it to **25 tools, a 31k-char schema, and ~30
+readable modules** with the same capability, enforced by a scoreboard
+whose ceilings only ratchet downward (`tools/scoreboard.py`,
+`tests/test_budgets.py`, wave log in `docs/journal/waves.md`). The
+retrospective is `doxabase_design_docs/09-distillation-retrospective.md`.
 
-Progress and budgets are measured, not asserted: `tools/scoreboard.py` prints
-the scoreboard, ceilings only ratchet downward, and `tests/test_budgets.py`
-enforces them in the ordinary test run. The wave-by-wave log lives in
-`docs/journal/waves.md`.
+Since then the project runs a **recorded-trials / deferred-distiller
+loop** (doc 10): real analytical work happens in cold agent sessions
+against real data, everything is graded and recorded, and product
+changes land in small evidence-batched distiller passes rather than
+reflexively. The first field study — fourteen sessions on two years of
+NOAA AIS data with a domain expert in the loop — is written up in
+`CASE-STUDY-AIS.md`.
 
-Done so far: instrumentation and loop rules; packaging (installable wheel,
-`doxabase-mcp` entry point, CI gate with a clean-venv install smoke); the
-core monolith split into ~30 readable modules; response envelopes that omit
-null/empty; RDF-first context graphs (TriG payload by default — the same
-graph content costs ~10x less as TriG than as JSON triples). In progress:
-response-size diets, collapsing the tool surface to ≤25
-(`doxabase_design_docs/08-mcp-surface-v2.md` is the mapping), and rebuilding
-`project_brief` as state-not-script.
+Because this is research, here is the honest state of the claims:
+
+- **Demonstrated, with graded trial records** (`docs/journal/trials/`):
+  knowledge transfer between cold agents that never met, including a
+  deliberately weaker model applying an inherited method correctly and
+  extending it; a domain vocabulary distilled from recorded cases and
+  then transferred *blind* to an agent never told it existed; and
+  analytical methods regenerated from RDF behavioural contracts alone
+  at 99.8% agreement, with the contract's invariants catching a real
+  bug in the regenerated code.
+- **Working practice, one domain so far**: the state-vs-ephemera
+  architecture (populations in regenerable frames, methods and
+  promoted judgements in the graph), evidenced parameters whose
+  thresholds cite their validation surveys, and identity-by-promotion
+  for derived entities (doc 14). A second, independent case study is
+  underway to test generalization; nothing enters the core ontology
+  until two domains need it.
+- **Design-stage, deliberately speculative**: the capsule
+  workbench/observatory (docs 13/11 — a first working cut of the
+  workbench exists), RDF method contracts as general engineering
+  practice (doc 12 — pilot passed), and search-based method
+  improvement over contracts. These are stated as designs with pilot
+  evidence, not shipped claims; expect them to be revised as trials
+  accumulate.
 
 ## How To Read This Project
 
@@ -159,10 +173,13 @@ snapshots). `docs/agent/graph-roles.md` has the placement rules.
 
 ## Project Direction
 
-The Distillation Program's exit criteria (doc 07) define near-term
-direction: ≤25 tools, budget-tested response sizes, state-not-script
-orientation, distilled reference docs, and an external case study from an
-installed wheel. Feature development resumes only after the program's
-retrospective (`doxabase_design_docs/09-...`, forthcoming); the V2 ideas
-parked in `doxabase_design_docs/04-doxabase-v2-backlog.md` are inputs to
-that decision, not commitments.
+Direction is set by `doxabase_design_docs/10-next-directions.md` (the
+trials/distiller loop) and the design docs it has since produced:
+11 (capsule observatory), 12 (RDF method contracts), 13 (capsule
+workbench), 14 (anchored derivations) — each written from field-study
+need and carrying its pilot evidence and open decision points. The
+core's surface stays frozen under the distillation budgets; product
+changes arrive through evidence-batched distiller passes
+(`docs/journal/distiller-pass-1.md` is the first, and the template).
+The V2 ideas parked in `doxabase_design_docs/04-doxabase-v2-backlog.md`
+remain inputs, not commitments.
