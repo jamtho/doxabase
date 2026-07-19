@@ -5,7 +5,8 @@
 maintainer intends to rewrite it in his own voice. The underlying
 records — session briefs, analyst journals, graded trial records, and
 rendered capsule reports — are all in `docs/journal/`, and every claim
-below links to them.)*
+below links to them. For the full chapter-by-chapter narrative of all
+fourteen sessions, see `docs/case-study-ais-full.md`.)*
 
 ---
 
