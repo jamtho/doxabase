@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ dataset.label or dataset.iri }} — DoxaBase Workbench{% endblock %}
+
+{% macro caveat_card(c) %}
+{% set sev = (c.severity.label if c.severity else 'moderate')|lower %}
+{% set css_class = 'severe' if 'severe' in sev else ('minor' if 'minor' in sev else 'moderate') %}
+<div class="caveat {{ css_class }}">
+  <span class="sev">{{ c.severity.label if c.severity else 'caveat' }}</span>
+  <div><a href="{{ resource_url(c.iri) }}"><strong>{{ c.label or c.iri }}</strong></a></div>
+  {% if c.description %}<div>{{ c.description }}</div>{% endif %}
+  {% if c.impact %}<div class="impact">Impact: {{ c.impact }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<h1>{{ dataset.label or dataset.iri }}</h1>
+<p class="iri">{{ dataset.iri }}</p>
+{% if dataset.description %}<p>{{ dataset.description }}</p>{% endif %}
+
+<p>
+  {% if dataset.row_semantics %}<span class="pill">row = {{ dataset.row_semantics.label }}</span>{% endif %}
+  {% if dataset.entity_key %}<span class="pill">key: {{ dataset.entity_key.label }}</span>{% endif %}
+  {% if dataset.schema_stability %}<span class="pill">schema: {{ dataset.schema_stability.label }}</span>{% endif %}
+  {% if dataset.row_count_snapshot %}<span class="pill">{{ dataset.row_count_snapshot }} rows (snapshot)</span>{% endif %}
+</p>
+
+{% if dataset.caveats or dataset.upstream_caveats %}
+<section>
+  <h2>Caveats — data never appears without its semantics</h2>
+  {% for c in dataset.caveats %}{{ caveat_card(c) }}{% endfor %}
+  {% for c in dataset.upstream_caveats %}{{ caveat_card(c) }}{% endfor %}
+</section>
+{% endif %}
+
+<section>
+  <h2>Columns ({{ dataset.columns|length }})</h2>
+  {% if dataset.columns %}
+  <table>
+    <thead><tr><th>Column</th><th>Semantics</th><th>Type</th><th>Nullable</th></tr></thead>
+    <tbody>
+      {% for col in dataset.columns %}
+      <tr>
+        <td><a href="{{ resource_url(col.iri) }}">{{ col.column_name or col.label or col.iri }}</a></td>
+        <td>{{ col.description or col.label or '' }}</td>
+        <td class="muted">
+          {{ col.value_type.label if col.value_type else '' }}
+          {% if col.physical_type %}<span class="muted">({{ col.physical_type.label }})</span>{% endif %}
+        </td>
+        <td class="muted">
+          {% if col.nullable is none %}unknown{% elif col.nullable %}yes{% else %}no{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No columns described.</p>
+  {% endif %}
+</section>
+
+<section class="query-box">
+  <h2>Query the frame</h2>
+  {% if reachable %}
+  <p class="hint">
+    Runs read-only against a view named <code>frame</code>, backed by
+    <code>{{ glob }}</code>. Results capped at {{ 500 }} rows; SELECT/WITH only.
+  </p>
+  <form method="post" action="/dataset/query">
+    <input type="hidden" name="iri" value="{{ iri }}">
+    <textarea name="sql" spellcheck="false">{{ sql or 'SELECT * FROM frame LIMIT 20' }}</textarea>
+    <p><button type="submit">Run query</button></p>
+  </form>
+  {% if query_error %}
+  <div class="error-note">{{ query_error }}</div>
+  {% elif columns %}
+  <p class="results-meta">{{ rows|length }} row(s) shown (capped at 500).</p>
+  <table>
+    <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% else %}
+  <p class="muted">
+    No query box: this dataset has no reachable S3-backed physical layout
+    (e.g. it is a logical analysis view, or the described storage is not
+    reachable from the workbench right now).
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

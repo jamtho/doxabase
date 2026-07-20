@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ revision.summary or revision.iri }} — DoxaBase Workbench{% endblock %}
+
+{% macro resource_list(items) %}
+<ul>
+  {% for item in items %}
+  <li><a href="{{ resource_url(item.iri) }}">{{ item.label or item.iri }}</a>
+    {% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{% block content %}
+<p><a href="/revisions">&larr; All revisions</a></p>
+<h1>{{ revision.summary or revision.iri }}</h1>
+<p class="iri">{{ revision.iri }}</p>
+<p>
+  <span class="pill">{{ revision_kind_label(revision.record_kind) }}</span>
+  {% if revision.revision_type_label %}<span class="pill">{{ revision.revision_type_label }}</span>{% endif %}
+  {% for g in revision.changed_graphs %}<span class="pill">changed: {{ g }}</span>{% endfor %}
+</p>
+<p class="muted">
+  {{ revision.created_at or 'no timestamp recorded' }}
+  {% if revision.created_by %} — {{ revision.created_by }}{% endif %}
+</p>
+
+{% if revision.rationale %}
+<section>
+  <h2>Rationale</h2>
+  <p>{{ revision.rationale }}</p>
+</section>
+{% endif %}
+
+{% if revision.applies_staged_revision or revision.resolves_staged_revision %}
+<section>
+  <h2>Lineage</h2>
+  {% if revision.applies_staged_revision %}
+  <p>Applies staged revision:
+    <a href="{{ revision_url(revision.applies_staged_revision) }}">{{ revision.applied_source.summary if revision.applied_source else revision.applies_staged_revision }}</a>
+  </p>
+  {% endif %}
+  {% if revision.resolves_staged_revision %}
+  <p>Resolves staged revision:
+    <a href="{{ revision_url(revision.resolves_staged_revision) }}">{{ revision.resolves_staged_revision }}</a>
+    {% if revision.staged_review_decision_label %}<span class="pill">decision: {{ revision.staged_review_decision_label }}</span>{% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section>
+  <h2>Validation</h2>
+  {% if revision.validation_scope %}
+  <p>
+    Scope: <code>{{ revision.validation_scope }}</code> —
+    {% if revision.validation_conforms %}
+    conforms, no SHACL issues.
+    {% elif revision.validation_conforms is sameas false %}
+    does not conform — {{ revision.validation_result_count or 0 }} issue(s).
+    {% else %}
+    not recorded.
+    {% endif %}
+  </p>
+  {% else %}
+  <p class="muted">No validation recorded for this revision.</p>
+  {% endif %}
+  {% if revision.validation_results %}
+  <table>
+    <thead><tr><th>Severity</th><th>Path</th><th>Message</th></tr></thead>
+    <tbody>
+      {% for diag in revision.validation_results %}
+      <tr>
+        <td>{{ diag.severity_label or diag.severity }}</td>
+        <td class="muted">{{ diag.result_path_label or diag.result_path }}</td>
+        <td>{{ diag.messages|join('; ') }}{% if diag.hint %}<div class="hint">{{ diag.hint }}</div>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+{% if revision.graph_snapshots %}
+<section>
+  <h2>Graph snapshots</h2>
+  <table>
+    <thead><tr><th>Graph</th><th>Triples</th><th>Content digest</th></tr></thead>
+    <tbody>
+      {% for snap in revision.graph_snapshots %}
+      <tr>
+        <td>{{ snap.graph_role }}</td>
+        <td>{{ snap.triple_count }}</td>
+        <td class="mono muted">{{ (snap.content_digest or '')[:24] }}{% if snap.content_digest %}&hellip;{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if revision.snapshot_evidence %}
+  <p class="hint">{{ revision.snapshot_evidence.note }}</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if revision.revision_anchors %}
+<section>
+  <h2>Revision anchors — resources this revision names as its subject</h2>
+  {{ resource_list(revision.revision_anchors) }}
+</section>
+{% endif %}
+
+{% if revision.supporting_claims or revision.supporting_observations or revision.supporting_patterns %}
+<section>
+  <h2>Supporting evidence chain</h2>
+  {% if revision.supporting_claims %}<h3>Claims</h3>{{ resource_list(revision.supporting_claims) }}{% endif %}
+  {% if revision.supporting_observations %}<h3>Observations</h3>{{ resource_list(revision.supporting_observations) }}{% endif %}
+  {% if revision.supporting_patterns %}<h3>Patterns</h3>{{ resource_list(revision.supporting_patterns) }}{% endif %}
+  {% if revision.evidence %}<h3>Evidence</h3>{{ resource_list(revision.evidence) }}{% endif %}
+</section>
+{% endif %}
+{% endblock %}

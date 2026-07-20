@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DoxaBase Capsule Workbench{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">DoxaBase Workbench</a>
+    <a href="/datasets">Datasets</a>
+    <a href="/types">Types</a>
+    <a href="/revisions">Revisions</a>
+    <form class="searchbox" action="/search" method="get">
+      <input type="text" name="q" placeholder="Search the capsule..." value="{{ query|default('') }}">
+      <button type="submit">Search</button>
+    </form>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <p>Local-first, read-only workbench over one capsule. First implementation
+      cut of design doc 13 — see the repo README for what is not built yet.</p>
+  </footer>
+</body>
+</html>

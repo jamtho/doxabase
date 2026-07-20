@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Types — DoxaBase Workbench{% endblock %}
+{% block content %}
+<h1>Entity types</h1>
+<p class="muted">
+  Every <code>rdf:type</code> present in this capsule, one section per named
+  graph, in the capsule's own role order — current working state (map)
+  through project-owned extensions and the revision history, down to the
+  immutable shipped seeds. Types with hundreds of instances and types with
+  exactly one are both shown, sorted by instance count within the graph;
+  each type links to its instance list.
+</p>
+
+<nav class="type-graph-nav">
+  {% for g in overview %}
+  <a class="pill" href="#g-{{ g.graph }}">{{ g.graph }} ({{ g.entity_count }})</a>
+  {% endfor %}
+</nav>
+
+{% for g in overview %}
+<section id="g-{{ g.graph }}">
+  <h2>
+    {{ g.graph }}
+    <span class="muted count-suffix">
+      — {{ g.entity_count }} entit{{ 'y' if g.entity_count == 1 else 'ies' }},
+      {{ g.type_count }} type{{ '' if g.type_count == 1 else 's' }}
+    </span>
+  </h2>
+  {% if g.types %}
+  <table>
+    <thead><tr><th>Type</th><th class="num">Instances</th></tr></thead>
+    <tbody>
+      {% for t in g.types %}
+      <tr>
+        <td>
+          <a href="{{ type_entities_url(g.graph, t.type_iri) }}">{{ t.display }}</a>
+          <div class="hint iri">{{ t.type_iri }}</div>
+        </td>
+        <td class="num">{{ t.instance_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No <code>rdf:type</code> instances in this graph.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

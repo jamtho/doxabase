@@ -19,10 +19,26 @@ dependencies = [
 
 [project.optional-dependencies]
 parquet = ["pyarrow>=17"]
+# The Capsule Workbench (doc 13): a local FastAPI/DuckDB UI over a capsule.
+# Kept optional so the core install stays lean -- pip install "doxabase[workbench]".
+workbench = [
+    "fastapi>=0.139",
+    "uvicorn>=0.51",
+    "duckdb>=1.5",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.32",
+    # DuckDB needs pytz at fetch time to materialize TIMESTAMPTZ columns as
+    # Python objects; without it fetchall() raises on tz-aware timestamp columns.
+    "pytz>=2024.1",
+]
 
 [project.scripts]
 doxabase-mcp = "doxabase.mcp_server:main"
 doxabase-report = "doxabase.report:main"
+# Registered unconditionally (pip entry points can't be gated on an extra);
+# workbench/cli.py guards its own fastapi/uvicorn imports so a core-only
+# install fails with one clear message instead of a raw traceback.
+doxabase-workbench = "workbench.cli:main"
 
 [dependency-groups]
 dev = [
@@ -31,7 +47,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["doxabase"]
+packages = ["doxabase", "workbench"]
 
 # Runtime data ships inside the package as doxabase/_data/, mirroring the
 # repo-root layout so path resolution is identical in both (see

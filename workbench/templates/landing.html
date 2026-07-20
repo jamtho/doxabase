@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Project brief — DoxaBase Workbench{% endblock %}
+{% block content %}
+<h1>Project brief</h1>
+
+<section>
+  <div class="tiles">
+    {% for name, count in brief.key_counts.items() %}
+    <div class="tile"><span class="n">{{ count }}</span><span class="label">{{ name }}</span></div>
+    {% endfor %}
+  </div>
+  <p class="hint">
+    Graph validation ({{ validation.scope }}):
+    {% if validation.conforms %}
+      conforms, no SHACL issues.
+    {% else %}
+      does not conform — {{ validation.result_count }} issue(s) recorded.
+    {% endif %}
+  </p>
+</section>
+
+<section>
+  <h2><a href="/datasets">Datasets ({{ brief.dataset_count }})</a></h2>
+  {% if brief.datasets %}
+  <table>
+    <thead><tr><th>Dataset</th><th>Columns</th><th>Caveats</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for ds in brief.datasets %}
+      <tr>
+        <td><a href="{{ dataset_url(ds.iri) }}">{{ ds.label or ds.iri }}</a></td>
+        <td>{{ ds.column_count }}</td>
+        <td>{{ ds.caveat_count }}</td>
+        <td class="muted">{{ ds.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="hint">See <a href="/datasets">/datasets</a> for recorded row counts, storage reachability, and reference counts across every described dataset.</p>
+  {% else %}
+  <p class="muted">No datasets described yet.</p>
+  {% endif %}
+</section>
+
+{% if graph_totals %}
+<section>
+  <h2>What's in this capsule</h2>
+  <div class="tiles">
+    {% for g, count in graph_totals %}
+    <a class="tile tile-link" href="/types#g-{{ g }}">
+      <span class="n">{{ count }}</span><span class="label">{{ g }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  <p class="hint">Entities per named graph — see <a href="/types">/types</a> for the rdf:type breakdown behind each total.</p>
+</section>
+{% endif %}
+
+{% if brief.queues %}
+<section>
+  <h2>Queues</h2>
+  <table>
+    <thead><tr><th>Queue</th><th>Count</th><th>Example</th></tr></thead>
+    <tbody>
+      {% for q in brief.queues %}
+      <tr>
+        <td>{{ q.name }}</td>
+        <td>{{ q.count }}</td>
+        <td>{% if q.example_iri %}<a href="{{ resource_url(q.example_iri) }}" class="iri">{{ q.example_iri }}</a>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="hint">Queues are orientation only here — review and apply stay with agents/CLI (doc 13 decision 1).</p>
+</section>
+{% endif %}
+
+{% if brief.suggested_next_actions %}
+<section>
+  <h2>Suggested next actions</h2>
+  <ul>
+    {% for action in brief.suggested_next_actions %}
+    <li><code>{{ action.tool }}</code> — {{ action.reason }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

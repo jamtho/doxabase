@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}{{ resource.label or resource.iri }} — DoxaBase Workbench{% endblock %}
+
+{% macro inline_panel(target_iri) %}
+  {% if target_iri in inline %}
+  {% set exp = inline[target_iri] %}
+  <div class="inline-panel">
+    <div class="kind">{{ exp.types[0].split('#')[-1] if exp.types else 'linked resource' }} — one hop inline</div>
+    <strong>{{ exp.label or exp.iri }}</strong>
+    {% if exp.description %}<div>{{ exp.description }}</div>{% endif %}
+    <ul>
+      {% for t in exp.outgoing if t.object_kind == 'literal' %}
+        {% if loop.index <= 6 %}
+        <li><span class="muted">{{ t.predicate_label or t.predicate }}:</span> {{ t.object }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <a href="{{ resource_url(target_iri) }}">Open &rarr;</a>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<h1>{{ resource.label or resource.iri }}</h1>
+<p class="iri">{{ resource.iri }}</p>
+
+{% if resource.types %}
+<p>
+  {% for t in resource.types %}
+  <a class="pill" href="{{ resource_url(t) }}">{{ t.split('#')[-1].split('/')[-1] }}</a>
+  {% endfor %}
+</p>
+{% endif %}
+
+{% if resource.description %}<p>{{ resource.description }}</p>{% endif %}
+
+{% if not found %}
+<p class="muted">No triples found for this IRI in the capsule.</p>
+{% endif %}
+
+{% if derivation %}
+<section>
+  <h2>Anchored derivation</h2>
+  <div class="inline-panel derivation-panel">
+    <p class="hint">
+      This resource carries doc-14 anchored-derivation provenance
+      (<code>aisv:</code> properties): its assertions are tied to a
+      detector run and/or an assessment window, not stated as timeless
+      graph-native fact. Only the fields actually present are shown below.
+    </p>
+    <ul>
+      {% if derivation.derived_from_run %}
+      <li><strong>Derived from run:</strong>
+        {% for v in derivation.derived_from_run %}{{ v.value }}{% if not loop.last %}; {% endif %}{% endfor %}
+      </li>
+      {% endif %}
+      {% if derivation.represents_detector_rows %}
+      <li><strong>Represents rows:</strong>
+        {% for v in derivation.represents_detector_rows %}{{ v.value }}{% if not loop.last %}; {% endif %}{% endfor %}
+      </li>
+      {% endif %}
+      {% if derivation.assessed_at %}
+      <li><strong>Assessed at:</strong>
+        {% for v in derivation.assessed_at %}{{ v.value }}{% if not loop.last %}; {% endif %}{% endfor %}
+      </li>
+      {% endif %}
+      {% if derivation.assessment_data_window %}
+      <li><strong>Assessment window:</strong>
+        {% for v in derivation.assessment_data_window %}{{ v.value }}{% if not loop.last %}; {% endif %}{% endfor %}
+      </li>
+      {% endif %}
+    </ul>
+    <p class="hint">
+      <strong>Match-back status: not yet computed.</strong> The match-back
+      method (design doc 14 §1.3) that would report live drift between this
+      anchor and the current run's detector output does not exist yet — this
+      line is a placeholder for where that status will go, not a live check.
+    </p>
+  </div>
+</section>
+{% endif %}
+
+{% if resource.claim %}
+{% set claim = resource.claim %}
+<section>
+  <h2>Claim</h2>
+  <div class="inline-panel">
+    {% if claim.claim_kind_label %}<span class="pill">{{ claim.claim_kind_label }}</span>{% endif %}
+    {% if claim.confidence_label %}<span class="pill">confidence: {{ claim.confidence_label }}</span>{% endif %}
+    {% if claim.observation_status_label %}<span class="pill">{{ claim.observation_status_label }}</span>{% endif %}
+    {% if claim.claim_text %}<p>{{ claim.claim_text }}</p>{% endif %}
+    {% if claim.lifecycle_summary %}<p class="muted">{{ claim.lifecycle_summary }}</p>{% endif %}
+    {% if claim.claim_targets %}
+    <p class="muted">About:
+      {% for target in claim.claim_targets %}
+      <a href="{{ resource_url(target.iri) }}">{{ target.label or target.iri }}</a>{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+    {% endif %}
+  </div>
+  {% if claim.outgoing_reconsiderations or claim.incoming_reconsiderations %}
+  <div class="inline-panel">
+    <div class="kind">supersession / reconsideration chain</div>
+    {% for rec in claim.incoming_reconsiderations if rec.older_claim and rec.newer_claim %}
+    <p>
+      <a href="{{ resource_url(rec.older_claim.iri) }}">{{ rec.older_claim.label or rec.older_claim.iri }}</a>
+      (this claim)
+      &rarr; <strong>{{ rec.relation_label or 'reconsidered' }}</strong> by
+      <a href="{{ resource_url(rec.newer_claim.iri) }}">{{ rec.newer_claim.label or rec.newer_claim.iri }}</a>
+      {% if rec.reconsidered_at %}<span class="muted">on {{ rec.reconsidered_at }}</span>{% endif %}
+    </p>
+    {% if rec.rationale %}<p class="muted">{{ rec.rationale }}</p>{% endif %}
+    {% endfor %}
+    {% for rec in claim.outgoing_reconsiderations if rec.older_claim and rec.newer_claim %}
+    <p>
+      <a href="{{ resource_url(rec.older_claim.iri) }}">{{ rec.older_claim.label or rec.older_claim.iri }}</a>
+      &rarr; <strong>{{ rec.relation_label or 'reconsidered' }}</strong> by
+      <a href="{{ resource_url(rec.newer_claim.iri) }}">{{ rec.newer_claim.label or rec.newer_claim.iri }}</a>
+      (this claim)
+      {% if rec.reconsidered_at %}<span class="muted">on {{ rec.reconsidered_at }}</span>{% endif %}
+    </p>
+    {% if rec.rationale %}<p class="muted">{{ rec.rationale }}</p>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section>
+  <h2>Outgoing ({{ resource.outgoing_returned_count or 0 }} of {{ resource.outgoing_total_count or 0 }})</h2>
+  {% if resource.outgoing %}
+  <table>
+    <thead><tr><th>Predicate</th><th>Object</th></tr></thead>
+    <tbody>
+      {% for t in resource.outgoing %}
+      <tr>
+        <td class="muted">{{ t.predicate_label or t.predicate }}</td>
+        <td>
+          {% if t.object_kind == 'uri' %}
+            <a href="{{ resource_url(t.object) }}">{{ t.object_label or t.object }}</a>
+            {{ inline_panel(t.object) }}
+          {% else %}
+            {{ t.object }}
+            {% if t.object_lang %}<span class="pill">{{ t.object_lang }}</span>{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if resource.outgoing_omitted_count %}
+  <p class="hint">+{{ resource.outgoing_omitted_count }} more not shown (page size {{ resource.limit }}).</p>
+  {% endif %}
+  {% else %}
+  <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Incoming ({{ resource.incoming_returned_count or 0 }} of {{ resource.incoming_total_count or 0 }})</h2>
+  {% if resource.incoming %}
+  <table>
+    <thead><tr><th>Subject</th><th>Predicate</th></tr></thead>
+    <tbody>
+      {% for t in resource.incoming %}
+      <tr>
+        <td>
+          <a href="{{ resource_url(t.subject) }}">{{ t.subject_label or t.subject }}</a>
+          {{ inline_panel(t.subject) }}
+        </td>
+        <td class="muted">{{ t.predicate_label or t.predicate }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if resource.incoming_omitted_count %}
+  <p class="hint">+{{ resource.incoming_omitted_count }} more not shown (page size {{ resource.limit }}).</p>
+  {% endif %}
+  {% else %}
+  <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>History ({{ history.returned_count or 0 }} of {{ history.total_count or 0 }})</h2>
+  <p class="hint">
+    Revisions matched by revision-anchor link or by a scan of stored patch
+    payloads mentioning this resource as subject/predicate/object (including
+    via the staged source behind an applied event) — the cheapest honest
+    query the wheel offers, not a full-text search. It will miss a resource
+    only ever mentioned in a revision's free-text summary or rationale, and
+    it will miss a staged-review-resolution record that carries no revision
+    anchor of its own even when it is clearly about this resource (see the
+    <a href="/revisions">all-revisions view</a> for those). Oldest first, so
+    it reads as the story of how this resource's evidence accrued.
+  </p>
+  {% if history.timeline %}
+  <table>
+    <thead><tr><th>#</th><th>When</th><th>Type</th><th>Revision</th><th>Matched via</th></tr></thead>
+    <tbody>
+      {% for event in history.timeline %}
+      <tr>
+        <td class="muted">{{ event.event_index }}</td>
+        <td class="muted">{{ event.created_at or '' }}</td>
+        <td>
+          <span class="pill">{{ revision_kind_label(event.record_kind) }}</span>
+          <div class="hint">{{ event.timeline_role.replace('_', ' ') }}</div>
+        </td>
+        <td><a href="{{ revision_url(event.revision_iri) }}">{{ event.summary or event.revision_iri }}</a></td>
+        <td class="muted">{{ event.match_types|join(', ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if history.patch_mention_scan and (history.patch_mention_scan.status == 'incomplete' or history.patch_mention_scan.omitted_match_risk) %}
+  <p class="hint">
+    Patch-mention scan was incomplete
+    ({{ history.patch_mention_scan.unreadable_patch_count }} unreadable
+    patch(es)) — some matching revisions may be missing from this list.
+  </p>
+  {% endif %}
+  {% if history.total_count and history.returned_count and history.total_count > history.returned_count %}
+  <p class="hint">+{{ history.total_count - history.returned_count }} more not shown (page size {{ history.limit }}).</p>
+  {% endif %}
+  {% else %}
+  <p class="muted">
+    No revision in this capsule's history graph currently touches this
+    resource by revision anchor or patch mention.
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

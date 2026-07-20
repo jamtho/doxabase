@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Search{% if query %}: {{ query }}{% endif %} — DoxaBase Workbench{% endblock %}
+{% block content %}
+<h1>Search</h1>
+
+{% if not query %}
+<p class="muted">Type a query in the box above to search literals across the capsule.</p>
+{% elif results is none %}
+<p class="muted">No results.</p>
+{% elif results.matches %}
+<p class="results-meta">
+  {{ results.returned_count }} of {{ results.total_count }} match(es) for
+  &ldquo;{{ results.query }}&rdquo;{% if results.graph %} in graph <code>{{ results.graph }}</code>{% endif %}.
+</p>
+<table>
+  <thead><tr><th>Resource</th><th>Predicate</th><th>Snippet</th></tr></thead>
+  <tbody>
+    {% for m in results.matches %}
+    <tr>
+      <td>
+        <a href="{{ resource_url(m.iri) }}">{{ m.label or m.iri }}</a>
+        {% for t in m.types %}<span class="pill">{{ t.split('#')[-1].split('/')[-1] }}</span>{% endfor %}
+      </td>
+      <td class="muted">{{ m.predicate_label or m.predicate }}</td>
+      <td>{{ m.snippet }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if results.has_more %}
+<p><a href="/search?q={{ results.query }}&offset={{ results.next_offset }}{% if results.graph %}&graph={{ results.graph }}{% endif %}">More results &rarr;</a></p>
+{% endif %}
+{% else %}
+<p class="muted">No matches for &ldquo;{{ results.query }}&rdquo;.</p>
+{% if results.suggested_next_actions %}
+<ul>
+  {% for action in results.suggested_next_actions %}
+  <li class="hint">{{ action.reason }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endif %}
+{% endblock %}

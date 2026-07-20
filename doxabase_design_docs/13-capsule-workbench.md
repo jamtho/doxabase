@@ -7,6 +7,12 @@ doc 11: the observatory is the *curated, public* rendering of a
 capsule; the workbench is the *exploratory, analyst-facing* one. They
 share their lower layers by construction, in one repo with two build
 targets.
+**Status update (2026-07-20)**: implementation lives in-repo as the
+`workbench/` package as of this date, at the owner's direction
+("humans can't really interface with the capsules without it") —
+superseding the separate-repo phase it briefly went through
+(`jamtho/doxabase-workbench`) and returning to §3 decision 2's original
+"one repo" call.
 **The ask**: one web system that connects to a capsule (+ the S3
 frames it describes) and exposes the contents for exploratory work,
 with the bulk shared across domains and project-specific customization

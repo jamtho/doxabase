@@ -90,17 +90,21 @@ Because this is research, here is the honest state of the claims:
   contracts. These are stated as designs with pilot evidence, not
   shipped claims; expect them to be revised as trials accumulate.
 
-**The Capsule Workbench is real and usable now**
-([`jamtho/doxabase-workbench`](https://github.com/jamtho/doxabase-workbench)):
-point it at any capsule (`doxabase-workbench capsule.sqlite`) and
-browse it in your browser — the project brief as a landing page,
-every IRI clickable with claims and evidence expanded inline, dataset
-pages that refuse to show data without its caveats, a guarded SQL box
-over the S3 frames a capsule describes, the full revision timeline
-with staged→applied lineage, and supersession chains rendered so you
-can watch conclusions change as evidence arrives. It opens the capsule
-strictly read-only: agents write, humans see. Design contract in
-doc 13.
+**The Capsule Workbench is real and usable now** — it moved into this
+repo as the `workbench/` package (2026-07-20, at the owner's direction;
+previously `jamtho/doxabase-workbench`). Install the optional extra
+(`pip install doxabase[workbench]`) and point it at any capsule
+(`doxabase-workbench capsule.sqlite`) to browse it in your browser — the
+project brief as a landing page, a `/datasets` overview leading with
+recorded row counts and storage reachability, every IRI clickable with
+claims and evidence expanded inline, dataset pages that refuse to show
+data without its caveats, a guarded SQL box over the frames a capsule
+describes, the full revision timeline with staged→applied lineage, and
+supersession chains rendered so you can watch conclusions change as
+evidence arrives. It opens the capsule strictly read-only: agents write,
+humans see. `workbench/` is a sibling top-level package, not part of
+`doxabase/` — the distillation scoreboard doesn't measure it. Design
+contract in doc 13.
 
 ## How To Read This Project
 
@@ -131,8 +135,10 @@ doxabase-mcp --capsule /path/to/capsule.sqlite
 ```
 
 Runtime dependencies are `mcp`, `rdflib`, and `pyshacl`; Parquet helpers need
-the `doxabase[parquet]` extra. The ontology seeds, agent docs, and example
-fixtures ship inside the wheel.
+the `doxabase[parquet]` extra, and the Capsule Workbench (`workbench/`, doc
+13) needs `doxabase[workbench]` — `pip install doxabase[workbench]` then
+`doxabase-workbench capsule.sqlite`. The ontology seeds, agent docs, and
+example fixtures ship inside the wheel.
 
 ## Python Quickstart
 

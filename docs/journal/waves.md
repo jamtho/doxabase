@@ -724,3 +724,32 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   docs/journal/trials/2026-07-ais-production-run-1.md).
 - Workbench gained safe local-frame support (data-root contained);
   population queries now answer in the browser.
+
+## Wave 42 — 2026-07-20 — The workbench moves in-repo
+
+- Capsule Workbench (doc 13) moved from its separate repo
+  (`jamtho/doxabase-workbench`) into this one as a sibling top-level
+  `workbench/` package, at the owner's direction — humans need it to
+  interface with capsules at all. Doc 13 gained a status-update note;
+  the old repo's README now just points here.
+- Packaging: `workbench` runtime deps (fastapi/uvicorn/duckdb/jinja2/
+  python-multipart/pytz) are a new `doxabase[workbench]` optional
+  extra; `doxabase-workbench` console script added. The entry point is
+  always registered (pip can't gate one on an extra), so
+  `workbench/cli.py` defers and guards its `uvicorn` import — a
+  core-only install fails with one clear line, not a traceback.
+  `tools/gate.sh` (no extras) still passes; no scoreboard effect,
+  `workbench/` is a sibling package outside `tools/scoreboard.py`'s
+  `doxabase/` walk.
+- New `/datasets` overview page (owner ask, "row counts making
+  datasets tractable is the point"): every described dataset, led with
+  its recorded row-count snapshot, plus kind, column/caveat counts,
+  storage kind (S3/local/logical) + a reachability badge, and a
+  referenced-by count (distinct map/observations entities citing the
+  dataset or a column, one `quads` query cached per process —
+  `workbench/dataset_index.py`). Linked from the nav and the landing
+  page's dataset table.
+- Smoke script moved to `tools/workbench_smoke.sh`, extended with a
+  `/datasets` check; run against the real AIS study capsule read-only
+  on a scratch port, confirming both a clean-venv `tools/gate.sh` run
+  and the extras-installed workbench smoke pass together.

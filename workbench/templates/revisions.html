@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Revisions — DoxaBase Workbench{% endblock %}
+{% block content %}
+<h1>Revision history</h1>
+<p class="muted">
+  Every entry in the capsule's <code>history</code> graph, newest first: staged
+  proposals, applied events, and staged-review resolutions. This is the wheel's
+  <code>list_graph_revisions</code> call — the living capsule's own record of
+  how it got here.
+</p>
+
+<p class="results-meta">
+  {{ listing.returned_count }} of {{ listing.total_count }} revision(s).
+</p>
+
+{% if listing.revisions %}
+<table>
+  <thead><tr><th>Type</th><th>Summary</th><th>Changed graphs</th><th>When</th></tr></thead>
+  <tbody>
+    {% for r in listing.revisions %}
+    <tr>
+      <td><span class="pill">{{ revision_kind_label(r.record_kind) }}</span></td>
+      <td>
+        <a href="{{ revision_url(r.iri) }}">{{ r.summary or r.iri }}</a>
+        {% if r.record_kind == 'staged_review_resolution' and r.iri %}
+        <div class="hint">resolves a staged revision, see detail</div>
+        {% endif %}
+      </td>
+      <td>{% for g in r.changed_graphs %}<span class="pill">{{ g }}</span>{% endfor %}</td>
+      <td class="muted">{{ r.created_at or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p>
+  {% if listing.offset and listing.offset > 0 %}
+  <a href="/revisions?offset={{ [listing.offset - listing.limit, 0]|max }}&limit={{ listing.limit }}">&larr; Newer</a>
+  {% endif %}
+  {% if listing.offset + listing.returned_count < listing.total_count %}
+  <a href="/revisions?offset={{ listing.offset + listing.limit }}&limit={{ listing.limit }}">Older &rarr;</a>
+  {% endif %}
+</p>
+{% else %}
+<p class="muted">No revisions recorded in this capsule's history graph.</p>
+{% endif %}
+{% endblock %}

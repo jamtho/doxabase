@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Not found — DoxaBase Workbench</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">DoxaBase Workbench</a>
+    <form class="searchbox" action="/search" method="get">
+      <input type="text" name="q" placeholder="Search the capsule...">
+      <button type="submit">Search</button>
+    </form>
+  </header>
+  <main>
+    <h1>Not found</h1>
+    <div class="error-note">{{ message }}</div>
+    <p><a href="/">Back to the project brief</a></p>
+  </main>
+</body>
+</html>

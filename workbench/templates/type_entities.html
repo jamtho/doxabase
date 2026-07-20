@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ type_label or type_iri.split('#')[-1].split('/')[-1] }} — DoxaBase Workbench{% endblock %}
+{% block content %}
+<h1>{{ type_label or type_iri.split('#')[-1].split('/')[-1] }}</h1>
+<p class="iri">{{ type_iri }}</p>
+<p class="muted">
+  Graph <code>{{ graph }}</code> &middot;
+  <a href="/types#g-{{ graph }}">&larr; back to types</a>
+</p>
+
+<p class="results-meta">
+  {{ entities.returned_count }} of {{ entities.total_count }} instance(s).
+</p>
+
+{% if entities.entities %}
+<table>
+  <thead><tr><th>Entity</th><th>Other types</th></tr></thead>
+  <tbody>
+    {% for e in entities.entities %}
+    <tr>
+      <td><a href="{{ resource_url(e.iri) }}">{{ e.label or e.iri }}</a></td>
+      <td>
+        {% for t in e.types if t != type_iri %}
+        <a class="pill" href="{{ type_entities_url(e.graph, t) }}">{{ t.split('#')[-1].split('/')[-1] }}</a>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if entities.has_more %}
+<p><a href="{{ type_entities_url(graph, type_iri, entities.next_offset) }}">More &rarr;</a></p>
+{% endif %}
+{% else %}
+<p class="muted">No instances found.</p>
+{% endif %}
+{% endblock %}
