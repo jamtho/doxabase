@@ -714,3 +714,13 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Doc 12 gained its session outcome (§8): all four points ratified,
   autoresearch-over-contracts recorded as future direction.
 - Round 7 recorded in the study capsule.
+
+## Wave 41 — 2026-07-20 — The first production run, and frames in the browser
+
+- M12 executed over the whole feed from its recorded contract: 30.08M
+  stop events / 91,977 vessels, −0.019% vs the proven sample; frames
+  described back into the capsule as datasets; feed-outage
+  quantization of long stops discovered (records:
+  docs/journal/trials/2026-07-ais-production-run-1.md).
+- Workbench gained safe local-frame support (data-root contained);
+  population queries now answer in the browser.
