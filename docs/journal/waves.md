@@ -773,3 +773,11 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - `tools/workbench_smoke.sh` gained a 12th check (coordinate-bearing
   query renders the map view, default color-by = the CASE column); full
   smoke and `tools/gate.sh` both pass.
+
+## Wave 44 — 2026-07-21 — Session 15: boundary reasons land
+
+- M13 recorded (docs/journal/trials/2026-07-ais-session-15.md): 854
+  feed outages; 60.16M boundaries attributed (movement/silence/outage/
+  edge); the hour-on-the-hour cadence artifact discovered during
+  threshold validation; contract needed zero new mc: terms and shares
+  M12's parameter by citation. Two more frames described as datasets.
