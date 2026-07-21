@@ -191,6 +191,17 @@
       applyColor(null);
     }
 
+    // Leaflet renders blank if its container was resized while hidden;
+    // recompute on every toggle back to the map view.
+    var mapRadio = document.getElementById("view-map");
+    if (mapRadio) {
+      mapRadio.addEventListener("change", function () {
+        if (mapRadio.checked) {
+          setTimeout(function () { map.invalidateSize(); }, 0);
+        }
+      });
+    }
+
     var pathWrap = document.getElementById("map-path-toggle-wrap");
     var pathToggle = document.getElementById("map-path-toggle");
     if (payload.path_available) {

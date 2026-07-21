@@ -103,10 +103,13 @@
   <p class="results-meta">{{ rows|length }} row(s) shown (capped at 500).</p>
 
   {% if map_payload %}
+  {# The radios must be SIBLINGS of the result panels for the CSS
+     :checked ~ panel rules to apply; only the labels live in the
+     styled toggle strip. #}
+  <input type="radio" name="view" id="view-map" class="view-radio" checked>
+  <input type="radio" name="view" id="view-table" class="view-radio">
   <div class="view-toggle">
-    <input type="radio" name="view" id="view-map" checked>
     <label for="view-map">Map</label>
-    <input type="radio" name="view" id="view-table">
     <label for="view-table">Table</label>
   </div>
   {% endif %}
