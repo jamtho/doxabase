@@ -753,3 +753,23 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   `/datasets` check; run against the real AIS study capsule read-only
   on a scratch port, confirming both a clean-venv `tools/gate.sh` run
   and the extras-installed workbench smoke pass together.
+
+## Wave 43 — 2026-07-21 — Query-result maps: a second renderer, not a subsystem
+
+- Owner design note reframed doc 13 §2 item 4: the map renders SQL
+  results, not geo-typed graph resources — "set a hollow_frac threshold
+  and see what it implies." Doc 13 gained a status-update note recording
+  the pivot away from MapLibre/KML export toward this cut.
+- Built: Leaflet 1.9.4 vendored (`workbench/static/vendor/leaflet/`, no
+  CDN at runtime, `VENDORED.md`); any frame-query result whose columns
+  carry a recognizable coordinate pair renders as a map alongside the
+  table (CSS-only toggle, defaults to Map); color-by dropdown
+  (categorical palette / 5-step numeric gradient, thresholds visible);
+  "join points as path" when a single-mmsi result also has an ordering
+  column; 2-3 canned example queries on coordinate-bearing dataset pages,
+  stops-series-full's hand-tuned to the hollow_frac/CASE worked example.
+  New `workbench/maps.py` + `static/map.js`; no scoreboard effect
+  (`workbench/` stays outside `doxabase/`).
+- `tools/workbench_smoke.sh` gained a 12th check (coordinate-bearing
+  query renders the map view, default color-by = the CASE column); full
+  smoke and `tools/gate.sh` both pass.

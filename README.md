@@ -99,10 +99,13 @@ project brief as a landing page, a `/datasets` overview leading with
 recorded row counts and storage reachability, every IRI clickable with
 claims and evidence expanded inline, dataset pages that refuse to show
 data without its caveats, a guarded SQL box over the frames a capsule
-describes, the full revision timeline with staged→applied lineage, and
-supersession chains rendered so you can watch conclusions change as
-evidence arrives. It opens the capsule strictly read-only: agents write,
-humans see. `workbench/` is a sibling top-level package, not part of
+describes — any query result whose columns carry a coordinate pair also
+renders as a Leaflet map with color-by and path-join affordances, the map
+being a second renderer for query results rather than a separate
+geospatial subsystem — the full revision timeline with staged→applied
+lineage, and supersession chains rendered so you can watch conclusions
+change as evidence arrives. It opens the capsule strictly read-only:
+agents write, humans see. `workbench/` is a sibling top-level package, not part of
 `doxabase/` — the distillation scoreboard doesn't measure it. Design
 contract in doc 13.
 

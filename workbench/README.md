@@ -2,7 +2,9 @@
 
 A local-first, read-only web UI over one DoxaBase capsule: project brief,
 resource pages, search, a datasets overview, and per-dataset pages with a
-capped SQL query box over the frames the capsule describes.
+capped SQL query box over the frames the capsule describes — any result
+with a recognizable coordinate pair also renders as a map, the same way
+any result renders as a table.
 
 **Status (2026-07-20): lives in this repo now**, at the owner's direction
 ("humans can't really interface with the capsules without it") — it
@@ -73,15 +75,49 @@ Honest status against doc 13 §2's L2 list — built vs. not:
   `observations` entities citing the dataset or one of its columns, a
   direct `quads` query cached per process — see `workbench/dataset_index.py`).
   Linked from the nav and from the landing page's own dataset table.
-- **Not built**: the frame browser's saved/recorded views and export; the
-  map panel (MapLibre, KML/KMZ export, geo layers); method pages (recorded
-  methods as contracts, with evidenced-parameter plots inline); the caveat
-  catalog as its own cross-dataset view; queue *review* (queue *viewing*
-  exists via the landing page only); a live match-back status computation
-  (doc 14's match-back method itself is unbuilt); L3 domain configuration
-  (vessel-page templates, saved views, layer styling); the observatory
-  static-build target from doc 11; auth (doc 13 open question 1 — don't
-  expose this beyond localhost, use an observatory build instead).
+- Built (owner design note, 2026-07-21 — "the map is a second renderer for
+  query results, not a geospatial subsystem"): a **map view of frame-query
+  results**. A query's returned columns are checked for a recognizable
+  coordinate pair (`latitude`/`longitude`, `lat`/`lon`,
+  `centroid_lat`/`centroid_lon`, `start_lat`/`start_lon`,
+  `end_lat`/`end_lon` — first match wins); if one is found, the results
+  render as a Leaflet map alongside the table (a CSS-only radio toggle,
+  defaulting to Map — "lead with what's being shown"), with points capped
+  at the same 500-row limit, auto-fit bounds, and a popup per point
+  showing its other columns. A **color-by** dropdown lists every
+  non-coordinate column — categorical values get up to 10 distinct
+  palette slots plus "other", numeric values get a 5-step gradient with
+  visible breakpoints — and auto-selects a sensible default (a real
+  classification column over an ordering/id-like one) so a query that
+  already computes a class (`SELECT ..., CASE WHEN hollow_frac > 0.85
+  THEN 'tight' ... END AS class FROM frame WHERE mmsi = ...`) renders
+  classed colored points with zero dropdown interaction. A result that
+  also carries a recognizable ordering column (`base_date_time`,
+  `start_ts`, `ts`, `timestamp`) *and* is scoped to a single
+  mmsi/identity value offers a "join points as path" checkbox (points-only
+  stays the default). Dataset pages whose described frame schema has a
+  coordinate pair get 2-3 one-click canned example queries above the SQL
+  box — stops-series-full's are the flagship set (one vessel's stops
+  classed by hollow_frac, multi-day stops in a bounding box, a density
+  sample); other coordinate-bearing datasets get a generic sample query
+  plus a per-identity track example when their schema supports it. Basemap
+  is vendored Leaflet (`workbench/static/vendor/leaflet/`, see
+  `VENDORED.md`) over standard OSM raster tiles, requested by the viewer's
+  own browser; `WORKBENCH_TILES=off` renders a plain grid instead (no
+  external tile requests), noted on the map's own attribution line. See
+  `workbench/maps.py` and `workbench/static/map.js`.
+- **Not built**: the frame browser's saved/recorded views and export;
+  geo-typed *resources* as a map layer (this cut renders query results
+  only, not the graph's own geo-typed entities) or KML/KMZ export (doc
+  11's exporter core, a separate future build target); method pages
+  (recorded methods as contracts, with evidenced-parameter plots inline);
+  the caveat catalog as its own cross-dataset view; queue *review* (queue
+  *viewing* exists via the landing page only); a live match-back status
+  computation (doc 14's match-back method itself is unbuilt); L3 domain
+  configuration (vessel-page templates, saved views, layer styling); the
+  observatory static-build target from doc 11; auth (doc 13 open question
+  1 — don't expose this beyond localhost, use an observatory build
+  instead).
 
 ## Run it
 
@@ -141,9 +177,11 @@ reachability, reference counts); the `/revisions` list and a
 `/revisions/<iri>` detail page (IRI discovered via `list_graph_revisions`);
 the `/types` overview and a `/types/entities` drilldown (graph + type IRI
 discovered live via the same `graph_types.type_overview` GROUP BY the page
-itself runs); and a resource page whose History section is non-empty (IRI
-discovered via a revision's `revision_anchors`) — asserting HTTP 200 +
-expected substrings on each.
+itself runs); a resource page whose History section is non-empty (IRI
+discovered via a revision's `revision_anchors`); and a coordinate-bearing
+frame query against stops-series-full (the hollow_frac/CASE worked
+example) rendering the map-view markup with the expected auto-selected
+color-by column — asserting HTTP 200 + expected substrings on each.
 
 ## Layout
 
@@ -151,6 +189,7 @@ expected substrings on each.
 workbench/
   capsule.py       L1: open the capsule read-only (one connection per request)
   frames.py        the one DuckDB frame-query endpoint: glob + SELECT-only guard + 500-row cap
+  maps.py          coordinate-pair detection, map payload, canned example queries
   graph_types.py   the /types rollup: direct SQL over quads, no wheel call wraps this
   dataset_index.py the /datasets rollup: row-count/storage/reachability/referenced-by per dataset
   app.py           FastAPI routes (the facade) + Jinja rendering glue
@@ -162,7 +201,11 @@ workbench/
     types.html          /types -- rdf:type instances and counts, one section per graph
     type_entities.html  /types/entities -- list_entities(type=, graph=) reused, paginated
     resource.html       (extended) History section, supersession chain, anchored-derivation panel
-  static/          one plain CSS file
+    dataset.html         (extended) example queries, table/map toggle, map view
+  static/
+    style.css        one plain CSS file
+    map.js            Leaflet wiring: points, color-by, legend, path toggle
+    vendor/leaflet/   vendored Leaflet 1.9.4 (see VENDORED.md) -- no CDN at runtime
 tools/workbench_smoke.sh
 ```
 
@@ -170,5 +213,9 @@ tools/workbench_smoke.sh
 
 Resource pages + search first (done here, they exercise L1 completely);
 frame browser next — this cut has one query box per dataset page but not
-the saved/recorded-view affordance or export; then the map panel by porting
-`story_kml.py`'s DuckDB queries to GeoJSON for a MapLibre layer, per doc 11.
+the saved/recorded-view affordance or export; the map panel is now a
+second renderer over frame-query results (Leaflet, points + color-by +
+path, above), not the geo-typed-resource/MapLibre/KML-export panel
+doc 13 §2 item 4 originally sketched — see doc 13's 2026-07-21 status
+note for the pivot. Porting `story_kml.py`'s own queries to a graph-level
+map layer, and KML/KMZ export, remain doc 11 observatory-target territory.

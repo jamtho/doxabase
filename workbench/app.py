@@ -9,6 +9,7 @@ presentation.
 """
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from urllib.parse import quote
@@ -20,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 from doxabase import DoxaBaseError, to_dict
 
-from . import dataset_index, frames, graph_types
+from . import dataset_index, frames, graph_types, maps
 from .capsule import capsule_path, open_capsule
 
 _APP_DIR = Path(__file__).parent
@@ -58,6 +59,12 @@ templates.env.globals["dataset_url"] = lambda iri: f"/dataset?iri={quote(iri, sa
 # mis-parsed as path/query/fragment separators (?, #, %, space, ...) keeps
 # the round trip lossless with a {iri:path} route.
 templates.env.globals["revision_url"] = lambda iri: f"/revisions/{quote(iri, safe='/:')}"
+# Single source of truth for the OSM tile URL/attribution -- both the
+# human-readable line under the map and map.js's Leaflet attribution
+# control read the same constants (workbench/maps.py) rather than each
+# hardcoding their own copy.
+templates.env.globals["osm_tile_url"] = maps.OSM_TILE_URL
+templates.env.globals["osm_attribution"] = maps.OSM_ATTRIBUTION
 
 
 def _type_entities_url(graph: str, type_iri: str, offset: int = 0) -> str:
@@ -76,6 +83,22 @@ templates.env.globals["type_entities_url"] = _type_entities_url
 templates.env.filters["thousands"] = (
     lambda n: f"{n:,}" if isinstance(n, int) else n
 )
+
+
+def _tojson(value) -> str:
+    """The map payload embedded as `<script type="application/json">`
+    text -- Jinja has no built-in `tojson` (that's a Flask addition), and
+    the escaping matters: a row value containing a literal "</script>"
+    must not close the tag early."""
+    return (
+        json.dumps(value)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
+templates.env.filters["tojson"] = _tojson
 
 # record_kind is the wheel's internal vocabulary for a history-graph row;
 # the maintainer asked for the plainer staged/applied/resolution framing
@@ -296,15 +319,24 @@ def revision_detail(request: Request, iri: str) -> HTMLResponse:
     return _render(request, "revision.html", revision=rev, iri=iri)
 
 
+def _schema_columns(ds: dict) -> list[str]:
+    return [c["column_name"] for c in ds.get("columns", []) if c.get("column_name")]
+
+
 @app.get("/dataset", response_class=HTMLResponse)
 def dataset(request: Request, iri: str) -> HTMLResponse:
     with open_capsule() as db:
         ds = to_dict(db.describe_dataset(iri))
     glob = frames.frame_glob(ds.get("path_templates", []))
     reachable = bool(glob) and frames.is_reachable(glob)
+    # Canned example queries (doc ask, item 3) only make sense once we
+    # know the frame is actually queryable -- same condition the query
+    # box itself uses to decide whether to render at all.
+    examples = maps.example_queries(iri, _schema_columns(ds)) if reachable else []
     return _render(
         request, "dataset.html", dataset=ds, iri=iri, glob=glob,
         reachable=reachable, sql=None, columns=None, rows=None, query_error=None,
+        examples=examples, map_payload=None, tiles_enabled=maps.tiles_enabled(),
     )
 
 
@@ -317,15 +349,23 @@ def dataset_query(request: Request, iri: str = Form(...),
     reachable = bool(glob) and frames.is_reachable(glob)
     columns = rows = None
     query_error = None
+    map_payload = None
     if not reachable:
         query_error = "This dataset's storage is not reachable right now."
     else:
         try:
             columns, rows = frames.run_query(glob, sql)
+            # The map is a second renderer for this same result set (owner
+            # design note) -- not a separate query, not a separate cap.
+            # None when the returned columns carry no recognizable
+            # coordinate pair; the template falls back to table-only.
+            map_payload = maps.build_map_payload(columns, rows)
         except frames.FrameQueryError as exc:
             query_error = str(exc)
+    examples = maps.example_queries(iri, _schema_columns(ds)) if reachable else []
     return _render(
         request, "dataset.html", dataset=ds, iri=iri, glob=glob,
         reachable=reachable, sql=sql, columns=columns, rows=rows,
-        query_error=query_error,
+        query_error=query_error, examples=examples, map_payload=map_payload,
+        tiles_enabled=maps.tiles_enabled(),
     )

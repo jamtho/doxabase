@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}DoxaBase Capsule Workbench{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  {% block head_extra %}{% endblock %}
 </head>
 <body>
   <header class="topbar">
@@ -24,5 +25,6 @@
     <p>Local-first, read-only workbench over one capsule. First implementation
       cut of design doc 13 — see the repo README for what is not built yet.</p>
   </footer>
+  {% block body_extra %}{% endblock %}
 </body>
 </html>

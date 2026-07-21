@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ dataset.label or dataset.iri }} — DoxaBase Workbench{% endblock %}
 
+{% block head_extra %}
+{% if examples %}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+{% endif %}
+{% endblock %}
+
 {% macro caveat_card(c) %}
 {% set sev = (c.severity.label if c.severity else 'moderate')|lower %}
 {% set css_class = 'severe' if 'severe' in sev else ('minor' if 'minor' in sev else 'moderate') %}
@@ -64,24 +70,97 @@
   <p class="hint">
     Runs read-only against a view named <code>frame</code>, backed by
     <code>{{ glob }}</code>. Results capped at {{ 500 }} rows; SELECT/WITH only.
+    A result whose columns include a coordinate pair (latitude/longitude,
+    lat/lon, centroid_lat/centroid_lon, start_lat/start_lon, or
+    end_lat/end_lon) also renders as a map — the map is a second view of
+    the same query result, not a separate feature.
   </p>
+
+  {% if examples %}
+  <div class="example-queries">
+    <p class="hint">Example queries (one click runs them):</p>
+    {% for ex in examples %}
+    <div class="example-query">
+      <button type="button" class="example-run" data-sql="{{ ex.sql }}"
+              {% if ex.param %}data-param="{{ ex.param }}"{% endif %}>{{ ex.label }}</button>
+      {% if ex.param %}
+      <input type="text" class="example-param" aria-label="{{ ex.param }}"
+             placeholder="{{ ex.param }}" value="{{ ex.param_default }}">
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <form method="post" action="/dataset/query">
     <input type="hidden" name="iri" value="{{ iri }}">
-    <textarea name="sql" spellcheck="false">{{ sql or 'SELECT * FROM frame LIMIT 20' }}</textarea>
+    <textarea name="sql" id="sql-box" spellcheck="false">{{ sql or 'SELECT * FROM frame LIMIT 20' }}</textarea>
     <p><button type="submit">Run query</button></p>
   </form>
   {% if query_error %}
   <div class="error-note">{{ query_error }}</div>
   {% elif columns %}
   <p class="results-meta">{{ rows|length }} row(s) shown (capped at 500).</p>
-  <table>
-    <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+  {% if map_payload %}
+  <div class="view-toggle">
+    <input type="radio" name="view" id="view-map" checked>
+    <label for="view-map">Map</label>
+    <input type="radio" name="view" id="view-table">
+    <label for="view-table">Table</label>
+  </div>
+  {% endif %}
+
+  <div id="results-table-view" class="{% if map_payload %}boxed{% endif %}">
+    <table>
+      <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if map_payload %}
+  <div id="results-map-view" class="map-view">
+    <div class="map-controls">
+      <span class="map-control" id="map-color-control">
+        <label for="map-color-by">Color by</label>
+        <select id="map-color-by"></select>
+      </span>
+      <label class="map-path-toggle" id="map-path-toggle-wrap" hidden>
+        <input type="checkbox" id="map-path-toggle">
+        Join points as path (ordered by <span id="map-order-col"></span>)
+      </label>
+      <span class="map-point-count">
+        {{ map_payload.point_count }} point(s) plotted
+        {%- if map_payload.point_count < rows|length %}
+        ({{ rows|length - map_payload.point_count }} row(s) missing a
+        coordinate value, not plotted)
+        {%- endif %}
+      </span>
+    </div>
+    <div id="map-canvas" class="map-canvas"
+         data-tiles="{{ 'on' if tiles_enabled else 'off' }}"
+         data-tile-url="{{ osm_tile_url }}"
+         data-attribution="{{ osm_attribution }}"></div>
+    <div id="map-legend" class="map-legend"></div>
+    <p class="hint">
+      {% if tiles_enabled %}
+      Basemap: OpenStreetMap raster tiles, requested directly by your
+      browser from tile.openstreetmap.org (&copy;
+      <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>
+      contributors). Set <code>WORKBENCH_TILES=off</code> to render a
+      plain grid instead, with no tile requests.
+      {% else %}
+      Basemap: off (<code>WORKBENCH_TILES=off</code>) — a plain grid, no
+      external tile requests.
+      {% endif %}
+    </p>
+    <script type="application/json" id="map-payload">{{ map_payload | tojson | safe }}</script>
+  </div>
+  {% endif %}
   {% endif %}
   {% else %}
   <p class="muted">
@@ -91,4 +170,27 @@
   </p>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block body_extra %}
+{% if examples %}
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/map.js"></script>
+<script>
+document.querySelectorAll(".example-run").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var sql = btn.dataset.sql;
+    var paramName = btn.dataset.param;
+    if (paramName) {
+      var input = btn.parentElement.querySelector(".example-param");
+      var value = input ? input.value.trim() : "";
+      sql = sql.split("{" + paramName + "}").join(value || "0");
+    }
+    var box = document.getElementById("sql-box");
+    box.value = sql;
+    box.form.submit();
+  });
+});
+</script>
+{% endif %}
 {% endblock %}

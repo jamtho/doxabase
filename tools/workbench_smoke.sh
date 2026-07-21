@@ -7,7 +7,9 @@
 # list_graph_revisions); /types and a /types/entities drilldown (graph+type
 # discovered live via graph_types.type_overview, the same GROUP BY the page
 # itself runs); and a resource page whose History section is non-empty (IRI
-# discovered via a revision's revision_anchors) -- asserting HTTP 200 +
+# discovered via a revision's revision_anchors); and a coordinate-bearing
+# frame query against stops-series-full (the owner's hollow_frac/CASE
+# worked example) rendering the map-view markup -- asserting HTTP 200 +
 # expected substrings on each.
 #
 # Not part of `tools/gate.sh`: it needs the optional `workbench` extra
@@ -189,5 +191,29 @@ assert_status "${BASE}/datasets" 200
 assert_contains "dataset(s)."
 assert_contains "Referenced by"
 assert_contains "Rows (recorded snapshot)"
+
+echo "12) coordinate-bearing frame query renders the map view (stops-series-full)"
+# The map is a second renderer for query results, not a separate feature
+# (owner design note, 2026-07-21): this is the owner's own worked example
+# -- set a hollow_frac threshold in SQL, get classed colored points, zero
+# extra UI. mmsi 338617000 is the story_kml.py demo vessel (PENNSYLVANIA).
+MAP_SQL="SELECT centroid_lat, centroid_lon, start_ts, hollow_frac,
+  CASE WHEN hollow_frac > 0.85 THEN 'tight'
+       WHEN hollow_frac < 0.7 THEN 'hollow'
+       ELSE 'mid' END AS class
+FROM frame WHERE mmsi = 338617000
+ORDER BY start_ts LIMIT 500"
+MAP_STATUS="$(curl -s -o /tmp/smoke-body.html -w '%{http_code}' \
+  "${BASE}/dataset/query" \
+  --data-urlencode "iri=https://ais.study/dataset/stops-series-full" \
+  --data-urlencode "sql=${MAP_SQL}")"
+if [ "$MAP_STATUS" != "200" ]; then
+  fail "POST ${BASE}/dataset/query (map query) -> ${MAP_STATUS}, expected 200"
+fi
+assert_contains 'id="results-map-view"'
+assert_contains 'id="map-canvas"'
+assert_contains 'id="map-payload"'
+assert_contains '"lat_col": "centroid_lat"'
+assert_contains '"default_color": "class"'
 
 echo "ALL SMOKE CHECKS PASSED"

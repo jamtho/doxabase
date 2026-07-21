@@ -13,6 +13,21 @@ targets.
 superseding the separate-repo phase it briefly went through
 (`jamtho/doxabase-workbench`) and returning to §3 decision 2's original
 "one repo" call.
+**Status update (2026-07-21)**: section 2 item 4's map panel shipped, but
+reframed from the owner's own design note that morning: "SQL queries
+drive the map — it is a second renderer for query results, exactly like
+the results table," not a geospatial subsystem over geo-typed graph
+resources. What's built: any frame-query result whose columns carry a
+recognizable coordinate pair renders as a Leaflet map (vendored, not
+MapLibre) alongside the results table, with a color-by dropdown
+(categorical palette / numeric gradient), a "join points as path"
+checkbox, and canned example queries on coordinate-bearing dataset
+pages. What §2 item 4 originally described — geo-typed *resources* as
+map features, KML/KMZ export, folders by classification — is unbuilt and
+now reads as doc 11 observatory-target territory instead, since that is
+where the graph-level (not query-result-level) rendering belongs. See
+`workbench/maps.py`, `workbench/static/map.js`, and the workbench
+README's own status list for the exact cut.
 **The ask**: one web system that connects to a capsule (+ the S3
 frames it describes) and exposes the contents for exploratory work,
 with the bulk shared across domains and project-specific customization
