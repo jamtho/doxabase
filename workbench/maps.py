@@ -36,6 +36,15 @@ OSM_ATTRIBUTION = (
     "OpenStreetMap</a> contributors"
 )
 
+ESRI_IMAGERY_TILE_URL = (
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/"
+    "MapServer/tile/{z}/{y}/{x}"
+)
+ESRI_IMAGERY_ATTRIBUTION = (
+    "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, "
+    "and the GIS User Community"
+)
+
 
 def tiles_enabled() -> bool:
     return os.environ.get("WORKBENCH_TILES", "on").strip().lower() != "off"
@@ -223,7 +232,7 @@ def _stops_series_examples(lat_col: str, lon_col: str) -> list[dict]:
         {
             "label": "One vessel's stops, classed by hollow_frac",
             "sql": (
-                f"SELECT {lat_col}, {lon_col}, start_ts, hollow_frac,\n"
+                f"SELECT {lat_col}, {lon_col}, start_ts, mmsi, hollow_frac,\n"
                 "  CASE WHEN hollow_frac > 0.85 THEN 'tight'\n"
                 "       WHEN hollow_frac < 0.7 THEN 'hollow'\n"
                 "       ELSE 'mid' END AS class\n"

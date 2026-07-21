@@ -322,6 +322,10 @@ code, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, mono
   gap: 0.35rem;
 }
 
+.map-path-toggle[hidden] {
+  display: none;
+}
+
 .map-point-count {
   color: var(--muted);
 }

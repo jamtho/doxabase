@@ -65,6 +65,8 @@ templates.env.globals["revision_url"] = lambda iri: f"/revisions/{quote(iri, saf
 # hardcoding their own copy.
 templates.env.globals["osm_tile_url"] = maps.OSM_TILE_URL
 templates.env.globals["osm_attribution"] = maps.OSM_ATTRIBUTION
+templates.env.globals["esri_imagery_url"] = maps.ESRI_IMAGERY_TILE_URL
+templates.env.globals["esri_imagery_attribution"] = maps.ESRI_IMAGERY_ATTRIBUTION
 
 
 def _type_entities_url(graph: str, type_iri: str, offset: int = 0) -> str:

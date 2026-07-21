@@ -135,13 +135,24 @@
     if (canvas.dataset.tiles === "off") {
       canvas.classList.add("map-no-tiles");
     } else {
-      // Tile URL/attribution come from the template (workbench/maps.py's
-      // OSM_TILE_URL/OSM_ATTRIBUTION) rather than a second hardcoded copy
-      // here.
-      L.tileLayer(canvas.dataset.tileUrl, {
+      // Tile URLs/attributions come from the template (workbench/maps.py
+      // constants) rather than a second hardcoded copy here. Two base
+      // layers: OSM streets and Esri World Imagery (satellite/aerial),
+      // switchable via the standard Leaflet layers control.
+      var streets = L.tileLayer(canvas.dataset.tileUrl, {
         attribution: canvas.dataset.attribution,
         maxZoom: 19,
-      }).addTo(map);
+      });
+      var imagery = L.tileLayer(canvas.dataset.imageryUrl, {
+        attribution: canvas.dataset.imageryAttribution,
+        maxZoom: 19,
+      });
+      streets.addTo(map);
+      L.control.layers(
+        { "Streets (OSM)": streets, "Satellite (Esri)": imagery },
+        null,
+        { position: "topright" }
+      ).addTo(map);
     }
 
     var colorMetaByName = {};
