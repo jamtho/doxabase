@@ -207,8 +207,14 @@ workbench = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "duckdb" },
+    { name = "fastapi" },
+    { name = "jinja2" },
     { name = "pytest" },
     { name = "pytest-xdist" },
+    { name = "python-multipart" },
+    { name = "pytz" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -228,8 +234,14 @@ provides-extras = ["parquet", "workbench"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "duckdb", specifier = ">=1.5" },
+    { name = "fastapi", specifier = ">=0.139" },
+    { name = "jinja2", specifier = ">=3.1" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
+    { name = "pytz", specifier = ">=2024.1" },
+    { name = "uvicorn", specifier = ">=0.51" },
 ]
 
 [[package]]

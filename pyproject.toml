@@ -44,6 +44,15 @@ doxabase-workbench = "workbench.cli:main"
 dev = [
     "pytest>=9.0.3",
     "pytest-xdist>=3.8.0",
+    # Workbench runtime deps repeated here so plain `uv sync`/`uv run`
+    # keeps the dev venv workbench-capable; end users still opt in via
+    # the doxabase[workbench] extra.
+    "duckdb>=1.5",
+    "fastapi>=0.139",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.32",
+    "pytz>=2024.1",
+    "uvicorn>=0.51",
 ]
 
 [tool.hatch.build.targets.wheel]
