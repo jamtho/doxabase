@@ -804,3 +804,13 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   shapes as vocabulary seeds; doc 15's sampling-bias prediction
   confirmed with specifics; harvest-tool friction ledgered. Stage 2
   (vocabulary distillation) launched.
+
+## Wave 47 — 2026-08-01 — The episode vocabulary distills itself
+
+- Know-how pilot stage 2 recorded (docs/journal/trials/
+  2026-08-knowhow-distill-1.md): 35-term kh: vocabulary from the 79
+  episodes; archivist's shapes judged 9/1/2/1; Heuristic at zero
+  instances with a SHACL ≥2-episode promotion gate that REJECTED a
+  deliberately under-cited heuristic live; graveyard first-class
+  (DeclinedOption, retainedForm); five episodes re-expressed. The
+  pilot's remaining stage: the pre-committed blind A/B (doc 15 §4).
