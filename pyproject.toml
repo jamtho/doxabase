@@ -12,7 +12,7 @@ requires-python = ">=3.12"
 # rdflib pinned <8: rdflib 7.6 emits Dataset deprecation warnings from its own
 # parse internals; the removal lands in 8.0 and needs a deliberate migration.
 dependencies = [
-    "mcp[cli]>=1.27.2",
+    "mcp[cli]>=1.27.2,<2",
     "pyshacl>=0.31.0",
     "rdflib>=7.6.0,<8",
 ]

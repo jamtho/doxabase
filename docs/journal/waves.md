@@ -781,3 +781,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   edge); the hour-on-the-hour cadence artifact discovered during
   threshold validation; contract needed zero new mc: terms and shares
   M12's parameter by citation. Two more frames described as datasets.
+
+## Wave 45 — 2026-08-01 — mcp 2.0 lands upstream; we pin below it
+
+- The mcp SDK released 2.0.0 with a restructure (mcp.server.fastmcp
+  gone, MCPServer replaces FastMCP); our unpinned floor broke every
+  clean install. The gate's clean-venv smoke caught it precisely as
+  designed. Hotfix: pin mcp[cli]>=1.27.2,<2; gate green again.
+- Migration to 2.x is a deliberate follow-up task, not a hotfix:
+  server surface, tool naming, call_tool signatures, and the SCHEMA
+  CHAR BUDGET must all be verified behaviorally (schema serialization
+  may differ), plus the study bridges use server.call_tool directly.
+  Ledgered.
+- Process note: the failure was masked once by piping gate output to
+  tail (pipe status). Gates get bare runs with checked exits.

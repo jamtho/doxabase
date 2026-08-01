@@ -216,7 +216,7 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'workbench'", specifier = ">=1.5" },
     { name = "fastapi", marker = "extra == 'workbench'", specifier = ">=0.139" },
     { name = "jinja2", marker = "extra == 'workbench'", specifier = ">=3.1" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.27.2" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.27.2,<2" },
     { name = "pyarrow", marker = "extra == 'parquet'", specifier = ">=17" },
     { name = "pyshacl", specifier = ">=0.31.0" },
     { name = "python-multipart", marker = "extra == 'workbench'", specifier = ">=0.0.32" },
