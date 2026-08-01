@@ -795,3 +795,12 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   Ledgered.
 - Process note: the failure was masked once by piping gate output to
   tail (pipe status). Gates get bare runs with checked exits.
+
+## Wave 46 — 2026-08-01 — The archivist's first harvest
+
+- Know-how pilot stage 1 recorded (docs/journal/trials/
+  2026-08-knowhow-harvest-1.md): 79 evidence-linked design episodes +
+  4 meta-observations in a fresh capsule; eleven recurring episode
+  shapes as vocabulary seeds; doc 15's sampling-bias prediction
+  confirmed with specifics; harvest-tool friction ledgered. Stage 2
+  (vocabulary distillation) launched.
