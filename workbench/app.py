@@ -242,7 +242,10 @@ def types_overview(request: Request) -> HTMLResponse:
     the graph -- doc 13's L2 entity listing had no page of its own yet;
     this is the overview that leads into it."""
     overview = graph_types.type_overview(capsule_path())
-    return _render(request, "types.html", overview=overview)
+    uninstantiated = graph_types.declared_uninstantiated_classes(capsule_path())
+    return _render(
+        request, "types.html", overview=overview, uninstantiated=uninstantiated
+    )
 
 
 _TYPE_ENTITIES_LIMIT = 25

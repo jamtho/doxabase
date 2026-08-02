@@ -46,4 +46,31 @@
   {% endif %}
 </section>
 {% endfor %}
+
+<section id="uninstantiated">
+  <h2>Declared classes with zero instances ({{ uninstantiated|length }})</h2>
+  <p class="hint">
+    Classes defined in the ontology graphs that no resource is typed
+    with — anywhere. In this project an empty class is often
+    deliberate signal (a promotion gate not yet passed, a declaration
+    threshold not yet met), so absence is shown rather than hidden.
+    Each links to the class definition.
+  </p>
+  {% if uninstantiated %}
+  <table>
+    <thead><tr><th>Class</th><th>Declared in</th></tr></thead>
+    <tbody>
+      {% for c in uninstantiated %}
+      <tr>
+        <td><a href="{{ resource_url(c.class_iri) }}">{{ c.display }}</a>
+            <span class="iri-inline">{{ c.class_iri }}</span></td>
+        <td class="muted">{{ c.declared_in }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">None — every declared class has at least one instance.</p>
+  {% endif %}
+</section>
 {% endblock %}

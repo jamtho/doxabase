@@ -145,6 +145,46 @@ def type_overview(path: Path) -> list[dict]:
         conn.close()
 
 
+RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
+OWL_CLASS = "http://www.w3.org/2002/07/owl#Class"
+
+
+def declared_uninstantiated_classes(path: Path) -> list[dict]:
+    """Classes DECLARED in any ontology graph (typed rdfs:Class or
+    owl:Class) that have zero instances in any graph. Zero-instance
+    classes are a deliberate pattern in capsules (promotion gates,
+    declaration thresholds), so their absence is signal the types page
+    must show rather than hide."""
+    conn = _connect(path)
+    try:
+        rows = conn.execute(
+            """
+            SELECT DISTINCT c.subject AS class_iri, c.graph AS declared_in
+            FROM quads c
+            WHERE c.predicate = ? AND c.object IN (?, ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM quads i
+                WHERE i.predicate = ? AND i.object = c.subject
+              )
+            ORDER BY c.graph, c.subject
+            """,
+            (RDF_TYPE, RDFS_CLASS, OWL_CLASS, RDF_TYPE),
+        ).fetchall()
+        iris = [row["class_iri"] for row in rows]
+        labels = _labels_for(conn, iris)
+        return [
+            {
+                "class_iri": row["class_iri"],
+                "declared_in": row["declared_in"],
+                "label": labels.get(row["class_iri"]),
+                "display": labels.get(row["class_iri"]) or _local_name(row["class_iri"]),
+            }
+            for row in rows
+        ]
+    finally:
+        conn.close()
+
+
 def graph_entity_totals(path: Path) -> list[tuple[str, int]]:
     """Per-graph entity totals only, in role order -- the landing page's
     compact strip doesn't need the full type breakdown, just enough to
