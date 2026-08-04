@@ -814,3 +814,15 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   deliberately under-cited heuristic live; graveyard first-class
   (DeclinedOption, retainedForm); five episodes re-expressed. The
   pilot's remaining stage: the pre-committed blind A/B (doc 15 §4).
+
+## Wave 48 — 2026-08-04 — The A/B verdict: capsule win
+
+- Stage 3 of the know-how pilot judged blind per the sealed protocol:
+  the capsule condition won 19–17, strictly higher on 3 of 4 criteria
+  (record: docs/journal/trials/2026-08-knowhow-ab-verdict.md; both
+  designs + full judge report preserved in knowhow-ab/). The decisive
+  design move was directly capsule-sourced, and the baseline broke on
+  exactly that case — the null hypothesis failing specifically.
+  Honest counterweights recorded: n=1, baseline won specificity,
+  effect came from ~15 targeted retrievals. Method pages will be
+  built from B with A's best pieces folded in.

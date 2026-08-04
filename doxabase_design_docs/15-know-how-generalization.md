@@ -126,6 +126,18 @@ bar as ever: the human who owns the know-how recognizes their own
 judgement coming back at them, applied correctly to a case they never
 discussed.
 
+**Pilot outcome note (2026-08-04)**: stages 1–3 ran within four days
+of this doc — 79 episodes harvested, a 35-term vocabulary distilled
+from them (the archivist's shape candidates judged, not transcribed),
+and the sealed blind A/B returned a **capsule win** (19–17, strictly
+higher on 3 of 4 criteria) on a real design task, with the decisive
+move directly traceable to a harvested episode the baseline agent
+failed to surface from the same raw corpus. One trial, one judge:
+the §1 claims ratchet up one evidence tier, no further. The owner's
+caution stands on the record: expect surprises that force rethinks.
+Open frontier: transcript harvest (tranche 2), the elicitation drip,
+the attention model. Records: docs/journal/trials/2026-08-knowhow-*.
+
 ## 5. Relationship to the demo applications
 
 The public demonstration applications (doc 11's observatory line) are
