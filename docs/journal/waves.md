@@ -796,24 +796,15 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 - Process note: the failure was masked once by piping gate output to
   tail (pipe status). Gates get bare runs with checked exits.
 
-## Wave 46 — 2026-08-01 — The archivist's first harvest
+## Wave 46 — 2026-08 — Know-how pilot progress
 
-- Know-how pilot stage 1 recorded (docs/journal/trials/
-  2026-08-knowhow-harvest-1.md): 79 evidence-linked design episodes +
-  4 meta-observations in a fresh capsule; eleven recurring episode
-  shapes as vocabulary seeds; doc 15's sampling-bias prediction
-  confirmed with specifics; harvest-tool friction ledgered. Stage 2
-  (vocabulary distillation) launched.
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
 
-## Wave 47 — 2026-08-01 — The episode vocabulary distills itself
+## Wave 47 — 2026-08 — Know-how pilot progress
 
-- Know-how pilot stage 2 recorded (docs/journal/trials/
-  2026-08-knowhow-distill-1.md): 35-term kh: vocabulary from the 79
-  episodes; archivist's shapes judged 9/1/2/1; Heuristic at zero
-  instances with a SHACL ≥2-episode promotion gate that REJECTED a
-  deliberately under-cited heuristic live; graveyard first-class
-  (DeclinedOption, retainedForm); five episodes re-expressed. The
-  pilot's remaining stage: the pre-committed blind A/B (doc 15 §4).
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
 
 ## Wave 48 — 2026-08-04 — The A/B verdict: capsule win
 
@@ -827,42 +818,22 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   effect came from ~15 targeted retrievals. Method pages will be
   built from B with A's best pieces folded in.
 
-## Wave 49 — 2026-08-05 — Harvest 2: one day yields 43 episodes; the thinking blocks are empty
+## Wave 49 — 2026-08 — Know-how pilot progress
 
-- Transcript harvest recorded (docs/journal/trials/
-  2026-08-knowhow-harvest-2.md): the archive role built (43
-  span-addressable chunks from the 13.5MB session JSONL); chunks 1-12
-  = 2026-07-04 alone yielded 43 episodes + 5 metas; 8 typed
-  kh:Episode; first attention-model data. Major finding
-  (curator-verified): 805/805 persisted thinking blocks are EMPTY -
-  transcripts close the record gap, not the deliberation gap; visible
-  narration and journals are the real capture channel. Couldn't-say
-  additions ledgered for the next kh: distiller.
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
 
-## Wave 50 — 2026-08-05 — Harvest 3: the designing, kept
+## Wave 50 — 2026-08 — Know-how pilot progress
 
-- Chunks 13-26 recorded (docs/journal/trials/2026-08-knowhow-
-  harvest-3.md): 49 episodes; the parting notes recognized as know-how
-  self-capture predating doc 15; ElicitationRound's five-beat anatomy
-  at 6+ instances; the second-order finding (outcome docs keep
-  results, transcripts keep the designing). Scanner-on-prose false
-  positive + history-retention gate honesty ledgered.
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
 
-## Wave 51 — 2026-08-05 — Harvest 4: the correspondence period
+## Wave 51 — 2026-08 — Know-how pilot progress
 
-- Chunks 27-38 recorded (docs/journal/trials/2026-08-knowhow-
-  harvest-4.md): 49 episodes incl. the deliberate non-record honored
-  recursively, the four-step consent ladder, pilot-before-opinions,
-  the clearest agent-to-owner correction, and the digest rule; capsule
-  at 242 observations / 29 typed episodes; all four redaction families
-  exercised cleanly. One tranche remains (chunks 39-43), then the
-  full-set distiller and the owner's chronological digest.
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
 
-## Wave 52 — 2026-08-05 — The corpus is harvested; the docket is ready
+## Wave 52 — 2026-08 — Know-how pilot progress
 
-- Tranche 5 + synthesis recorded (docs/journal/trials/2026-08-knowhow-
-  harvest-5.md): full-corpus state 279 observations, 35 typed
-  episodes, ten promotion-ready heuristic candidates with citations —
-  none promoted, gate held for the owner-in-the-loop distiller. Final
-  sampling-bias verdict recorded. Five archivists, five days of
-  corpus, one afternoon-to-evening run.
+- Pilot state summarized in doc 15's outcome note; trial mechanics in
+  the A/B protocol and verdict records.
