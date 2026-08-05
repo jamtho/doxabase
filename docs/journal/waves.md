@@ -847,3 +847,13 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   at 6+ instances; the second-order finding (outcome docs keep
   results, transcripts keep the designing). Scanner-on-prose false
   positive + history-retention gate honesty ledgered.
+
+## Wave 51 — 2026-08-05 — Harvest 4: the correspondence period
+
+- Chunks 27-38 recorded (docs/journal/trials/2026-08-knowhow-
+  harvest-4.md): 49 episodes incl. the deliberate non-record honored
+  recursively, the four-step consent ladder, pilot-before-opinions,
+  the clearest agent-to-owner correction, and the digest rule; capsule
+  at 242 observations / 29 typed episodes; all four redaction families
+  exercised cleanly. One tranche remains (chunks 39-43), then the
+  full-set distiller and the owner's chronological digest.
