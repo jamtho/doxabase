@@ -826,3 +826,15 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   Honest counterweights recorded: n=1, baseline won specificity,
   effect came from ~15 targeted retrievals. Method pages will be
   built from B with A's best pieces folded in.
+
+## Wave 49 — 2026-08-05 — Harvest 2: one day yields 43 episodes; the thinking blocks are empty
+
+- Transcript harvest recorded (docs/journal/trials/
+  2026-08-knowhow-harvest-2.md): the archive role built (43
+  span-addressable chunks from the 13.5MB session JSONL); chunks 1-12
+  = 2026-07-04 alone yielded 43 episodes + 5 metas; 8 typed
+  kh:Episode; first attention-model data. Major finding
+  (curator-verified): 805/805 persisted thinking blocks are EMPTY -
+  transcripts close the record gap, not the deliberation gap; visible
+  narration and journals are the real capture channel. Couldn't-say
+  additions ledgered for the next kh: distiller.
