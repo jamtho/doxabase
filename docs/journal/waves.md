@@ -857,3 +857,12 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   at 242 observations / 29 typed episodes; all four redaction families
   exercised cleanly. One tranche remains (chunks 39-43), then the
   full-set distiller and the owner's chronological digest.
+
+## Wave 52 — 2026-08-05 — The corpus is harvested; the docket is ready
+
+- Tranche 5 + synthesis recorded (docs/journal/trials/2026-08-knowhow-
+  harvest-5.md): full-corpus state 279 observations, 35 typed
+  episodes, ten promotion-ready heuristic candidates with citations —
+  none promoted, gate held for the owner-in-the-loop distiller. Final
+  sampling-bias verdict recorded. Five archivists, five days of
+  corpus, one afternoon-to-evening run.
