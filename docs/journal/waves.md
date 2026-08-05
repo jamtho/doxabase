@@ -838,3 +838,12 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   transcripts close the record gap, not the deliberation gap; visible
   narration and journals are the real capture channel. Couldn't-say
   additions ledgered for the next kh: distiller.
+
+## Wave 50 — 2026-08-05 — Harvest 3: the designing, kept
+
+- Chunks 13-26 recorded (docs/journal/trials/2026-08-knowhow-
+  harvest-3.md): 49 episodes; the parting notes recognized as know-how
+  self-capture predating doc 15; ElicitationRound's five-beat anatomy
+  at 6+ instances; the second-order finding (outcome docs keep
+  results, transcripts keep the designing). Scanner-on-prose false
+  positive + history-retention gate honesty ledgered.
