@@ -837,3 +837,8 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 
 - Pilot state summarized in doc 15's outcome note; trial mechanics in
   the A/B protocol and verdict records.
+
+## Wave 53 — 2026-08-09 — Know-how pilot progress
+
+- Arc re-analysis complete; findings and modeling recommendation in
+  the review copy; capsule conforms.
