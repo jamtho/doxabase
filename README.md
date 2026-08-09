@@ -102,7 +102,9 @@ found that *understanding-arcs* — trajectories where a
 conceptualization forms until its decisions stop being decisions —
 are the natural unit, now being made first-class as patterns over
 episodes. To follow the thread: doc 15 (the thesis and honest state),
-then `docs/journal/trials/2026-08-knowhow-ab-protocol.md` and
+then `docs/journal/knowhow-study/` (the arc analysis and the
+vocabulary's understanding-lens revision, worked examples first), then
+`docs/journal/trials/2026-08-knowhow-ab-protocol.md` and
 `...-ab-verdict.md` with the blind judge's report in
 `docs/journal/trials/knowhow-ab/`. The working corpus itself profiles
 its human participant closely, so it lives outside the public repo;
