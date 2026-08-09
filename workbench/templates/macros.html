@@ -1,0 +1,15 @@
+{# Shared Jinja macros with no page context of their own -- importable from
+   any template via {% from "macros.html" import ... %} without pulling in
+   an unrelated template's {% extends %} chain (a plain macro-holder
+   template, deliberately never rendered on its own). #}
+
+{% macro caveat_card(c) %}
+{% set sev = (c.severity.label if c.severity else 'moderate')|lower %}
+{% set css_class = 'severe' if 'severe' in sev else ('minor' if 'minor' in sev else 'moderate') %}
+<div class="caveat {{ css_class }}">
+  <span class="sev">{{ c.severity.label if c.severity else 'caveat' }}</span>
+  <div><a href="{{ resource_url(c.iri) }}"><strong>{{ c.label or c.iri }}</strong></a></div>
+  {% if c.description %}<div>{{ c.description }}</div>{% endif %}
+  {% if c.impact %}<div class="impact">Impact: {{ c.impact }}</div>{% endif %}
+</div>
+{% endmacro %}

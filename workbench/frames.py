@@ -38,10 +38,18 @@ class FrameQueryError(ValueError):
     """A frame query was rejected or failed."""
 
 
-def _data_root() -> str | None:
+def data_root() -> str | None:
     """Root for LOCAL frames (WORKBENCH_DATA_ROOT, default: the capsule's
     own directory). Local path templates in dataset descriptions are
-    resolved against it; anything escaping the root is refused."""
+    resolved against it; anything escaping the root is refused.
+
+    Promoted out of module-private status (method-page design doc's own
+    implementation note, knowhow-ab/design-B-capsule.md §5): the
+    ``/evidence/plot`` route resolves recorded plot paths (``work/plots/...``)
+    against this exact same root with the exact same containment guard
+    ``frame_glob`` already uses below, rather than inventing a second
+    root-resolution convention for evidence assets.
+    """
     root = os.environ.get("WORKBENCH_DATA_ROOT")
     if not root:
         capsule = os.environ.get("WORKBENCH_CAPSULE_PATH")
@@ -58,7 +66,7 @@ def frame_glob(path_templates: list[str]) -> str | None:
     for template in path_templates:
         if template.startswith("s3://"):
             return _PLACEHOLDER.sub("*", template)
-        root = _data_root()
+        root = data_root()
         if root is None:
             continue
         widened = _PLACEHOLDER.sub("*", template)

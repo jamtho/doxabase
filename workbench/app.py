@@ -10,18 +10,19 @@ presentation.
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from doxabase import DoxaBaseError, to_dict
 
-from . import dataset_index, frames, graph_types, maps
+from . import dataset_index, frames, graph_types, maps, methods
 from .capsule import capsule_path, open_capsule
 
 _APP_DIR = Path(__file__).parent
@@ -51,6 +52,9 @@ app.mount("/static", StaticFiles(directory=str(_APP_DIR / "static")), name="stat
 templates = Jinja2Templates(directory=str(_APP_DIR / "templates"))
 templates.env.globals["resource_url"] = lambda iri: f"/resource?iri={quote(iri, safe='')}"
 templates.env.globals["dataset_url"] = lambda iri: f"/dataset?iri={quote(iri, safe='')}"
+templates.env.globals["method_url"] = lambda iri: f"/method?iri={quote(iri, safe='')}"
+templates.env.globals["evidence_plot_url"] = lambda path: f"/evidence/plot?path={quote(path, safe='')}"
+templates.env.globals["depth_badge_label"] = methods.DEPTH_BADGE_TEXT
 # A path segment, not a query param (task ask: "/revisions/<iri>"), so the
 # IRI's own '/' and ':' stay unescaped -- Starlette hands routes the
 # ASGI-decoded path, so a fully quote(safe='')-escaped IRI would arrive
@@ -212,6 +216,57 @@ def datasets_overview(request: Request) -> HTMLResponse:
     return _render(request, "datasets.html", rows=rows)
 
 
+@app.get("/methods", response_class=HTMLResponse)
+def methods_overview(request: Request) -> HTMLResponse:
+    """Every recorded method (M1-M13, the pattern-summary convention
+    `methods.discover_methods` documents), one row each, contract depth
+    badge plus stat-pill counts led first -- the same "lead with the
+    number that makes it tractable" principle /datasets already applies to
+    row counts."""
+    rows = methods.discover_methods(capsule_path())
+    return _render(request, "methods.html", rows=rows)
+
+
+@app.get("/method", response_class=HTMLResponse)
+def method_detail(request: Request, iri: str) -> HTMLResponse:
+    """`iri` accepts either a method's pattern IRI or its mc:MethodContract
+    IRI (`methods.resolve_method`) -- a link arriving from either direction
+    lands on the same page."""
+    with open_capsule() as db:
+        page = methods.build_method_page(capsule_path(), db, iri)
+    return _render(request, "method.html", **page)
+
+
+# Evidence plots (work/plots/*.png) are local files referenced by relative
+# path in recorded rc:Evidence dct:source literals -- not portable URIs,
+# and not guaranteed to exist on whatever machine runs the workbench (they
+# travel with the analysis session's working directory, not the capsule).
+# Resolved against the exact same root/containment convention
+# frames.frame_glob already uses for frame files (frames.data_root()),
+# promoted out of frames.py's own module-private helper rather than
+# invented a second time.
+_EVIDENCE_IMAGE_CONTENT_TYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml", ".gif": "image/gif",
+}
+
+
+@app.get("/evidence/plot")
+def evidence_plot(path: str):
+    content_type = _EVIDENCE_IMAGE_CONTENT_TYPES.get(os.path.splitext(path)[1].lower())
+    root = frames.data_root()
+    if content_type is None or root is None or os.path.isabs(path):
+        raise HTTPException(status_code=404, detail="Evidence plot not found")
+    resolved = os.path.realpath(os.path.join(root, path))
+    if not resolved.startswith(root + os.sep) or not os.path.isfile(resolved):
+        raise HTTPException(status_code=404, detail="Evidence plot not found")
+    return FileResponse(
+        resolved,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
+    )
+
+
 @app.get("/search", response_class=HTMLResponse)
 def search(request: Request, q: str = "", graph: str | None = None,
            offset: int = 0) -> HTMLResponse:
@@ -302,9 +357,10 @@ def resource(request: Request, iri: str) -> HTMLResponse:
         )
     found = bool(ctx.get("types") or ctx.get("outgoing") or ctx.get("incoming"))
     derivation = _anchored_derivation(ctx.get("outgoing", []))
+    method_callout = methods.method_callout(capsule_path(), iri)
     return _render(request, "resource.html", resource=ctx, iri=iri,
                    inline=inline, found=found, history=history,
-                   derivation=derivation)
+                   derivation=derivation, method_callout=method_callout)
 
 
 _REVISIONS_LIST_LIMIT = 20
@@ -338,10 +394,12 @@ def dataset(request: Request, iri: str) -> HTMLResponse:
     # know the frame is actually queryable -- same condition the query
     # box itself uses to decide whether to render at all.
     examples = maps.example_queries(iri, _schema_columns(ds)) if reachable else []
+    analytical_methods = methods.methods_touching_dataset(capsule_path(), iri)
     return _render(
         request, "dataset.html", dataset=ds, iri=iri, glob=glob,
         reachable=reachable, sql=None, columns=None, rows=None, query_error=None,
         examples=examples, map_payload=None, tiles_enabled=maps.tiles_enabled(),
+        analytical_methods=analytical_methods,
     )
 
 
@@ -368,9 +426,10 @@ def dataset_query(request: Request, iri: str = Form(...),
         except frames.FrameQueryError as exc:
             query_error = str(exc)
     examples = maps.example_queries(iri, _schema_columns(ds)) if reachable else []
+    analytical_methods = methods.methods_touching_dataset(capsule_path(), iri)
     return _render(
         request, "dataset.html", dataset=ds, iri=iri, glob=glob,
         reachable=reachable, sql=sql, columns=columns, rows=rows,
         query_error=query_error, examples=examples, map_payload=map_payload,
-        tiles_enabled=maps.tiles_enabled(),
+        tiles_enabled=maps.tiles_enabled(), analytical_methods=analytical_methods,
     )

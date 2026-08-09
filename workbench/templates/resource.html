@@ -34,6 +34,13 @@
 
 {% if resource.description %}<p>{{ resource.description }}</p>{% endif %}
 
+{% if method_callout %}
+<p class="hint">
+  This is method {{ method_callout.title }} —
+  <a href="{{ method_url(method_callout.pattern_iri) }}">open the method page &rarr;</a>
+</p>
+{% endif %}
+
 {% if not found %}
 <p class="muted">No triples found for this IRI in the capsule.</p>
 {% endif %}

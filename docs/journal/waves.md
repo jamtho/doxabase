@@ -847,3 +847,22 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 
 - Vocabulary v2 applied; review copy staged for the owner; capsule
   conforms.
+
+## Wave 55 — 2026-08-09 — Method pages built (knowhow-ab winner)
+
+- Implemented the knowhow-ab trial winner (design B) amended per the
+  judge report: A's header trust-triage surface (depth badge, outputGrain,
+  consumed datasets, failure-mode count) and pattern-level output-edge
+  resolution stolen in; B's verified `constrainedBy` cross-contract
+  breakage fixed (reverse `mc:hasParameter` lookup, honest no-owner
+  fallback); M12's real `dependsOnMethod`->M11 edge rendered, unmodified.
+  New `workbench/methods.py`, `/methods` + `/method?iri=` +
+  `/evidence/plot`, templates `methods.html`/`method.html`/`macros.html`,
+  nav link, dataset/resource cross-links. `frames._data_root()` promoted
+  to public `frames.data_root()`, reused by the plot route's containment
+  check.
+- `tools/workbench_smoke.sh` gained 7 checks (B's five acceptance checks
+  plus A's shared-failure-mode cross-link); full smoke and `tools/gate.sh`
+  both pass. No scoreboard effect (`workbench/` stays outside `doxabase/`).
+- Next: a `producesDataset` mc: predicate remains an open vocabulary gap
+  (method pages render it honestly rather than papering over it).

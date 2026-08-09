@@ -7,16 +7,7 @@
 {% endif %}
 {% endblock %}
 
-{% macro caveat_card(c) %}
-{% set sev = (c.severity.label if c.severity else 'moderate')|lower %}
-{% set css_class = 'severe' if 'severe' in sev else ('minor' if 'minor' in sev else 'moderate') %}
-<div class="caveat {{ css_class }}">
-  <span class="sev">{{ c.severity.label if c.severity else 'caveat' }}</span>
-  <div><a href="{{ resource_url(c.iri) }}"><strong>{{ c.label or c.iri }}</strong></a></div>
-  {% if c.description %}<div>{{ c.description }}</div>{% endif %}
-  {% if c.impact %}<div class="impact">Impact: {{ c.impact }}</div>{% endif %}
-</div>
-{% endmacro %}
+{% from "macros.html" import caveat_card %}
 
 {% block content %}
 <h1>{{ dataset.label or dataset.iri }}</h1>
@@ -29,6 +20,21 @@
   {% if dataset.schema_stability %}<span class="pill">schema: {{ dataset.schema_stability.label }}</span>{% endif %}
   {% if dataset.row_count_snapshot %}<span class="pill">{{ dataset.row_count_snapshot }} rows (snapshot)</span>{% endif %}
 </p>
+
+{% if analytical_methods and (analytical_methods.consumes or analytical_methods.cites) %}
+<p class="hint">
+  Analytical methods:
+  {% if analytical_methods.consumes %}
+  consumed by
+  {% for m in analytical_methods.consumes %}<a href="{{ method_url(m.contract_iri) }}">{{ m.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  {% endif %}
+  {% if analytical_methods.consumes and analytical_methods.cites %} — {% endif %}
+  {% if analytical_methods.cites %}
+  cited by
+  {% for m in analytical_methods.cites %}<a href="{{ method_url(m.contract_iri) }}">{{ m.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  {% endif %}
+</p>
+{% endif %}
 
 {% if dataset.caveats or dataset.upstream_caveats %}
 <section>

@@ -1,10 +1,13 @@
 # DoxaBase Capsule Workbench
 
 A local-first, read-only web UI over one DoxaBase capsule: project brief,
-resource pages, search, a datasets overview, and per-dataset pages with a
-capped SQL query box over the frames the capsule describes — any result
+resource pages, search, a datasets overview, per-dataset pages with a
+capped SQL query box over the frames the capsule describes (any result
 with a recognizable coordinate pair also renders as a map, the same way
-any result renders as a table.
+any result renders as a table), and method pages — a recorded analytical
+method rendered as a contract where a formal one exists (invariants,
+evidenced parameters with plots, realizations, failure modes, dependency
+chain), and as an L0-only pattern page where it doesn't.
 
 **Status (2026-07-20): lives in this repo now**, at the owner's direction
 ("humans can't really interface with the capsules without it") — it
@@ -106,18 +109,66 @@ Honest status against doc 13 §2's L2 list — built vs. not:
   own browser; `WORKBENCH_TILES=off` renders a plain grid instead (no
   external tile requests), noted on the map's own attribution line. See
   `workbench/maps.py` and `workbench/static/map.js`.
+- Built (2026-08-09, the knowhow-ab design trial's winner -- design B,
+  amended per the judge report to fold in design A's header trust-triage
+  surface, pattern-level output-edge resolution, and shared-failure-mode
+  cross-linking): **method pages**. `/methods` lists every recorded
+  analytical method (the "M&lt;n&gt; method" pattern-summary convention --
+  13 today, M1-M13); `/method?iri=` renders one, accepting either the
+  method's pattern IRI or its `mc:MethodContract` IRI. Three of the
+  thirteen (M11-M13) have a formal contract and get the full treatment:
+  header trust-triage (depth badge that orients rather than grades,
+  outputGrain "Produces:" line, consumed datasets, the `dependsOnMethod`
+  edge, and invariant/parameter/realization/failure-mode stat counts
+  including the failure-mode count, all above the prose); Purpose &amp;
+  behaviour rendered from the contract's own ALL-CAPS-heading authoring
+  convention; failure modes (reusing `dataset.html`'s `caveat_card` macro,
+  with "Also affects: M11" cross-links for caveats shared across
+  contracts); invariants, with cross-contract `constrainedBy` resolved by
+  reverse `mc:hasParameter` lookup (M13's `m13-movement-symmetry` correctly
+  attributes `m12-silence-gap` to the M12 contract, "reused here by
+  reference", honest no-owner fallback if a reverse lookup ever comes up
+  empty); parameters with an evidence chain (claim/evidence/observation
+  targets resolved by type, plots rendered inline via the new
+  `/evidence/plot` route, an honest "surveyed with a plot" /
+  "documented, not plotted" / no-citation tier); inputs grouped by
+  consumed dataset (declared-but-columnless datasets shown plainly, not
+  hidden); output rendered both as the honest mc:-`seeAlso`-only "cites
+  this contract" panel (never claiming a direction the graph doesn't
+  assert) *and* a separate panel resolving the underlying pattern's own
+  `patternTarget`/`mapImplication` links by type (design A's steal --
+  recovers M13's `feed-outages`/`stop-boundary-reasons` output frames,
+  which carry no `mc:` edge back to the contract at all); realizations
+  behind a collapsed SQL disclosure (pointer-following into the linked
+  pattern's `patternText` via `describe_pattern()`, never duplicated), a
+  side-by-side grid if a contract ever gains a second one; and
+  dependencies (depends-on/depended-on-by, rendering the verified
+  M12-\>M11 `dependsOnMethod` edge exactly as recorded even though M12's
+  own prose never mentions M11). The other ten methods get an L0-only page
+  (pattern summary/rationale/patternText, related resources, and
+  depended-on-by, all a plain reverse-quads scan -- no contract sections
+  to show). `workbench/methods.py` is the new module (direct SQL over
+  `quads`, the `graph_types.py`/`dataset_index.py` idiom, batched per
+  contract); `frames.py`'s local-frame root resolver is now the public
+  `frames.data_root()`, reused by `/evidence/plot`'s identical
+  containment check rather than a second one. Dataset pages grow an
+  "Analytical methods" line (consumed-by / cited-by, both cheap reverse
+  scans); resource pages grow a "This is method M12" callout when the
+  resource itself is a method pattern or contract.
 - **Not built**: the frame browser's saved/recorded views and export;
   geo-typed *resources* as a map layer (this cut renders query results
   only, not the graph's own geo-typed entities) or KML/KMZ export (doc
-  11's exporter core, a separate future build target); method pages
-  (recorded methods as contracts, with evidenced-parameter plots inline);
-  the caveat catalog as its own cross-dataset view; queue *review* (queue
-  *viewing* exists via the landing page only); a live match-back status
-  computation (doc 14's match-back method itself is unbuilt); L3 domain
-  configuration (vessel-page templates, saved views, layer styling); the
-  observatory static-build target from doc 11; auth (doc 13 open question
-  1 — don't expose this beyond localhost, use an observatory build
-  instead).
+  11's exporter core, a separate future build target); a `producesDataset`
+  predicate (the output-edge gap method pages render honestly rather than
+  papering over, per doc 12's "couldn't-say list"); live invariant
+  re-checking (invariants are recorded prose today, not stored executable
+  checks); automated realization diffing; the caveat catalog as its own
+  cross-dataset view; queue *review* (queue *viewing* exists via the
+  landing page only); a live match-back status computation (doc 14's
+  match-back method itself is unbuilt); L3 domain configuration
+  (vessel-page templates, saved views, layer styling); the observatory
+  static-build target from doc 11; auth (doc 13 open question 1 — don't
+  expose this beyond localhost, use an observatory build instead).
 
 ## Run it
 
@@ -178,10 +229,18 @@ reachability, reference counts); the `/revisions` list and a
 the `/types` overview and a `/types/entities` drilldown (graph + type IRI
 discovered live via the same `graph_types.type_overview` GROUP BY the page
 itself runs); a resource page whose History section is non-empty (IRI
-discovered via a revision's `revision_anchors`); and a coordinate-bearing
+discovered via a revision's `revision_anchors`); a coordinate-bearing
 frame query against stops-series-full (the hollow_frac/CASE worked
 example) rendering the map-view markup with the expected auto-selected
-color-by column — asserting HTTP 200 + expected substrings on each.
+color-by column; and the method pages -- `/methods`, the M11 plot
+rendering as a real `<img>` plus a direct `/evidence/plot` 200, M12's
+structural completeness with severity coloring, M13's cross-contract
+`constrainedBy` resolution, the M12-\>M11 `dependsOnMethod` edge, M13's
+output section not fabricating a link the graph doesn't assert, and the
+shared-failure-mode cross-link -- asserting HTTP 200 + expected substrings
+(the M13-output and shared-caveat checks call `workbench.methods`
+directly, since the two honestly-distinct output panels can share
+substrings that a single-line grep can't tell apart).
 
 ## Layout
 
@@ -192,6 +251,8 @@ workbench/
   maps.py          coordinate-pair detection, map payload, canned example queries
   graph_types.py   the /types rollup: direct SQL over quads, no wheel call wraps this
   dataset_index.py the /datasets rollup: row-count/storage/reachability/referenced-by per dataset
+  methods.py       the /methods, /method rollup: contract/invariant/parameter/realization/
+                    failure-mode assembly, direct SQL over quads, batched per contract
   app.py           FastAPI routes (the facade) + Jinja rendering glue
   cli.py           `doxabase-workbench capsule.sqlite` entry point (extras-guarded)
   templates/       server-rendered HTML, no JS framework
@@ -200,8 +261,14 @@ workbench/
     revision.html       /revisions/<iri> -- one revision's full description
     types.html          /types -- rdf:type instances and counts, one section per graph
     type_entities.html  /types/entities -- list_entities(type=, graph=) reused, paginated
-    resource.html       (extended) History section, supersession chain, anchored-derivation panel
-    dataset.html         (extended) example queries, table/map toggle, map view
+    resource.html       (extended) History section, supersession chain, anchored-derivation
+                          panel, "this is method M12" callout
+    dataset.html         (extended) example queries, table/map toggle, map view,
+                          "Analytical methods" line; caveat_card moved out to macros.html
+    macros.html          shared Jinja macros with no page context of their own (caveat_card,
+                          imported by both dataset.html and method.html)
+    methods.html         /methods -- every recorded method, depth badge + stat counts
+    method.html           /method?iri= -- one method's full page (see README status above)
   static/
     style.css        one plain CSS file
     map.js            Leaflet wiring: points, color-by, legend, path toggle

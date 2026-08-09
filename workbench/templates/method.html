@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% from "macros.html" import caveat_card %}
+{% block title %}{{ title }} — DoxaBase Workbench{% endblock %}
+
+{% macro evidence_entry(e) %}
+<div class="inline-panel">
+  {% if e.kind == 'evidence' %}
+  <div class="kind">evidence</div>
+  {% if e.summary %}<p>{{ e.summary }}</p>{% endif %}
+  {% for img in e.images %}
+    {% if img.reachable %}
+    <img class="evidence-plot" src="{{ evidence_plot_url(img.path) }}" alt="{{ img.path }}">
+    {% else %}
+    <p class="hint">plot referenced, not found locally at <code>{{ img.path }}</code></p>
+    {% endif %}
+  {% endfor %}
+  {% if e.other_sources %}<p class="hint mono">{{ e.other_sources|join(', ') }}</p>{% endif %}
+  <a href="{{ resource_url(e.iri) }}">Read the full evidence note &rarr;</a>
+  {% elif e.kind == 'claim' %}
+  <div class="kind">claim</div>
+  {% if e.claim_kind_label %}<span class="pill">{{ e.claim_kind_label }}</span>{% endif %}
+  {% if e.confidence_label %}<span class="pill">confidence: {{ e.confidence_label }}</span>{% endif %}
+  {% if e.observation_status_label %}<span class="pill">{{ e.observation_status_label }}</span>{% endif %}
+  {% if e.excerpt %}<p>{{ e.excerpt }}</p>{% endif %}
+  {% for img in e.images %}
+    {% if img.reachable %}
+    <img class="evidence-plot" src="{{ evidence_plot_url(img.path) }}" alt="{{ img.path }}">
+    {% else %}
+    <p class="hint">plot referenced, not found locally at <code>{{ img.path }}</code></p>
+    {% endif %}
+  {% endfor %}
+  <a href="{{ resource_url(e.iri) }}">Read the full claim &rarr;</a>
+  {% elif e.kind == 'observation' %}
+  <div class="kind">observation</div>
+  {% if e.excerpt %}<p>{{ e.excerpt }}</p>{% endif %}
+  <a href="{{ resource_url(e.iri) }}">Open &rarr;</a>
+  {% elif e.kind == 'pattern' %}
+  <div class="kind">related pattern (see Realizations below)</div>
+  <a href="{{ resource_url(e.iri) }}">Open &rarr;</a>
+  {% else %}
+  <a href="{{ resource_url(e.iri) }}">Open &rarr;</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro realization_card(r) %}
+<div class="realization-card">
+  <p><strong>{{ r.label }}</strong>{% if r.engine %} &mdash; {{ r.engine }}{% endif %}</p>
+  {% if r.comment %}<p>{{ r.comment }}</p>{% endif %}
+  {% for e in r.evidence %}{{ evidence_entry(e) }}{% endfor %}
+  {% if r.pattern_text %}
+  <details>
+    <summary>View the SQL (as authored, in the linked pattern) &mdash; {{ r.pattern_text|length }} characters</summary>
+    <pre class="mono code-block">{{ r.pattern_text }}</pre>
+  </details>
+  {% else %}
+  <p class="muted">No linked pattern found to pull the SQL text from.</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="iri">{{ pattern_iri }}{% if contract_iri %}<br>{{ contract_iri }}{% endif %}</p>
+
+<p>
+  <span class="pill depth-{{ depth }}">{{ depth_label }}</span>
+  {% if contract_iri %}
+  <span class="pill">{{ stat_counts.invariants }} invariant{{ 's' if stat_counts.invariants != 1 else '' }}</span>
+  <span class="pill">{{ stat_counts.parameters }} parameter{{ 's' if stat_counts.parameters != 1 else '' }}</span>
+  <span class="pill">{{ stat_counts.realizations }} realization{{ 's' if stat_counts.realizations != 1 else '' }}</span>
+  <span class="pill">{{ stat_counts.failure_modes }} failure mode{{ 's' if stat_counts.failure_modes != 1 else '' }}</span>
+  {% else %}
+  <span class="muted">prose only (rc:summary / patternText) — see Purpose &amp; behaviour below</span>
+  {% endif %}
+</p>
+
+{% if produces %}<p><strong>Produces:</strong> {{ produces }}</p>{% endif %}
+{% if consumes_labels %}<p class="hint"><strong>Consumes:</strong> {{ consumes_labels|join(', ') }}</p>{% endif %}
+{% if dependencies.depends_on %}
+<p class="hint">
+  <strong>Depends on:</strong>
+  {% for d in dependencies.depends_on %}
+  <a href="{{ method_url(d.pattern_iri) }}">{{ d.label }}</a>{% if not d.has_contract %} (no contract recorded){% endif %}{% if not loop.last %}, {% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+
+<section>
+  <h2>Purpose &amp; behaviour</h2>
+  {% if l0_source == 'contract' %}
+    {% for sec in l0_sections %}
+    <div class="l0-section">
+      {% if sec.heading %}<p class="l0-heading">{{ sec.heading }}</p>{% endif %}
+      {% if sec.list_items %}
+      <ol>{% for item in sec.list_items %}<li>{{ item }}</li>{% endfor %}</ol>
+      {% elif sec.body %}
+      <p>{{ sec.body }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    {% if pattern_summary %}<p>{{ pattern_summary }}</p>{% endif %}
+    {% if pattern_rationale %}<p>{{ pattern_rationale }}</p>{% endif %}
+  {% endif %}
+  {% if pattern_text and l0_source != 'contract' %}
+  {# For a contracted method the same patternText is the Realization
+     section's "View the SQL" disclosure below -- shown once there, not
+     duplicated here. For an uncontracted method there is no realization
+     resource at all, so this is the only place the pattern's full text
+     (prose and any embedded SQL together, per the pattern's own authoring
+     convention) is reachable. #}
+  <details>
+    <summary>Full pattern text (as authored) &mdash; {{ pattern_text|length }} characters, the only recorded detail for this method</summary>
+    <pre class="mono code-block">{{ pattern_text }}</pre>
+  </details>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Failure modes ({{ failure_modes|length }})</h2>
+  {% if failure_modes %}
+    {% for fm in failure_modes %}
+    {{ caveat_card(fm) }}
+    {% if fm.also_affects %}
+    <p class="hint also-affects">Also affects:
+      {% for a in fm.also_affects %}<a href="{{ method_url(a.iri) }}">{{ a.short }}</a>{% if not loop.last %}, {% endif %}{% endfor %} &rarr;
+    </p>
+    {% endif %}
+    {% endfor %}
+  {% elif contract_iri %}
+    <p class="muted">No failure modes recorded for this contract.</p>
+  {% else %}
+    <p class="muted">No contract recorded for this method &mdash; failure modes are only tracked on a formal mc:MethodContract.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Invariants ({{ invariants|length }})</h2>
+  {% if invariants %}
+    {% for inv in invariants %}
+    <div class="invariant-card">
+      <p><strong>{{ inv.label }}</strong></p>
+      {% if inv.statement %}<p>{{ inv.statement }}</p>{% endif %}
+      {% if inv.comment %}<p class="hint">{{ inv.comment }}</p>{% endif %}
+      {% if inv.constrained_by %}
+      <p class="hint">Constrained by:
+        {% for c in inv.constrained_by %}
+          {%- if c.own %}<span class="pill">{{ c.label }}</span>
+          {%- elif c.owner_contract_iri %}<a href="{{ method_url(c.owner_contract_iri) }}">{{ c.label }} (defined in the {{ c.owner_label }} contract, reused here by reference)</a>
+          {%- else %}<span class="pill">{{ c.label }} (no owning contract found for this parameter)</span>
+          {%- endif %}{% if not loop.last %} &middot; {% endif %}
+        {% endfor %}
+      </p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% elif contract_iri %}
+    <p class="muted">No invariants recorded for this contract.</p>
+  {% else %}
+    <p class="muted">No contract recorded for this method &mdash; invariants are only tracked on a formal mc:MethodContract.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Parameters, with evidence ({{ parameters|length }})</h2>
+  {% if parameters %}
+    {% for p in parameters %}
+    <div class="param-card">
+      <p class="param-value"><strong>{{ p.label }}</strong> &mdash;
+        <span class="param-number">{{ p.value }}{% if p.unit %} {{ p.unit }}{% endif %}</span>
+      </p>
+      {% if p.role %}<p>{{ p.role }}</p>{% endif %}
+      {% if p.comment %}<p class="hint">{{ p.comment }}</p>{% endif %}
+      {% if p.assessed_at or p.assessment_window %}
+      <p class="hint">
+        {% if p.assessed_at %}assessed {{ p.assessed_at }}{% endif %}
+        {%- if p.assessment_window %} &middot; {{ p.assessment_window }}{% endif %}
+        &mdash; indexical, not timeless: tied to a specific assessment run, not stated as a graph-native fact for all time.
+      </p>
+      {% endif %}
+      <p><span class="pill">{{ p.evidence_tier }}</span></p>
+      {% for e in p.evidence %}{{ evidence_entry(e) }}{% endfor %}
+    </div>
+    {% endfor %}
+  {% elif contract_iri %}
+    <p class="muted">No parameters recorded for this contract.</p>
+  {% else %}
+    <p class="muted">No contract recorded for this method &mdash; parameters are only tracked on a formal mc:MethodContract.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Inputs</h2>
+  {% if inputs %}
+    {% for g in inputs %}
+    <p><a href="{{ dataset_url(g.dataset_iri) }}"><strong>{{ g.dataset_label }}</strong></a></p>
+    {% if g.columns %}
+    <p class="hint">{% for c in g.columns %}<a href="{{ resource_url(c.iri) }}">{{ c.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+    {% else %}
+    <p class="muted">dataset consumed, no individual columns declared</p>
+    {% endif %}
+    {% endfor %}
+  {% elif contract_iri %}
+    <p class="muted">No inputs recorded for this contract.</p>
+  {% else %}
+    <p class="muted">No contract recorded for this method &mdash; declared inputs are only tracked on a formal mc:MethodContract. See Related resources under Output below for the pattern's own target links.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Output</h2>
+  {% if output.grain %}<p><strong>Grain:</strong> {{ output.grain }}</p>{% endif %}
+  {% if output.meaning %}<p><strong>Meaning:</strong> {{ output.meaning }}</p>{% endif %}
+  {% if not output.grain and not output.meaning %}
+  <p class="muted">No formal outputGrain/outputMeaning recorded{% if not contract_iri %} (no contract for this method) {% endif %}.</p>
+  {% endif %}
+
+  {% if output.cited_by %}
+  <p class="hint">Datasets that cite this contract (incoming rdfs:seeAlso &mdash; not asserted as "produced by", the direction isn't uniform across that one predicate):
+    {% for d in output.cited_by %}<a href="{{ dataset_url(d.iri) }}">{{ d.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% elif contract_iri %}
+  <p class="muted">No dataset currently cites this contract via rdfs:seeAlso.</p>
+  {% endif %}
+
+  {% if output.related_datasets or output.related_other %}
+  <p class="hint">
+    Related resources (the pattern's own patternTarget/mapImplication links, resolved by the target's own type &mdash; not input/output-directional, and may overlap with declared inputs above):
+    {% for d in output.related_datasets %}<a href="{{ dataset_url(d.iri) }}">{{ d.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+    {%- if output.related_datasets and output.related_other %} &middot; {% endif %}
+    {% for d in output.related_other %}<a href="{{ resource_url(d.iri) }}">{{ d.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Realizations ({{ realizations|length }})</h2>
+  {% if realizations|length > 1 %}
+    <p class="hint">More than one realization recorded &mdash; rendered side by side for comparison by reading. No automated numeric diff: nothing in the mc: vocabulary yet records a structured, comparable metric per realization.</p>
+    <div class="realization-grid">
+      {% for r in realizations %}{{ realization_card(r) }}{% endfor %}
+    </div>
+  {% elif realizations %}
+    {% for r in realizations %}{{ realization_card(r) }}{% endfor %}
+    <p class="hint">1 realization recorded. This contract has not yet been regenerated against a second engine or approach.</p>
+  {% elif contract_iri %}
+    <p class="muted">No realization recorded for this contract.</p>
+  {% else %}
+    <p class="muted">No contract recorded for this method &mdash; no realization resource exists; the full pattern text above (Purpose &amp; behaviour) is the only recorded detail.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Dependencies</h2>
+  <p class="hint">Depends on:</p>
+  {% if dependencies.depends_on %}
+  <ul>
+    {% for d in dependencies.depends_on %}
+    <li>
+      <a href="{{ method_url(d.pattern_iri) }}">{{ d.label }}</a>
+      {%- if not d.has_contract %} &mdash; no contract recorded for this method (L0-only){% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No dependsOnMethod edge recorded.</p>
+  {% endif %}
+
+  <p class="hint">Depended on by:</p>
+  {% if dependencies.depended_on_by %}
+  <ul>
+    {% for d in dependencies.depended_on_by %}
+    <li><a href="{{ method_url(d.pattern_iri) }}">{{ d.label }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No other recorded method depends on this one.</p>
+  {% endif %}
+</section>
+
+<p class="hint"><a href="{{ resource_url(contract_iri or pattern_iri) }}">View raw triples for this resource &rarr;</a></p>
+{% endblock %}

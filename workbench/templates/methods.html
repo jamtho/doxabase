@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Methods — DoxaBase Workbench{% endblock %}
+
+{% block content %}
+<h1>Methods</h1>
+<p class="hint">
+  Every recorded analytical method — the "M&lt;n&gt; method" pattern-summary
+  convention (a naming heuristic this page relies on, not a graph
+  guarantee: a method authored without it would not appear here). Three of
+  the thirteen (M11–M13) have a formal <code>mc:MethodContract</code> —
+  invariants, evidenced parameters, realizations, failure modes; the rest
+  are pattern-only (L0 prose, no structured contract layer recorded yet).
+  The depth badge orients which methods have how much formal structure to
+  read — it does not grade method quality: a one-invariant sketch can be a
+  genuinely harder problem than a five-invariant full contract.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Method</th>
+      <th>Depth</th>
+      <th class="num">Invariants</th>
+      <th class="num">Parameters</th>
+      <th class="num">Realizations</th>
+      <th class="num">Failure modes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td><a href="{{ method_url(r.pattern_iri) }}">{{ r.title }}</a></td>
+      <td><span class="pill depth-{{ r.depth }}">{{ depth_badge_label[r.depth] }}</span></td>
+      <td class="num">{{ r.invariant_count }}</td>
+      <td class="num">{{ r.parameter_count }}</td>
+      <td class="num">{{ r.realization_count }}</td>
+      <td class="num">{{ r.failure_mode_count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

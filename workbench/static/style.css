@@ -221,6 +221,63 @@ section > h2 {
 
 code, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 
+/* Method pages (/methods, /method?iri=) */
+
+.pill.depth-full { color: var(--minor); border-color: var(--minor); background: var(--minor-bg); }
+.pill.depth-sketch { color: var(--moderate); border-color: var(--moderate); background: var(--moderate-bg); }
+.pill.depth-none { color: var(--muted); }
+
+.l0-section { margin-bottom: 0.9rem; }
+.l0-heading {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  margin-bottom: 0.15rem;
+}
+
+.invariant-card, .param-card, .realization-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.9rem;
+  background: var(--panel);
+}
+
+.param-value { font-size: 1.05rem; }
+.param-number { font-weight: 700; }
+
+.also-affects { margin-top: -0.3rem; margin-bottom: 0.6rem; }
+
+.code-block {
+  max-height: 28rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+.evidence-plot {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin: 0.4rem 0;
+}
+
+.realization-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.9rem;
+}
+.realization-grid .realization-card { margin-bottom: 0; }
+
 /* Example queries (dataset page, above the SQL box) */
 
 .example-queries {

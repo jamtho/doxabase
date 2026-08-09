@@ -6,10 +6,20 @@
 # and a /revisions/<iri> detail page (IRI discovered via
 # list_graph_revisions); /types and a /types/entities drilldown (graph+type
 # discovered live via graph_types.type_overview, the same GROUP BY the page
-# itself runs); and a resource page whose History section is non-empty (IRI
-# discovered via a revision's revision_anchors); and a coordinate-bearing
-# frame query against stops-series-full (the owner's hollow_frac/CASE
-# worked example) rendering the map-view markup -- asserting HTTP 200 +
+# itself runs); a resource page whose History section is non-empty (IRI
+# discovered via a revision's revision_anchors); a coordinate-bearing frame
+# query against stops-series-full (the owner's hollow_frac/CASE worked
+# example) rendering the map-view markup; and the method pages
+# (/methods, /method?iri=, /evidence/plot) added per the knowhow-ab design-B
+# trial win -- the design's own five acceptance checks (plots render as real
+# images, M12 structural completeness with severity coloring, M13's
+# cross-contract constrainedBy resolution, the M12->M11 dependsOnMethod edge
+# rendered honestly, M13's output section not fabricating a link the graph
+# doesn't assert) plus design A's shared-failure-mode cross-link check
+# (stolen into the build per the judge report). Sub-IRIs (invariant/
+# parameter/dependency targets) are discovered live via workbench.methods
+# calls against the real capsule; only the three known contract IRIs named
+# in the design docs themselves are hardcoded -- asserting HTTP 200 +
 # expected substrings on each.
 #
 # Not part of `tools/gate.sh`: it needs the optional `workbench` extra
@@ -215,5 +225,113 @@ assert_contains 'id="map-canvas"'
 assert_contains 'id="map-payload"'
 assert_contains '"lat_col": "centroid_lat"'
 assert_contains '"default_color": "class"'
+
+echo "13) methods index page"
+assert_status "${BASE}/methods" 200
+assert_contains "M12"
+assert_contains "M13"
+
+M11_IRI="https://ais.study/contract/m11-berth-anchor-discriminator"
+M12_IRI="https://ais.study/contract/m12-stops-series"
+M13_IRI="https://ais.study/contract/m13-feed-outage-attribution"
+ENCODED_M11="$(python3 -c "import sys, urllib.parse as u; print(u.quote(sys.argv[1], safe=''))" "$M11_IRI")"
+ENCODED_M12="$(python3 -c "import sys, urllib.parse as u; print(u.quote(sys.argv[1], safe=''))" "$M12_IRI")"
+ENCODED_M13="$(python3 -c "import sys, urllib.parse as u; print(u.quote(sys.argv[1], safe=''))" "$M13_IRI")"
+
+echo "14) M11 plot renders as an actual image, not a text citation (design-B check 1)"
+assert_status "${BASE}/method?iri=${ENCODED_M11}" 200
+assert_contains '<img class="evidence-plot"'
+assert_contains '/evidence/plot?path=work%2Fplots%2Fm11_'
+PLOT_HEADERS="$(curl -s -o /dev/null -D - "${BASE}/evidence/plot?path=work%2Fplots%2Fm11_a_radius_mean_hist.png" | tr -d '\r')"
+echo "${PLOT_HEADERS}" | grep -q "^HTTP/1.1 200" || fail "GET /evidence/plot?path=work/plots/m11_a_radius_mean_hist.png did not return 200"
+echo "${PLOT_HEADERS}" | grep -qi "^content-type: image/png" || fail "GET /evidence/plot did not return Content-Type: image/png"
+
+echo "15) M12 structural completeness + severity coloring (design-B check 2)"
+assert_status "${BASE}/method?iri=${ENCODED_M12}" 200
+assert_contains "5 invariants"
+assert_contains "7 parameters"
+assert_contains "1 realization"
+assert_contains "5 failure modes"
+assert_contains 'class="caveat severe"'
+assert_contains 'class="caveat moderate"'
+
+echo "16) M13 cross-contract parameter reuse is visible, not hidden (design-B check 3, judge fix b)"
+assert_status "${BASE}/method?iri=${ENCODED_M13}" 200
+assert_contains "defined in the M12 contract, reused here by reference"
+assert_contains "href=\"/method?iri=https%3A%2F%2Fais.study%2Fcontract%2Fm12-stops-series\""
+
+echo "17) M12->M11 dependsOnMethod renders honestly, unmodified (design-B check 4, judge fix c)"
+assert_status "${BASE}/method?iri=${ENCODED_M12}" 200
+# method_url() percent-encodes the whole IRI (including '/'), so the link
+# target appears in the rendered href as ".../pattern%2F2fb8d9b7-..." --
+# check for that encoded form, not the raw IRI, which never appears as
+# page text (only the M11 title text does).
+assert_contains "pattern%2F2fb8d9b7-80e9-44e7-b5f9-181b2f271008"
+assert_contains "<strong>Depends on:</strong>"
+
+echo "18) M13's output section reports the real graph shape, not a prose-name-matched fabrication (design-B check 5)"
+"$PYTHON" - "$CAPSULE" <<'EOF'
+import sys
+from pathlib import Path
+
+from doxabase import DoxaBase
+
+from workbench import methods
+
+path = Path(sys.argv[1])
+db = DoxaBase.open_readonly(path)
+page = methods.build_method_page(path, db, "https://ais.study/contract/m13-feed-outage-attribution")
+
+# The honest mc:-seeAlso-only panel ("datasets that cite this contract")
+# must not include M13's own two output frames -- no mc: edge connects
+# them to the contract today, only a name-check in free prose.
+cited = {d["iri"] for d in page["output"]["cited_by"]}
+assert cited == {"https://ais.study/dataset/stops-series-full"}, f"cited_by unexpected: {cited}"
+
+# The separate, additional panel stolen from design A (pattern-level
+# patternTarget/mapImplication resolution) is exactly what recovers the
+# edge the mc:-only panel above cannot show -- both must be true at once.
+related = {d["iri"] for d in page["output"]["related_datasets"]}
+expected = {"https://ais.study/dataset/feed-outages", "https://ais.study/dataset/stop-boundary-reasons"}
+assert expected <= related, f"related_datasets missing pattern-level output edges: {related}"
+
+grain_or_meaning = (page["output"]["grain"] or "") + (page["output"]["meaning"] or "")
+assert "feed_outages" in grain_or_meaning, "outputGrain/outputMeaning prose does not name feed_outages"
+
+print("M13 output section: OK")
+EOF
+
+echo "19) shared failure modes are cross-linked across methods, not silently duplicated (design-A check 4, stolen per judge report)"
+assert_status "${BASE}/method?iri=${ENCODED_M12}" 200
+assert_contains "ais-sentinel-values"
+# The cross-link line is HTML-adjacent but not on the same physical line as
+# "Also affects:", so a single-line grep can't see it -- verify through the
+# same data build_method_page() feeds the template (proves the shared-
+# caveat computation actually ran, not just that both pages independently
+# list their own hasFailureMode targets).
+"$PYTHON" - "$CAPSULE" <<'EOF'
+import sys
+from pathlib import Path
+
+from doxabase import DoxaBase
+
+from workbench import methods
+
+path = Path(sys.argv[1])
+db = DoxaBase.open_readonly(path)
+
+m12 = methods.build_method_page(path, db, "https://ais.study/contract/m12-stops-series")
+shared = next(fm for fm in m12["failure_modes"] if fm["iri"].endswith("ais-sentinel-values"))
+also = {a["short"] for a in shared["also_affects"]}
+assert "M11" in also, f"M12's ais-sentinel-values card does not cross-link to M11: {also}"
+
+m11 = methods.build_method_page(path, db, "https://ais.study/contract/m11-berth-anchor-discriminator")
+assert any(fm["iri"].endswith("ais-sentinel-values") for fm in m11["failure_modes"]), \
+    "M11 does not independently list ais-sentinel-values as its own failure mode"
+
+print("Shared failure mode cross-link: OK")
+EOF
+assert_status "${BASE}/method?iri=${ENCODED_M11}" 200
+assert_contains "ais-sentinel-values"
 
 echo "ALL SMOKE CHECKS PASSED"
