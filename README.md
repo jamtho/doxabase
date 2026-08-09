@@ -90,6 +90,24 @@ Because this is research, here is the honest state of the claims:
   contracts. These are stated as designs with pilot evidence, not
   shipped claims; expect them to be revised as trials accumulate.
 
+**In progress: the know-how generalization** (design doc 15). We are
+part-way through testing whether this mechanism generalizes beyond
+data-project memory to *know-how* — the tacit competence people learn
+by doing. So far: the project's own history was harvested into an
+episode corpus by archivist agents; an episode vocabulary was
+distilled from the cases (never designed a priori); a sealed blind A/B
+on a real design task returned a win for the capsule-equipped agent
+over an identical agent with only the raw corpus; and a re-analysis
+found that *understanding-arcs* — trajectories where a
+conceptualization forms until its decisions stop being decisions —
+are the natural unit, now being made first-class as patterns over
+episodes. To follow the thread: doc 15 (the thesis and honest state),
+then `docs/journal/trials/2026-08-knowhow-ab-protocol.md` and
+`...-ab-verdict.md` with the blind judge's report in
+`docs/journal/trials/knowhow-ab/`. The working corpus itself profiles
+its human participant closely, so it lives outside the public repo;
+the vocabulary and trial mechanics land here as they mature.
+
 **The Capsule Workbench is real and usable now** — it moved into this
 repo as the `workbench/` package (2026-07-20, at the owner's direction;
 previously `jamtho/doxabase-workbench`). Install the optional extra
