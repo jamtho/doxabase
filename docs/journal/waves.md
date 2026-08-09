@@ -842,3 +842,8 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 
 - Arc re-analysis complete; findings and modeling recommendation in
   the review copy; capsule conforms.
+
+## Wave 54 — 2026-08-09 — Know-how pilot progress
+
+- Vocabulary v2 applied; review copy staged for the owner; capsule
+  conforms.
