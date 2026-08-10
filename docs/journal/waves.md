@@ -875,3 +875,48 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   case (impossible cross-track speeds + transceiver split); one
   candidate emitter promoted under doc-14, 31 held in frames;
   gear-beacon check negative, recorded.
+
+## Wave 57 — 2026-08-10 — Capsule Observatory: layers 1-2 exporter built
+
+- Doc 11's first deliverable: `workbench/observatory.py` +
+  `workbench/observatory/` (static viewer assets), console script
+  `doxabase-observatory` (registered unconditionally, extras-guarded like
+  `doxabase-workbench`; only needs `duckdb` from the `workbench` extra).
+  `doxabase-observatory export <capsule> <outdir>` writes a self-contained
+  static bundle: `manifest.json`, `layers/*.geojson`, `provenance/*.json`
+  (per-feature claim/evidence chains), and a vendored-Leaflet viewer
+  (`index.html`/`observatory.js`/`observatory.css`) copied in verbatim.
+- Layer 1 "story map": the 12 promoted `aisv:SilencePeriod`/`DwellPeriod`/
+  `IdentityChange`/`DraftChangeEvent` resources found by a direct SQL scan
+  for `aisv:place` (no wheel call enumerates geo-typed resources -- flagged
+  as a genuine capsule gap in the module docstring, per doc 11 section 3).
+  Coordinates are parsed out of each resource's free-text `aisv:place`
+  literal (the capsule has no structured geo predicate -- second flagged
+  gap); multi-point events (silence exit/intervening/return) render as a
+  joined path per the round-5 "joined motion" rule, not disconnected dots.
+- Layer 2 "shuttle census": M9's two-point-shuttle thresholds (recorded as
+  prose, not literal layer-2 SQL) re-implemented and run live against the
+  described `daily-index` dataset, M2's shared-MMSI exclusion reused
+  verbatim from its recorded query snippet. Spot checks against M9's own
+  worked examples match exactly (SULPHUR ENTERPRISE 0.529 concentration,
+  QUEEN OF SURREY 0.809/4 switches, exactly 12 M2 multi_emitter exclusions);
+  the recomputed population (829) lands a few percent above the capsule's
+  recorded 820 because the tie-breaking in M9's pole ranking was never
+  recorded verbatim -- documented in the manifest, not silently rounded
+  away. The 17-vessel "stopped" sub-population (hand-extracted from the
+  session-9 classification claim, cited by IRI) is flagged with its
+  stop-kind and rendered as a highlighted, always-visible layer-control
+  group.
+- Every feature's popup/detail panel opens a "how this is known" section
+  fetched from `provenance/<feature id>.json` -- doc 11 section 1's stated
+  product. `export_preflight` runs as an informational check; the manifest
+  always stamps `local_only_pending_review` regardless (doc 11's public-
+  mode gating is future work, said so in the manifest and README). KML
+  export stays post-MVP per doc 11 section 4, noted in the manifest rather
+  than built.
+- `tools/observatory_smoke.sh` (not part of `tools/gate.sh`, same reasoning
+  as `workbench_smoke.sh`): exports against the real capsule, asserts
+  bundle structure, both layers' feature counts, the known Gulf-coast
+  berth-stay feature's full claim chain, the 17/17 stopped-vessel count,
+  and that the bundle serves cleanly over plain HTTP. `tools/gate.sh` is
+  unaffected (`workbench/` stays outside `doxabase/`'s scoreboard).

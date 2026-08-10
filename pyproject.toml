@@ -39,6 +39,10 @@ doxabase-report = "doxabase.report:main"
 # workbench/cli.py guards its own fastapi/uvicorn imports so a core-only
 # install fails with one clear message instead of a raw traceback.
 doxabase-workbench = "workbench.cli:main"
+# The Capsule Observatory exporter (doc 11): same extras-guard convention as
+# doxabase-workbench above -- its only extra runtime need is duckdb, guarded
+# inside workbench/observatory.py's main().
+doxabase-observatory = "workbench.observatory:main"
 
 [dependency-groups]
 dev = [

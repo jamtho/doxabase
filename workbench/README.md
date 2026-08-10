@@ -24,8 +24,12 @@ This is the **first implementation cut** of
 Capsule Workbench"), scoped to doc 13 §5's first cut: L1 (a thin FastAPI
 facade over the installed `doxabase` wheel's read calls, plus one DuckDB
 frame-query endpoint) and the generic resource/search/dataset views from
-L2. Doc 11 ("The Capsule Observatory") is its static, public-facing
-sibling — not built here.
+L2. [Design doc 11](../doxabase_design_docs/11-capsule-observatory.md)
+("The Capsule Observatory") is its static, public-facing sibling — its
+first deliverable (layers 1-2 of doc 11 §4) is now built here too, as the
+separate `doxabase-observatory` export target described below; it shares
+this repo and the installed wheel but nothing else with the live app
+above (no FastAPI, no request loop, no shared runtime state).
 
 ## What this is not (yet)
 
@@ -156,9 +160,13 @@ Honest status against doc 13 §2's L2 list — built vs. not:
   scans); resource pages grow a "This is method M12" callout when the
   resource itself is a method pattern or contract.
 - **Not built**: the frame browser's saved/recorded views and export;
-  geo-typed *resources* as a map layer (this cut renders query results
-  only, not the graph's own geo-typed entities) or KML/KMZ export (doc
-  11's exporter core, a separate future build target); a `producesDataset`
+  geo-typed *resources* as a **live** map layer in this app (the live map
+  panel above still renders query results only, not the graph's own
+  geo-typed entities) -- that rendering now exists as the separate,
+  *static* Capsule Observatory build target below (doc 11's exporter
+  core), not as a new live workbench view; KML/KMZ export stays
+  out-of-scope for both (doc 11 section 4 marks it post-MVP even for the
+  observatory). A `producesDataset`
   predicate (the output-edge gap method pages render honestly rather than
   papering over, per doc 12's "couldn't-say list"); live invariant
   re-checking (invariants are recorded prose today, not stored executable
@@ -276,6 +284,88 @@ workbench/
 tools/workbench_smoke.sh
 ```
 
+## The Capsule Observatory (doc 11 exporter)
+
+`workbench/observatory.py` + `workbench/observatory/` (static viewer
+assets) is doc 11's first deliverable: "the exporter producing layers 1-2
+from the real AIS capsule, viewed locally ... before ANY hosting
+decisions." Doc 13 §2.4: "the observatory (doc 11) = a build that
+snapshots L2 views through the export-eligibility gate into static
+artifacts. One codebase, two targets." This is that second target — a
+static exporter, not a live server, sharing nothing but the repo and the
+installed wheel with the app above.
+
+```bash
+doxabase-observatory export /home/codex/ais-study/capsule.sqlite ./bundle
+python -m http.server -d ./bundle   # fetch()-based viewer needs a server, not file://
+```
+
+Registered the same way as `doxabase-workbench` (unconditional
+`[project.scripts]` entry, its own extras guard inside
+`workbench/observatory.py`'s `main()` — its only extra runtime need is
+`duckdb`, which the `workbench` extra already carries). Layer 2 needs
+`MINIO_ENDPOINT`/`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` in the environment
+(same convention as the frame query box above); pass `--skip-shuttle-layer`
+to export Layer 1 only when S3 isn't reachable.
+
+**Bundle contents** (`manifest.json`, `layers/*.geojson`,
+`provenance/*.json` keyed by feature id, `index.html`/`observatory.js`/
+`observatory.css`, `vendor/leaflet/` copied from this package's own
+`static/vendor/leaflet/`):
+
+- **Layer 1, "story map"**: the 12 promoted `aisv:SilencePeriod`/
+  `DwellPeriod`/`IdentityChange`/`DraftChangeEvent` resources, found by a
+  direct SQL scan for subjects carrying `aisv:place` (there is no wheel
+  call that enumerates "all geo-typed resources with their claim chains"
+  — a genuine gap, flagged in the module docstring per doc 11 §3, not
+  silently worked around). Coordinates are parsed out of each resource's
+  free-text `aisv:place` literal with a regex — the capsule has no
+  structured geo predicate, a second flagged gap; multi-point events
+  (a silence period's exit/intervening/return positions) render as one
+  joined path, not disconnected dots (round-5's "joined motion" rule).
+  Every feature's `provenance/<id>.json` is a full claim → observation →
+  evidence chain walked live off the graph.
+- **Layer 2, "shuttle census"**: M9's two-point-shuttle thresholds
+  (`concentration>=0.85`, `pole_sep_deg>=0.15`, `n_spans_top2>=8`,
+  `n_switches>=6`, `dwell_fraction<=0.5`, `top2_window_days>=300` —
+  recorded in the graph as prose, not literal layer-2 SQL) re-implemented
+  and run live against the described `daily-index` dataset; M2's shared-
+  MMSI exclusion is reused verbatim from its recorded `ExecutableQuerySnippet`.
+  Spot checks against M9's own worked examples match exactly (SULPHUR
+  ENTERPRISE 0.529 concentration, QUEEN OF SURREY 0.809 concentration / 4
+  switches, exactly 12 M2 `multi_emitter` exclusions); the recomputed
+  population lands a few percent above the capsule's recorded 820 because
+  M9's tie-breaking for equal-dwell-day bins was never recorded verbatim —
+  documented honestly in `manifest.json`'s `layers[].sampling`, not rounded
+  away. The 17-vessel "stopped" sub-population (session 9's classification,
+  hand-extracted from its claim/evidence pair and cited by IRI in
+  `STOPPED_VESSELS`) is flagged `stopped: true` with its stop-kind and
+  renders as its own highlighted, always-visible layer-control group.
+  Population-scale features cite the method chain (M9 + M2 + the recorded
+  820-census claim) as their provenance, not a per-vessel graph claim that
+  doesn't exist — honest about what's asserted vs. computed.
+- **Export-eligibility**: `export_preflight` runs against the map graph as
+  an informational check (recorded in `manifest.json`); the manifest
+  always stamps `"status": "local_only_pending_review"` regardless of the
+  result. Doc 11's public-mode gating (promoted/reviewed resources only,
+  controlled wording by confidence, the anti-insinuation rendering rule)
+  is future work, said so in the manifest and here — **this bundle is not
+  reviewed for public sharing.**
+- **Not built (deliberately, doc 11 §4)**: Layer 3 (M11 stop
+  classification + method-plot overlay), search/query UI, "export what
+  I'm looking at as KML/KMZ" (round-6's affordance — cheap because
+  `docs/journal/ais-study/story_kml.py` is a peer output of the same
+  underlying data, but out of this layers-1-2 cut; `manifest.json`'s
+  `kml_export` field says so), colour-for-speed, the classifier-feedback
+  loop, PMTiles/hosting (doc 11 §6's open questions).
+
+`tools/observatory_smoke.sh` (not part of `tools/gate.sh`, same reasoning
+as `tools/workbench_smoke.sh`: needs the `workbench` extra and live
+capsule/S3 access) exports against the real AIS capsule and asserts bundle
+structure, both layers' feature counts, the known Gulf-coast berth-stay
+feature's full claim chain, the 17/17 stopped-vessel count, and that the
+bundle serves cleanly over plain HTTP.
+
 ## What's next (per doc 13 §5's own ordering)
 
 Resource pages + search first (done here, they exercise L1 completely);
@@ -285,4 +375,6 @@ second renderer over frame-query results (Leaflet, points + color-by +
 path, above), not the geo-typed-resource/MapLibre/KML-export panel
 doc 13 §2 item 4 originally sketched — see doc 13's 2026-07-21 status
 note for the pivot. Porting `story_kml.py`'s own queries to a graph-level
-map layer, and KML/KMZ export, remain doc 11 observatory-target territory.
+map layer now exists as the Capsule Observatory above (layers 1-2); KML/
+KMZ export and Layer 3 (M11 stop classification + method-plot overlay)
+remain doc 11 observatory-target territory.

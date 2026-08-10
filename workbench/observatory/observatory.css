@@ -1,0 +1,177 @@
+/* Static viewer styling. Same palette as workbench/static/style.css (doc
+ * 13 section 2.4: "one codebase, two targets" -- the observatory should
+ * not look like a different product). Deliberately light-only; this is a
+ * reviewed static export, not a themeable live app.
+ */
+:root {
+  --bg: #fbfaf7;
+  --panel: #ffffff;
+  --ink: #1c1b19;
+  --muted: #5f5a52;
+  --border: #e4dfd5;
+  --link: #1a5276;
+  --accent: #8a5a00;
+  --code-bg: #f1efe8;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+#app-header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+#header-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+#header-meta .pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  background: var(--code-bg);
+}
+
+#header-meta .pill.pending-review {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+#body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+#map {
+  flex: 1;
+  min-width: 0;
+}
+
+#map.no-tiles {
+  background-color: #eceae3;
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+#detail {
+  width: 24rem;
+  max-width: 40vw;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+#detail-empty {
+  color: var(--muted);
+}
+
+#detail-content h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+#detail-content .summary {
+  color: var(--ink);
+}
+
+#detail-content .field {
+  margin: 0.6rem 0;
+}
+
+#detail-content .field dt {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+#detail-content .field dd {
+  margin: 0.15rem 0 0;
+}
+
+#detail-content .iri, #detail-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--muted);
+}
+
+#detail-content .provenance-block {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin: 0.6rem 0;
+  background: var(--code-bg);
+}
+
+#detail-content .provenance-block h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+#detail-content .chain-step {
+  border-left: 2px solid var(--border);
+  padding-left: 0.6rem;
+  margin: 0.5rem 0 0.5rem 0.2rem;
+}
+
+#detail-content .confidence {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+}
+
+#app-footer {
+  padding: 0.35rem 1.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.leaflet-popup-content {
+  font-size: 0.85rem;
+}
+
+.leaflet-popup-content b {
+  display: block;
+  margin-bottom: 0.2rem;
+}

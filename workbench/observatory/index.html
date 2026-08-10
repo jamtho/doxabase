@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DoxaBase Capsule Observatory</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="observatory.css" />
+</head>
+<body>
+<!--
+  Static viewer for one observatory export bundle (doc 11 section 2).
+  Self-contained: everything this page needs (manifest.json, layers/*.geojson,
+  provenance/*.json, vendored Leaflet) lives alongside it in the same bundle
+  directory. Fetches are relative paths, so open this via a local static
+  server (e.g. `python -m http.server` from inside the bundle directory) --
+  most browsers block fetch() of local files opened directly as file://.
+
+  Doc 11 section 1's product: every rendered feature opens a "how this is
+  known" panel on click -- the #detail panel below, populated from
+  provenance/<feature id>.json.
+-->
+<div id="app">
+  <header id="app-header">
+    <h1>DoxaBase Capsule Observatory</h1>
+    <div id="header-meta"></div>
+  </header>
+  <div id="body">
+    <div id="map"></div>
+    <aside id="detail">
+      <div id="detail-empty">
+        Click any map feature to see how it's known -- its label, story
+        summary, and its claim/evidence chain pulled straight from the
+        capsule.
+      </div>
+      <div id="detail-content" hidden></div>
+    </aside>
+  </div>
+  <footer id="app-footer"></footer>
+</div>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="observatory.js"></script>
+</body>
+</html>

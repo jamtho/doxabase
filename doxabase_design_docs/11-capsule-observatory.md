@@ -3,6 +3,15 @@
 **Date**: 2026-07-12 (Fable, final day)
 **Status**: Design for handover — implementation belongs to future
 sessions in a SEPARATE repository. This doc is the contract.
+**Status update (2026-08-10)**: the first deliverable (section 7) is
+built, in-repo per doc 13's "one repo, two build targets" call —
+`workbench/observatory.py` + `workbench/observatory/`, console script
+`doxabase-observatory export <capsule> <outdir>`, layers 1-2 only, viewed
+locally via a vendored-Leaflet static bundle (no hosting decisions made).
+See `workbench/README.md`'s observatory section and
+`docs/journal/waves.md` Wave 57 for exact scope, honest gaps found (no
+structured geo predicate; M9's layer-2 SQL isn't recorded verbatim), and
+what remains (Layer 3, public mode, KML export, PMTiles/hosting).
 **Origin**: The AIS field study's expert channel converged on "maps are
 the interface" (round 4, recorded in the study capsule), and the study
 needs a public face that doubles as DoxaBase's demonstration. This doc
