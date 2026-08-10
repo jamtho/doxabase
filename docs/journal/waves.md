@@ -920,3 +920,8 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   berth-stay feature's full claim chain, the 17/17 stopped-vessel count,
   and that the bundle serves cleanly over plain HTTP. `tools/gate.sh` is
   unaffected (`workbench/` stays outside `doxabase/`'s scoreboard).
+
+## Wave 58 — 2026-08-11 — Know-how pilot progress
+
+- Promotion gate exercised; person-model terms landed under owner
+  consent; journal in the review copy; capsule conforms.
