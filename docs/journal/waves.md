@@ -866,3 +866,12 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   both pass. No scoreboard effect (`workbench/` stays outside `doxabase/`).
 - Next: a `producesDataset` mc: predicate remains an open vocabulary gap
   (method pages render it honestly rather than papering over it).
+
+## Wave 56 — 2026-08-10 — Session 16: the placeholder census grows 5x
+
+- M14 recorded (docs/journal/trials/2026-08-ais-session-16.md):
+  35 placeholder MMSIs found vs 7 known (the largest previously
+  unknown); top-3 segregated deterministically; the M/Y CASUAL proof
+  case (impossible cross-track speeds + transceiver split); one
+  candidate emitter promoted under doc-14, 31 held in frames;
+  gear-beacon check negative, recorded.
