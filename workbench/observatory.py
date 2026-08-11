@@ -16,7 +16,9 @@ frames it describes) once and writes a self-contained static bundle.
 Bundle layout (doc 11 section 2's architecture diagram):
     manifest.json        layer registry, data window, generation provenance,
                           export-eligibility stamp
-    layers/*.geojson      Layer 1 "story map", Layer 2 "shuttle census"
+    layers/*.geojson      Layer 1 "story map", Layer 2 "shuttle census",
+                           optional Layer "tracks" (full vessel-track
+                           context, see below)
     provenance/*.json     per-feature claim/evidence chains, keyed by feature id
     index.html            the static viewer (workbench/observatory/index.html,
                            copied verbatim)
@@ -26,6 +28,28 @@ Bundle layout (doc 11 section 2's architecture diagram):
                            workbench/static/vendor/leaflet (already in-repo
                            for the workbench's own map panel -- doc 13
                            section 2.4's "shared lower layers")
+
+Two owner asks added after the layers-1-2 MVP landed (this module's
+docstring keeps growing per its own "flow findings here" convention):
+
+- Optional full vessel tracks (``--tracks``, default on when S3 is
+  reachable): each story-map vessel's complete broadcast track
+  (dataset ``ais.study/dataset/broadcasts``), split into a
+  MultiLineString wherever consecutive fixes are more than 30 minutes
+  apart -- M12's own stops-series silence-run-break rule (session 13),
+  so a coverage/silence gap renders as an honest gap rather than an
+  invented straight-line transit (the capsule's ``m3-silence-is-not-
+  dark`` caveat: silence is absent evidence, not evidence of continuous
+  motion). Thinned by deterministic every-Nth-fix decimation (segment
+  endpoints always kept, so a gap's true edges never get thinned away)
+  to a fixed total byte budget across all vessels -- "determinism and
+  honesty over prettiness" per the ask, so Douglas-Peucker (which
+  optimizes visual smoothness over sample-density honesty) was not
+  used. See the "Optional context layer" section below.
+- A second base layer, Esri World Imagery, alongside OSM streets --
+  the same two-basemap Leaflet layers control the workbench's own map
+  panel already has (``workbench/maps.py``'s ``ESRI_IMAGERY_TILE_URL``/
+  ``ESRI_IMAGERY_ATTRIBUTION``, reused here rather than re-hardcoded).
 
 Two genuine data-model findings surfaced while building this (recorded here
 per doc 11 section 3 -- "flow to the distiller ledger like any other
@@ -68,12 +92,15 @@ import re
 import shutil
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib import metadata as importlib_metadata
+from math import ceil
 from pathlib import Path
 from typing import Any
 
 from doxabase import DoxaBase, to_dict
+
+from . import maps
 
 _MODULE_DIR = Path(__file__).parent
 _ASSETS_DIR = _MODULE_DIR / "observatory"
@@ -792,6 +819,197 @@ def _shuttle_provenance(feature: ShuttleFeature) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
+# Optional context layer: full vessel tracks (owner ask, added after the
+# layers-1-2 MVP). Not a claim-bearing story/population feature -- raw
+# broadcast fixes joined into a line so the story-map/shuttle-census
+# points of interest read against the vessel's actual motion beneath them
+# (round-5 "the eye reads joined motion" lesson, applied to context rather
+# than to a promoted resource this time). No provenance/*.json is written
+# per track: it is not an asserted graph fact, just the same broadcasts
+# dataset story_kml.py's fix_cloud() already reads, joined and thinned.
+
+TRACK_SILENCE_GAP_MINUTES = 30  # M12's stops-series silence-run-break rule (session 13)
+TRACK_LAYER_BYTE_BUDGET = 2_000_000  # keep layers/tracks.geojson comfortably under the 2MB ask
+TRACK_BYTES_PER_POINT_ESTIMATE = 27  # "-123.456789,45.678901"+separators, compact encoding
+TRACK_MIN_POINTS_PER_VESSEL = 500  # floor so a many-vessel capsule doesn't thin any one track away
+
+_TRACK_SQL = """
+SELECT base_date_time, latitude, longitude
+FROM read_parquet('{glob}')
+WHERE mmsi = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
+ORDER BY base_date_time
+"""
+
+VESSEL_MMSI_PATTERN = re.compile(r"mmsi-(\d+)$")
+
+
+def _vessel_mmsi(vessel_iri: str) -> int | None:
+    match = VESSEL_MMSI_PATTERN.search(vessel_iri)
+    return int(match.group(1)) if match else None
+
+
+def _promoted_vessels(story_features: list[StoryFeature]) -> dict[int, str | None]:
+    """{mmsi: vessel label} for every distinct vessel behind a promoted
+    story feature (request: "the promoted aisv: resources' MMSIs"),
+    ascending by MMSI for deterministic output order."""
+    vessels: dict[int, str | None] = {}
+    for feature in story_features:
+        if not feature.vessel_iri:
+            continue
+        mmsi = _vessel_mmsi(feature.vessel_iri)
+        if mmsi is None:
+            continue
+        vessels.setdefault(mmsi, feature.vessel_label)
+    return dict(sorted(vessels.items()))
+
+
+@dataclass
+class VesselTrackFeature:
+    mmsi: int
+    vessel_label: str | None
+    segments: list[list[tuple[float, float]]]  # post-thinning [(lat, lon), ...] per segment
+    raw_point_count: int
+    rendered_point_count: int
+    thinning_stride: int
+    isolated_fixes_dropped: int
+    first_fix_at: str
+    last_fix_at: str
+
+
+def _split_on_silence(
+    rows: list[tuple[str, float, float]],
+) -> list[list[tuple[str, float, float]]]:
+    """Split one vessel's chronological fixes into runs wherever the gap
+    between consecutive fixes exceeds TRACK_SILENCE_GAP_MINUTES -- so a
+    coverage/silence gap renders as an honest gap in the line rather than
+    a straight segment implying continuous motion across it (the
+    capsule's m3-silence-is-not-dark caveat)."""
+    if not rows:
+        return []
+    segments: list[list[tuple[str, float, float]]] = [[rows[0]]]
+    prev_dt = datetime.fromisoformat(rows[0][0])
+    gap = timedelta(minutes=TRACK_SILENCE_GAP_MINUTES)
+    for row in rows[1:]:
+        dt = datetime.fromisoformat(row[0])
+        if dt - prev_dt > gap:
+            segments.append([])
+        segments[-1].append(row)
+        prev_dt = dt
+    return segments
+
+
+def _thin_segment(
+    segment: list[tuple[str, float, float]], stride: int
+) -> list[tuple[str, float, float]]:
+    """Deterministic every-Nth-fix decimation ("determinism and honesty
+    over prettiness" -- no Douglas-Peucker smoothing). A segment's first
+    and last fix are always kept so a silence gap's true edges (last fix
+    before, first fix after) are never thinned away."""
+    if stride <= 1 or len(segment) <= 2:
+        return segment
+    thinned = segment[::stride]
+    if thinned[-1] != segment[-1]:
+        thinned.append(segment[-1])
+    return thinned
+
+
+def _run_vessel_tracks(
+    con, broadcasts_glob: str, vessels: dict[int, str | None]
+) -> list[VesselTrackFeature]:
+    """One full, thinned, gap-split track per vessel MMSI. The per-vessel
+    point budget is the total byte budget split evenly across vessels
+    (simple and deterministic); a vessel already under budget keeps every
+    fix (stride 1)."""
+    if not vessels:
+        return []
+    per_vessel_budget_points = max(
+        TRACK_MIN_POINTS_PER_VESSEL,
+        (TRACK_LAYER_BYTE_BUDGET // TRACK_BYTES_PER_POINT_ESTIMATE) // len(vessels),
+    )
+    features: list[VesselTrackFeature] = []
+    for mmsi, label in vessels.items():
+        rows = con.execute(_TRACK_SQL.format(glob=broadcasts_glob), [mmsi]).fetchall()
+        if not rows:
+            continue
+        raw_count = len(rows)
+        stride = max(1, ceil(raw_count / per_vessel_budget_points))
+        raw_segments = _split_on_silence(rows)
+        thinned_segments = [_thin_segment(seg, stride) for seg in raw_segments]
+        coord_segments = [
+            [(lat, lon) for _, lat, lon in seg] for seg in thinned_segments if len(seg) >= 2
+        ]
+        isolated_dropped = sum(1 for seg in raw_segments if len(seg) == 1)
+        features.append(
+            VesselTrackFeature(
+                mmsi=mmsi,
+                vessel_label=label,
+                segments=coord_segments,
+                raw_point_count=raw_count,
+                rendered_point_count=sum(len(seg) for seg in coord_segments),
+                thinning_stride=stride,
+                isolated_fixes_dropped=isolated_dropped,
+                first_fix_at=rows[0][0],
+                last_fix_at=rows[-1][0],
+            )
+        )
+    return features
+
+
+def _track_geojson_feature(feature: VesselTrackFeature) -> dict[str, Any] | None:
+    if not feature.segments:
+        return None  # nothing renderable (e.g. every fix was an isolated ping)
+    if len(feature.segments) == 1:
+        geometry = {
+            "type": "LineString",
+            "coordinates": [[lon, lat] for lat, lon in feature.segments[0]],
+        }
+    else:
+        geometry = {
+            "type": "MultiLineString",
+            "coordinates": [[[lon, lat] for lat, lon in seg] for seg in feature.segments],
+        }
+    feature_id = f"track-{feature.mmsi}"
+    return {
+        "type": "Feature",
+        "id": feature_id,
+        "geometry": geometry,
+        "properties": {
+            "layer": "vessel-track",
+            "id": feature_id,
+            "mmsi": feature.mmsi,
+            "vessel_label": feature.vessel_label,
+            "segment_count": len(feature.segments),
+            "raw_point_count": feature.raw_point_count,
+            "rendered_point_count": feature.rendered_point_count,
+            "thinning_stride": feature.thinning_stride,
+            "isolated_fixes_dropped": feature.isolated_fixes_dropped,
+            "silence_gap_minutes": TRACK_SILENCE_GAP_MINUTES,
+            "first_fix_at": feature.first_fix_at,
+            "last_fix_at": feature.last_fix_at,
+        },
+    }
+
+
+def _s3_glob_reachable(
+    minio_endpoint: str, minio_access_key: str, minio_secret_key: str, glob: str
+) -> bool:
+    """Cheap reachability probe (list, read nothing) -- same idiom as
+    ``frames.is_reachable``, reimplemented per this module's own "fixed
+    multi-statement build step, not untrusted input" connection (see
+    ``_connect_s3`` docstring). Tracks must degrade gracefully rather than
+    raise: unlike the shuttle layer, this is an optional context layer."""
+    try:
+        con = _connect_s3(minio_endpoint, minio_access_key, minio_secret_key)
+        try:
+            matches = con.execute("SELECT * FROM glob(?) LIMIT 1", [glob]).fetchall()
+        finally:
+            con.close()
+        return len(matches) > 0
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------
 # Export-eligibility posture (doc 11 section 2: "export_preflight + human
 # review before any bundle goes public")
 
@@ -876,10 +1094,14 @@ def export_bundle(
     minio_secret_key: str | None,
     tiles_enabled: bool = True,
     skip_shuttle_layer: bool = False,
+    tracks_enabled: bool = True,
 ) -> ExportSummary:
     """Build the full static bundle (doc 11 section 2). ``skip_shuttle_layer``
     exists only for fast offline smoke runs where MinIO isn't reachable;
-    the default (real) export always includes both layers."""
+    the default (real) export always includes both layers.
+    ``tracks_enabled`` (the ``--tracks`` flag) is the softer sibling: even
+    when true, the optional tracks context layer is skipped with a
+    manifest note rather than raised on if S3/MinIO isn't reachable."""
     capsule_path = Path(capsule_path)
     outdir = Path(outdir)
     (outdir / "layers").mkdir(parents=True, exist_ok=True)
@@ -893,10 +1115,16 @@ def export_bundle(
             index_templates = index_description.path_templates
         except Exception:
             index_templates = []
+        try:
+            broadcasts_description = db.describe_dataset("https://ais.study/dataset/broadcasts")
+            broadcasts_templates = broadcasts_description.path_templates
+        except Exception:
+            broadcasts_templates = []
 
     conn = _connect_capsule(capsule_path)
     try:
         story_features = _story_features(conn)
+        promoted_vessels = _promoted_vessels(story_features)
         story_geojson_features = []
         provenance_written = 0
         for feature in story_features:
@@ -1002,6 +1230,85 @@ def export_bundle(
         _write_geojson(outdir / shuttle_layer.file, shuttle_geojson_features)
         layers.append(shuttle_layer)
 
+    tracks_status: dict[str, Any] = {"requested": tracks_enabled}
+    if not tracks_enabled:
+        tracks_status["built"] = False
+        tracks_status["note"] = "Disabled via --tracks off."
+    elif not promoted_vessels:
+        tracks_status["built"] = False
+        tracks_status["note"] = "No promoted story-map vessel MMSIs found; nothing to track."
+    elif not (minio_endpoint and minio_access_key and minio_secret_key):
+        tracks_status["built"] = False
+        tracks_status["note"] = (
+            "S3 not configured (MINIO_ENDPOINT/MINIO_ACCESS_KEY/MINIO_SECRET_KEY not all "
+            "set); tracks context layer skipped, not raised on (it is optional)."
+        )
+    elif not broadcasts_templates:
+        tracks_status["built"] = False
+        tracks_status["note"] = (
+            "Could not resolve the broadcasts dataset's path_templates from the capsule; "
+            "tracks context layer skipped."
+        )
+    else:
+        broadcasts_glob = re.sub(r"\{[^}]+\}", "*", broadcasts_templates[0])
+        if not _s3_glob_reachable(minio_endpoint, minio_access_key, minio_secret_key, broadcasts_glob):
+            tracks_status["built"] = False
+            tracks_status["note"] = f"S3 glob not reachable ({broadcasts_glob}); tracks context layer skipped."
+        else:
+            con = _connect_s3(minio_endpoint, minio_access_key, minio_secret_key)
+            try:
+                track_features = _run_vessel_tracks(con, broadcasts_glob, promoted_vessels)
+            finally:
+                con.close()
+            track_geojson_features = [
+                f for f in (_track_geojson_feature(t) for t in track_features) if f is not None
+            ]
+            if not track_geojson_features:
+                tracks_status["built"] = False
+                tracks_status["note"] = "No renderable track geometry (every fix was an isolated ping)."
+            else:
+                tracks_file = "layers/tracks.geojson"
+                _write_geojson(outdir / tracks_file, track_geojson_features, compact=True)
+                output_bytes = (outdir / tracks_file).stat().st_size
+                raw_total = sum(t.raw_point_count for t in track_features)
+                rendered_total = sum(t.rendered_point_count for t in track_features)
+                tracks_layer = LayerSummary(
+                    id="tracks",
+                    title="Vessel tracks (context)",
+                    file=tracks_file,
+                    kind="context",
+                    feature_count=len(track_geojson_features),
+                    description=(
+                        "Optional context layer (owner ask, not doc 11's original MVP "
+                        "cut): each story-map vessel's full broadcast track from the "
+                        "ais.study/dataset/broadcasts dataset, split into a "
+                        "MultiLineString wherever consecutive fixes are more than "
+                        f"{TRACK_SILENCE_GAP_MINUTES} minutes apart (M12's stops-series "
+                        "silence-run-break rule) so a coverage/silence gap renders as an "
+                        "honest gap rather than an invented straight-line transit (the "
+                        "capsule's m3-silence-is-not-dark caveat). Thinned by "
+                        "deterministic every-Nth-fix decimation, segment endpoints "
+                        "always kept, so the layer stays under its byte budget; "
+                        "per-vessel raw/rendered point counts and stride are on each "
+                        "feature's own properties."
+                    ),
+                    sampling={
+                        "method": "every-Nth-fix decimation per vessel, segment (gap) endpoints always kept",
+                        "silence_gap_minutes": TRACK_SILENCE_GAP_MINUTES,
+                        "byte_budget": TRACK_LAYER_BYTE_BUDGET,
+                        "output_bytes": output_bytes,
+                        "vessel_count": len(track_features),
+                        "raw_point_total": raw_total,
+                        "rendered_point_total": rendered_total,
+                    },
+                )
+                layers.append(tracks_layer)
+                tracks_status["built"] = True
+                tracks_status["note"] = (
+                    f"{len(track_features)} vessel track(s), {rendered_total:,} of "
+                    f"{raw_total:,} raw fixes rendered, {output_bytes:,} bytes."
+                )
+
     manifest = {
         "format": "doxabase.observatory_bundle.v1",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -1015,15 +1322,29 @@ def export_bundle(
         "tiles": (
             {
                 "enabled": True,
-                "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "attribution": (
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">'
-                    "OpenStreetMap</a> contributors"
-                ),
+                # Kept at the top level for backward compatibility (the primary/
+                # default basemap); "basemaps" below is the full switchable set.
+                "url": maps.OSM_TILE_URL,
+                "attribution": maps.OSM_ATTRIBUTION,
+                "basemaps": [
+                    {
+                        "id": "osm",
+                        "label": "Streets (OSM)",
+                        "url": maps.OSM_TILE_URL,
+                        "attribution": maps.OSM_ATTRIBUTION,
+                    },
+                    {
+                        "id": "esri-imagery",
+                        "label": "Satellite (Esri)",
+                        "url": maps.ESRI_IMAGERY_TILE_URL,
+                        "attribution": maps.ESRI_IMAGERY_ATTRIBUTION,
+                    },
+                ],
             }
             if tiles_enabled
             else {"enabled": False, "note": "Plain-grid fallback: no external tile requests."}
         ),
+        "tracks": tracks_status,
         "layers": [
             {
                 "id": layer.id,
@@ -1059,11 +1380,18 @@ def export_bundle(
     return ExportSummary(outdir=outdir, manifest=manifest, layers=layers)
 
 
-def _write_geojson(path: Path, features: list[dict[str, Any]]) -> None:
-    path.write_text(
-        json.dumps({"type": "FeatureCollection", "features": features}, indent=2, sort_keys=True)
-        + "\n"
-    )
+def _write_geojson(path: Path, features: list[dict[str, Any]], *, compact: bool = False) -> None:
+    """``compact`` (used by the tracks layer, whose coordinate arrays can
+    run into the tens of thousands): no indentation/whitespace, since
+    ``indent=2`` would put every single [lon, lat] pair's own numbers on
+    their own padded line -- multiplying the very byte budget the tracks
+    layer's thinning exists to respect."""
+    body = {"type": "FeatureCollection", "features": features}
+    if compact:
+        text = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    else:
+        text = json.dumps(body, indent=2, sort_keys=True)
+    path.write_text(text + "\n")
 
 
 def _copy_viewer_assets(outdir: Path) -> None:
@@ -1099,6 +1427,16 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Export Layer 1 (story map) only; skip Layer 2 (needs S3/MinIO access).",
     )
+    export_parser.add_argument(
+        "--tracks",
+        choices=["on", "off"],
+        default="on",
+        help=(
+            "Optional full vessel-tracks context layer for story-map vessels (on, "
+            "default) vs skip entirely (off). Even when on, this degrades to a "
+            "manifest note rather than failing the export if S3/MinIO isn't reachable."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.command == "export":
@@ -1121,10 +1459,12 @@ def main(argv: list[str] | None = None) -> None:
             minio_secret_key=os.environ.get("MINIO_SECRET_KEY"),
             tiles_enabled=(args.tiles == "on"),
             skip_shuttle_layer=args.skip_shuttle_layer,
+            tracks_enabled=(args.tracks == "on"),
         )
         print(f"wrote bundle to {summary.outdir}")
         for layer in summary.layers:
             print(f"  {layer.id}: {layer.feature_count} feature(s) -> {layer.file}")
+        print(f"  tracks: {summary.manifest['tracks']['note']}")
         print(f"  manifest.json, provenance/ ({summary.manifest['provenance_count']} file(s))")
         print(f"  open with a local static server, e.g.: python -m http.server -d {summary.outdir}")
 

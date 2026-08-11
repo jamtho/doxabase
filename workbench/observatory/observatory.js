@@ -23,6 +23,22 @@
  *     lines drawn are a single feature's own recorded path (an exit/
  *     return silence event, or one vessel's two dwell poles), never a
  *     line invented between two different resources.
+ *
+ * Two owner asks added after the layers-1-2 MVP:
+ *   - optional vessel tracks (layers/tracks.geojson, kind "context" in
+ *     the manifest): each story-map vessel's full, thinned broadcast
+ *     track, rendered in a dedicated low-z-index Leaflet pane so it
+ *     always sits beneath the story/shuttle features regardless of
+ *     fetch/add order -- "the eye reads joined motion; points of
+ *     interest need the track for context" (round-5). Muted color, no
+ *     per-vertex markers (would be noise at thousands of points), no
+ *     click-through provenance panel (raw broadcast fixes, not a graph
+ *     claim) -- just a popup with the thinning stats. Toggleable
+ *     per-vessel via the same layers control, initially on.
+ *   - a second base layer (Esri World Imagery) alongside OSM streets,
+ *     reusing workbench/maps.py's tile URL/attribution constants via
+ *     manifest.tiles.basemaps -- the same two-basemap switcher the
+ *     workbench's own map panel (static/map.js) already has.
  */
 (function () {
   "use strict";
@@ -243,6 +259,52 @@
   }
 
   // ---------------------------------------------------------------
+  // Vessel tracks (context layer): plain muted lines, no vertex markers
+  // (a thinned track can still carry thousands of points -- markers at
+  // every one would be visual noise, not context) and no click-through
+  // provenance fetch (raw broadcast fixes are not a graph claim; a
+  // popup with the thinning stats is enough).
+
+  function trackPopupHtml(props) {
+    var label = props.vessel_label ? fmt(props.vessel_label) : "MMSI " + fmt(props.mmsi);
+    var html = "<b>" + label + " -- full track (context)</b>";
+    html += "<div>" + fmt(props.rendered_point_count) + " of " + fmt(props.raw_point_count) +
+      " broadcast fixes shown (every " + fmt(props.thinning_stride) + "-fix)</div>";
+    if (props.segment_count > 1) {
+      html += "<div>" + fmt(props.segment_count) + " segments, split wherever consecutive " +
+        "fixes are more than " + fmt(props.silence_gap_minutes) + " minutes apart</div>";
+    }
+    html += "<div>" + fmt(props.first_fix_at) + " → " + fmt(props.last_fix_at) + "</div>";
+    return html;
+  }
+
+  function trackFeatureToLayers(feature) {
+    var geom = feature.geometry;
+    var lineStrings = geom.type === "MultiLineString" ? geom.coordinates : [geom.coordinates];
+    var popup = trackPopupHtml(feature.properties);
+    return lineStrings.map(function (coords) {
+      var latlngs = coords.map(function (c) { return [c[1], c[0]]; });
+      var line = L.polyline(latlngs, {
+        pane: "tracksPane", color: MUTED_COLOR, weight: 2, opacity: 0.55,
+      });
+      line.bindPopup(popup);
+      return line;
+    });
+  }
+
+  function buildTrackOverlays(geojson) {
+    var overlays = {};
+    geojson.features.forEach(function (feature) {
+      var props = feature.properties;
+      var group = L.layerGroup();
+      trackFeatureToLayers(feature).forEach(function (l) { l.addTo(group); });
+      var label = props.vessel_label ? props.vessel_label + " (MMSI " + props.mmsi + ")" : "MMSI " + props.mmsi;
+      overlays["Vessel track — " + label + " (" + props.rendered_point_count + " pts)"] = group;
+    });
+    return overlays;
+  }
+
+  // ---------------------------------------------------------------
   // Layer building
 
   function buildStoryOverlays(geojson) {
@@ -321,8 +383,29 @@
       if (!tilesEnabled) mapEl.className = "no-tiles";
 
       var map = L.map("map", { worldCopyJump: true }).setView([30, -85], 4);
+
+      // Below the default overlayPane (z-index 400) so vessel tracks always
+      // render beneath story-map/shuttle-census features regardless of which
+      // layer's async fetch happens to resolve/add first (doc 11 round-5:
+      // tracks are context for the points of interest, not the other way
+      // round). Still above the tile pane (200) so it's visible over the base.
+      map.createPane("tracksPane");
+      map.getPane("tracksPane").style.zIndex = 350;
+
+      var baseLayers = {};
       if (tilesEnabled) {
-        L.tileLayer(manifest.tiles.url, { attribution: manifest.tiles.attribution, maxZoom: 18 }).addTo(map);
+        // manifest.tiles.basemaps: the full switchable set (owner ask --
+        // Esri World Imagery alongside OSM streets, workbench/maps.py's own
+        // tile URL/attribution constants, reused not re-hardcoded). Falls
+        // back to the single top-level url/attribution for older bundles.
+        var basemaps = (manifest.tiles.basemaps && manifest.tiles.basemaps.length)
+          ? manifest.tiles.basemaps
+          : [{ id: "default", label: "Base map", url: manifest.tiles.url, attribution: manifest.tiles.attribution }];
+        basemaps.forEach(function (bm, i) {
+          var layer = L.tileLayer(bm.url, { attribution: bm.attribution, maxZoom: 19 });
+          baseLayers[bm.label] = layer;
+          if (i === 0) layer.addTo(map);
+        });
       }
 
       var layerFiles = manifest.layers.map(function (layer) { return fetchJson(layer.file).then(function (geojson) {
@@ -336,16 +419,22 @@
           var built;
           if (entry.layer.id === "story-map") {
             built = buildStoryOverlays(entry.geojson);
+          } else if (entry.layer.id === "tracks") {
+            built = buildTrackOverlays(entry.geojson);
           } else {
             built = buildShuttleOverlays(entry.geojson);
           }
+          var isTracks = entry.layer.id === "tracks";
           Object.keys(built).forEach(function (name) {
             overlays[name] = built[name];
             built[name].addTo(map);
-            allBoundsLayers.push(built[name]);
+            // Tracks are context, not the primary content -- initial fitBounds
+            // stays driven by the story/shuttle features so a sprawling
+            // 2-year vessel track doesn't zoom the opening view out past them.
+            if (!isTracks) allBoundsLayers.push(built[name]);
           });
         });
-        L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+        L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
 
         var group = L.featureGroup(allBoundsLayers.reduce(function (acc, lg) {
           lg.eachLayer(function (l) { acc.push(l); });

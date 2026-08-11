@@ -925,3 +925,40 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
 
 - Promotion gate exercised; person-model terms landed under owner
   consent; journal in the review copy; capsule conforms.
+
+## Wave 59 — 2026-08-11 — Capsule Observatory: vessel tracks + basemap toggle
+
+- Optional context layer `layers/tracks.geojson` (`--tracks`, default on
+  when S3 is reachable, else a manifest note rather than a hard failure):
+  one full broadcast track per promoted story-map vessel, split into a
+  MultiLineString wherever consecutive fixes are >30min apart (M12's
+  silence-run-break rule) so a coverage/silence gap renders as an honest
+  gap, not an invented straight-line transit (the capsule's
+  `m3-silence-is-not-dark` caveat). Thinned by deterministic every-Nth-fix
+  decimation, segment endpoints always kept, to a fixed byte budget; the
+  method and per-vessel raw/rendered counts are stamped into the
+  manifest and onto each feature. Against the real capsule: 4 promoted
+  vessels (a 5th promoted `IdentityChange` resource has no `aisv:place`
+  at all, so never had a story-map feature or a track to begin with),
+  1,250,407 raw broadcast fixes thinned to 74,251 rendered points across
+  1,859 gap-segments, 1.56MB total. Viewer renders tracks in a dedicated
+  low-z-index Leaflet pane so they always sit beneath story-map/shuttle-
+  census features regardless of layer-fetch order, muted color, no
+  vertex markers, no click-through provenance (raw broadcasts, not a
+  graph claim); toggleable per vessel via the existing layers control,
+  excluded from the initial `fitBounds` so a 2-year track doesn't zoom
+  the opening view out past the story features.
+- Second base layer: Esri World Imagery alongside OSM streets, reusing
+  `workbench/maps.py`'s tile URL/attribution constants (not re-hardcoded)
+  -- the same two-basemap Leaflet layers control the workbench's own map
+  panel already has. Plain-grid fallback unchanged when tiles are off.
+- `tools/observatory_smoke.sh` gained two checks (tiles basemaps, tracks
+  layer tolerant of unreachable S3/`--tracks off`); full smoke and
+  `tools/gate.sh` both pass. Verified end-to-end: a scripted headless
+  drive of the real unmodified `observatory.js` against the live
+  re-exported bundle (jsdom + a recording Leaflet stub, since jsdom's
+  SVG implementation can't run Leaflet's real renderer at all -- traced
+  to environment, not this change, via a control test) confirmed the
+  tracks pane, both basemap tile layers, all 21 layer-control entries,
+  1,859 muted track polylines carrying zero click handlers, and the
+  17-non-track-group bounds-fit excluding all 4 track groups.

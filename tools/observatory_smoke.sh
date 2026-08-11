@@ -62,7 +62,11 @@ assert manifest["export_eligibility"]["status"] == "local_only_pending_review", 
     manifest["export_eligibility"]["status"]
 )
 layer_ids = {layer["id"] for layer in manifest["layers"]}
-assert layer_ids == {"story-map", "shuttle-census"}, layer_ids
+# tracks (context) is optional -- present only when S3 was reachable and
+# --tracks wasn't turned off (check 8 below asserts on it specifically,
+# tolerant either way); story-map/shuttle-census are always required.
+assert {"story-map", "shuttle-census"} <= layer_ids, layer_ids
+assert layer_ids <= {"story-map", "shuttle-census", "tracks"}, layer_ids
 for layer in manifest["layers"]:
     assert layer["feature_count"] > 0, layer
 
@@ -153,7 +157,65 @@ assert provenance["stop_classification"]["stop_kind"] == "left_region"
 print("shuttle provenance: OK")
 EOF
 
-echo "7) bundle serves cleanly over plain HTTP (fetch()-based viewer needs a server, not file://)"
+echo "7) manifest.json: two-basemap tiles (OSM + Esri World Imagery, workbench/maps.py constants)"
+"$PYTHON" - "$OUTDIR" <<'EOF'
+import json
+import sys
+from pathlib import Path
+
+outdir = Path(sys.argv[1])
+manifest = json.loads((outdir / "manifest.json").read_text())
+tiles = manifest["tiles"]
+assert tiles["enabled"] is True, tiles
+basemap_ids = {bm["id"] for bm in tiles["basemaps"]}
+assert basemap_ids == {"osm", "esri-imagery"}, basemap_ids
+for bm in tiles["basemaps"]:
+    assert bm["url"] and bm["attribution"], bm
+
+print("tiles basemaps: OK (osm + esri-imagery)")
+EOF
+
+echo "8) layers/tracks.geojson (optional context layer, tolerant of unreachable S3 / --tracks off)"
+"$PYTHON" - "$OUTDIR" <<'EOF'
+import json
+import sys
+from pathlib import Path
+
+outdir = Path(sys.argv[1])
+manifest = json.loads((outdir / "manifest.json").read_text())
+tracks = manifest.get("tracks")
+assert tracks is not None, "manifest.json missing top-level 'tracks' status"
+assert "built" in tracks and "note" in tracks and "requested" in tracks, tracks
+
+if not tracks["built"]:
+    print(f"tracks layer: not built ({tracks['note']}) -- OK, tolerated")
+else:
+    layer_ids = {layer["id"] for layer in manifest["layers"]}
+    assert "tracks" in layer_ids, "tracks marked built but not registered in manifest.layers"
+    tracks_layer = next(layer for layer in manifest["layers"] if layer["id"] == "tracks")
+    assert tracks_layer["kind"] == "context", tracks_layer
+    assert tracks_layer["sampling"]["silence_gap_minutes"] == 30, tracks_layer["sampling"]
+
+    geojson_path = outdir / "layers" / "tracks.geojson"
+    assert geojson_path.exists(), "tracks marked built but layers/tracks.geojson missing"
+    size = geojson_path.stat().st_size
+    assert size < 2_000_000, f"tracks.geojson too large for its 2MB budget: {size} bytes"
+
+    geojson = json.loads(geojson_path.read_text())
+    features = geojson["features"]
+    assert features, "tracks layer built but has zero features"
+    for feature in features:
+        assert feature["geometry"]["type"] in ("LineString", "MultiLineString"), feature["geometry"]["type"]
+        props = feature["properties"]
+        assert props["layer"] == "vessel-track"
+        assert props["rendered_point_count"] > 0
+        assert props["rendered_point_count"] <= props["raw_point_count"]
+        assert props["silence_gap_minutes"] == 30
+
+    print(f"tracks layer: OK ({len(features)} vessel track(s), {size:,} bytes, under 2MB budget)")
+EOF
+
+echo "9) bundle serves cleanly over plain HTTP (fetch()-based viewer needs a server, not file://)"
 PORT="${OBSERVATORY_SMOKE_HTTP_PORT:-8898}"
 # --directory instead of `(cd "$OUTDIR" && ...)`: a `cd &&` subshell makes
 # `$!` the wrapper subshell's PID, not http.server's -- killing it later
