@@ -962,3 +962,10 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   tracks pane, both basemap tile layers, all 21 layer-control entries,
   1,859 muted track polylines carrying zero click handlers, and the
   17-non-track-group bounds-fit excluding all 4 track groups.
+
+## Wave 60 — 2026-08-12 — Know-how pilot progress
+
+- Corpus program phase 1 complete: two foreign-corpus pilots and the
+  cross-corpus synthesis landed in the review copy; home capsule at
+  312 observations, conforms; distiller-3 agenda ranked and awaiting
+  the owner.
