@@ -33,3 +33,9 @@
   paginates at 50/page (Gowers's does not) — caught by the ingester
   cross-checking extracted counts against page headers; a silent
   half-thread loss was avoided by mechanical verification, not luck.
+- 2026-08-13: s4 complete — allowlist 7-8 (quasirandomness thread +
+  reading seminar), 43 new observations / 4 typed episodes (capsule
+  183 obs / 12 episodes), conforms, zero staged debt; thread-7
+  coverage records three documented low-content folds; the ingester
+  verified Tao's thread was genuinely single-page (sidebar-widget
+  false pagination signal checked mechanically before trusting).
