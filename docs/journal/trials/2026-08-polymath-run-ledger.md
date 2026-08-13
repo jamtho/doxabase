@@ -13,3 +13,9 @@
 - Full variant (not CORE) selected at launch.
 - Ingester working directory /home/codex/polymath-study/ (neutral
   name; the ingester is not told a benchmark exists).
+- 2026-08-13: s1 complete — allowlist 1-3, all fetches direct (no
+  substitutions), 39 observations / 2 typed episodes, conforms, zero
+  staged debt; coverage: post-1 comments 1-85 recorded, 86-247
+  verified pingbacks/off-topic (logged); posts 2-3 covered. Ingester
+  parsed HTML locally rather than via summarizing fetch — anchors
+  verbatim-verifiable.
