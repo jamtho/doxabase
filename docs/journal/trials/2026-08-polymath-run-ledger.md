@@ -85,3 +85,17 @@
   and only reader of the seal, must verify the seal hash before
   opening, and grades in registry order (seal hash first hex digit
   is even).
+- 2026-08-13: VERDICT — **PASS** (not STRONG PASS; the ≥3-RECOVERED
+  gate missed by one, with the judge explicitly rejecting the laxer
+  reading that would have granted it). 6/6 HIGH arcs ≥ PARTIAL, 2
+  RECOVERED, 5/5 negatives correct, ZERO hallucinated established
+  claims across 394 observations, headline 4.5 vs the 3.0 bar;
+  anchor audit 81/81 comment-level checks passed on the live 2009
+  pages. Four plausible-novel governance arcs found that the seal
+  never anticipated — the retrospectives-are-winner's-history thesis
+  demonstrated against the trial's own seal. The sealed prediction
+  (terminus surfaces) NOT borne out — recorded as a clean
+  couldn't-say: v3 scopes narratedTerminus to bot-notices, making
+  the predicted split inexpressible. No D1 deviations; run valid;
+  the seal is spent and now published in polymath-judge/ for
+  hash-verification against the protocol's pre-commitment.

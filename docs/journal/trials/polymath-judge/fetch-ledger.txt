@@ -1,0 +1,42 @@
+FETCH https://gowers.wordpress.com/2009/01/27/is-massively-collaborative-mathematics-possible/
+  -> 526959 bytes
+FETCH https://gowers.wordpress.com/2009/02/01/a-combinatorial-approach-to-density-hales-jewett/
+  -> 1237645 bytes
+FETCH https://gowers.wordpress.com/2009/02/06/dhj-the-triangle-removal-approach/
+  -> 508252 bytes
+FETCH https://gowers.wordpress.com/2009/02/08/dhj-quasirandomness-and-obstructions-to-uniformity/
+  -> 931562 bytes
+FETCH https://gowers.wordpress.com/2009/02/13/dhj-possible-proof-strategies/
+  -> 902675 bytes
+FETCH https://gowers.wordpress.com/2009/02/23/brief-review-of-polymath1/
+  -> 681466 bytes
+FETCH https://gowers.wordpress.com/2009/03/02/dhj3-851-899/
+  -> 645946 bytes
+FETCH https://gowers.wordpress.com/2009/03/10/problem-solved-probably/
+  -> 634343 bytes
+FETCH https://gowers.wordpress.com/2009/03/16/dhj3-and-related-results-1050-1099/
+  -> 517524 bytes
+FETCH https://terrytao.wordpress.com/2009/03/14/dhj3-1100-1199-density-hales-jewett-type-numbers/comment-page-1/
+  -> 437011 bytes
+FETCH https://terrytao.wordpress.com/2009/03/14/dhj3-1100-1199-density-hales-jewett-type-numbers/comment-page-2/
+  -> 332613 bytes
+FETCH https://terrytao.wordpress.com/2009/03/14/dhj3-1100-1199-density-hales-jewett-type-numbers/comment-page-3/
+  -> 211118 bytes
+FETCH https://terrytao.wordpress.com/2009/03/30/dhjk-1200-1299-density-hales-jewett-type-numbers/comment-page-1/
+  -> 343709 bytes
+FETCH https://terrytao.wordpress.com/2009/03/30/dhjk-1200-1299-density-hales-jewett-type-numbers/comment-page-2/
+  -> 299893 bytes
+FETCH https://terrytao.wordpress.com/2009/02/05/upper-and-lower-bounds-for-the-density-hales-jewett-problem/comment-page-1/
+  -> 462052 bytes
+FETCH https://terrytao.wordpress.com/2009/02/05/upper-and-lower-bounds-for-the-density-hales-jewett-problem/comment-page-2/
+  -> 425852 bytes
+FETCH https://terrytao.wordpress.com/2009/02/13/bounds-for-the-first-few-density-hales-jewett-numbers-and-related-quantities/
+  -> 169723 bytes
+FETCH https://gowers.wordpress.com/2009/03/10/polymath1-and-open-collaborative-mathematics/
+  -> 362383 bytes
+FETCH https://michaelnielsen.org/polymath/index.php?title=Timeline
+  -> 72097 bytes
+FETCH https://terrytao.wordpress.com/2009/02/13/bounds-for-the-first-few-density-hales-jewett-numbers-and-related-quantities/comment-page-2/
+  -> 397289 bytes
+FETCH https://gowers.wordpress.com/2009/02/21/to-thread-or-not-to-thread/
+  -> 76643 bytes
