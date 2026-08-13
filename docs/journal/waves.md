@@ -969,3 +969,17 @@ keep the old spelling; tracked files should use DoxaBase / doxabase.
   cross-corpus synthesis landed in the review copy; home capsule at
   312 observations, conforms; distiller-3 agenda ranked and awaiting
   the owner.
+
+## Wave 61 — 2026-08-13 — v3: the vocabulary meets its dialects
+
+- Distiller-3 applied and frozen (docs/journal/knowhow-study/
+  VOCAB-NOTE-KH3.md, worked examples first): shapes carry corpus
+  provenance (10 new dialect shapes; genre-neutral ones marked);
+  terminus basis and surface; machine participants as typed episode
+  actors under the owner's public-record posture; three authority
+  regimes; the first cross-capsule citation mechanism with a SHACL
+  pairing guard; the first heuristic REVIVAL through it
+  (hotfix-narrow-migrate, kernel second witness); seven in-force
+  policies recorded as prose citizens per doc 16. Terminus-reversal
+  refused at n=1 with a Gerrit revival condition — the gate's
+  discipline unchanged at v3.
