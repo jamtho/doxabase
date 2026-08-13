@@ -55,3 +55,11 @@
   ingester checked EpisodeShape corpus-scoping text before reuse and
   correctly declined to force kernel/email dialect shapes onto
   mathematical material.
+- 2026-08-13: s7 complete — allowlist 14-15 (the endgame: the numbers
+  branch's close + "problem solved (probably)"), 40 new observations
+  / 3 typed episodes (capsule 338 obs / 22 episodes), conforms, zero
+  staged debt; full coverage; one D3-class note: source 14's URL 301s
+  to a longer canonical slug, followed transparently (same page, not
+  a substitution). Session 5's c'_5 gap resolved by this session's
+  material; session 6's quasirandomness-definition gap explicitly
+  rechecked and confirmed still absent.
