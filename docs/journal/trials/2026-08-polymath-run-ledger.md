@@ -39,3 +39,11 @@
   coverage records three documented low-content folds; the ingester
   verified Tao's thread was genuinely single-page (sidebar-widget
   false pagination signal checked mechanically before trusting).
+- 2026-08-13: s5 complete — allowlist 9-10 (strategy consolidation +
+  numbers branch), 55 new observations / 4 typed episodes (capsule
+  238 obs / 16 episodes), conforms, zero staged debt; full coverage
+  both threads with six named side-strand gaps recorded; thread-10
+  pagination ran to three pages, caught via the link chain rather
+  than string matching. Anchor note for the judge: five inline
+  numbering collisions found on thread 9 — WordPress comment IDs were
+  the reliable anchor, as the ingester's records reflect.
