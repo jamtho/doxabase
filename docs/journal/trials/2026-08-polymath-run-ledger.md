@@ -19,3 +19,10 @@
   verified pingbacks/off-topic (logged); posts 2-3 covered. Ingester
   parsed HTML locally rather than via summarizing fetch — anchors
   verbatim-verifiable.
+- 2026-08-13: s2 complete — allowlist 4 (the first mathematical
+  thread), direct fetch, 53 new observations / 3 typed episodes
+  (capsule now 92 obs / 5 episodes), conforms, zero staged debt; all
+  181 non-pingback comments covered, remainder verified pingbacks.
+  Notable for the record: the ingester exercised triple-retraction
+  for the first time in this capsule (schema probes cleanly
+  retracted) — the discipline holding without prompting.
