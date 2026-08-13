@@ -223,6 +223,15 @@ analysis need yet); re-expression for claims/person references (sourceCapsule is
 deliberately domain-less to receive it); policy L1-L3 vocabulary (the policy distiller's,
 from these instances); narrated-terminus as a harvest-cost predictor (1 corpus).
 
+**Addendum 2026-08-13 (revival 2)**: the terminus-reversal refusal above is DISCHARGED —
+the Gerrit corpus met the graveyard entry's revival condition three times over
+(glance-location cycle #891036->#950336->#950623, ironic #985362, neutron #963390);
+kh:terminusReversal now exists as an EpisodeShape (observedInCorpus syzbot + gerrit), all
+four witnesses re-expressed as typed home episodes (the two observation-grade originals
+honestly marked under a widened reexpressedFrom contract), the graveyard entry annotated
+REVIVED with its decline reason retained. Couldn't-say v6 is in session-meta observation
+15591b0a; details in DISTILL-3.md §Revival 2.
+
 ## 8. Verification state
 
 validate_graph scope "all": conforms, 0 results (checked after each apply and at close).

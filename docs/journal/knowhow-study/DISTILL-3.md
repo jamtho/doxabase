@@ -232,3 +232,80 @@ project_brief: 324/324, patterns 13, shapes 66 (entities). Foreign capsules: syz
 quads, enron 4591 quads, both mtime 2026-08-11 (untouched), both read-only throughout.
 Retrieval sanity logged in VOCAB-NOTE-KH3 §8. Gerrit scout corroborations used as prose
 color only (this journal + the note); zero graph citations to Gerrit material.
+
+## Revival 2 — the terminus-reversal term (2026-08-13, revival-2 distiller)
+
+**Trigger**: kho:terminus-reversal-term's recorded revival condition ("a second independent
+apply-then-reopen event in any registered corpus — Gerrit's submit/revert stream is the
+expected source") was met by GERRIT-PILOT-1 three times over, from exactly the predicted
+stream. Second exercise of design decision 6's cross-capsule mechanism; the
+hotfix-narrow-migrate precedent (decision 7) followed step for step. Surgical session:
+nothing else touched.
+
+**Witnesses verified in the graphs (never journal-trusted), anchors verbatim**:
+- gerrit glance-location cycle (obs cf592f49 + typed episodes episode/glance-location-revert
+  and -reapply + arc nova-glance-location-reversal-cycle, narratedTerminus): #891036 merged
+  2025-04-24 -> revert #950336 ("Due to glance behavioral changes, using the new location API
+  causes async hashing jobs to create confusion for tooling not expecting undeletable images.
+  Revert this until glance can resolve the issue.") -> Revert^2 #950623 merged 2025-08-07,
+  gated Depends-On the glance fix. The fullest form: apply -> reopen -> re-decide.
+- gerrit ironic #985362 (obs f2d8ff04): merged soft-power-off change reopened by a late
+  regression — "causing fast-track to not work for PXE (but it should)".
+- gerrit neutron #963390 (obs 3bee608c): merged OVN chassis change reopened NEXT DAY —
+  "this patch is breaking the Ironic CI" — the closest structural echo of the kernel event.
+- kernel asus (obs defe2dfc + typed episode syzbot/episode/asus-unqueue): "Applied to
+  hid.git#for-6.20/asus, thanks." -> "Now dropped from the queue." The original n=1 witness,
+  joining legitimately through the existing syzbot registry.
+
+**Journal/graph disagreement (graph wins, recorded on the dossier observation)**: the
+pilot's meta-rq1 claims all three gerrit instances carry "typed episodes"; the graph types
+only the flagship cycle — ironic and neutron are observation-grade records. Handled in
+vocabulary, not silence: kh:reexpressedFrom's contract widened by supersede-retain to admit
+observation-grade foreign originals with the record grade stated on the home evidence
+observation (and in attestedNotWitnessed prose on the re-expressions).
+
+**Executed** (payloads-revival2/; every foreign text pulled character-for-character by the
+generators, asserts inline):
+- Pre-staged 6 observations: registry bdc687b8 (gerrit conformance checked on a scratch COPY;
+  all foreign capsules opened mode=ro throughout, mtimes unchanged at close); dossier
+  f6869728 (counting rules + non-instances: pre-apply steam withdrawal, home workbench,
+  revert-to-force-discussion #975846, abandon->restore pairs); per-witness evidence 1384a24b
+  glance / 4f54e824 ironic / fb03cffd neutron / a050915c asus.
+- **R1 (ontology +17/-2, staged 237693e2, applied 1d429485, conforms)**: khcap:gerrit-knowhow
+  registered (the SAME IRI the capsule self-registered in its own ontology — one identity,
+  two anchors); kh:terminusReversal minted as EpisodeShape, observedInCorpus syzbot + gerrit,
+  4 events + boundary non-instances + same-event law on the term; kh:terminusBasis comment
+  gains case (iv) THE REVERSAL BOUNDARY (an apply event alone is never a terminus basis; a
+  completed cycle's basis is the re-decision with its reopening condition discharged) —
+  supersede-retain, v3 text kept verbatim; kh:reexpressedFrom widened — supersede-retain.
+- **R2 (map +44/-0, staged 2bdfbef1, applied 0c952fb1, conforms)**: four re-expressions, the
+  ReexpressionShape pairing honest on each — khe:syzbot-asus-unqueue (hasShape
+  terminusReversal + reversalWithEvidence + maintainerOverride), khe:gerrit-glance-location-
+  revert (foreign episode mirrored verbatim, + reversalWithEvidence), khe:gerrit-ironic-
+  power-revert and khe:gerrit-neutron-chassis-revert (observation-grade, grade stated);
+  graveyard REVIVED comment added, decline reason and revival condition untouched.
+- Session meta + couldn't-say v6: obs 15591b0a (resolved: the reversal term; sharpened:
+  re-expression record grades; still refused: machine outcome/role enums — the pilot's
+  merged-tally re-test stays queued; new parking: narratedTerminus count-refresh, below).
+- Seed re-exported: 1166 quads (739+427), re-parse-checked; previous 1151-quad seed kept at
+  payloads-revival2/kh-vocab-seed.trig.pre-revival2.bak.
+
+**Gate behavior**: both stagings passed the ReexpressionShape gate honestly (pairing present
+on all four re-expressions); no negative probe repeated — the v3 probe proved the gate bites
+and a surgical session does not re-prove settled mechanics. apply dry_run ready both times;
+validate scope=all conforms 0 results after each apply and at close; recovery planner 0 rows.
+
+**End state**: 332 obs / 332 evidence; 61 kh:Episode; 4 kh:Capsule; 23 EpisodeShape
+individuals; ontology 739 / map 803 / shapes 427 / patterns 404 quads. export_preflight:
+same pre-existing tranche-3 residues; nothing from this session fired.
+
+**Friction (for the product ledger)**:
+1. kh:narratedTerminus is now STALE ("4 verified instances, all syzbot arcs";
+   observedInCorpus syzbot only) while the gerrit graph holds 2 narrated arcs — a v4
+   count-refresh candidate, deliberately not smuggled into a surgical pass.
+2. Registry retrieval: "gerrit capsule registry" surfaces evidence rows above the live
+   khcap: node — the history/evidence-outranking family's next sighting. (Positive: the
+   minted term ranks FIRST for its natural query, the graveyard entry second.)
+3. Positive: register -> dossier -> re-express -> mint -> supersede-retain ran with ZERO
+   failed stagings; the only novelty this pass was record-grade honesty, and the vocabulary
+   absorbed it in one supersede-retain.
