@@ -47,3 +47,11 @@
   than string matching. Anchor note for the judge: five inline
   numbering collisions found on thread 9 — WordPress comment IDs were
   the reliable anchor, as the ingester's records reflect.
+- 2026-08-13: s6 complete — allowlist 11-13 (governance micro-thread,
+  mid-project self-review, the main-push resumption), 60 new
+  observations / 3 typed episodes (capsule 298 obs / 19 episodes),
+  conforms, zero staged debt; ALL 235 comments covered (zero
+  pingbacks existed); four named gaps. Dialect discipline note: the
+  ingester checked EpisodeShape corpus-scoping text before reuse and
+  correctly declined to force kernel/email dialect shapes onto
+  mathematical material.
