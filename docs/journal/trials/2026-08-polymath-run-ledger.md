@@ -73,3 +73,15 @@
   to the end (one resolved s7, one confirmed absent to the last).
   Next: the synthesis session (arcs), then export + freeze, then the
   judge.
+- 2026-08-13: SYNTHESIS complete — 9 kh:Arc recorded (all with pivot
+  quotes, terminus basis+surface; one mixed terminus recorded
+  honestly), 4 near-miss arcs REFUSED with reasons, 3 abandoned
+  approaches retained as DeclinedOptions (one with a revival
+  condition), two literal shared members braiding three arcs;
+  conforms, zero staged debt; 394 obs / 9 patterns / 26 episodes.
+- 2026-08-13: OUTPUT FROZEN — capsule + journal copied to
+  /home/codex/polymath-frozen/, SHA-256 hashes in FREEZE-HASHES.txt
+  there. The judge launches next; per protocol §3 it is the FIRST
+  and only reader of the seal, must verify the seal hash before
+  opening, and grades in registry order (seal hash first hex digit
+  is even).
