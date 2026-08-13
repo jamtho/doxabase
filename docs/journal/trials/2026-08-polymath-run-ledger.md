@@ -63,3 +63,13 @@
   a substitution). Session 5's c'_5 gap resolved by this session's
   material; session 6's quasirandomness-definition gap explicitly
   rechecked and confirmed still absent.
+- 2026-08-13: s8 complete — allowlist 16-18 (the generalization push
+  and the branches' ends), 47 new observations / 3 typed episodes,
+  conforms, zero staged debt. HARVEST CAMPAIGN COMPLETE: 8/8
+  sessions, all 18 allowlist sources read in full (Jan 27 - Jun 25
+  2009, research comments ~1-1270), capsule at 385 observations /
+  192 claims / 25 typed episodes / zero staged debt throughout.
+  Longitudinal gap discipline held: two cross-session gaps re-checked
+  to the end (one resolved s7, one confirmed absent to the last).
+  Next: the synthesis session (arcs), then export + freeze, then the
+  judge.
