@@ -26,3 +26,10 @@
   Notable for the record: the ingester exercised triple-retraction
   for the first time in this capsule (schema probes cleanly
   retracted) — the discipline holding without prompting.
+- 2026-08-13: s3 complete — allowlist 5-6 (the bounds branch + the
+  triangle-removal thread), 48 new observations / 3 typed episodes
+  (capsule 140 obs / 8 episodes), conforms, zero staged debt; full
+  comment coverage on both threads. Operational note: Tao's blog
+  paginates at 50/page (Gowers's does not) — caught by the ingester
+  cross-checking extracted counts against page headers; a silent
+  half-thread loss was avoided by mechanical verification, not luck.
