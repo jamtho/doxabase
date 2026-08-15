@@ -90,7 +90,8 @@ Because this is research, here is the honest state of the claims:
   contracts. These are stated as designs with pilot evidence, not
   shipped claims; expect them to be revised as trials accumulate.
 
-**In progress: the know-how generalization** (design doc 15). We are
+**In progress: the know-how generalization** (design doc 15;
+narrative summary for human readers: `CASE-STUDY-KNOW-HOW.md`). We are
 part-way through testing whether this mechanism generalizes beyond
 data-project memory to *know-how* — the tacit competence people learn
 by doing. So far: the project's own history was harvested into an
