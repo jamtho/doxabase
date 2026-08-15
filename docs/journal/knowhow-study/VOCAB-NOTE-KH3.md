@@ -223,6 +223,24 @@ analysis need yet); re-expression for claims/person references (sourceCapsule is
 deliberately domain-less to receive it); policy L1-L3 vocabulary (the policy distiller's,
 from these instances); narrated-terminus as a harvest-cost predictor (1 corpus).
 
+**Addendum 2026-08-15 (distiller-4, terminus-surface generalization)**: the "narrated-terminus
+as a harvest-cost predictor (1 corpus)" parking above understated what was coming — the
+Polymath sealed benchmark's judge found the narrated-vs-silent distinction REAL in an
+all-human corpus but inexpressible, because §2's narratedTerminus was scoped to bot notices.
+DISTILL-4 generalized all three terminus-surface terms corpus-neutral by supersede-retain
+(narration by ANY participant or mechanism — bot notice, merge message, operator close,
+human announcement post, ritual thread-close — vs silence-with-external-confirmation),
+registered khcap:polymath-knowhow, and re-expressed three witnesses: the proof-strategy arc
+whose terminus member is the 'Problem solved (probably)' announcement (now typed
+narratedTerminus at home — the exact case v3 couldn't say), the thread-16 numbering-cap
+ritual close, and the write-up-thread fade. Counts refreshed live: narrated 7 events /
+silent 26 instances across five corpora. The gerrit graph had already typed a HUMAN
+operator-narrated close under v3 — the scoping was comment prose, never graph law.
+kh:reexpressedFrom lost its rdfs:domain (gate-taught: the arc was the first non-episode
+carrier, exactly the widening v5 parked). The sealed prediction itself stays FAILED —
+history is history; what changed is expressibility going forward. Couldn't-say v7 in
+session-meta observation 0d8a0bb5; details in DISTILL-4.md.
+
 **Addendum 2026-08-13 (revival 2)**: the terminus-reversal refusal above is DISCHARGED —
 the Gerrit corpus met the graveyard entry's revival condition three times over
 (glance-location cycle #891036->#950336->#950623, ironic #985362, neutron #963390);
