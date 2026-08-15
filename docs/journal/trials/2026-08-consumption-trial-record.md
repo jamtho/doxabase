@@ -26,3 +26,12 @@
   8cda05833e90ee94ee3996b5a6f0223d95e2f79eba73b38d5d65225ade070124
   Judge reading order: X first (X's pack hash begins 8, even).
   Judge model, recorded before spawn: claude-fable-5.
+- 2026-08-15: judge complete — all pack hashes verified, phases A-D
+  in order, X read first per the parity rule. Weighted totals:
+  X 60/60, Y 52/60 — X strictly stronger on the rubric. The decisive
+  deduction: a mechanically-checkable record-vs-summary drift in
+  pack Y (journal shape tallies contradicting its own staged
+  capsule). Judge's Phase-D disclosure: suspected a paired trial on
+  complementary bands; states the suspicion influenced no score.
+  Assignment stays sealed until the verdict assembly (measurer still
+  out).
