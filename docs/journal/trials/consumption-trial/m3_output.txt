@@ -1,0 +1,84 @@
+===== t2a =====
+raw index: 1868 changes known; per-change max-ps entries=1868; comment-file sets=448
+A capsule-IRI refs: total=996 dead=0
+B in-record anchors: total=740 dead=6
+   DEAD-ANCHOR [change] 903099  (URL in comment on alletramp-optional-dependency-packaging-969373)
+   DEAD-ANCHOR [change] 925771  (URL in comment on barbican-config-section-post-merge-objec-942021)
+   DEAD-ANCHOR [change] 961564  (URL in outcome on force-live-migration-service-bump-disput-941483)
+   DEAD-ANCHOR [change] 990877  (URL in outcome on llm-rewrite-maintainer-override-988254)
+   DEAD-ANCHOR [change] 984350  (URL in outcome on policy-scope-per-project-vs-global-984356)
+   DEAD-ANCHOR [file] 987156:nova/tests/fixtures/nova.py  (episode glance-cache-global-mutation-removed-987156)
+episodes=136 anchors parsed=136 unparsed=0
+M3 = 6/1736 = 0.0035
+
+===== t2b =====
+raw index: 1505 changes known; per-change max-ps entries=1505; comment-file sets=71
+A capsule-IRI refs: total=641 dead=58
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/275797
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/634507
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/898100
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/912058
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/934579
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/939684
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/950340
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/950516
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/950546
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/950615
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/950695
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/970039
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/970388
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/973957
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/975118
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/975530
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/976117
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/976124
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/976490
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/976608
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/977037
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/977336
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/977851
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/990212
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/990682
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/991013
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/991065
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/991167
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/991529
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/991743
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992021
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992247
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992306
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992415
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992542
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/992581
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/993570
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/993760
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/993901
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/993942
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/993959
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/995546
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/995712
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/995813
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/996246
+   DEAD-IRI x2: observedAsset -> https://knowhow.study/gerrit-t2b/change/996299
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/996824
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/997366
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/998164
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/998562
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/998640
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/998826
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/change/TESTXYZ
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/rq/T2-1
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/rq/T2-2
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/rq/T2-3
+   DEAD-IRI x1: observedAsset -> https://knowhow.study/gerrit-t2b/rq/T2-4
+B in-record anchors: total=582 dead=7
+   DEAD-ANCHOR [change] 935410  (URL in rationale on 934579-cors-config-generator-regression)
+   DEAD-ANCHOR [change] 992786  (URL in outcome on 950695-spawn-migration-deferred)
+   DEAD-ANCHOR [change] 972825  (URL in rationale on 975530-orm-filter-performance-evidence)
+   DEAD-ANCHOR [change] 984951  (URL in rationale on 977851-tpool-wrap-confusion)
+   DEAD-ANCHOR [change] 972973  (URL in rationale on 991065-eventlet-env-var-devstack-gap)
+   DEAD-ANCHOR [change] 983192  (URL in outcome on 996824-validate-version-exception-type-revert)
+   DEAD-ANCHOR [file] 991743:nova/compute/manager.py  (episode 991743-graceful-shutdown-mark-service-down-deferred)
+episodes=120 anchors parsed=120 unparsed=0
+M3 = 65/1223 = 0.0531
+

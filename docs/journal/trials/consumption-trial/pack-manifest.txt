@@ -1,0 +1,9 @@
+# Pack manifest
+
+7e97415f8687c2b6eedeb57f41a14819b0938ec20c900943815c59dd508784d9  pack-X-journal.md
+d7f0692bab26b82936b1054c4e58088d46abebeb72f28f4b9f321778b1532185  pack-X-capsule.md
+94c550c315ba136e25fa831a48b063297e41369b9d56d2664c87eb2e4e184a14  pack-Y-journal.md
+a153f15be51cf2557c6e61f0d50e0642bcde7a31f4b6c60941046a8f596079d4  pack-Y-capsule.md
+
+pack hash X (SHA-256 over pack-X-journal.md then pack-X-capsule.md concatenated): 800768381ab269c3c9966b1d89df256b0a98607e5e97bef9610c975d7df57a6f
+pack hash Y (SHA-256 over pack-Y-journal.md then pack-Y-capsule.md concatenated): 95a3455cd571004829cc2e629187a6db1be23430488b5e45f00204deea1658b8

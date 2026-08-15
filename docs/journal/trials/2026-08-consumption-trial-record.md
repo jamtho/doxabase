@@ -35,3 +35,44 @@
   complementary bands; states the suspicion influenced no score.
   Assignment stays sealed until the verdict assembly (measurer still
   out).
+- 2026-08-15: measurer complete — mechanical tally CONTROL 1 (M3),
+  CAPSULE 1 (M4), five ties. Full enumerations preserved in
+  consumption-trial/ alongside the judge report.
+
+## VERDICT (§9, assembled 2026-08-15)
+
+**NULL — "no recognisable advantage."** Neither arm reached ≥4 of 7
+mechanical metrics (tally 1–1–5); the judged layer went strictly to
+the capsule arm (60 vs 52). A split across layers is, by
+pre-commitment, the null verdict — not a debate.
+
+**Assignment unseal**: X = T2B = CAPSULE (judged 60/60, won M4);
+Y = T2A = CONTROL (judged 52/60, won M3). Seal hash verified:
+8cda05833e90ee94ee3996b5a6f0223d95e2f79eba73b38d5d65225ade070124.
+
+**Deviation ledger**: D3 — T2A's disclosed un-ledgered connectivity
+probe; T2B's harness-timeout kill with clean retry; the measurer's
+M2 normalization choice (grounded in the protocol's own method
+citation; the strict alternative reading would have flipped M2 to
+the capsule arm — tally 1–2–4, verdict unchanged). Noted per §11.4 —
+the judge's Phase-D structural suspicion, disclosed, with no score
+influence claimed; the decisive deduction is mechanically checkable
+regardless. No D1, no D2. Run valid.
+
+**Secondary observations (recorded, no verdict weight)**: (1) The
+control arm fell into the record-vs-summary-drift trap in its
+literal form — its journal's shape tallies contradict its own staged
+graph (M4 #43/#44/#67; the judge found it independently and it
+decided the judged layer). The capsule arm — briefed on exactly that
+failure family — reconciled perfectly everywhere mechanically
+checkable. (2) The capsule arm's unverified-claim rate was roughly
+half the control's (0.066 vs 0.119) — M4 is the record-honesty
+metric. (3) The control arm's M3 win traces mostly to the capsule
+arm's minted observedAsset IRI design choice, robust to sensitivity
+but a design cost, not a discipline failure. (4) Both arms were
+otherwise near-indistinguishable: same N, both conforming, zero
+staged debt, ceilings respected, honest zero-arc findings. The
+protocol's own counterweight 6 predicted this: the shared method
+already equalizes most of the trap surface, so the null is a real
+finding about where the value does NOT live — and the directional
+signal (journal-vs-graph honesty) points at where it does.
