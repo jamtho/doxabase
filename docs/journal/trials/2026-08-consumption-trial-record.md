@@ -19,3 +19,10 @@
   preparer (packs + sealed assignment) and measurer (M1-M7 on the
   real artifacts) in mutual isolation; the judge spawns only after
   the assignment seal's hash is recorded.
+- 2026-08-15: preparer complete — packs built (completeness-checked
+  digests), 1,257 logged replacements, post-strip dictionary sweep
+  clean, freeze hashes verified twice, nothing written to arm dirs.
+  ASSIGNMENT-SEAL SHA-256, recorded BEFORE judge spawn per §8:
+  8cda05833e90ee94ee3996b5a6f0223d95e2f79eba73b38d5d65225ade070124
+  Judge reading order: X first (X's pack hash begins 8, even).
+  Judge model, recorded before spawn: claude-fable-5.
