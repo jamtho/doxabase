@@ -7,3 +7,7 @@
 - Launch order: T2A (control) first, then T2B, sequential per §4.
 - Coordinator has read the protocol and both briefs; the know-how
   render delta is auditable in the protocol's appendices.
+- 2026-08-15: T2A (control) complete — 70 changes graded, 9 applied
+  revisions, capsule conforming with zero staged debt, 105/120 ops.
+  Working dir intact for the freeze step. T2B launches next,
+  sequential per §4.
