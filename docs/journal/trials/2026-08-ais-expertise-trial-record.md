@@ -36,3 +36,13 @@
   the coordinator's freeze file. Preparer and measurer launch next
   in mutual isolation; judge after the assignment seal is recorded;
   then the owner's packets.
+- 2026-08-16: preparer complete — 49 ledgered redaction decisions,
+  symmetric namespace mapping (~300 IRIs), A2's consultation section
+  rewritten as neutral sanity-check bullets preserving every
+  substantive result, symmetric field omissions (observedBy;
+  reconsideration nodes) to kill presence-tells; freeze re-verified
+  byte-for-byte before and after; nothing written to arm dirs.
+  ASSIGNMENT-SEAL SHA-256, recorded BEFORE judge spawn and BEFORE
+  any packet leaves for the owner, per §10:
+  57c0882f7e37459aa5beb1843842bb05690b5c8f37a6ac2a2c485e41dba8f16e
+  Judge reading order X→Y→Z per protocol.
