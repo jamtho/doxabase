@@ -23,3 +23,16 @@
   hypothesis A0 pursued; Zipf message concentration), one declined
   finding with reasons, capsule conforming, 21/150 queries. Dir
   intact for the freeze. A2 launches next.
+- 2026-08-16: A2 (expert) complete — three findings (a ~19-vessel
+  inter-island tug backbone; the same weekly-circuit vessel ALL
+  THREE arms independently found; a July sailing-arrival pulse
+  traced to mainland departures), 6 ledgered consultations at
+  2,900/4,000 tokens, a pre-writing self-audit catching two numeric
+  errors corrected via claim reconsideration, and striking
+  economics: 9 data-bearing queries versus A0's 35 and A1's 21 —
+  one bulk slice pull, then local mining. All arms conforming.
+- 2026-08-16: ALL THREE DIRS FROZEN — hashes over journals,
+  findings, capsules, ledgers, and A2's consultation artifacts in
+  the coordinator's freeze file. Preparer and measurer launch next
+  in mutual isolation; judge after the assignment seal is recorded;
+  then the owner's packets.
