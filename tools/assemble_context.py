@@ -1,47 +1,46 @@
 #!/usr/bin/env python3
-"""assemble_context v0 — budgeted working-memory assembly (doc 17 §3).
+"""assemble_context v0.5 — budgeted working-memory assembly (doc 17 §3).
 
-The simple version: given a capsule and a task description, find entry
-points by term match, expand one hop along typed edges, rank by the
-epistemic ladder's tier weights, trim to a token budget, and render in
-one of three provenance modes. Stdlib only; reads the quads table
-directly and read-only. This is the trial instrument, not the product
-tool — v1 (spreading activation, decay, a real capsule tool) is
-designed in doc 17 and budgeted separately.
+v0.5 additions over v0 (each addressing a live-retrieval-trial finding):
+- multi-phrasing via pseudo-relevance feedback: the best first-pass hit's
+  own vocabulary becomes a second query (the capsule teaches the walk its
+  dialect; fixes the documented phrasing-sensitivity failure)
+- chunk-level serving: long literals are split and only matching chunks
+  served, with the node handle attached (fixes mega-node budget domination)
+- schema-tier excluded from serving: classes/shapes are term fuel, never
+  items (fixes the generic-label noise that produced the R2 knife-edge)
+- two-hop expansion with decay (the associative walk, minimally real)
+- honest emptiness: weak entry scores yield "nothing strong" instead of
+  noise (keeps context clear; free recall data)
+- --describe: what this memory covers, so a consumer knows what it has
+
+Stdlib only; reads the quads table directly and read-only. v1 (true
+spreading activation, sleep-built chunk index, embeddings) is designed in
+doc 17 and sequenced after the AIS expertise trial.
 
 Usage:
-  python3 tools/assemble_context.py CAPSULE.sqlite "task description..."
+  python3 tools/assemble_context.py CAPSULE.sqlite "task or question"
       [--budget 4000] [--provenance handles|digest|full] [--entries 8]
-
-Provenance modes (doc 17: a parameter, decided experimentally):
-  digest  - clean prose only
-  handles - every item carries its IRI so the agent can pull the thread
-  full    - handles plus evidence/source edges inline
+  python3 tools/assemble_context.py CAPSULE.sqlite --describe
 """
 import argparse
+import math
 import re
 import sqlite3
 import sys
 from collections import defaultdict
 
-# Ladder-derived tier weights: the map is the reviewed working surface,
-# patterns are syntheses, observations are the deep store. History is
-# never served (supersession-awareness, the cheap way: the live graphs
-# only). Base/seed vocabulary graphs rank below content: definitions
-# help orientation but the task usually wants the domain's records.
 TIER = {
     "map": 3.0,
     "patterns": 2.5,
     "observations": 1.5,
     "evidence": 1.0,
     "ontology": 0.8,
-    "shapes": 0.4,
-    "base_ontology": 0.3,
-    "base_shapes": 0.2,
 }
+# Never served as items (term fuel and definitions only):
+NEVER_SERVE = {"shapes", "base_ontology", "base_shapes", "history"}
 EXCLUDED_GRAPHS = {"history"}
 
-# Edges worth following out of an entry point, with follow weights.
 EDGE_WEIGHT = {
     "supportingObservation": 1.0,
     "citesEpisode": 1.0,
@@ -54,23 +53,25 @@ EDGE_WEIGHT = {
     "relatesToEpisode": 0.6,
 }
 DEFAULT_EDGE_WEIGHT = 0.4
+HOP2_FACTOR = 0.25
+WEAK_FLOOR = 4.0   # below this top score, declare nothing-strong
 
 STOPWORDS = set(
     "the a an and or of to in for on with by from at as is are was were be "
     "been this that these those it its into over under about what which who "
     "how why when where do does did done can could should would may might "
     "will shall must not no nor but if then than so such per each any all "
-    "some more most other same own just only very s t d ll re ve".split()
+    "some more most other same own just only very s t d ll re ve using use "
+    "used data record records recorded work working".split()
 )
 
 
-def terms_from(task: str):
-    words = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{2,}", task.lower())
+def terms_from(text: str):
+    words = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{2,}", text.lower())
     return [w for w in words if w not in STOPWORDS]
 
 
 def stem(word: str) -> str:
-    """Cheap suffix strip so 'anchored' finds 'anchor', 'stops' 'stop'."""
     for suf in ("ing", "ed", "es", "s"):
         if word.endswith(suf) and len(word) - len(suf) >= 4:
             return word[: -len(suf)]
@@ -81,30 +82,25 @@ def localname(iri: str) -> str:
     return re.split(r"[#/]", iri)[-1] or iri
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("capsule")
-    ap.add_argument("task")
-    ap.add_argument("--budget", type=int, default=4000, help="approx tokens")
-    ap.add_argument("--provenance", choices=["digest", "handles", "full"],
-                    default="handles")
-    ap.add_argument("--entries", type=int, default=8)
-    args = ap.parse_args()
+def chunk_text(text: str, target=550):
+    """Split a long literal into readable chunks near target chars,
+    merging short paragraphs (the sleep-agent's discretionary chunking is
+    v1; this is the cheap deterministic stand-in)."""
+    paras = [p.strip() for p in re.split(r"\n\s*\n|(?<=[.;]) (?=\()|(?<=\.) (?=[A-Z(])", text) if p.strip()]
+    chunks, cur = [], ""
+    for p in paras:
+        if len(cur) + len(p) + 1 <= target or not cur:
+            cur = (cur + " " + p).strip()
+        else:
+            chunks.append(cur)
+            cur = p
+    if cur:
+        chunks.append(cur)
+    return chunks
 
-    con = sqlite3.connect(f"file:{args.capsule}?mode=ro", uri=True)
-    con.row_factory = sqlite3.Row
-    terms = terms_from(args.task)
-    if not terms:
-        sys.exit("no usable terms in task description")
 
-    # --- entry points: term hits in literals and localnames, live graphs.
-    # Score rewards DISTINCT-term coverage over single-term flooding: a
-    # node matching three of the task's terms once each should beat a
-    # node matching one term fifty times (the M11-vs-M12 lesson from
-    # this script's first live test).
-    hit_terms = defaultdict(set)   # subject -> set of matched terms
-    hit_rows = defaultdict(int)    # subject -> matching row count
-    best_tier = {}                 # subject -> best tier weight seen
+def score_entries(con, terms):
+    hit_terms, hit_rows, best_tier = defaultdict(set), defaultdict(int), {}
     for t in terms:
         like = f"%{stem(t)}%"
         for row in con.execute(
@@ -121,59 +117,136 @@ def main():
             w = TIER.get(g, 0.5)
             if w > best_tier.get(s, 0):
                 best_tier[s] = w
-
-    import math
-    scores = {
+    return {
         s: best_tier[s] * (len(hit_terms[s]) ** 1.5 + math.log1p(hit_rows[s]))
         for s in hit_terms
-    }
+    }, hit_terms
+
+
+def node_graph(con, subj):
+    r = con.execute(
+        "SELECT graph FROM quads WHERE subject=? AND graph NOT IN "
+        "('history') LIMIT 1", (subj,)).fetchone()
+    return r["graph"] if r else None
+
+
+def describe(con):
+    print("# What this memory covers")
+    for g in ("map", "patterns", "observations"):
+        rows = con.execute(
+            "SELECT object, count(*) FROM quads WHERE graph=? AND "
+            "predicate LIKE '%type' AND object_kind='uri' GROUP BY object "
+            "ORDER BY 2 DESC LIMIT 12", (g,)).fetchall()
+        if rows:
+            kinds = ", ".join(f"{localname(o)} ({n})" for o, n in rows
+                              if localname(o) not in ("Pattern",))
+            print(f"- {g}: {kinds}")
+    labels = con.execute(
+        "SELECT object FROM quads WHERE graph='map' AND predicate LIKE "
+        "'%label' AND object_kind='literal' ORDER BY length(object) "
+        "LIMIT 40").fetchall()
+    if labels:
+        print("- named things include:", "; ".join(r["object"][:60] for r in labels[:25]))
+    print("\nConsult this memory with a question whenever you are about to "
+          "make a judgement call, are surprised by the data, or are about "
+          "to invest effort something like it may have met before.")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("capsule")
+    ap.add_argument("task", nargs="?")
+    ap.add_argument("--budget", type=int, default=4000)
+    ap.add_argument("--provenance", choices=["digest", "handles", "full"],
+                    default="handles")
+    ap.add_argument("--entries", type=int, default=8)
+    ap.add_argument("--describe", action="store_true")
+    args = ap.parse_args()
+
+    con = sqlite3.connect(f"file:{args.capsule}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+
+    if args.describe:
+        describe(con)
+        return
+    if not args.task:
+        sys.exit("task required (or --describe)")
+
+    terms = terms_from(args.task)
+    if not terms:
+        sys.exit("no usable terms in task description")
+
+    # pass 1
+    scores, hit_terms = score_entries(con, terms)
+    # pseudo-relevance feedback: best multi-term hit's vocabulary, half weight
+    ranked1 = sorted(scores.items(), key=lambda kv: -kv[1])
+    prf_terms = []
+    for s, sc in ranked1[:3]:
+        if len(hit_terms[s]) >= 2:
+            lits = con.execute(
+                "SELECT object FROM quads WHERE subject=? AND "
+                "object_kind='literal' AND graph NOT IN ('history')",
+                (s,)).fetchall()
+            text = " ".join(r["object"] for r in lits)[:3000]
+            freq = defaultdict(int)
+            for w in terms_from(text):
+                if stem(w) not in {stem(t) for t in terms}:
+                    freq[stem(w)] += 1
+            prf_terms = [w for w, _ in sorted(freq.items(), key=lambda kv: -kv[1])[:5]]
+            break
+    if prf_terms:
+        scores2, _ = score_entries(con, prf_terms)
+        for s, sc in scores2.items():
+            scores[s] = scores.get(s, 0) + 0.4 * sc
+
     entries = sorted(scores.items(), key=lambda kv: -kv[1])[: args.entries]
-    if not entries:
-        sys.exit("no entry points found for these terms")
+    top_score = entries[0][1] if entries else 0.0
+    # Weakness = low score OR no node matching >=2 distinct query terms
+    # (a single common word matching many rows is noise, not memory).
+    best_distinct = max((len(hit_terms[s]) for s, _ in entries), default=0)
+    if top_score < WEAK_FLOOR or best_distinct < 2:
+        print(f"# Working-memory assembly (v0.5)\ntask: {args.task}\n")
+        print("MEMORY: nothing strong for this question — the best match "
+              f"scored {top_score:.1f} (floor {WEAK_FLOOR}). Candidates "
+              "considered: "
+              + ", ".join(localname(s) for s, _ in entries[:5])
+              + ". Proceed on your own judgement; consider recording what "
+                "you learn so the next asker finds it.")
+        return
 
-    # --- one-hop typed expansion, both directions
-    selected = {}  # subject -> (score, why)
-    for subj, sc in entries:
-        selected[subj] = (sc, "entry")
-    for subj, sc in entries:
-        for row in con.execute(
-            "SELECT graph, predicate, object, object_kind FROM quads "
-            "WHERE subject=? AND object_kind='uri'", (subj,)
-        ):
-            if row["graph"] in EXCLUDED_GRAPHS:
-                continue
-            w = EDGE_WEIGHT.get(localname(row["predicate"]), DEFAULT_EDGE_WEIGHT)
-            cand = row["object"]
-            s = sc * 0.5 * w
-            if s > selected.get(cand, (0, ""))[0]:
-                selected[cand] = (s, f"←{localname(row['predicate'])}")
-        for row in con.execute(
-            "SELECT graph, subject, predicate FROM quads "
-            "WHERE object=? AND object_kind='uri'", (subj,)
-        ):
-            if row["graph"] in EXCLUDED_GRAPHS:
-                continue
-            w = EDGE_WEIGHT.get(localname(row["predicate"]), DEFAULT_EDGE_WEIGHT)
-            cand = row["subject"]
-            s = sc * 0.5 * w
-            if s > selected.get(cand, (0, ""))[0]:
-                selected[cand] = (s, f"→{localname(row['predicate'])}")
+    # expansion: 2 hops with decay
+    selected = {s: (sc, "entry") for s, sc in entries}
+    frontier = list(entries)
+    for hop, factor in ((1, 0.5), (2, HOP2_FACTOR)):
+        nxt = []
+        for subj, sc in frontier:
+            for dirn, q in (("→", "SELECT graph, predicate, object AS o FROM quads WHERE subject=? AND object_kind='uri'"),
+                             ("←", "SELECT graph, predicate, subject AS o FROM quads WHERE object=? AND object_kind='uri'")):
+                for row in con.execute(q, (subj,)):
+                    if row["graph"] in EXCLUDED_GRAPHS:
+                        continue
+                    w = EDGE_WEIGHT.get(localname(row["predicate"]), DEFAULT_EDGE_WEIGHT)
+                    cand, s2 = row["o"], sc * factor * w
+                    if s2 > selected.get(cand, (0, ""))[0]:
+                        selected[cand] = (s2, f"{dirn}{localname(row['predicate'])} (hop {hop})")
+                        nxt.append((cand, s2))
+        frontier = nxt
 
-    # --- render each selected node compactly, best first, until budget.
-    # Relative floor: nodes far below the best hit are vocabulary junk
-    # (enum individuals, base classes) that matched a stray term.
     ranked = sorted(selected.items(), key=lambda kv: -kv[1][0])
-    if ranked:
-        floor = ranked[0][1][0] * 0.15
-        ranked = [r for r in ranked if r[1][0] >= floor]
+    floor = ranked[0][1][0] * 0.15
+    ranked = [r for r in ranked if r[1][0] >= floor]
+
+    stems = {stem(t) for t in terms} | set(prf_terms)
     out, used = [], 0
     budget_chars = args.budget * 4
     for subj, (sc, why) in ranked:
-        rows = con.execute(
+        g = node_graph(con, subj)
+        if g is None or g in NEVER_SERVE:
+            continue
+        rows = [r for r in con.execute(
             "SELECT graph, predicate, object, object_kind FROM quads "
-            "WHERE subject=? ORDER BY predicate", (subj,)
-        ).fetchall()
-        rows = [r for r in rows if r["graph"] not in EXCLUDED_GRAPHS]
+            "WHERE subject=? ORDER BY predicate", (subj,))
+            if r["graph"] not in EXCLUDED_GRAPHS]
         if not rows:
             continue
         label, texts, links, kinds = None, [], [], []
@@ -187,13 +260,27 @@ def main():
                 texts.append((p, r["object"]))
             elif r["object_kind"] == "uri" and p in EDGE_WEIGHT:
                 links.append((p, r["object"]))
+        if kinds and all(k in ("Class", "Property", "NodeShape", "PropertyShape", "DatatypeProperty", "ObjectProperty") for k in kinds):
+            continue  # schema node reached via hops: fuel, not item
         head = label or localname(subj)
         kind = ",".join(k for k in kinds if k not in ("Pattern",))[:60]
         piece = [f"## {head}" + (f"  [{kind}]" if kind else "")]
         if args.provenance in ("handles", "full"):
             piece.append(f"<{subj}>  (score {sc:.1f}, {why})")
         for p, txt in sorted(texts, key=lambda x: -len(x[1]))[:4]:
-            piece.append(f"- {p}: {txt}")
+            if len(txt) <= 650:
+                piece.append(f"- {p}: {txt}")
+            else:
+                chunks = chunk_text(txt)
+                scored = []
+                for c in chunks:
+                    ct = {stem(w) for w in terms_from(c)}
+                    scored.append((len(ct & stems), c))
+                keep = [c for n, c in sorted(scored, key=lambda x: -x[0]) if n > 0][:3]
+                if not keep:
+                    keep = [chunks[0]]
+                marker = " […] " if len(keep) < len(chunks) else " "
+                piece.append(f"- {p} (excerpted {len(keep)}/{len(chunks)} chunks):{marker}" + " […] ".join(keep))
         if args.provenance == "full":
             for p, o in links[:6]:
                 piece.append(f"- {p} -> <{o}>")
@@ -203,10 +290,11 @@ def main():
         out.append(block)
         used += len(block)
 
-    print(f"# Working-memory assembly (v0)\n"
+    print(f"# Working-memory assembly (v0.5)\n"
           f"task: {args.task}\ncapsule: {args.capsule}\n"
           f"budget: ~{args.budget} tokens | mode: {args.provenance} | "
-          f"nodes: {len(out)} of {len(ranked)} candidates\n")
+          f"nodes: {len(out)} of {len(ranked)} candidates"
+          + (f" | prf: {'+'.join(prf_terms)}" if prf_terms else "") + "\n")
     print("\n".join(out))
 
 
