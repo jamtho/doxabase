@@ -11,3 +11,14 @@
   zero arcs (explicit refusal, no in-window terminus), capsule
   conforming with zero staged debt. Working dir intact for the
   freeze. E2L launches next, sequential per §4.
+- 2026-08-16: E2L (live) complete — 21 episodes, 5 person-claims,
+  zero arcs (refused with revival condition), capsule conforming
+  with zero staged debt. THE INSTRUMENT WAS USED: 4 ledgered
+  consultations, 1500/1500 token budget spent, all assembly outputs
+  saved. Notable self-audit: the arm caught third-party names leaked
+  into its own staged prose and executed a clean two-step correction,
+  recorded transparently.
+- 2026-08-16: BOTH ARMS FROZEN — SHA-256 over journals, capsules,
+  consultation ledger, and assembly outputs in the coordinator's
+  freeze-hashes file. Preparer and measurer launch next in mutual
+  isolation; judge after the assignment seal's hash is recorded.
