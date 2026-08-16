@@ -7,3 +7,7 @@
 - Launch order: E2S (static) first, then E2L (live), sequential.
 - Window assignment executed mechanically per §3: capsule-copy hash
   first hex digit e (even) → E2S=W1 (2001-H1), E2L=W2 (2001-H2).
+- 2026-08-16: E2S (static) complete — 21 episodes, 2 person-claims,
+  zero arcs (explicit refusal, no in-window terminus), capsule
+  conforming with zero staged debt. Working dir intact for the
+  freeze. E2L launches next, sequential per §4.
