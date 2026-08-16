@@ -22,3 +22,13 @@
   consultation ledger, and assembly outputs in the coordinator's
   freeze-hashes file. Preparer and measurer launch next in mutual
   isolation; judge after the assignment seal's hash is recorded.
+- 2026-08-16: preparer complete — 65 ledgered redaction decisions;
+  E2L's consultation-log section excised wholesale (the structure
+  itself is the behavioural signature under test); observedBy
+  omitted symmetrically to kill a field-presence tell; final
+  dictionary re-scan clean; nothing written to arm dirs (verified
+  twice by hash and once by find -newer).
+  ASSIGNMENT-SEAL SHA-256, recorded BEFORE judge spawn per §9:
+  e93a02893b08e521e9fba66f137e580d3374970b75e597fc0970e672458786aa
+  Judge reading order: X first (X's pack hash begins 2, even).
+  Judge model, recorded before spawn per §4: claude-sonnet-5.
