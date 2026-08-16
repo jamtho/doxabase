@@ -48,3 +48,52 @@
   third-party-name leaks its journal claimed were checked absent —
   to be repaired by the curator after the verdict, supersession
   route.
+- 2026-08-16: judge complete — Pack X 60/60, Pack Y 55/60, X
+  strictly stronger. Deductions grounded in cited text (an
+  undisclosed TEST PROBE observation surviving in Y's "clean" final
+  census — record-vs-summary drift — and an unsurfaced reading-gap
+  limitation); the judge's origin suspicion disclosed post-scoring
+  per protocol.
+
+## VERDICT (§10, assembled 2026-08-16)
+
+**LIVE WIN — all three sealed conditions met.**
+Assignment unseal (seal hash verified e93a0289…):
+X = E2L = LIVE (judged 60/60; mechanical winner M2/M3/M4/M5);
+Y = E2S = STATIC (judged 55/60; won M1).
+1. Mechanical: E2L strictly better on 4 of 6 — MET.
+2. Judged: E2L strictly higher (60 v 55) — MET.
+3. Retrieval qualification: R1=4; the mid-task letter satisfied with
+   a genuinely used item (a heuristic's graveyard language verbatim
+   in the arm's own refusal reasoning); aggregate precision 0.40
+   under the sealed literal used-test, clearing the 1/3 floor — MET,
+   with the measurer's flagged alternate reading (0.10, excluding a
+   generic class-label match) reported alongside as the knife-edge
+   it is.
+
+**Reported with the win, per §10 and §12**: (a) the R4-vs-R2
+comparison is the trial's sharpest datum — the static arm used its
+briefing render 0 of 3 items, NOT AT ALL, while live pulls achieved
+0.40 (alt 0.10) attributable use: WHEN assembly happens matters more
+than THAT it happens; (b) the mid-task condition was met in letter
+while the consultations clustered in the write-up phase — the
+timing-of-relevance claim stands at verification-time, not
+harvest-steering-time, at this diameter; (c) phrasing sensitivity is
+real and documented (a need the arm's own abstract phrasing
+retrieved successfully was missed by the measurer's more concrete
+replay phrasing) — the v1 requirements list now has its first
+entries; (d) counterweights §12 apply in full: n=1, one genre, one
+custodian, the v0 instrument bounds the showing, and the seal is
+spent.
+
+**Deviation ledger**: D3 — E2L's consultation-ledger timestamps
+evenly spaced rather than true wall-clock (ordering verified by file
+mtimes); the home-capsule copy differing from the consumption
+trial's (expected drift, recorded pre-launch). D2 — none. No D1;
+run valid.
+
+**Post-trial duties queued**: E2S capsule third-party-name repair by
+supersession (the two leaks the measurer found against its journal's
+claim); both capsules then join the corpus program as ENRON-2
+material pending the owner's shareability pass; the consultation
+ledger and per-item verdicts flow to the v1 assembler requirements.

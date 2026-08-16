@@ -1,0 +1,9 @@
+1d7fecebdce0f7729eaf071240284c5468fdb1858e930aad4d4e3158cf456bfa  /home/codex/enron-e2s/JOURNAL.md
+ec147bfa5521baa13359de8b273608ecc87c099992fd5ae268fdf8dca670eed6  /home/codex/enron-e2s/capsule.sqlite
+9afcee50e92c28ab5dbac80da968da4d04b1089dc06d85fbecab6d4a20b3fa6e  /home/codex/enron-e2l/JOURNAL.md
+85d61c507f54df8fabdbef02fcd4c4529811a9f59576b47f53d8b918f1b7f00f  /home/codex/enron-e2l/capsule.sqlite
+ca83623facc42772039d36428019e0d12159420c8a85ef7202e16f7364a6a2eb  /home/codex/enron-e2l/consultations.jsonl
+4b56ac4b5186ba8f9ffcc53b98c5ad09ce1e28877bafa7fde2e6df7a512e01ee  /home/codex/enron-e2l/assembly-1.md
+3ed63bf45434dc76279570a48f136d2dec94052b90a64890d8a0cdae684a7cc7  /home/codex/enron-e2l/assembly-2.md
+34c233a271944d1b9534217c1799729a2de5ffb5862fa0beb4e141e47a57c435  /home/codex/enron-e2l/assembly-3.md
+8edd106d12469b4b7a3f0f9f0b492a41f82a68e5a6937f75a2b3fc1d19164fea  /home/codex/enron-e2l/assembly-4.md

@@ -1,0 +1,22 @@
+ENRON-2 live-retrieval trial — judge pack manifest
+Prepared by the PREPARER role (trial protocol §9). The judge verifies these
+hashes against the delivered files before Phase A (protocol §8).
+
+Pack hash definition: SHA-256 over (stripped journal bytes || stripped
+capsule-digest bytes), UTF-8 text files, concatenated with no separator, in
+that order (journal first).
+
+File hashes:
+  pack-X-journal.md  sha256:40374cc729db2aafe6674587c211d2ad27b9b2ef33782bb460e611a81b30e916
+  pack-X-capsule.md  sha256:070664ce3ec906dea1e86ce435a70222874a1354e32ee4a3e92d56b806227f1e
+  pack-Y-journal.md  sha256:3ab980ad804f53895c47ea5104953325e87037c89d3b750d844eb00ddafee88b
+  pack-Y-capsule.md  sha256:fb0ff55f6e38a0ccea31be64893c71812378debe774edfc800be7fd02d877d5b
+
+Pack hashes:
+  X  sha256:227915aadb8283491987f7c4362767dabf41e4ac241a07ed4dc467e900b61438
+  Y  sha256:ca3e4cbc8deff889cbf82db2370722f9d1d8ce4540ee74a325ab6a1c58b5ce6c
+
+X is the lexicographically smaller pack hash; Y is the other, per protocol
+§9's total rule. Reading order for the judge (protocol §8 Phase A) is fixed
+by X's pack hash's first hex digit: 2 (even) ->
+read X first.
