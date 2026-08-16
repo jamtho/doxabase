@@ -32,3 +32,19 @@
   e93a02893b08e521e9fba66f137e580d3374970b75e597fc0970e672458786aa
   Judge reading order: X first (X's pack hash begins 2, even).
   Judge model, recorded before spawn per §4: claude-sonnet-5.
+- 2026-08-16: measurer complete — mechanical tally: E2L strictly
+  better on 4 of 6 (M2 quotes, M3 anchors, M4 unverified claims at
+  0.0% vs 20.0%, M5 coverage), E2S takes M1, M7 ties: the ≥4-of-6
+  threshold is MET by the live arm. Retrieval: R1=4 consultations,
+  1500/1500 spent; mid-task letter MET (with the honest note that
+  consultations clustered in the write-up phase); R2 aggregate 0.40
+  under the sealed literal reading — clearing the 1/3 floor — with
+  the measurer's flagged alternate reading (excluding a generic
+  class-label match) at 0.10, below it; R4: the static arm used its
+  briefing render NOT AT ALL (0/3 items) — the cleanest possible
+  separation on the selection axis. Every replay reproduced
+  byte-identical. Full enumerations preserved for publication.
+  Post-trial remediation noted: E2S's capsule carries two
+  third-party-name leaks its journal claimed were checked absent —
+  to be repaired by the curator after the verdict, supersession
+  route.
