@@ -56,3 +56,18 @@
   is instructed to assume rigor-parity across packets. Same policy
   applies to the measurer's tables on arrival. Verdict assembly
   remains gated on the owner layer per §4 step 9.
+- 2026-08-16: measurer complete — all 19 freeze hashes verified; 69
+  ledgered re-execution queries + 41 assembler replays; every arm
+  query re-executed (all reproduced); the full 30×3 trap grid
+  computed with signature evidence; consultation accounting and
+  recall-gap replays done; ambiguity log with uniform readings
+  recorded. THE TABLES ARE HELD SEALED with the judge report
+  (coordinator scratch only) until the owner's ranking freezes —
+  they are arm-labeled and the owner layer must stay uncontaminated.
+  Process-integrity notes safe to state now: no D1 anywhere;
+  several D2-class items queued for the deviation ledger
+  (self-disclosed retroactive ledger rows; local analysis steps not
+  retained as scripts in two arms, all reconstructed and reproduced
+  by the measurer); five new-caveat candidates and a
+  registry live-bite audit queued for the AIS curator per §14.
+  Everything now waits on the owner layer.
