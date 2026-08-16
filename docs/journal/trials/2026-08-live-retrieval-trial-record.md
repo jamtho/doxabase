@@ -97,3 +97,14 @@ supersession (the two leaks the measurer found against its journal's
 claim); both capsules then join the corpus program as ENRON-2
 material pending the owner's shareability pass; the consultation
 ledger and per-item verdicts flow to the v1 assembler requirements.
+- 2026-08-16: post-trial repair EXECUTED — E2S's two third-party
+  name leaks generalized by staged revision (episode re-minted under
+  a role-based slug; names inside verbatim custodian quotes
+  bracket-generalized per the marked-editorial convention the
+  trial's own quote verification accepts; both dependent observation
+  summaries aligned). Live graphs verified clean of both names;
+  validate conforms; recovery planner confirms zero staged debt;
+  history retains the originals per the append-only law (the
+  scanner's history-blindness remains ledgered). Both ENRON-2
+  capsules now eligible to join the corpus program pending the
+  owner's shareability pass.
