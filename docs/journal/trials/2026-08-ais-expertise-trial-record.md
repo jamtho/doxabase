@@ -10,3 +10,10 @@
   Alaska is near-empty in this bucket (60 index rows in two years)
   despite the provider FAQ's coverage sentence — to be recorded as an
   observation with the census evidence.
+- 2026-08-16: A0 (scratch) complete — three findings delivered
+  (a dated multinational naval surge; a fishing-fleet distance
+  discontinuity visible only after cohort+metric switches; a
+  two-year weekly passenger circuit with a drydock interruption and
+  exact-phase resumption), capsule conforming, 35/150 queries, one
+  honestly-disclosed ledger deviation. Dir intact for the freeze.
+  A1 launches next.
