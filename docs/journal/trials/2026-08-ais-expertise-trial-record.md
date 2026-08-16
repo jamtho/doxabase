@@ -17,3 +17,9 @@
   exact-phase resumption), capsule conforming, 35/150 queries, one
   honestly-disclosed ledger deviation. Dir intact for the freeze.
   A1 launches next.
+- 2026-08-16: A1 (caveats) complete — three findings (the same
+  weekly-circuit vessel as A0, independently; a single-port fleet
+  structure reached by pivoting off the same exclusion-zone
+  hypothesis A0 pursued; Zipf message concentration), one declined
+  finding with reasons, capsule conforming, 21/150 queries. Dir
+  intact for the freeze. A2 launches next.
