@@ -46,3 +46,13 @@
   any packet leaves for the owner, per §10:
   57c0882f7e37459aa5beb1843842bb05690b5c8f37a6ac2a2c485e41dba8f16e
   Judge reading order X→Y→Z per protocol.
+- 2026-08-16: blind rigor judge complete — hashes verified, five
+  phases in order, all 15 cells cited, two narrow deductions each
+  grounded in the graded pack's own text, origin suspicion disclosed
+  with scores tied to per-pack quotes. THE REPORT IS HELD SEALED
+  (coordinator's scratch only, outside every owner-visible surface)
+  until the owner's ranking freezes — publishing the rigor ordering
+  now could contaminate the impressiveness layer, since the owner
+  is instructed to assume rigor-parity across packets. Same policy
+  applies to the measurer's tables on arrival. Verdict assembly
+  remains gated on the owner layer per §4 step 9.
