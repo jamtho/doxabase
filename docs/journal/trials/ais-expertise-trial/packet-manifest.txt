@@ -1,0 +1,13 @@
+AIS-X owner packet manifest
+
+Packet hash formula: SHA-256(stripped FINDINGS.md), UTF-8. The packet file is byte-identical to the hashed text.
+
+packet-P1.md
+  packet hash : 274d5fd283d43a9efb4d48aa832605a6bfc836968a1617700ad6b146b06bc2ed
+
+packet-P2.md
+  packet hash : 7f135c3578d8c498be80fb4d17a149fc8d56fd74b104f0fb35ab23766f0d2abf
+
+packet-P3.md
+  packet hash : a02248eb9bf65bb53c828adad15be4bbaaf9bce0772292f7d8dcf77e1e2942ea
+

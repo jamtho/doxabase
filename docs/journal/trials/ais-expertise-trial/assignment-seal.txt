@@ -1,0 +1,23 @@
+AIS-X ASSIGNMENT SEAL (preparer-internal; not for judge or owner)
+
+arm -> judge label -> owner label
+  a0 -> Y -> P2
+  a1 -> X -> P1
+  a2 -> Z -> P3
+
+Full hashes:
+arm=a0
+  pack hash (journal||digest||findings) = 8e0d3b3c65a262a53f0827ab81954a88f868e81d57aae2a3e66c406b5eb7e259
+  pack file hash (pack-Y.md)     = 1977333d23774af879050697c57609cc25e2b0a11a1de4f29ddd7dfdad8f5a87
+  packet hash (findings only)            = 7f135c3578d8c498be80fb4d17a149fc8d56fd74b104f0fb35ab23766f0d2abf
+arm=a1
+  pack hash (journal||digest||findings) = 3c547de769a937f637a7c16a099e96d6828ef8cc3d225b8d3d0d09daf17166d2
+  pack file hash (pack-X.md)     = 46fa0b2a4b52fe7f39bc583a001c626d58bc4dbb1d5e4817e85d73a756306336
+  packet hash (findings only)            = 274d5fd283d43a9efb4d48aa832605a6bfc836968a1617700ad6b146b06bc2ed
+arm=a2
+  pack hash (journal||digest||findings) = e538e8e8735aa41095c44f53caeeeefa3956c0aafd21573fff2bc229876f520f
+  pack file hash (pack-Z.md)     = 522741af6120e0647a3e1b68978f38db4c6d5790942736f8d92314756f742b87
+  packet hash (findings only)            = a02248eb9bf65bb53c828adad15be4bbaaf9bce0772292f7d8dcf77e1e2942ea
+
+Judge order: X=a1, Y=a0, Z=a2
+Owner order: P1=a1, P2=a0, P3=a2

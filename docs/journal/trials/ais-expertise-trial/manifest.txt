@@ -1,0 +1,18 @@
+AIS-X judge pack manifest
+Reading order: X, Y, Z
+
+Pack hash formula: SHA-256(stripped journal || capsule digest || findings), UTF-8, direct concatenation, no separator.
+Pack file hash: SHA-256 of the delivered pack-<label>.md file exactly as given to the judge.
+
+pack-X.md
+  pack file hash : 46fa0b2a4b52fe7f39bc583a001c626d58bc4dbb1d5e4817e85d73a756306336
+  pack hash      : 3c547de769a937f637a7c16a099e96d6828ef8cc3d225b8d3d0d09daf17166d2
+
+pack-Y.md
+  pack file hash : 1977333d23774af879050697c57609cc25e2b0a11a1de4f29ddd7dfdad8f5a87
+  pack hash      : 8e0d3b3c65a262a53f0827ab81954a88f868e81d57aae2a3e66c406b5eb7e259
+
+pack-Z.md
+  pack file hash : 522741af6120e0647a3e1b68978f38db4c6d5790942736f8d92314756f742b87
+  pack hash      : e538e8e8735aa41095c44f53caeeeefa3956c0aafd21573fff2bc229876f520f
+

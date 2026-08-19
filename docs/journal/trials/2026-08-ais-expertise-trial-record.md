@@ -71,3 +71,82 @@
   by the measurer); five new-caveat candidates and a
   registry live-bite audit queued for the AIS curator per §14.
   Everything now waits on the owner layer.
+- 2026-08-19: THE OWNER'S RANKING IS IN — the O-layer freezes and
+  everything unseals.
+
+## VERDICT (§11, assembled 2026-08-19)
+
+**Assignment unseal** (seal hash verified 57c0882f…):
+P1 = X = **A1 (CAVEATS)** · P2 = Y = **A0 (SCRATCH)** · P3 = Z =
+**A2 (EXPERT)**. The owner's mid-read origin guess (P1 = full
+capsule) was WRONG — P1 was the caveats arm; blindness held.
+
+**The layers, unsealed**:
+- **Layer O (owner, headline)**: A2 > A0 > A1. Aggregate absolute:
+  "Every agent's work is impressive."
+- **Layer J (blind rigor)**: A1 60/60 > A2 58 > A0 57.
+- **Layer M (mechanical)**: NO pair separated (best tally 2–1
+  against the ≥4-of-6 threshold; five ties on M1/M7 and near-ties
+  elsewhere).
+- **Reinvention cost**: A1 CLEAN (0 corrupted findings, burden
+  0.00, 8 briefed-applied + 3 rediscovered) < A2 (2 corrupted —
+  the CET clock-time hit and the all-22 coverage classification —
+  burden 0.27) < A0 (2 corrupted — missing-day denominator and the
+  unaudited MMSI census — burden 0.60).
+- **A2 consultation qualification: FAILED** (aggregate used-item
+  precision 1/13 = 7.7% vs the 1/3 floor; consultations clustered
+  post-analysis) — with the measurer's documented footnote that
+  four explicit paraphrase-level consultation attributions exist
+  that the sealed mechanical test cannot count.
+
+**Named verdict: IMPRESSIVENESS WITHOUT SEPARATION.** A2 took the
+owner's ranking decisively (his best-of-all study was A2's freight
+backbone) but no mechanical separation exists and the rigor layer
+went to A1 — per §11, reported as bearing on the ceiling thesis,
+with the explicit caution that one ranking at n=1 is the weakest
+signal class in the trial. Because the consultation qualification
+failed, the O-win cannot be mechanically credited to live memory;
+per the interpretation discipline, the retrieval result is routed
+INSTRUMENT-LIMITED (precision < 1/3 indicts the v0.5 walk before
+the thesis; the consultation ledger is the v1 requirements list).
+
+**Ablation reading (pre-committed names)**: the A1>A2 rigor result
+is reported as a **caveat-sufficiency anomaly** — static deficiency
+briefing beat full live memory on the rigor layer (and swept the
+trap grid clean: the missing-day caveat alone created the A0 rigor
+deduction, the cleanest single demonstration of a briefed caveat
+paying for itself). The A0>A1 owner-layer result is reported as
+**briefing drag** by its pre-committed name, with the honest gloss
+that at n=1 it is indistinguishable from study-quality variance
+(the owner found A1's third study "kinda dull" — a depth choice,
+not a trap). Each layer crowned a DIFFERENT arm: owner→expert,
+rigor→caveats, traps→caveats, economics→expert (9 vs 21 vs 35
+queries), mechanical→nobody. The owner's "nuances of where"
+question has its answer: the capsule's value at this diameter
+concentrated in trap-immunity (caveats layer) and in
+depth-per-query (expert layer), not in gated mechanics.
+
+**Cost-of-absence (the scratch tax, priced)**: 7–8 of A0's 11
+stated needs were answerable from the frozen capsule at budget 500;
+A0's two corrupted findings trace to briefed-away traps; and A2
+left unasked the one consultation (its pytz friction) that would
+have served the CET caveat at rank 2 and prevented its only
+uncorrected hit — the demand side remains the binding constraint,
+exactly as doc 17's trials keep finding.
+
+**Deviation ledger**: D2 — retro-ledgered debug queries (A0, A2,
+self-disclosed); A2/A0 local analysis steps not retained as scripts
+(measurer reconstructed, all reproduced); A2 consultation-ledger
+question strings not byte-verbatim ×2 (saved outputs govern). D3 —
+A1 q17 tie-row feed nondeterminism; assembler v0.5 post-dating the
+ENRON-2 seal. No D1; run valid.
+
+**§14 dispositions**: all three capsules join the AIS study as
+region tranches pending shareability; five new-caveat candidates +
+the registry live-bite audit route to the AIS curator; consultation
+ledgers and 29 recall-gap replays route to the v1 assembler
+requirements; the owner's tradecraft comments (time-series-of-
+signals monitoring; bathymetry/known-region map comparison) route
+to the expert channel harvest. The judge phases, manifests,
+assignment seal, freeze hashes, and all three arms' findings and
+journals are now published alongside this record.
