@@ -1,0 +1,119 @@
+{
+ "a0": {
+  "n_paths": 32,
+  "s3_paths": [
+   "s3://ais-noaa/broadcasts/*/ais-*.parquet",
+   "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet",
+   "s3://ais-noaa/index/*/ais-*.parquet",
+   "s3://ais-noaa/index/2024/ais-2024-01-01.parquet",
+   "s3://ais-noaa/index/{year}/ais-{date}.parquet"
+  ],
+  "dead_paths": [],
+  "pairs": [
+   [
+    "211920000",
+    "2024-07-10"
+   ],
+   [
+    "366994450",
+    "2024-01-01"
+   ]
+  ]
+ },
+ "a1": {
+  "n_paths": 23,
+  "s3_paths": [
+   "s3://ais-noaa/broadcasts/",
+   "s3://ais-noaa/index/",
+   "s3://ais-noaa/index/*/*.parquet"
+  ],
+  "dead_paths": [
+   "outputs/q16-18.txt",
+   "outputs/q5.txt..q9.txt"
+  ],
+  "pairs": [
+   [
+    "366994450",
+    "2024-01-01"
+   ],
+   [
+    "366994450",
+    "2025-12-31"
+   ]
+  ]
+ },
+ "a2": {
+  "n_paths": 5,
+  "s3_paths": [
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-05.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-06.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-07.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-08.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-09.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-10.parquet",
+   "s3://ais-noaa/broadcasts/2024/ais-2024-01-11.parquet",
+   "s3://ais-noaa/index/*/ais-*.parquet",
+   "s3://ais-noaa/index/2024/ais-*.parquet",
+   "s3://ais-noaa/index/2025/ais-*.parquet"
+  ],
+  "dead_paths": [],
+  "pairs": [
+   [
+    "338033000",
+    "2024-01-05"
+   ],
+   [
+    "338033000",
+    "2024-01-11"
+   ],
+   [
+    "338100828",
+    "2025-05-15"
+   ],
+   [
+    "338100828",
+    "2025-07-05"
+   ],
+   [
+    "338223150",
+    "2024-07-19"
+   ],
+   [
+    "338223150",
+    "2024-07-27"
+   ],
+   [
+    "338385765",
+    "2024-07-19"
+   ],
+   [
+    "338385765",
+    "2024-07-27"
+   ],
+   [
+    "338525433",
+    "2025-07-05"
+   ],
+   [
+    "366887950",
+    "2024-06-25"
+   ],
+   [
+    "366887950",
+    "2024-11-03"
+   ],
+   [
+    "366887950",
+    "2025-03-10"
+   ],
+   [
+    "366994450",
+    "2024-01-05"
+   ],
+   [
+    "367353180",
+    "2024-07-19"
+   ]
+  ]
+ }
+}

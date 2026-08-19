@@ -1,0 +1,37 @@
+{
+  "a0": [
+    "DuckDB Python client fails with ModuleNotFoundError pytz when fetching TIMESTAMP WITH TIME ZONE columns like timestamp/first_timestamp/last_timestamp -- known workaround for querying these timestamp columns?",
+    "status navigational status code is NULL for ~93% of a fishing fleet's broadcasts -- is NavStatus reliable enough to use as an underway/moored filter?",
+    "one 0.1-degree harbor grid cell shows 486,072 broadcasts in a single month -- is broadcast message rate biased by vessel speed or mooring, inflating position-density comparisons?",
+    "how can I rule out that an MMSI was shared or reassigned between two different physical vessels during the study window?",
+    "is max_inter_msg_speed_ms useful for detecting GPS jamming, spoofing, or position glitches?",
+    "should I cross-check vessel identity using the imo number field, and how trustworthy is it?",
+    "a 200m vessel reports vessel_type=30 fishing -- is an implausibly large fishing vessel a labeling artifact of self-reported type codes?",
+    "could the feed route non-local military traffic through a region's bounding box via a routing or relay artifact -- what does receiver coverage geometry look like?",
+    "is sog under 3 knots a reliable proxy for a fishing vessel actively working gear rather than transiting?",
+    "what does AIS data alone say about vessel ownership, operator, or flag state beyond vessel_name, call_sign and MMSI?",
+    "can this dataset establish whether a fishing trip was legally compliant with a regulatory exclusion zone?"
+  ],
+  "a1": [
+    "why would a fishing fleet concentrate on a single home port -- can this data distinguish regulatory, economic, or infrastructure causes?",
+    "a vessel sits motionless for three weeks at one coordinate then returns to service -- how to tell a scheduled drydock from other multi-week absences?",
+    "how can I identify the operating company behind a group of vessels from AIS fields alone?",
+    "how should transceiver class A versus B be controlled for when comparing message volume across a vessel population?",
+    "how to identify real-world harbor names for coordinate clusters without a gazetteer?",
+    "what are the h3_res15 and geometry columns good for in this feed?",
+    "method for classifying per-vessel silence gap durations into short local trips versus multi-week offshore voyages?",
+    "should region membership be defined by bounding-box overlap or centroid-in-box for a study region?",
+    "record_observation kind=claim silently drops top-level fields not nested in spec -- known tool trap?",
+    "is silence in this feed evidence that a vessel turned its transponder off at sea?"
+  ],
+  "a2": [
+    "are shared, reassigned, or artifact MMSIs common enough that a fleet roster should be systematically audited rather than spot-checked?",
+    "is there a canonical port or harbor coordinate reference for identifying which harbor a position cluster is?",
+    "does NOAA coastal receiver coverage vary seasonally in a way that could manufacture an arrival-pulse artifact?",
+    "can AIS data identify the organizing event behind a synchronized fleet arrival, like a race or rally?",
+    "what would a full census of a pulse population's departure points require beyond a convenience sample?",
+    "workaround for pytz ModuleNotFoundError when DuckDB fetches TIMESTAMP WITH TIME ZONE columns?",
+    "what does AIS show about the regulatory reason a US-flagged cruise ship stays in permanent inter-island service?",
+    "how precise are single-day distance_m and sog_mean index aggregates for a vessel with very sparse position fixes?"
+  ]
+}
