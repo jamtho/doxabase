@@ -152,6 +152,71 @@ def describe(con):
           "to invest effort something like it may have met before.")
 
 
+def prime(con, entries, args):
+    """Push layer (doc 17 + the owner's ladder answer): from the matched
+    dataset/domain nodes, serve what the MAP holds about them — every
+    linked caveat in full, methods that touch them as a one-line index,
+    parameters/invariants as constants. Deep store stays pull-only."""
+    seeds = [s for s, _ in entries[:4]]
+    print(f"# Priming render (map-tier push)\nseeds: "
+          + ", ".join(localname(s) for s in seeds) + "\n")
+    seen = set()
+    budget_chars = args.budget * 4
+    used = 0
+    # 1. caveats linked to the seeds (hasKnownCaveat is emitted from the
+    #    target side), served in full — trap immunity is cheap and proven.
+    cav_subjects = []
+    for seed in seeds:
+        for row in con.execute(
+            "SELECT object FROM quads WHERE subject=? AND predicate LIKE "
+            "'%hasKnownCaveat' AND object_kind='uri'", (seed,)):
+            if row["object"] not in seen:
+                seen.add(row["object"])
+                cav_subjects.append(row["object"])
+    if cav_subjects:
+        print("## Known deficiencies and traps of these tools")
+    for c in cav_subjects:
+        rows = con.execute(
+            "SELECT predicate, object, object_kind FROM quads WHERE "
+            "subject=? AND graph NOT IN ('history')", (c,)).fetchall()
+        label = next((r["object"] for r in rows
+                      if localname(r["predicate"]) == "label"), localname(c))
+        texts = [r["object"] for r in rows if r["object_kind"] == "literal"
+                 and len(r["object"]) > 40]
+        block = f"\n### {label}\n" + "\n".join(f"- {t}" for t in sorted(texts, key=len, reverse=True)[:2]) + "\n"
+        if used + len(block) > budget_chars:
+            continue
+        print(block, end="")
+        used += len(block)
+    # 2. methods touching the seeds — index only (names + one line);
+    #    depth is pull-on-demand.
+    heads = []
+    for seed in seeds:
+        for row in con.execute(
+            "SELECT DISTINCT subject FROM quads WHERE object=? AND "
+            "object_kind='uri' AND graph IN ('patterns','map')", (seed,)):
+            s = row["subject"]
+            if s in seen:
+                continue
+            seen.add(s)
+            lab = con.execute(
+                "SELECT object FROM quads WHERE subject=? AND predicate "
+                "LIKE '%label' LIMIT 1", (s,)).fetchone()
+            if lab:
+                heads.append((lab["object"], s))
+    if heads:
+        print("\n## Methods and records that touch these tools "
+              "(consult by name for depth)")
+        for lab, s in heads[:25]:
+            line = f"- {lab}  <{localname(s)}>\n"
+            if used + len(line) > budget_chars:
+                break
+            print(line, end="")
+            used += len(line)
+    print("\nEverything deeper — episodes, evidence, tuned parameters — "
+          "is pull-on-demand: consult with a specific question.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("capsule")
@@ -161,6 +226,11 @@ def main():
                     default="handles")
     ap.add_argument("--entries", type=int, default=8)
     ap.add_argument("--describe", action="store_true")
+    ap.add_argument("--prime", action="store_true",
+                    help="priming mode: treat the task as a dataset/domain "
+                         "name; serve the map-tier neighborhood an expert "
+                         "would have in mind on picking up these tools — "
+                         "caveats in full, methods as an index, constants")
     args = ap.parse_args()
 
     con = sqlite3.connect(f"file:{args.capsule}?mode=ro", uri=True)
@@ -212,6 +282,10 @@ def main():
               + ", ".join(localname(s) for s, _ in entries[:5])
               + ". Proceed on your own judgement; consider recording what "
                 "you learn so the next asker finds it.")
+        return
+
+    if args.prime:
+        prime(con, entries, args)
         return
 
     # expansion: 2 hops with decay
