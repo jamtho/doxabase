@@ -68,7 +68,8 @@ SLICE of the right node — tier weighting already finds the right layer
 (keep-list K-3).
 
 **V1-R5. Verification state travels with served items.** New, from the
-uk-money benchmark (WP-D R1): a claim served without its tier,
+public-money study's sealed benchmark (the top-ranked gap in its
+retrospective): a claim served without its tier,
 matchBasis, and supersession context invites the measured
 error-transmission failure (a stale match inherited at "exact" grade,
 6→4→4→3 across rounds) at the retrieval layer. `handles` mode already
